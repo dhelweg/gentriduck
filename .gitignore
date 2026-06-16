@@ -30,6 +30,9 @@ web/node_modules/
 web/.svelte-kit/
 web/build/
 
+# --- local session transcripts (kept on-machine for continuity; never published) ---
+.sessions/
+
 # --- OS / editor ---
 .DS_Store
 *.swp

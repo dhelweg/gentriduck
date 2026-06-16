@@ -4,6 +4,8 @@ Reviving a 2018 Berlin gentrification thesis on a modern, **free, open, local-fi
 growing it into a public, **multi-city** statistics website. Plan: `docs/PROJECT_PLAN.md`.
 Decisions: `docs/adr/`. Live backlog: the **Gentriduck** GitHub Project board.
 
+**Resuming?** Start with the latest session handoff in `docs/handoff/` for current state + next step.
+
 ## Golden rules
 1. **Free + open only.** No paid tools, no proprietary/internal data — ever. New tool/library/source
    needs an ADR and the maintainer's OK.
