@@ -23,6 +23,7 @@ transform/target/
 transform/dbt_packages/
 transform/logs/
 logs/
+.user.yml
 
 # --- web (later) ---
 web/node_modules/

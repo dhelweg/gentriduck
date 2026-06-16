@@ -1,0 +1,14 @@
+# Repo-local dbt profile (kept here so the global ~/.dbt/profiles.yml is untouched).
+# Local-first: a DuckDB file under data/ with the spatial extension loaded.
+# Path is relative to the repo root — all dbt runs go via `uv run poe <task>` from
+# the repo root (CWD = repo root, with --project-dir transform). A MotherDuck 'prod'
+# target is added later (Epic F).
+gentriduck:
+  target: dev
+  outputs:
+    dev:
+      type: duckdb
+      path: "data/gentriduck.duckdb"
+      threads: 4
+      extensions:
+        - spatial

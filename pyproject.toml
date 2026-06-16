@@ -1,0 +1,31 @@
+[project]
+name = "gentriduck"
+version = "0.1.0"
+description = "Reviving a 2018 Berlin gentrification thesis on dbt + DuckDB; growing into a public open-data stats website."
+readme = "README.md"
+requires-python = ">=3.12"
+license = "MIT"
+dependencies = [
+    "dbt-duckdb>=1.9",
+    "duckdb>=1.1",
+    "pandas>=2.2",
+    "scikit-learn>=1.5",
+    "scipy>=1.13",
+    "quackosm>=0.11",
+]
+
+# Dev tooling lives in an isolated group; installed via `uv sync`.
+# (sqlfmt / sqlfluff / ruff / pre-commit are wired into the gate in task A7.)
+[dependency-groups]
+dev = [
+    "poethepoet>=0.29",
+]
+
+# Cross-platform task runner — identical commands on macOS / Windows / Linux.
+# dbt always runs against the project in transform/ with a repo-local profile.
+[tool.poe.tasks]
+debug = "dbt debug --project-dir transform --profiles-dir transform"
+deps  = "dbt deps --project-dir transform"
+build = "dbt build --project-dir transform --profiles-dir transform"
+test  = "dbt test --project-dir transform --profiles-dir transform"
+docs  = "dbt docs generate --project-dir transform --profiles-dir transform"
