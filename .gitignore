@@ -33,6 +33,9 @@ web/build/
 # --- local session transcripts (kept on-machine for continuity; never published) ---
 .sessions/
 
+# --- Claude Code local (machine-specific; never published) ---
+.claude/settings.local.json
+
 # --- OS / editor ---
 .DS_Store
 *.swp
