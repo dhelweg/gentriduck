@@ -1,0 +1,36 @@
+# --- Python / uv ---
+.venv/
+__pycache__/
+*.py[cod]
+.python-version.local
+
+# --- Secrets / env ---
+.env
+.env.*
+!.env.example
+
+# --- DuckDB / large + raw data (rebuilt from open sources, never committed) ---
+*.duckdb
+*.duckdb.wal
+data/raw/
+data/cache/
+*.osm.pbf
+*.osh.pbf
+*.parquet
+
+# --- dbt ---
+transform/target/
+transform/dbt_packages/
+transform/logs/
+logs/
+
+# --- web (later) ---
+web/node_modules/
+web/.svelte-kit/
+web/build/
+
+# --- OS / editor ---
+.DS_Store
+*.swp
+.idea/
+.vscode/
