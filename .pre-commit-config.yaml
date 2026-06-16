@@ -1,0 +1,38 @@
+# Cross-platform gate via the pre-commit framework. All hooks use the isolated
+# .venv tools through `uv run`, so behaviour is identical on macOS/Windows/Linux.
+#   Install once:  uv run pre-commit install && uv run pre-commit install --hook-type pre-push
+default_install_hook_types: [pre-commit, pre-push]
+
+repos:
+  - repo: local
+    hooks:
+      # --- commit stage: auto-format + lint ---
+      - id: ruff-format
+        name: ruff format (python)
+        entry: uv run ruff format
+        language: system
+        types: [python]
+      - id: ruff-check
+        name: ruff check (python)
+        entry: uv run ruff check --fix
+        language: system
+        types: [python]
+      - id: sqlfmt
+        name: sqlfmt (sql, auto-format)
+        entry: uv run sqlfmt
+        language: system
+        types: [sql]
+      - id: sqlfluff-lint
+        name: sqlfluff lint (sql)
+        entry: uv run sqlfluff lint
+        language: system
+        types: [sql]
+
+      # --- push stage: correctness (the deterministic gate) ---
+      - id: dbt-build
+        name: dbt build + tests (pre-push)
+        entry: uv run poe build
+        language: system
+        pass_filenames: false
+        always_run: true
+        stages: [pre-push]
