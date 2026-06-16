@@ -22,10 +22,11 @@ website of **gentrification & social-development statistics** for Berlin (and, l
 
 ## Roadmap
 
-The full plan lives in [`docs/PROJECT_PLAN.md`](docs/PROJECT_PLAN.md); the live backlog is the
-**Gentriduck** GitHub Project board. Epics: **A** foundations · **B** revive the 2018 concept ·
-**C** longitudinal OSM POI history · **D** price/rent dimension · **E** analysis & ML ·
-**F** serving + MotherDuck · **G** public website · **H** multi-city.
+The full plan lives in [`docs/PROJECT_PLAN.md`](docs/PROJECT_PLAN.md); architecture decisions are
+recorded in [`docs/adr/`](docs/adr/README.md); the live backlog is the **Gentriduck** GitHub
+Project board. Epics: **A** foundations · **B** revive the 2018 concept · **C** longitudinal OSM POI
+history · **D** price/rent dimension · **E** analysis & ML · **F** serving + MotherDuck ·
+**G** public website · **H** multi-city.
 
 ## Setup
 
