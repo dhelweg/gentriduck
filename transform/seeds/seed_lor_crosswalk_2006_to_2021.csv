@@ -1,0 +1,2 @@
+plr_id_pre2021,plr_id_2021,mapping_type,weight,note
+00000000,00000000,stub,1.0,PLACEHOLDER: This seed requires the official LOR 2021 concordance document from the Berlin Senate (Senatsverwaltung fuer Stadtentwicklung). Obtain from https://www.stadtentwicklung.berlin.de/planen/basisdaten_stadtentwicklung/lor/ and replace with official_concordance or areal_pop_weighted mappings. The stub row uses dummy area codes 00000000 and will not match real PLR rows. int_berlin_ewr_plr2021 detects the stub and passes through lor_2021 rows only.

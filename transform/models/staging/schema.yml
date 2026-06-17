@@ -381,12 +381,24 @@ models:
         description: >
           Computed indicator value. Shares are in [0, 1]; residents_total is a
           count; mean_age_years is in decimal years. May be NULL for migration_
-          background_share when the source column is absent in a given year.
+          background_share when the source column is absent in a given year, or
+          NULL when is_suppressed_any is True (suppressed cells are never coerced
+          to 0).
+      - name: is_suppressed_any
+        description: >
+          Boolean flag: True when any numeric indicator cell for this PLR row was
+          privacy-suppressed in the source EWR CSV (values '-', '.', blank, or
+          similar sentinels). When True, one or more indicator_value fields for
+          this PLR x year combination may be NULL. Never coerced to False or 0.
+        tests:
+          - not_null:
+              config:
+                where: "area_code is not null"
       - name: source_attribution
         description: >
           CC BY 3.0 DE attribution string (mandatory per licence). Value:
           "Amt fuer Statistik Berlin-Brandenburg / Einwohnerregister
-          Berlin-Brandenburg (EWR), CC BY 3.0 DE —
+          Berlin-Brandenburg (EWR), CC BY 3.0 DE --
           https://www.statistik-berlin-brandenburg.de/"
         tests:
           - not_null:

@@ -1,0 +1,11 @@
+osm_key,osm_value,osm_secondary_key,osm_secondary_value,stg_poi_type,canonical_key,canonical_value,since_year,confidence,rationale
+amenity,coworking_space,,,Coworking Space,office,coworking,2018,high,OSM wiki deprecation Sep 2018 — most consequential migration
+shop,health_food,,,Health Food,shop,organic,2017,medium,health-food synonymous with organic shop for gentrification proxy
+shop,greengrocer,organic,yes,,shop,organic,2017,medium,organic greengrocer distinct signal from plain greengrocer
+shop,bakery,organic,yes,,shop,organic,2018,medium,organic bakery variant
+shop,supermarket,organic,yes,,shop,organic,2017,medium,organic supermarket variant
+shop,supermarket,organic,only,,shop,organic,2017,medium,dedicated organic supermarket
+shop,coffee,,,Coffee Shop,amenity,cafe,2016,medium,shop=coffee misused for specialty coffee bars in Berlin
+sport,yoga,,,Yoga,leisure,yoga_studio,2016,medium,yoga tagged via sport= on fitness_centre parent
+amenity,yoga,,,Yoga Amenity,leisure,yoga_studio,2018,low,non-canonical but observed in Berlin
+leisure,fitness_station,,,Fitness Station,leisure,fitness_outdoor,2015,high,outdoor fitness != indoor fitness_centre; keep as separate canonical

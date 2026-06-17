@@ -69,9 +69,14 @@ seeds:
     description: >
       Metadata for the 13 EWR socio-economic indicators computed by
       ingestion/berlin/ewr/ingest_ewr.py (C3b). One row per indicator.
-      Documents the German label, English label, unit, definition vintage range,
-      source column expression, and any caveats (e.g. methodological breaks).
+      Documents the indicator key, German and English labels, unit, stable vintage
+      range (definition_vintage_from / definition_vintage_to), the source EWR
+      column expression, and any caveats (e.g. methodological breaks).
       Used by analysts and the methodology page (Epic G2) to understand the series.
+      Key caveat: migration_background_share has definition_vintage_from=2017 due to
+      the Mikrozensus definitional change around 2017. The pre-2017 column is present
+      in the data but is encoded separately (not silently concatenated) so analysts
+      can filter by reference_year >= 2017 for reliable comparisons.
     meta:
       dbt_meta_owner: data-engineer
     columns:
@@ -81,11 +86,11 @@ seeds:
           - not_null
           - unique
       - name: label_de
-        description: German label for the indicator.
+        description: German label for the indicator as used in EWR documentation.
         tests:
           - not_null
       - name: label_en
-        description: English label for the indicator.
+        description: English label / description of the indicator and its computation.
         tests:
           - not_null
       - name: unit
@@ -93,19 +98,187 @@ seeds:
         tests:
           - not_null
       - name: definition_vintage_from
-        description: First reference year for which this indicator definition applies.
+        description: >
+          First reference year for which this indicator definition is methodologically
+          stable and comparable. Analysts should filter reference_year >= definition_vintage_from
+          for time-series analysis. For migration_background_share this is 2017 (not 2015)
+          due to the Mikrozensus definitional break.
         tests:
           - not_null
       - name: definition_vintage_to
-        description: Last reference year for which this indicator definition applies.
+        description: Last reference year for which this indicator definition is stable.
         tests:
           - not_null
       - name: source_table
-        description: Source column expression from the raw EWR CSV.
+        description: >
+          Source EWR CSV column name (or expression) from which this indicator is derived
+          (e.g. 'E_E' for residents_total, 'DAU5' for residence_duration_5y_share).
         tests:
           - not_null
       - name: caveats
         description: >
-          Free-text caveats or known issues with the series (may be empty).
-          Example: "Definition changed with Mikrozensus reform ~2020; pre/post-2020
-          series not strictly comparable" for migration_background_share.
+          Free-text caveat or known issue with the series. Empty string when no
+          caveat applies. migration_background_share has a mandatory caveat
+          documenting the ~2017 Mikrozensus definitional break.
+
+  - name: seed_lor_crosswalk_2006_to_2021
+    description: >
+      PLR-level crosswalk from the pre-2021 LOR scheme (lor_pre2021, 447 PLRs,
+      reference_year <= 2020) to the LOR 2021 reform scheme (lor_2021, 542 PLRs,
+      reference_year >= 2021). Required by int_berlin_ewr_plr2021 to align the
+      EWR socio-economic time series across the LOR 2021 boundary.
+
+      CURRENT STATUS: STUB. The single data row uses dummy area codes (00000000)
+      and mapping_type='stub'. int_berlin_ewr_plr2021 detects this and passes
+      through lor_2021 rows only, producing zero output for lor_pre2021 rows.
+
+      PROVENANCE: The official concordance is published by the Senatsverwaltung
+      fuer Stadtentwicklung und Wohnen Berlin as an Excel file alongside the LOR
+      2021 reform documentation. Obtain from:
+        https://www.stadtentwicklung.berlin.de/planen/basisdaten_stadtentwicklung/lor/
+      or via the FIS-Broker geodata service (SenSW).
+
+      TODO: Replace stub rows with real concordance data. Use mapping_type values:
+        'official_concordance' -- direct 1:1 or split from Senate publication.
+        'areal_pop_weighted'   -- areal-interpolation weight (fractional for splits).
+        'identity'             -- area code unchanged between schemes (many PLRs).
+      weight=1.0 for 1:1 maps; fractional for splits (e.g. 0.6 + 0.4 for a PLR
+      split into two 2021 PLRs).
+    meta:
+      dbt_meta_owner: data-engineer
+    columns:
+      - name: plr_id_pre2021
+        description: >
+          PLR area code in the pre-2021 LOR scheme (8-digit string, zero-padded).
+          Matches area_code in stg_berlin_ewr where area_vintage='lor_pre2021'.
+        tests:
+          - not_null
+      - name: plr_id_2021
+        description: >
+          PLR area code in the LOR 2021 reform scheme (8-digit string, zero-padded).
+          Matches area_code in stg_berlin_ewr where area_vintage='lor_2021'.
+        tests:
+          - not_null
+      - name: mapping_type
+        description: >
+          Type of mapping: 'official_concordance' (from Senate publication),
+          'areal_pop_weighted' (areal/population weighted), 'identity' (same code),
+          or 'stub' (placeholder, not for analysis).
+        tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values:
+                  - official_concordance
+                  - areal_pop_weighted
+                  - identity
+                  - stub
+      - name: weight
+        description: >
+          Fractional weight for this mapping (1.0 for 1:1 maps; <1.0 for splits
+          where one pre-2021 PLR maps to multiple 2021 PLRs). Weights for a given
+          plr_id_pre2021 should sum to 1.0.
+        tests:
+          - not_null
+      - name: note
+        description: >
+          Free-text provenance note for this mapping row. For stub rows, documents
+          where to obtain the official concordance.
+
+  - name: seed_poi_tag_drift
+    description: >
+      C2 POI tag-schema drift mapping seed.  Documents approved OSM tag migrations
+      and alternative tagging conventions that must be normalised for cross-year
+      comparability of the gentrification index.  Each row maps one raw OSM tag pair
+      (osm_key / osm_value, with optional secondary key/value) to its canonical
+      equivalent (canonical_key / canonical_value).  The stg_poi_type column stores
+      the English poi_type label that the C1 ingestion layer writes for this tag; it
+      is used to join against stg_osm_poi.poi_type in int_osm_poi_harmonized.
+      Rows with an empty stg_poi_type are forward-looking definitions for tags not
+      yet captured by C1 (e.g. secondary-tag organic variants, unrecognised tags).
+      10 rows; geo-data-scientist approved.
+    meta:
+      dbt_meta_owner: data-engineer
+    columns:
+      - name: osm_key
+        description: Raw OSM tag key (e.g. 'amenity', 'shop', 'sport', 'leisure').
+        tests:
+          - not_null
+      - name: osm_value
+        description: Raw OSM tag value (e.g. 'coworking_space', 'health_food').
+        tests:
+          - not_null
+      - name: osm_secondary_key
+        description: >
+          Optional secondary OSM tag key qualifying the primary tag
+          (e.g. 'organic' for shop=bakery + organic=yes).  Empty when not applicable.
+      - name: osm_secondary_value
+        description: >
+          Optional secondary OSM tag value (e.g. 'yes', 'only').  Empty when not applicable.
+      - name: stg_poi_type
+        description: >
+          English poi_type label written by the C1 ingestion layer for this OSM tag
+          (e.g. 'Coworking Space').  Used as the join key against stg_osm_poi.poi_type.
+          Empty for tags not yet in the C1 poi_mapping (forward-looking drift rules).
+      - name: canonical_key
+        description: Target canonical OSM key after drift remapping (e.g. 'office', 'shop').
+        tests:
+          - not_null
+      - name: canonical_value
+        description: Target canonical OSM value after drift remapping (e.g. 'coworking', 'organic').
+        tests:
+          - not_null
+      - name: since_year
+        description: Year from which this drift rule should be applied (integer).
+        tests:
+          - not_null
+      - name: confidence
+        description: Geo-data-scientist confidence level for this rule.
+        tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ["high", "medium", "low"]
+      - name: rationale
+        description: Free-text rationale for the drift mapping rule.
+        tests:
+          - not_null
+
+  - name: seed_poi_canonical_category
+    description: >
+      C2 canonical POI tag to category mapping seed.  Maps canonical (key, value)
+      pairs — as defined in seed_poi_tag_drift — to the (poi_domain, poi_category,
+      poi_type, gentrification_proxy) classification used in the harmonized
+      int_osm_poi_harmonized model.  4 rows; geo-data-scientist approved.
+    meta:
+      dbt_meta_owner: data-engineer
+    columns:
+      - name: canonical_key
+        description: Canonical OSM tag key (e.g. 'office', 'shop', 'leisure').
+        tests:
+          - not_null
+      - name: canonical_value
+        description: Canonical OSM tag value (e.g. 'coworking', 'organic', 'yoga_studio').
+        tests:
+          - not_null
+      - name: poi_domain
+        description: Top-level POI domain label in the canonical classification (lower-case).
+        tests:
+          - not_null
+      - name: poi_category
+        description: Mid-level POI category within the domain (lower-case).
+        tests:
+          - not_null
+      - name: poi_type
+        description: Specific canonical POI type (lower-case, underscore-separated).
+        tests:
+          - not_null
+      - name: gentrification_proxy
+        description: >
+          Whether this canonical POI type serves as a gentrification proxy signal
+          (boolean string 'true' / 'false').
+        tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ["true", "false"]
