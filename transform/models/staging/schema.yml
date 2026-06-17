@@ -268,11 +268,127 @@ models:
 
   - name: stg_berlin_ewr
     description: >
-      STUB -- zero rows until Epic C3b EWR ingestion lands.
-      See ADR-0003 (Berlin geographies + open sources). When populated, each row
-      represents one socio-economic indicator value per area per year, sourced
-      from the Einwohnerregister (EWR) per-PLR CSV published by Amt fur Statistik
-      Berlin-Brandenburg (CC BY 3.0 DE) on daten.berlin.de.
-      Ingestion adapter: ingestion/berlin/ewr/ (not yet implemented).
+      Staging view over annual EWR (Einwohnerregister) Parquet snapshots for Berlin.
+      Produced by ingestion/berlin/ewr/ingest_ewr.py (ADR-0003, EWR section):
+      "Einwohnerinnen und Einwohner in Berlin in LOR-Planungsraeumen am 31.12.YYYY"
+      published by Amt fuer Statistik Berlin-Brandenburg (CC BY 3.0 DE) on
+      daten.berlin.de. One parquet per year under data/raw/berlin/ewr/<year>.parquet
+      (gitignored per ADR-0008). Each row is one indicator value for one PLR area
+      at one 31-Dec reference date. Long format: 13 indicators x ~542 PLR areas
+      x number of ingested years. source_attribution column carries the CC BY
+      attribution string.
+      Returns zero rows (typed stub) when no parquet files have been ingested yet,
+      so downstream models and dbt build pass before data download.
+      See seed_ewr_indicator_meta for indicator definitions and caveats.
     meta:
       dbt_meta_owner: data-engineer
+    tests:
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns:
+              - reference_year
+              - area_code
+              - indicator
+          config:
+            where: "area_code is not null"
+      - dbt_utils.expression_is_true:
+          arguments:
+            expression: "indicator_value between 0 and 1"
+          config:
+            where: "area_code is not null and indicator not in ('residents_total', 'mean_age_years') and indicator_value is not null"
+    columns:
+      - name: city_code
+        description: >
+          City identifier; always 'berlin' for this adapter (ADR-0005).
+          Lowercase, matching the C1 ingestion convention.
+        tests:
+          - not_null:
+              config:
+                where: "area_code is not null"
+          - accepted_values:
+              arguments:
+                values: ["berlin"]
+              config:
+                where: "area_code is not null"
+      - name: area_code
+        description: >
+          PLR (Planungsraum) identifier, zero-padded to 8 characters.
+          Matches the LOR area code scheme used in dim_area.
+        tests:
+          - not_null:
+              config:
+                where: "reference_year is not null"
+      - name: area_vintage
+        description: >
+          LOR scheme vintage for this area code.
+          'lor_pre2021': pre-2021 LOR layout (reference_year <= 2020).
+          'lor_2021': LOR 2021 reform layout (reference_year >= 2021).
+        tests:
+          - not_null:
+              config:
+                where: "area_code is not null"
+          - accepted_values:
+              arguments:
+                values: ["lor_pre2021", "lor_2021"]
+              config:
+                where: "area_code is not null"
+      - name: reference_year
+        description: >
+          Calendar year of the 31-December snapshot (integer). Range: 2008-2024.
+        tests:
+          - not_null:
+              config:
+                where: "area_code is not null"
+      - name: reference_date
+        description: >
+          The 31-December snapshot date as a DATE (e.g. 2018-12-31).
+          Always the last day of reference_year.
+        tests:
+          - not_null:
+              config:
+                where: "area_code is not null"
+      - name: indicator
+        description: >
+          Indicator key from the approved 13-indicator set (see seed_ewr_indicator_meta).
+          One of: residents_total, residents_male_share, residents_female_share,
+          age_under18_share, age_18_27_share, age_27_45_share, age_45_65_share,
+          age_65plus_share, mean_age_years, foreigners_share,
+          migration_background_share, residence_duration_5y_share,
+          residence_duration_10y_share.
+        tests:
+          - not_null:
+              config:
+                where: "area_code is not null"
+          - accepted_values:
+              arguments:
+                values:
+                  - residents_total
+                  - residents_male_share
+                  - residents_female_share
+                  - age_under18_share
+                  - age_18_27_share
+                  - age_27_45_share
+                  - age_45_65_share
+                  - age_65plus_share
+                  - mean_age_years
+                  - foreigners_share
+                  - migration_background_share
+                  - residence_duration_5y_share
+                  - residence_duration_10y_share
+              config:
+                where: "area_code is not null"
+      - name: indicator_value
+        description: >
+          Computed indicator value. Shares are in [0, 1]; residents_total is a
+          count; mean_age_years is in decimal years. May be NULL for migration_
+          background_share when the source column is absent in a given year.
+      - name: source_attribution
+        description: >
+          CC BY 3.0 DE attribution string (mandatory per licence). Value:
+          "Amt fuer Statistik Berlin-Brandenburg / Einwohnerregister
+          Berlin-Brandenburg (EWR), CC BY 3.0 DE —
+          https://www.statistik-berlin-brandenburg.de/"
+        tests:
+          - not_null:
+              config:
+                where: "area_code is not null"

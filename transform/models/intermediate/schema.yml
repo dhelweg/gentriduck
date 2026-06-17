@@ -140,3 +140,119 @@ models:
           - not_null
       - name: level_name
         description: Human-readable level name from seed_dim_area_level.
+
+  - name: int_ewr_series
+    description: >
+      EWR socio-economic time series joined to the conformed area dimension
+      (ADR-0005). Selects from stg_berlin_ewr (long-format, PLR grain,
+      13 indicators) and inner-joins dim_area to attach area metadata.
+      Graceful-degradation: returns zero rows when stg_berlin_ewr has no data
+      (ingestion not yet run) OR when dim_area does not yet include PLR rows
+      with city_code='berlin' (stg_berlin_lor stub). Both conditions must be
+      met for rows to appear; zero rows is correct at this stage.
+      One output row = one indicator for one PLR area for one reference year.
+    meta:
+      dbt_meta_owner: data-engineer
+    tests:
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns:
+              - city_code
+              - area_code
+              - reference_year
+              - indicator
+          config:
+            where: "area_code is not null"
+      - dbt_utils.expression_is_true:
+          arguments:
+            expression: "indicator_value between 0 and 1"
+          config:
+            where: "area_code is not null and indicator not in ('residents_total', 'mean_age_years') and indicator_value is not null"
+    columns:
+      - name: city_code
+        description: City identifier (ADR-0005). Always 'berlin' from EWR ingestion.
+        tests:
+          - not_null:
+              config:
+                where: "area_code is not null"
+      - name: area_code
+        description: PLR identifier (zero-padded to 8 chars). FK -> dim_area.area_code.
+        tests:
+          - not_null:
+              config:
+                where: "reference_year is not null"
+      - name: area_vintage
+        description: >
+          LOR scheme vintage: 'lor_pre2021' (reference_year <= 2020) or
+          'lor_2021' (reference_year >= 2021).
+        tests:
+          - not_null:
+              config:
+                where: "area_code is not null"
+          - accepted_values:
+              arguments:
+                values: ["lor_pre2021", "lor_2021"]
+              config:
+                where: "area_code is not null"
+      - name: reference_year
+        description: Calendar year of the 31-Dec snapshot (integer, 2008-2024).
+        tests:
+          - not_null:
+              config:
+                where: "area_code is not null"
+      - name: reference_date
+        description: 31-Dec snapshot date as DATE (e.g. 2018-12-31).
+        tests:
+          - not_null:
+              config:
+                where: "area_code is not null"
+      - name: indicator
+        description: >
+          Indicator key from the 13-indicator approved set
+          (see seed_ewr_indicator_meta for definitions).
+        tests:
+          - not_null:
+              config:
+                where: "area_code is not null"
+          - accepted_values:
+              arguments:
+                values:
+                  - residents_total
+                  - residents_male_share
+                  - residents_female_share
+                  - age_under18_share
+                  - age_18_27_share
+                  - age_27_45_share
+                  - age_45_65_share
+                  - age_65plus_share
+                  - mean_age_years
+                  - foreigners_share
+                  - migration_background_share
+                  - residence_duration_5y_share
+                  - residence_duration_10y_share
+              config:
+                where: "area_code is not null"
+      - name: indicator_value
+        description: >
+          Computed indicator value. Shares in [0, 1]; residents_total is a count;
+          mean_age_years in decimal years. May be NULL where source column absent.
+      - name: source_attribution
+        description: CC BY 3.0 DE attribution string from the EWR source.
+        tests:
+          - not_null:
+              config:
+                where: "area_code is not null"
+      - name: area_name
+        description: Area name from dim_area (German proper noun; Berlin place names).
+        tests:
+          - not_null:
+              config:
+                where: "area_code is not null"
+      - name: area_level
+        description: Area level from dim_area (e.g. 'plr').
+        tests:
+          - not_null:
+              config:
+                where: "area_code is not null"
+      - name: level_name
+        description: Human-readable level name from dim_area / seed_dim_area_level.

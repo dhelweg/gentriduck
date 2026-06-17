@@ -64,3 +64,48 @@ seeds:
           - not_null
       - name: description
         description: Brief description of the administrative level.
+
+  - name: seed_ewr_indicator_meta
+    description: >
+      Metadata for the 13 EWR socio-economic indicators computed by
+      ingestion/berlin/ewr/ingest_ewr.py (C3b). One row per indicator.
+      Documents the German label, English label, unit, definition vintage range,
+      source column expression, and any caveats (e.g. methodological breaks).
+      Used by analysts and the methodology page (Epic G2) to understand the series.
+    meta:
+      dbt_meta_owner: data-engineer
+    columns:
+      - name: indicator
+        description: Indicator key matching stg_berlin_ewr.indicator.
+        tests:
+          - not_null
+          - unique
+      - name: label_de
+        description: German label for the indicator.
+        tests:
+          - not_null
+      - name: label_en
+        description: English label for the indicator.
+        tests:
+          - not_null
+      - name: unit
+        description: Unit of measurement (e.g. 'share', 'count', 'years').
+        tests:
+          - not_null
+      - name: definition_vintage_from
+        description: First reference year for which this indicator definition applies.
+        tests:
+          - not_null
+      - name: definition_vintage_to
+        description: Last reference year for which this indicator definition applies.
+        tests:
+          - not_null
+      - name: source_table
+        description: Source column expression from the raw EWR CSV.
+        tests:
+          - not_null
+      - name: caveats
+        description: >
+          Free-text caveats or known issues with the series (may be empty).
+          Example: "Definition changed with Mikrozensus reform ~2020; pre/post-2020
+          series not strictly comparable" for migration_background_share.

@@ -9,6 +9,7 @@ dependencies = [
     "dbt-duckdb>=1.9",
     "duckdb>=1.1",
     "pandas>=2.2",
+    "pyarrow>=14",
     "scikit-learn>=1.5",
     "scipy>=1.13",
     "quackosm>=0.11",
