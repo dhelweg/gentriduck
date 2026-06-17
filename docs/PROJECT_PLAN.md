@@ -261,11 +261,14 @@ data and see whether the paper's conclusions reproduce; exact 2018 inputs are no
 - **C3** Fact `poi_development` (POI counts/categories per area per time). · *DE pair* · C2.
   *Pre-requisite — LOR geometry ingestion + dual-vintage spatial join (issue #22):*
   OSM parquets have `area_code = NULL`; POIs must be spatially assigned to PLR before aggregation.
-  Three sub-steps: **(C3-geo)** ingest LOR PLR shapefiles for both boundary vintages
-  (pre-2021 447 PLRs + LOR 2021 542 PLRs, CC BY 3.0 DE from daten.berlin.de) into `stg_lor_geometries`;
-  **(C3-join)** `ST_Within(ST_Point(lon, lat), plr_geometry)` per snapshot year against the correct
-  vintage (snapshots ≤2020 → pre-2021 boundaries; ≥2021 → LOR 2021 boundaries) — avoids a count
-  discontinuity at the 2021 reform; **(C3-fact)** aggregate to
+  **Geometry source (fully programmatic — no manual download):** GDI Berlin OGC WFS, CC BY 3.0 DE.
+  - Pre-2021: `https://gdi.berlin.de/services/wfs/lor_2019` · feature type `lor_2019:a_lor_plr_2019` · 448 PLRs
+  - LOR 2021: `https://gdi.berlin.de/services/wfs/lor_2021` · feature type `lor_2021:a_lor_plr_2021` · 542 PLRs
+  - Both serve `outputFormat=application/json`; `plr_id` attribute = `area_code` (direct match); default CRS EPSG:25833 → transform to WGS84 for join.
+  Three sub-steps: **(C3-geo)** fetch both vintages via WFS GeoJSON → write to
+  `data/raw/berlin/lor/{pre2021,2021}.parquet`; **(C3-join)** `ST_Within(ST_Point(lon, lat), plr_geometry)`
+  per snapshot year against the correct vintage (snapshots ≤2020 → pre-2021; ≥2021 → LOR 2021) —
+  avoids a count discontinuity at the 2021 reform; **(C3-fact)** aggregate to
   `fct_poi_development(area_code, area_vintage, poi_category, snapshot_year, poi_count)`.
 - **C3b** **Socio-economic time series:** ingest multi-year **EWR** (and later price/rent) per area,
   conformed to `dim_area`/`dim_city` + a `year` grain — so the over-time index reflects social change,
