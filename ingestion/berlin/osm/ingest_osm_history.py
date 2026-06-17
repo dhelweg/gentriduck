@@ -18,9 +18,18 @@ Processing:
 
 Usage:
   uv run python ingestion/berlin/osm/ingest_osm_history.py \\
-      --osh-pbf data/raw/osm/germany-internal.osh.pbf \\
+      --osh-pbf data/raw/germany-internal.osh.pbf \\
       --out-dir data/raw/osm/berlin \\
       --years 2008-2024
+
+Performance (M2 MacBook Pro, 11 GB germany-internal.osh.pbf):
+  Each worker makes one full sequential pass through the .osh.pbf file.
+  ~75 min per year-worker.  Parallelism helps on I/O-light machines but
+  causes contention when multiple processes read the same large file
+  simultaneously — tested: 9 parallel workers at 100 % CPU each, no
+  faster than 3.  Recommended: --workers 3 max, or sequential (default)
+  if RAM < 8 GB.  Full 17-year run (2008-2024): ~3.5 h sequential,
+  ~2.5 h with --workers 3.
 
 Dependency note (new in C1):
   `osmium` (PyPI, BSL-1.0) was added to pyproject.toml as part of this task.
