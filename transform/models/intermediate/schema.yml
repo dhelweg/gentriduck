@@ -18,13 +18,15 @@ models:
         tests:
           - not_null
           - accepted_values:
-              values: ["BER"]
+              arguments:
+                values: ["BER"]
       - name: area_level
         description: Area level identifier. Values from seed_dim_area_level.
         tests:
           - not_null
           - accepted_values:
-              values: ["bezirk", "bzr", "plr"]
+              arguments:
+                values: ["bezirk", "bzr", "plr"]
       - name: area_code
         description: Area code (raum_id from the thesis golden).
         tests:
@@ -46,25 +48,29 @@ models:
         tests:
           - not_null
           - accepted_values:
-              values: ["standard", "distance_weighted"]
+              arguments:
+                values: ["standard", "distance_weighted"]
       - name: status_class_bi
         description: Projected status class (binary; hoch/mittel/niedrig).
         tests:
           - accepted_values:
-              values: ["hoch", "mittel", "niedrig"]
+              arguments:
+                values: ["hoch", "mittel", "niedrig"]
       - name: dynamik_class_bi
         description: Projected dynamik class (binary; positiv/neutral/negativ).
         tests:
           - accepted_values:
-              values: ["positiv", "neutral", "negativ"]
+              arguments:
+                values: ["positiv", "neutral", "negativ"]
     tests:
       - dbt_utils.unique_combination_of_columns:
-          combination_of_columns:
-            - city_code
-            - area_level
-            - area_code
-            - period_yyyymm
-            - variant
+          arguments:
+            combination_of_columns:
+              - city_code
+              - area_level
+              - area_code
+              - period_yyyymm
+              - variant
 
   - name: dim_city
     description: >
@@ -105,14 +111,16 @@ models:
         tests:
           - not_null
           - relationships:
-              to: ref('dim_city')
-              field: city_code
+              arguments:
+                to: ref('dim_city')
+                field: city_code
       - name: area_level
         description: Area level identifier.
         tests:
           - not_null
           - accepted_values:
-              values: ["bezirk", "bzr", "plr"]
+              arguments:
+                values: ["bezirk", "bzr", "plr"]
       - name: area_code
         description: Area code. Natural key within (city_code, area_level).
         tests:

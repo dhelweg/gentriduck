@@ -27,23 +27,27 @@ models:
         tests:
           - not_null
           - accepted_values:
-              values: ["BER"]
+              arguments:
+                values: ["BER"]
       - name: area_level
         description: Area level identifier, always 'bzr' for this staging model.
         tests:
           - not_null
           - accepted_values:
-              values: ["bezirk", "bzr", "plr"]
+              arguments:
+                values: ["bezirk", "bzr", "plr"]
       - name: status_klasse_prj_bi
         description: Projected status class (binary; hoch/mittel/niedrig).
         tests:
           - accepted_values:
-              values: ["hoch", "mittel", "niedrig"]
+              arguments:
+                values: ["hoch", "mittel", "niedrig"]
       - name: dynamik_klasse_prj_bi
         description: Projected dynamik class (binary; positiv/neutral/negativ).
         tests:
           - accepted_values:
-              values: ["positiv", "neutral", "negativ"]
+              arguments:
+                values: ["positiv", "neutral", "negativ"]
 
   - name: stg_thesis_2018_result_plr
     description: >
@@ -70,23 +74,27 @@ models:
         tests:
           - not_null
           - accepted_values:
-              values: ["BER"]
+              arguments:
+                values: ["BER"]
       - name: area_level
         description: Area level identifier, always 'plr'.
         tests:
           - not_null
           - accepted_values:
-              values: ["bezirk", "bzr", "plr"]
+              arguments:
+                values: ["bezirk", "bzr", "plr"]
       - name: status_klasse_prj_bi
         description: Projected status class (binary).
         tests:
           - accepted_values:
-              values: ["hoch", "mittel", "niedrig"]
+              arguments:
+                values: ["hoch", "mittel", "niedrig"]
       - name: dynamik_klasse_prj_bi
         description: Projected dynamik class (binary).
         tests:
           - accepted_values:
-              values: ["positiv", "neutral", "negativ"]
+              arguments:
+                values: ["positiv", "neutral", "negativ"]
 
   - name: stg_thesis_2018_result_plr_distcalc
     description: >
@@ -117,13 +125,15 @@ models:
         tests:
           - not_null
           - accepted_values:
-              values: ["BER"]
+              arguments:
+                values: ["BER"]
       - name: area_level
         description: Area level identifier, always 'plr'.
         tests:
           - not_null
           - accepted_values:
-              values: ["bezirk", "bzr", "plr"]
+              arguments:
+                values: ["bezirk", "bzr", "plr"]
       - name: is_distance_weighted
         description: >
           Flag indicating that POI features were distance-weighted in this variant.

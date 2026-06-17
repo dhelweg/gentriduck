@@ -28,17 +28,20 @@ models:
         tests:
           - not_null
           - accepted_values:
-              values: ["BER"]
+              arguments:
+                values: ["BER"]
           - relationships:
-              to: ref('dim_city')
-              field: city_code
+              arguments:
+                to: ref('dim_city')
+                field: city_code
       - name: area_level
         description: Area level identifier from the conformed taxonomy.
         data_type: varchar
         tests:
           - not_null
           - accepted_values:
-              values: ["bezirk", "bzr", "plr"]
+              arguments:
+                values: ["bezirk", "bzr", "plr"]
       - name: area_code
         description: Area code. Part of the natural key.
         data_type: varchar
@@ -62,7 +65,8 @@ models:
         tests:
           - not_null
           - accepted_values:
-              values: ["standard", "distance_weighted"]
+              arguments:
+                values: ["standard", "distance_weighted"]
       - name: population
         description: Area population (Einwohner) at the reporting period.
         data_type: double
@@ -77,7 +81,8 @@ models:
         data_type: varchar
         tests:
           - accepted_values:
-              values: ["hoch", "mittel", "niedrig"]
+              arguments:
+                values: ["hoch", "mittel", "niedrig"]
       - name: dynamik_index
         description: Dynamik sub-index (z-score of POI-based dynamik features).
         data_type: double
@@ -89,7 +94,8 @@ models:
         data_type: varchar
         tests:
           - accepted_values:
-              values: ["positiv", "neutral", "negativ"]
+              arguments:
+                values: ["positiv", "neutral", "negativ"]
       - name: own_idx_class
         description: Own index class (5 buckets; socio-economic EWR-based index).
         data_type: varchar
@@ -98,9 +104,10 @@ models:
         data_type: varchar
     tests:
       - dbt_utils.unique_combination_of_columns:
-          combination_of_columns:
-            - city_code
-            - area_level
-            - area_code
-            - period_yyyymm
-            - variant
+          arguments:
+            combination_of_columns:
+              - city_code
+              - area_level
+              - area_code
+              - period_yyyymm
+              - variant
