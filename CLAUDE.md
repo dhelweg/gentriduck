@@ -45,20 +45,28 @@ from open sources — only small golden/reference files are committed.
 `web-engineer` (+ reviewer) are added at Epic G.
 
 ## Overnight / autonomous local run
-To hand off to the agents and walk away, open a persistent tmux session and invoke the PM:
-```bash
-tmux new -s gentriduck          # or: tmux attach -t gentriduck
-# inside tmux — tell Claude: "start the project manager and work on next best tasks"
-```
-The PM reads `docs/handoff/`, drives the next board task through the coder↔reviewer loop,
-creates a PR, and writes a new handoff. Permissions in `.claude/settings.local.json` are
-pre-approved so no manual prompts are needed. Tomorrow: `tmux attach -t gentriduck` to review.
+Claude **must run as the main session** (not a background subagent) so that git push and gh
+commands work. All required permissions are pre-approved in `.claude/settings.local.json`.
 
-For a recurring nightly cron (fires at 00:00 Berlin time, logs to `~/.claude/gentriduck-overnight.log`):
+**Start now and detach (one command):**
+```bash
+tmux new-session -d -s overnight \
+  "cd ~/git_private/gentriduck && claude --print 'start the project manager and work on next best tasks' >> ~/.claude/gentriduck-overnight.log 2>&1"
+```
+Check progress tomorrow:
+```bash
+tmux attach -t overnight                       # live session (if still running)
+tail ~/.claude/gentriduck-overnight.log        # if session already ended
+```
+
+**Recurring nightly cron (00:00 Berlin = 22:00 UTC):**
 ```bash
 (crontab -l 2>/dev/null; echo '0 22 * * * cd ~/git_private/gentriduck && claude --print "start the project manager and work on next best tasks" >> ~/.claude/gentriduck-overnight.log 2>&1') | crontab -
 ```
 Remove with: `crontab -e`
+
+> **Why not ask Claude to "run the PM" in an open session?** That spawns the PM as a subagent,
+> which runs in a restricted sandbox and cannot push to GitHub. Use `claude --print` above.
 
 ## Epic B framing
 B is a **directional revival** — does the 2018 paper's findings still hold? Exact number-for-number
