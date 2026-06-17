@@ -1,0 +1,125 @@
+version: 2
+
+models:
+  - name: int_thesis_2018_area_index
+    description: >
+      Conformed union of all three 2018 thesis golden staging models (bzr standard,
+      plr standard, plr distance_weighted). Normalises column names to the shared
+      mart schema. This is the single source of truth for the 2018 thesis index
+      within the Gentriduck warehouse and is used directly by the gentrification_index
+      mart. When Epic B3/C ingestion lands, this model is replaced/extended with
+      computed values; until then it serves as the directional baseline per the
+      Epic B strategy (docs/epic-b/B0-input-inventory.md).
+    meta:
+      dbt_meta_owner: data-engineer
+    columns:
+      - name: city_code
+        description: City identifier (ADR-0005). Always 'BER' from the thesis goldens.
+        tests:
+          - not_null
+          - accepted_values:
+              values: ["BER"]
+      - name: area_level
+        description: Area level identifier. Values from seed_dim_area_level.
+        tests:
+          - not_null
+          - accepted_values:
+              values: ["bezirk", "bzr", "plr"]
+      - name: area_code
+        description: Area code (raum_id from the thesis golden).
+        tests:
+          - not_null
+      - name: area_name
+        description: Area name (raum_desc; German, latin-1 decoded).
+        tests:
+          - not_null
+      - name: period_yyyymm
+        description: Reporting period as string YYYYMM (e.g. '201612').
+        tests:
+          - not_null
+      - name: variant
+        description: >
+          Index variant discriminator. 'standard' uses non-distance-weighted POI
+          features; 'distance_weighted' uses the POI inverse-distance weighting
+          from the 2018 thesis Java UDF (to be reproduced in DuckDB ST_Distance/
+          ST_DWithin in Epic B3/C).
+        tests:
+          - not_null
+          - accepted_values:
+              values: ["standard", "distance_weighted"]
+      - name: status_class_bi
+        description: Projected status class (binary; hoch/mittel/niedrig).
+        tests:
+          - accepted_values:
+              values: ["hoch", "mittel", "niedrig"]
+      - name: dynamik_class_bi
+        description: Projected dynamik class (binary; positiv/neutral/negativ).
+        tests:
+          - accepted_values:
+              values: ["positiv", "neutral", "negativ"]
+    tests:
+      - dbt_utils.unique_combination_of_columns:
+          combination_of_columns:
+            - city_code
+            - area_level
+            - area_code
+            - period_yyyymm
+            - variant
+
+  - name: dim_city
+    description: >
+      Conformed city dimension (ADR-0005 city-agnostic seam). One row per city.
+      Currently Berlin only (BER). Sourced from seed_dim_city. Multi-city expansion
+      (Epic H) adds a new seed row + adapter without changing this model or any mart.
+    meta:
+      dbt_meta_owner: data-engineer
+    columns:
+      - name: city_code
+        description: Short city identifier (e.g. 'BER'). Natural key.
+        tests:
+          - not_null
+          - unique
+      - name: city_name
+        description: Human-readable city name (e.g. 'Berlin').
+        tests:
+          - not_null
+      - name: country_code
+        description: ISO 3166-1 alpha-2 country code (e.g. 'DE').
+        tests:
+          - not_null
+
+  - name: dim_area
+    description: >
+      Conformed area dimension (ADR-0005 city-agnostic seam). Distinct
+      (city_code, area_level, area_code, area_name) from int_thesis_2018_area_index
+      joined with seed_dim_area_level for level_name.
+      NOTE: parent_area_code is intentionally omitted until stg_berlin_lor is
+      populated (Epic B2/C). When the LOR geometry ingestion lands, add the parent
+      crosswalk via a join on (city_code, area_code, area_level). See model SQL for
+      details.
+    meta:
+      dbt_meta_owner: data-engineer
+    columns:
+      - name: city_code
+        description: City identifier (FK -> dim_city).
+        tests:
+          - not_null
+          - relationships:
+              to: ref('dim_city')
+              field: city_code
+      - name: area_level
+        description: Area level identifier.
+        tests:
+          - not_null
+          - accepted_values:
+              values: ["bezirk", "bzr", "plr"]
+      - name: area_code
+        description: Area code. Natural key within (city_code, area_level).
+        tests:
+          - not_null
+      - name: area_name
+        description: Area name (human-readable; German).
+        tests:
+          - not_null
+      - name: level_name
+        description: Human-readable level name from seed_dim_area_level.

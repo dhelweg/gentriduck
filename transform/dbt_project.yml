@@ -23,3 +23,14 @@ models:
       +materialized: view
     marts:
       +materialized: table
+
+seeds:
+  gentriduck:
+    +schema: seeds
+
+# Project-level variables.
+# project_root resolves the absolute repo root at build time via PWD, so
+# staging models can call read_csv with an absolute path (cross-platform).
+# Override via --vars 'project_root: /absolute/path' if PWD is not the repo root.
+vars:
+  project_root: "{{ env_var('PWD', '.') }}"

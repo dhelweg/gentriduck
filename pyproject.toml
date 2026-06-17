@@ -29,6 +29,10 @@ target-version = "py312"
 line-length = 100
 extend-exclude = [".venv", "transform/dbt_packages", "transform/target"]
 
+[tool.sqlfmt]
+# Exclude generated dbt artefacts; sqlfmt owns source models only.
+exclude = ["transform/target/**", "transform/dbt_packages/**"]
+
 # Cross-platform task runner — identical commands on macOS / Windows / Linux.
 # dbt always runs against the project in transform/ with a repo-local profile.
 [tool.poe.tasks]

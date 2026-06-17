@@ -1,0 +1,106 @@
+version: 2
+
+models:
+  - name: gentrification_index
+    description: >
+      Governed gentrification index mart (ADR-0004). One row per
+      (city_code, area_level, area_code, period_yyyymm, variant).
+      This is the core output of the Gentriduck warehouse; its schema
+      is governed by ADR-0004 and stable — changes require a deliberate
+      contract edit.
+
+      Current state (Epic B baseline): sourced from the 2018 thesis goldens
+      via int_thesis_2018_area_index. When Epic B3/C re-computes the index
+      from fresh OSM/EWR inputs, the upstream intermediate model is updated
+      and this mart rebuilds without schema changes.
+
+      Index definition reference: docs/adr/0004-data-governance-and-index-definition.md
+    meta:
+      dbt_meta_owner: data-engineer
+      governed_definition: ADR-0004
+    config:
+      contract:
+        enforced: true
+    columns:
+      - name: city_code
+        description: City identifier (FK -> dim_city). ADR-0005 seam.
+        data_type: varchar
+        tests:
+          - not_null
+          - accepted_values:
+              values: ["BER"]
+          - relationships:
+              to: ref('dim_city')
+              field: city_code
+      - name: area_level
+        description: Area level identifier from the conformed taxonomy.
+        data_type: varchar
+        tests:
+          - not_null
+          - accepted_values:
+              values: ["bezirk", "bzr", "plr"]
+      - name: area_code
+        description: Area code. Part of the natural key.
+        data_type: varchar
+        tests:
+          - not_null
+      - name: area_name
+        description: Area name (human-readable; German with umlauts).
+        data_type: varchar
+        tests:
+          - not_null
+      - name: period_yyyymm
+        description: Reporting period as string YYYYMM (e.g. '201612').
+        data_type: varchar
+        tests:
+          - not_null
+      - name: variant
+        description: >
+          Index variant. 'standard' uses non-distance-weighted POI features;
+          'distance_weighted' uses POI inverse-distance weighting.
+        data_type: varchar
+        tests:
+          - not_null
+          - accepted_values:
+              values: ["standard", "distance_weighted"]
+      - name: population
+        description: Area population (Einwohner) at the reporting period.
+        data_type: double
+      - name: status_index
+        description: Status sub-index (z-score of POI-based status features).
+        data_type: double
+      - name: status_class
+        description: Projected status class (three values; from thesis projected scheme).
+        data_type: varchar
+      - name: status_class_bi
+        description: Binary projected status class (hoch/mittel/niedrig).
+        data_type: varchar
+        tests:
+          - accepted_values:
+              values: ["hoch", "mittel", "niedrig"]
+      - name: dynamik_index
+        description: Dynamik sub-index (z-score of POI-based dynamik features).
+        data_type: double
+      - name: dynamik_class
+        description: Projected dynamik class (three values; negativ/neutral/positiv).
+        data_type: varchar
+      - name: dynamik_class_bi
+        description: Binary projected dynamik class (positiv/neutral/negativ).
+        data_type: varchar
+        tests:
+          - accepted_values:
+              values: ["positiv", "neutral", "negativ"]
+      - name: own_idx_class
+        description: Own index class (5 buckets; socio-economic EWR-based index).
+        data_type: varchar
+      - name: own_idx_class_bi
+        description: Binary own index class.
+        data_type: varchar
+    tests:
+      - dbt_utils.unique_combination_of_columns:
+          combination_of_columns:
+            - city_code
+            - area_level
+            - area_code
+            - period_yyyymm
+            - variant
