@@ -94,11 +94,20 @@ import datetime
 import io
 import json
 import logging
+import ssl
 import sys
 import urllib.parse
 import urllib.request
 from pathlib import Path
 from typing import Optional
+
+# macOS Python does not ship CA certs; use certifi's bundle when available.
+try:
+    import certifi as _certifi
+
+    _SSL_CONTEXT = ssl.create_default_context(cafile=_certifi.where())
+except ImportError:
+    _SSL_CONTEXT = ssl.create_default_context()
 
 import pandas as pd
 import pyarrow as pa
@@ -123,12 +132,23 @@ CKAN_API_BASE = "https://daten.berlin.de/api/3/action/package_search"
 # Maintainer: when a new year is published, add the direct CSV download URL here,
 # or rely on the CKAN API fallback.
 VINTAGE_URLS: dict[int, str] = {
-    # No hard-wired URLs by default; rely on CKAN API discovery per year.
-    # Example entry:
-    # 2024: (
-    #     "https://www.statistik-berlin-brandenburg.de/opendata/"
-    #     "EWR_Dez2024_PLR_Matrix.csv"
-    # ),
+    # Direct CSV download URLs from statistik-berlin-brandenburg.de (CC BY 3.0 DE).
+    # Source: daten.berlin.de CKAN API + manual verification.
+    2008: "https://www.statistik-berlin-brandenburg.de/opendata/EWR200812E_Matrix.csv",
+    2009: "https://www.statistik-berlin-brandenburg.de/opendata/EWR200912E_Matrix.csv",
+    2010: "https://www.statistik-berlin-brandenburg.de/opendata/EWR201012E_Matrix.csv",
+    2011: "https://www.statistik-berlin-brandenburg.de/opendata/EWR201112E_Matrix.csv",
+    2012: "https://www.statistik-berlin-brandenburg.de/opendata/EWR201212E_Matrix.csv",
+    2013: "https://www.statistik-berlin-brandenburg.de/opendata/EWR201312E_Matrix.csv",
+    # 2014: not published on the open-data portal.
+    2015: "https://www.statistik-berlin-brandenburg.de/opendata/EWR201512E_Matrix.csv",
+    2016: "https://www.statistik-berlin-brandenburg.de/opendata/EWR201612E_Matrix.csv",
+    2017: "https://www.statistik-berlin-brandenburg.de/opendata/EWR201712E_Matrix.csv",
+    2018: "https://www.statistik-berlin-brandenburg.de/opendata/EWR201812E_Matrix.csv",
+    2019: "https://www.statistik-berlin-brandenburg.de/opendata/EWR201912E_Matrix.csv",
+    2020: "https://www.statistik-berlin-brandenburg.de/opendata/EWR202012E_Matrix.csv",
+    # 2021-2023: not yet published on the open-data portal (CKAN API miss confirmed).
+    2024: "https://www.statistik-berlin-brandenburg.de/opendata/EWR_L21_202412E_Matrix.csv",
 }
 
 # Values that represent privacy suppression in the EWR CSV cells.
@@ -225,7 +245,7 @@ def discover_url_via_ckan(year: int, timeout: int = 30) -> Optional[str]:
     log.debug("CKAN API discovery for year %d: %s", year, api_url)
 
     try:
-        with urllib.request.urlopen(api_url, timeout=timeout) as resp:  # noqa: S310
+        with urllib.request.urlopen(api_url, timeout=timeout, context=_SSL_CONTEXT) as resp:  # noqa: S310
             payload = json.loads(resp.read())
     except Exception as exc:
         log.warning("CKAN API request failed for year %d: %s", year, exc)
@@ -456,14 +476,8 @@ def compute_indicators(df: pd.DataFrame, year: int) -> pd.DataFrame:
 # ---------------------------------------------------------------------------
 
 
-def download_csv(url: str, year: int) -> pd.DataFrame:
-    """Download a CSV from url and parse it; tries ';', ',', and tab separators."""
-    log.info("Downloading EWR %d from %s", year, url)
-    with urllib.request.urlopen(url, timeout=120) as resp:  # noqa: S310
-        raw_bytes = resp.read()
-
-    # Try latin-1 first (older StatBB files use Windows-1252/latin-1),
-    # then utf-8-sig (BOM-prefixed), then utf-8.
+def _parse_csv_bytes(raw_bytes: bytes, year: int) -> pd.DataFrame:
+    """Decode and parse raw CSV bytes; tries latin-1/utf-8 and ;/,/tab separators."""
     for encoding in ("latin-1", "utf-8-sig", "utf-8", "cp1252"):
         try:
             text = raw_bytes.decode(encoding)
@@ -473,11 +487,10 @@ def download_csv(url: str, year: int) -> pd.DataFrame:
     else:
         raise ValueError(f"Cannot decode EWR CSV for {year}")
 
-    # Try semicolon separator (common for German government CSVs) then comma.
     for sep in (";", ",", "\t"):
         try:
             df = pd.read_csv(io.StringIO(text), sep=sep, dtype=str, low_memory=False, encoding=None)
-            if df.shape[1] > 5:  # sanity check: at least 5 columns
+            if df.shape[1] > 5:
                 log.debug(
                     "Parsed EWR %d CSV with sep=%r: %d rows x %d cols",
                     year,
@@ -492,6 +505,25 @@ def download_csv(url: str, year: int) -> pd.DataFrame:
     raise ValueError(f"Cannot parse EWR CSV for {year} — check separator/encoding")
 
 
+def load_local_csv(local_dir: Path, year: int) -> Optional[pd.DataFrame]:
+    """Load a pre-downloaded CSV from local_dir/<year>.csv if it exists."""
+    for name in (f"{year}.csv", f"EWR{year}12E_Matrix.csv", f"EWR_L21_{year}12E_Matrix.csv"):
+        path = local_dir / name
+        if path.exists():
+            log.info("Using local CSV for EWR %d: %s", year, path)
+            return _parse_csv_bytes(path.read_bytes(), year)
+    return None
+
+
+def download_csv(url: str, year: int) -> pd.DataFrame:
+    """Download a CSV from url and parse it; tries ';', ',', and tab separators."""
+    log.info("Downloading EWR %d from %s", year, url)
+    with urllib.request.urlopen(url, timeout=120, context=_SSL_CONTEXT) as resp:  # noqa: S310
+        raw_bytes = resp.read()
+
+    return _parse_csv_bytes(raw_bytes, year)
+
+
 # ---------------------------------------------------------------------------
 # Main pipeline
 # ---------------------------------------------------------------------------
@@ -499,22 +531,33 @@ def download_csv(url: str, year: int) -> pd.DataFrame:
 
 def process_year(
     year: int,
-    url: str,
+    url: Optional[str],
     out_dir: Path,
     dry_run: bool = False,
+    local_dir: Optional[Path] = None,
 ) -> bool:
-    """Download, compute indicators, write parquet. Returns True on success."""
+    """Load (local first, then HTTP), compute indicators, write parquet. Returns True on success."""
     out_path = out_dir / f"{year}.parquet"
 
     if dry_run:
-        log.info("[dry-run] Would download %d from %s -> %s", year, url, out_path)
+        src = f"local:{local_dir}" if local_dir else url or "CKAN-discovery"
+        log.info("[dry-run] Would process %d from %s -> %s", year, src, out_path)
         return True
 
-    try:
-        raw_df = download_csv(url, year)
-    except Exception as exc:
-        log.error("Failed to download EWR %d: %s", year, exc)
-        return False
+    # Local pre-downloaded CSV takes priority over HTTP.
+    raw_df = None
+    if local_dir:
+        raw_df = load_local_csv(local_dir, year)
+
+    if raw_df is None:
+        if url is None:
+            log.warning("No URL and no local CSV for EWR %d — skipping.", year)
+            return False
+        try:
+            raw_df = download_csv(url, year)
+        except Exception as exc:
+            log.error("Failed to download EWR %d: %s", year, exc)
+            return False
 
     try:
         wide_df = compute_indicators(raw_df, year)
@@ -601,9 +644,21 @@ def build_parser() -> argparse.ArgumentParser:
         ),
     )
     p.add_argument(
+        "--local-csv-dir",
+        type=Path,
+        default=None,
+        metavar="DIR",
+        help=(
+            "Directory of pre-downloaded CSVs (e.g. data/raw/berlin/ewr/csv). "
+            "Files named <year>.csv, EWR<year>12E_Matrix.csv, or "
+            "EWR_L21_<year>12E_Matrix.csv are used instead of HTTP download. "
+            "Use this when statistik-berlin-brandenburg.de blocks programmatic access."
+        ),
+    )
+    p.add_argument(
         "--dry-run",
         action="store_true",
-        help="Print what would be downloaded without making HTTP calls.",
+        help="Print what would be processed without making HTTP calls.",
     )
     p.add_argument(
         "--verbose",
@@ -632,10 +687,13 @@ def main(argv: Optional[list[str]] = None) -> int:
         url_map[int(yr_str)] = url.strip()
 
     out_dir = args.out_dir.resolve()
+    local_dir = args.local_csv_dir.resolve() if args.local_csv_dir else None
     dry_run = args.dry_run
 
     if dry_run:
         log.info("[dry-run] mode — no HTTP calls will be made.")
+    if local_dir:
+        log.info("Local CSV directory: %s", local_dir)
 
     success_count = 0
     skip_count = 0
@@ -645,7 +703,12 @@ def main(argv: Optional[list[str]] = None) -> int:
     for year in years:
         url = url_map.get(year)
 
-        if url is None:
+        # Skip URL discovery if a local file will cover this year.
+        has_local = (
+            local_dir and load_local_csv(local_dir, year) is not None if not dry_run else False
+        )
+
+        if url is None and not has_local:
             # Attempt CKAN API discovery.
             if not dry_run:
                 log.info("Attempting CKAN API discovery for year %d ...", year)
@@ -653,17 +716,18 @@ def main(argv: Optional[list[str]] = None) -> int:
             else:
                 log.info("[dry-run] Would attempt CKAN API discovery for year %d", year)
 
-        if url is None:
+        if url is None and not has_local:
             log.warning(
-                "No URL found for EWR %d (CKAN API miss) — skipping. "
-                "Add an entry to VINTAGE_URLS or use --url-override %d=<url>.",
+                "No URL and no local CSV for EWR %d — skipping. "
+                "Add to VINTAGE_URLS, use --url-override %d=<url>, "
+                "or place a CSV in --local-csv-dir.",
                 year,
                 year,
             )
             skip_count += 1
             continue
 
-        ok = process_year(year, url, out_dir, dry_run=dry_run)
+        ok = process_year(year, url, out_dir, dry_run=dry_run, local_dir=local_dir)
         if ok:
             success_count += 1
             out_path = out_dir / f"{year}.parquet"
