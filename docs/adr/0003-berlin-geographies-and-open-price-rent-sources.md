@@ -1,7 +1,8 @@
 # ADR-0003: Berlin geographies + open price/rent sources
 
-- **Status:** Proposed
+- **Status:** Accepted
 - **Date:** 2026-06-17
+- **Ratified:** 2026-06-18
 
 ## Context
 
@@ -121,6 +122,20 @@ distribution channel to standardise on.
 - **Status:** **Reference document, not a structured dataset.** We do not ingest it into the
   warehouse. Analysts (Epic E) and the methodology page (G2) may cite it for context.
 
+### P-D — Verkaufte Grundstücke (Gutachterausschuss / Senate WFS)
+
+- **What:** Annual dataset of actual registered property transactions in Berlin, from the
+  *Kaufpreissammlung* (purchase price collection) maintained by the *Gutachterausschuss für
+  Grundstückswerte*. Covers residential transactions by market segment.
+- **Source:** `daten.berlin.de` per-year dataset pages pointing at WFS endpoints (e.g.
+  `gdi.berlin.de/services/wfs/verkaufte_grundstuecke<YEAR>`).
+- **Licence:** **Datenlizenz Deutschland – Zero – 2.0.** No attribution legally required;
+  we credit "Gutachterausschuss für Grundstückswerte in Berlin" for transparency.
+- **Login:** None.
+- **Value:** Unlike Bodenrichtwerte (reference values), these are *actual* sale prices —
+  a more direct signal of market activity. Useful as a structural indicator alongside
+  Bodenrichtwerte for Epic D.
+
 ### P-X — Transactional / asking-rent datasets (ImmoScout24, immowelt, …) — **REJECTED**
 
 - All require paid plans or proprietary scraping with disputed legality. **Out of scope by
@@ -174,7 +189,10 @@ distribution channel to standardise on.
 9. **Bodenrichtwerte:** primary, annual. Adopt the per-year WFS endpoint pattern
    `gdi.berlin.de/services/wfs/brw<YEAR>`. Staging table **`stg_berlin_bodenrichtwert`** —
    `(reference_date, geometry, value_eur_per_m2, nutzung, …)`. Licence: **dl-de-zero-2.0**.
-10. **Mietspiegel:** primary for Epic D, with two ingestion paths because the publication is
+10. **Verkaufte Grundstücke:** annual actual transaction prices from the Kaufpreissammlung.
+    Staging table **`stg_berlin_verkaufte_grundstuecke`** — `(year, geometry, price_eur,
+    segment, …)`. Licence: **dl-de-zero-2.0**.
+11. **Mietspiegel:** primary for Epic D, with two ingestion paths because the publication is
     split:
     - **Wohnlagen WFS** → **`stg_berlin_wohnlage`** (`(vintage, address_or_block, wohnlage)`).
       Licence: **dl-de-zero-2.0**.
@@ -184,7 +202,7 @@ distribution channel to standardise on.
       a *small reference fixture* (ADR-0001/A8) and is committed; we do not redistribute the
       PDF itself. Source row records "Mietspiegeltabelle <year>, Senatsverwaltung für
       Stadtentwicklung, Bauen und Wohnen Berlin" as attribution.
-11. **IBB Wohnungsmarktbericht:** **reference only**. Not ingested. Cited by URL in the
+12. **IBB Wohnungsmarktbericht:** **reference only**. Not ingested. Cited by URL in the
     methodology page (G2) and in narrative analyses (Epic E3).
 
 ### Attribution wall (driven by G3)
@@ -259,9 +277,8 @@ These are deferred to the maintainer's ratification of this ADR and/or to Epic D
 5. **Bodenrichtwerte temporal coverage for the revival.** Backfill is technically available
    from 2002, but Epic B only needs the 2018 vintage and the current vintage for the
    directional check. Epic D's full back-series scope is a separate decision.
-6. **Ratification.** This ADR is **Proposed**. It is ratified once the maintainer signs off and
-   Epic D begins; if any source above turns out to require login/payment at ingestion time it
-   is swapped out and this ADR is superseded.
+6. **Verkaufte Grundstücke temporal coverage.** Available at least from 2024; backfill depth
+   for earlier years needs confirming before Epic D begins.
 
 ## References
 

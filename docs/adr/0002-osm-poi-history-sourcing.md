@@ -1,7 +1,8 @@
 # ADR-0002: OSM POI history sourcing
 
-- **Status:** Proposed
+- **Status:** Accepted
 - **Date:** 2026-06-17
+- **Ratified:** 2026-06-18
 
 ## Context
 
@@ -96,45 +97,36 @@ each with quackosm, stack into a time series in DuckDB.
 
 ## Decision
 
-**Primary path: Option A (ohsome API), with explicit fallback to Option B (full-history PBF
-processed locally with `quackosm`) if the ohsomeDB transition closes off free, anonymous HTTP
-access.**
+**Primary path: Option B — full-history PBF (`.osh.pbf`) downloaded from Geofabrik's internal
+server using the maintainer's OSM contributor account, processed locally with `quackosm`.**
 
-Concretely:
+### Rationale for switching from the originally proposed Option A
 
-- **Time grain:** **annual snapshots**, ISO timestamp `YYYY-01-01T00:00:00Z`, for the years
-  **2008 → present** (sliding). 2018 is one of the snapshots so Epic B's "do the findings still
-  hold?" check has the same vintage available alongside current data.
-- **Ingestion contract:** the Python ingestion in `ingestion/<city>/osm/` calls the chosen source
-  per-year, materialises one **GeoParquet** file per `(city, year)`, and dbt staging
-  (`stg_osm_poi`) unions them with a `year` column. The choice of source is a single function
-  swap behind that interface — dbt models don't care which option produced the parquet.
-- **Why ohsome first:** zero local disk burden, pure HTTP (cross-platform), full history depth
-  out of the box, the same API yields the *coverage denominators* we need for the
-  completeness-bias correction (Epic C5). It is the lowest-friction way to *start* the
-  longitudinal database; we can always re-materialise from B later without changing dbt models.
-- **Why B is the explicit fallback, not the default:** local full-history processing is
-  reproducible without depending on a third-party service, and `quackosm` keeps the toolchain
-  pure-Python on all three OSes. It is the right insurance policy against the ohsomeDB
-  transition. We do **not** make it the default today because the **public** full-history path
-  is large (planet-scale download or third-party mirrors), and the **convenient** regional
-  history extract (Geofabrik internal server) is **login-gated and therefore disqualified** under
-  our open-data rule.
-- **Why C is rejected:** no public, no-login historical archive of past Geofabrik snapshots
-  exists. Going forward it could collect new snapshots, but it cannot backfill — which is
-  the whole point of Epic C.
+ohsomeDB launched May 2026 and **requires mandatory account authentication** — the free anonymous
+tier no longer exists. This triggered the switch condition stated in the original proposal. Option
+A is therefore disqualified under the project's no-signup-keyed-sources rule.
 
-### Trigger to switch from A to B
+The original objection to Option B — that the Geofabrik regional `.osh.pbf` is login-gated — is
+resolved by the fact that the **maintainer holds an OSM contributor account**. OSM is already a
+core dependency of the project (ODbL attribution), so this does not add a new external account.
 
-Adopt Option B as primary if **any** of the following becomes true:
+Option C remains rejected: no public backfill of historical snapshots exists.
 
-1. ohsomeDB (post-May 2026) requires authentication for anonymous HTTP access.
-2. The legacy ohsome API is shut down (planned after SOTM 2026) and the replacement is not a
-   drop-in free + anonymous + open service.
-3. ohsome rate limits or response sizes make annual city queries impractical.
+### Concretely
 
-When the trigger fires, write a superseding ADR (ADR-0002 stays as historical record) and
-re-materialise the parquet artefacts from Option B; dbt models stay unchanged.
+- **Source:** Geofabrik internal server (`osm-internal.download.geofabrik.de`) — regional
+  Germany `.osh.pbf`. Login with OSM contributor account. One-off download per machine into
+  `data/raw/osm/` (gitignored).
+- **Local processing:** `quackosm` (Apache-2.0, pure Python / DuckDB) reads the `.osh.pbf`
+  directly; no `osmium-tool` required for the happy path.
+- **Time grain:** **annual snapshots**, `YYYY-01-01T00:00:00Z`, years **2008 → present**.
+  2018 is included so Epic B's directional check uses the same vintage as the paper.
+- **Ingestion contract:** `ingestion/<city>/osm/` materialises one **GeoParquet** file per
+  `(city, year)`. dbt staging (`stg_osm_poi`) unions them with a `year` column. The source
+  choice is behind this interface — dbt models don't change if the source changes.
+- **Coverage denominators** for the Epic C5 completeness-bias correction: computed from the
+  same `.osh.pbf` (total mapped features per area per year), keeping the correction
+  self-contained without a second data source.
 
 ## Consequences
 
@@ -148,10 +140,8 @@ re-materialise the parquet artefacts from Option B; dbt models stay unchanged.
   G3 attribution page; the ingestion layer records "source = OSM via ohsome / ODbL" per-row.
 - **Coverage denominators come from the same source** as the POI counts in the primary path,
   which makes the C5 completeness-bias control straightforward.
-- **Service-dependency risk is real.** The ohsome API platform transition is announced and
-  imminent. We accept this risk because (a) the fallback is concrete, (b) the model layer is
-  insulated from the source choice by the parquet contract, and (c) re-running ingestion is a
-  rebuild, not a migration.
+- **No ongoing service dependency.** Once the `.osh.pbf` is downloaded, all processing is
+  fully local and reproducible without any external API.
 - **City-agnostic seam respected (ADR-0005).** The ingestion is `ingestion/<city>/osm/`; the
   source choice and tag-mapping live in the adapter; the warehouse sees a generic
   `(city, area, year, …)` parquet.

@@ -82,7 +82,7 @@ models:
         description: Dynamik sub-index (z-score of POI-based dynamik features).
         data_type: double
       - name: dynamik_class
-        description: Projected dynamik class (three values; stabil/positiv/negativ).
+        description: Projected dynamik class (three values; negativ/neutral/positiv).
         data_type: varchar
       - name: dynamik_class_bi
         description: Binary projected dynamik class (positiv/neutral/negativ).

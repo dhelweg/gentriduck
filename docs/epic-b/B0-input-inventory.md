@@ -1,6 +1,6 @@
 # B0 — Artifact inventory & pragmatic input sourcing
 
-- **Status:** Proposed (overnight draft, 2026-06-17 → 2026-06-18)
+- **Status:** Accepted (ratified 2026-06-18)
 - **Issue:** [#13 — B0 Artifact inventory & pragmatic input sourcing](https://github.com/dhelweg/gentriduck/issues/13)
 - **Scope:** Epic B (revive the 2018 concept; **directional** check, not exact reproduction).
 
@@ -92,13 +92,13 @@ These are downloaded per-machine via the future `ingestion/` modules:
 - **Berlin LOR geometries** (current + LOR-2021): `gdi.berlin.de` / FIS-Broker WFS → GeoParquet
   → `data/raw/berlin/lor/`.
 - **EWR per-PLR socio-economic series**: `daten.berlin.de` annual CSVs → `data/raw/berlin/ewr/`.
-- **OSM POI snapshots**: ohsome API queries per `(city, year, tag-filter)` → GeoParquet →
-  `data/raw/osm/`. **Annual snapshots from 2008-01-01 onward** (ADR-0002).
-
-For **Epic B**, an **OSM "current" snapshot** is sufficient to stand up the staging→intermediate→
-marts flow; the longitudinal full-history work is **Epic C**. Pragmatic choice: B2 ingests one
-ohsome snapshot at `2018-09-09` (the date stamped on the goldens) **plus** a "today" snapshot, so
-the directional check has something close to the paper's vintage.
+- **OSM POI full history**: Geofabrik regional `.osh.pbf` (Germany, OSM contributor login per
+  ADR-0002) → `data/raw/osm/germany.osh.pbf`. Processed once with `quackosm` into a
+  GeoParquet of POI edit history `(poi_id, valid_from, valid_to, geometry, tags)` →
+  `data/raw/osm/berlin_poi_history.parquet`. Annual new/closed counts are **derived** in
+  the intermediate layer, not pre-materialised as N snapshot files.
+- **EWR per-PLR socio-economic series**: all available vintages from `daten.berlin.de`
+  (31 Dec per year, back to earliest available) → `data/raw/berlin/ewr/`.
 
 ### Tier 3 — Skip / defer
 
@@ -110,15 +110,33 @@ the directional check has something close to the paper's vintage.
 - **Re-using the Weka ARFFs as inputs.** They're **outputs** of the 2018 pipeline; they become
   Epic E's comparison baseline, not Epic B's input.
 
-## Open questions for the maintainer
+## Maintainer decisions (ratified 2026-06-18)
 
-1. **OK to commit the three `result_full_*.csv` goldens (~17 MB)** to `reference/`? They are
-   OSM-derived (ODbL); attribution covered by the accompanying licence file and ADR-0001.
-2. **OSM snapshot dates for B** — confirm `(2018-09-09, today)` rather than `(today only)`?
-   Slight extra ingest cost; much clearer "directional vs paper" story.
-3. **EWR vintages for B** — the goldens are stamped 2018-09-09. Berlin EWR is published per-31-Dec.
-   Proposal: use **EWR 2017** (closest before the goldens) for the B reconciliation and the
-   **latest published EWR** for the "today" comparison.
+1. **Goldens committed — confirmed.** The three `result_full_*.csv` (~17 MB) stay in
+   `reference/`. ODbL attribution covered by the accompanying licence file.
+
+2. **OSM ingestion model — single history file, not per-year snapshots.**
+   Download the Geofabrik regional `.osh.pbf` (Germany, via OSM contributor account per
+   ADR-0002) once per machine into `data/raw/osm/`. Process it with `quackosm` to extract
+   the full POI edit history as `(poi_id, valid_from, valid_to, geometry, tags)` — one row
+   per POI *version*. Annual new/closed counts per area are then *derived* in
+   `int_poi_development` from those timestamps, not materialised as N separate snapshot files.
+
+   **Why this is better for gentrification analysis:** movement (new + closed POIs per year)
+   is the meaningful signal, not a static count at a point in time. The history file captures
+   exactly when each POI opened and closed, so annual net change falls out naturally.
+
+   **Staging contract change:** `stg_osm_poi` schema becomes
+   `(poi_id, valid_from, valid_to, lat, lon, geometry, domain, category, type, city_code)`
+   rather than a `(year, poi_id, ...)` snapshot model. Downstream intermediate models
+   compute `COUNT(*) WHERE valid_from <= year_end AND (valid_to IS NULL OR valid_to > year_start)`
+   for total stock, and new/closed counts similarly.
+
+3. **EWR — ingest all available years.** Pull every published vintage from `daten.berlin.de`
+   (Berlin EWR is semi-annual, 30 Jun + 31 Dec, going back to at least 2010). Pin to the
+   **31 December** snapshot per year for the longitudinal series. This gives the full
+   time-series context rather than just the 2017/2018 snapshot, matching the ambition of
+   showing the full development arc on the public site.
 
 ## Next steps (this overnight session, if time)
 
