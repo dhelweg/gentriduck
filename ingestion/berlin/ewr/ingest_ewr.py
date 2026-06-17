@@ -32,8 +32,8 @@ Indicator set (geo-data-scientist approved):
   4  age_under18_share            — (E_U1+E_1U6+E_6U15+E_15U18)/E_E
   5  age_18_27_share              — (E_E18_21+E_E21_25+E_E25_27)/E_E
   6  age_27_45_share              — (E_E27_30+E_E30_35+E_E35_40+E_E40_45)/E_E
-  7  age_45_65_share              — (E_E45_50+E_E50_55+E_E55U65)/E_E
-  8  age_65plus_share             — (E_65U80+E_80U110)/E_E
+  7  age_45_65_share              — (E_E45_50+E_E50_55+E_55U65)/E_E  (canonical; 2014+ E_E55U65 aliased)
+  8  age_65plus_share             — (E_65U80+E_80U110)/E_E  (canonical; 2014+ E_E65U80/E_E80U110 aliased)
   9  mean_age_years               — midpoint-weighted over age cohorts (years)
   10 foreigners_share             — E_A / E_E                    (share)
   11 migration_background_share   — MH_E / E_E (NULL when column absent)
@@ -180,13 +180,13 @@ SUPPRESSION_SENTINELS = frozenset({"-", ".", "", "X", "x"})
 
 # 2014+ EWR CSVs renamed the grouped age-bin columns (added "E_" prefix).
 # Map new names -> canonical old names so compute_indicators always sees one name set.
+# Note: E_E18U25/E_E25U55 aliases omitted — compute_indicators uses fine-grained sub-bins
+# (E_E18_21, E_E21_25, etc.) which are present in all vintages, not the grouped mid-range bins.
 _GROUPED_BIN_ALIASES: dict[str, str] = {
     "E_EU1": "E_U1",
     "E_E1U6": "E_1U6",
     "E_E6U15": "E_6U15",
     "E_E15U18": "E_15U18",
-    "E_E18U25": "E_18U25",
-    "E_E25U55": "E_25U55",
     "E_E55U65": "E_55U65",
     "E_E65U80": "E_65U80",
     "E_E80U110": "E_80U110",
@@ -707,7 +707,7 @@ def process_year(
                             "Merged companion 12H cols %s for EWR %d (%d rows matched)",
                             cols_to_merge,
                             year,
-                            companion_subset["_JOIN_KEY"].isin(main_df["_JOIN_KEY"]).sum(),
+                            main_df["_JOIN_KEY"].isin(companion_subset["_JOIN_KEY"]).sum(),
                         )
 
     try:
