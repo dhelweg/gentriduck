@@ -40,6 +40,7 @@ from __future__ import annotations
 import argparse
 import datetime
 import logging
+import multiprocessing
 import sys
 from pathlib import Path
 from typing import Any
@@ -298,90 +299,90 @@ def load_poi_mapping(seeds_dir: Path) -> dict[tuple[str, str], tuple[str, str, s
 # ---------------------------------------------------------------------------
 
 
-class _HistorySnapshotHandler(osmium.SimpleHandler):
-    """osmium SimpleHandler that extracts a point-in-time snapshot from .osh.pbf.
+class _MultiYearSnapshotHandler(osmium.SimpleHandler):
+    """osmium SimpleHandler that extracts point-in-time snapshots for multiple years
+    in a single pass through the .osh.pbf file.
 
-    For each node in the history file, the handler receives ALL versions of that
-    node in increasing version order.  We track the "best candidate" for each
-    osm_id: the latest version whose timestamp is <= the snapshot datetime.
-
-    Only nodes within the Berlin bounding box and matching the POI tag mapping
-    are retained.
+    For each node version the handler updates candidates for every target year
+    whose snapshot datetime is >= the version timestamp.  A single file read
+    replaces the previous N-year loop, reducing runtime from O(N) passes to O(1).
 
     Args:
-        snapshot_dt: The point-in-time to snapshot (UTC).
+        years: List of calendar years to snapshot.
         poi_mapping: Dict of (osm_key, osm_value) -> (domain, category, poi_type).
-        year: The snapshot year integer (stored in output rows).
     """
 
     def __init__(
         self,
-        snapshot_dt: datetime.datetime,
+        years: list[int],
         poi_mapping: dict[tuple[str, str], tuple[str, str, str]],
-        year: int,
     ) -> None:
         super().__init__()
-        self.snapshot_dt = snapshot_dt
         self.poi_mapping = poi_mapping
-        self.year = year
-        # osm_id -> row dict (updated as we encounter later applicable versions)
-        self._candidates: dict[int, dict[str, Any]] = {}
+        self.years = sorted(years, reverse=True)  # descending so break is correct
+        self.snapshot_dts = {
+            y: datetime.datetime(y, 1, 1, 0, 0, 0, tzinfo=datetime.timezone.utc) for y in self.years
+        }
+        # year -> {osm_id -> row dict}
+        self._candidates: dict[int, dict[int, dict[str, Any]]] = {y: {} for y in self.years}
 
     def node(self, n: osmium.osm.Node) -> None:
-        """Called for each node version in the history file."""
-        # Skip if this version was created after the snapshot date.
-        if n.timestamp > self.snapshot_dt:
-            return
-
-        # Quick bbox pre-filter (lon/lat available on nodes).
+        """Called for each node version in chronological order."""
+        # Resolve bbox and POI match once per version (shared across all years).
         try:
             lon = n.lon
             lat = n.lat
         except Exception:
             return
-        if not (
+
+        in_bbox = (
             BERLIN_MIN_LON <= lon <= BERLIN_MAX_LON and BERLIN_MIN_LAT <= lat <= BERLIN_MAX_LAT
-        ):
-            return
+        )
 
-        # Check visibility — deleted nodes are not "active" at snapshot time.
-        if not n.visible:
-            # If this node was deleted before snapshot_dt, clear any prior candidate.
-            self._candidates.pop(n.id, None)
-            return
-
-        # Match tags to POI mapping — take the first matching (key, value) pair.
         poi_match: tuple[str, str, str] | None = None
-        for tag in n.tags:
-            key = tag.k
-            val = tag.v
-            match = self.poi_mapping.get((key, val))
-            if match is not None:
-                poi_match = match
+        if in_bbox and n.visible:
+            for tag in n.tags:
+                match = self.poi_mapping.get((tag.k, tag.v))
+                if match is not None:
+                    poi_match = match
+                    break
+
+        # Update candidates for every year this version applies to.
+        for year in self.years:
+            if n.timestamp > self.snapshot_dts[year]:
+                # Version is newer than this year's snapshot — skip all later years too.
                 break
 
-        if poi_match is None:
-            # Node doesn't match any POI type — remove any prior candidate.
-            self._candidates.pop(n.id, None)
-            return
+            year_candidates = self._candidates[year]
+            if not in_bbox or not n.visible or poi_match is None:
+                # Node deleted, moved out of bbox, or no longer a POI at this version.
+                year_candidates.pop(n.id, None)
+            else:
+                domain, category, poi_type = poi_match
+                year_candidates[n.id] = {
+                    "city_code": CITY_CODE,
+                    "area_code": None,  # populated by dbt join to LOR geometry
+                    "snapshot_year": year,
+                    "osm_id": f"node/{n.id}",
+                    "poi_domain": domain,
+                    "poi_category": category,
+                    "poi_type": poi_type,
+                    "lon": lon,
+                    "lat": lat,
+                    "source_attribution": SOURCE_ATTRIBUTION,
+                }
 
-        domain, category, poi_type = poi_match
-        self._candidates[n.id] = {
-            "city_code": CITY_CODE,
-            "area_code": None,  # populated by dbt join to LOR geometry
-            "snapshot_year": self.year,
-            "osm_id": f"node/{n.id}",
-            "poi_domain": domain,
-            "poi_category": category,
-            "poi_type": poi_type,
-            "lon": lon,
-            "lat": lat,
-            "source_attribution": SOURCE_ATTRIBUTION,
-        }
-
-    def get_rows(self) -> list[dict[str, Any]]:
-        """Return the collected snapshot rows."""
-        return list(self._candidates.values())
+    def get_dataframe(self, year: int) -> pd.DataFrame:
+        """Return the snapshot DataFrame for a single year."""
+        rows = list(self._candidates[year].values())
+        if not rows:
+            return pd.DataFrame(columns=list(OUTPUT_SCHEMA.names))
+        df = pd.DataFrame(rows)
+        df = df[list(OUTPUT_SCHEMA.names)]
+        df["snapshot_year"] = df["snapshot_year"].astype("int32")
+        df["lon"] = df["lon"].astype("float64")
+        df["lat"] = df["lat"].astype("float64")
+        return df
 
 
 def extract_snapshot(
@@ -389,35 +390,48 @@ def extract_snapshot(
     year: int,
     poi_mapping: dict[tuple[str, str], tuple[str, str, str]],
 ) -> pd.DataFrame:
-    """Extract a single-year POI snapshot from the .osh.pbf history file.
-
-    Args:
-        osh_pbf_path: Path to the Geofabrik Germany .osh.pbf file.
-        year: Calendar year to snapshot (e.g. 2018).
-        poi_mapping: Tag-to-POI-type mapping from load_poi_mapping().
-
-    Returns:
-        DataFrame with columns matching OUTPUT_SCHEMA (area_code may be None).
-    """
+    """Extract a single-year POI snapshot from the .osh.pbf history file."""
     snapshot_dt = datetime.datetime(year, 1, 1, 0, 0, 0, tzinfo=datetime.timezone.utc)
     log.info("Extracting snapshot year=%d (at %s) ...", year, snapshot_dt.isoformat())
-
-    handler = _HistorySnapshotHandler(snapshot_dt, poi_mapping, year)
-    handler.apply_file(str(osh_pbf_path))  # applies handler to the .osh.pbf
-
-    rows = handler.get_rows()
+    handler = _MultiYearSnapshotHandler([year], poi_mapping)
+    handler.apply_file(str(osh_pbf_path))
+    rows = list(handler._candidates[year].values())
     log.info("  -> %d POI candidates after history filter + bbox + tag match", len(rows))
-
     if not rows:
         return pd.DataFrame(columns=list(OUTPUT_SCHEMA.names))
-
     df = pd.DataFrame(rows)
-    # Ensure column order and types match schema.
     df = df[list(OUTPUT_SCHEMA.names)]
     df["snapshot_year"] = df["snapshot_year"].astype("int32")
     df["lon"] = df["lon"].astype("float64")
     df["lat"] = df["lat"].astype("float64")
     return df
+
+
+def extract_all_snapshots(
+    osh_pbf_path: Path,
+    years: list[int],
+    poi_mapping: dict[tuple[str, str], tuple[str, str, str]],
+) -> dict[int, pd.DataFrame]:
+    """Extract POI snapshots for all target years in a single .osh.pbf pass.
+
+    Args:
+        osh_pbf_path: Path to the Geofabrik Germany .osh.pbf file.
+        years: Calendar years to snapshot.
+        poi_mapping: Tag-to-POI-type mapping from load_poi_mapping().
+
+    Returns:
+        Dict mapping year -> DataFrame with columns matching OUTPUT_SCHEMA.
+    """
+    log.info("Single-pass extraction for %d years: %s", len(years), years)
+    handler = _MultiYearSnapshotHandler(years, poi_mapping)
+    handler.apply_file(str(osh_pbf_path))
+
+    results: dict[int, pd.DataFrame] = {}
+    for year in years:
+        df = handler.get_dataframe(year)
+        log.info("  year=%d -> %d POIs", year, len(df))
+        results[year] = df
+    return results
 
 
 # ---------------------------------------------------------------------------
@@ -488,6 +502,18 @@ def main(argv: list[str] | None = None) -> int:
         default=False,
         help="Overwrite existing output parquet files.",
     )
+    parser.add_argument(
+        "--workers",
+        type=int,
+        default=1,
+        help="Number of parallel worker processes (default: 1).",
+    )
+    parser.add_argument(
+        "--partial-years",
+        default="",
+        help="Comma-separated years whose output file is named '{year}-partial.parquet' "
+        "instead of '{year}.parquet' (e.g. '2026' for an in-progress year).",
+    )
     args = parser.parse_args(argv)
 
     osh_pbf = args.osh_pbf
@@ -503,6 +529,11 @@ def main(argv: list[str] | None = None) -> int:
         return 1
 
     years = parse_years(args.years)
+    partial_years: set[int] = (
+        {int(y.strip()) for y in args.partial_years.split(",") if y.strip()}
+        if args.partial_years
+        else set()
+    )
     out_dir: Path = args.out_dir
     skip_existing = args.skip_existing and not args.force
 
@@ -521,17 +552,59 @@ def main(argv: list[str] | None = None) -> int:
     )
     log.info("POI mapping: %d tag pairs loaded", len(poi_mapping))
 
-    for year in sorted(years):
-        out_path = out_dir / f"{year}.parquet"
-        if skip_existing and out_path.exists():
-            log.info("Skipping year=%d (output exists: %s)", year, out_path)
-            continue
+    def _stem(year: int) -> str:
+        return f"{year}-partial" if year in partial_years else str(year)
 
+    years_to_run = [
+        y
+        for y in sorted(years, reverse=True)  # newest first — more data, run early
+        if not (skip_existing and (out_dir / f"{_stem(y)}.parquet").exists())
+    ]
+    for y in sorted(years):
+        if y not in years_to_run:
+            log.info("Skipping year=%d (output exists: %s)", y, f"{_stem(y)}.parquet")
+
+    if not years_to_run:
+        log.info("All years already exist. Done.")
+        return 0
+
+    workers = min(args.workers, len(years_to_run))
+    log.info("Processing %d years with %d worker(s): %s", len(years_to_run), workers, years_to_run)
+
+    def _run_year(year: int) -> None:
         df = extract_snapshot(osh_pbf, year, poi_mapping)
-        write_parquet(df, out_path)
+        write_parquet(df, out_dir / f"{_stem(year)}.parquet")
+
+    if workers == 1:
+        for year in years_to_run:
+            _run_year(year)
+    else:
+        with multiprocessing.Pool(processes=workers) as pool:
+            pool.starmap(
+                _run_year_worker,
+                [(osh_pbf, y, poi_mapping, out_dir, partial_years) for y in years_to_run],
+            )
 
     log.info("Done. Output directory: %s", out_dir)
     return 0
+
+
+def _run_year_worker(
+    osh_pbf: Path,
+    year: int,
+    poi_mapping: dict,
+    out_dir: Path,
+    partial_years: set[int] | None = None,
+) -> None:
+    """Top-level worker function for multiprocessing (must be picklable)."""
+    logging.basicConfig(
+        level=logging.INFO,
+        format=f"%(asctime)s [%(levelname)s] [year={year}] %(message)s",
+        stream=sys.stdout,
+    )
+    stem = f"{year}-partial" if (partial_years and year in partial_years) else str(year)
+    df = extract_snapshot(osh_pbf, year, poi_mapping)
+    write_parquet(df, out_dir / f"{stem}.parquet")
 
 
 if __name__ == "__main__":
