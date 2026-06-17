@@ -4,9 +4,11 @@ models:
   - name: stg_thesis_2018_result_bzr
     description: >
       Staging view over the 2018 thesis golden CSV at BZR (Bezirksregion) level.
-      Strips the 'r.' column prefix, casts key columns, and adds city_code='BER'
-      and area_level='bzr'. Key columns only — the full 1722-column source is not
-      carried forward. ODbL-licensed; see reference/goldens/ODbL_LICENCE.
+      Strips the 'r.' column prefix, casts key columns, translates German data values to
+      English at the staging boundary, and adds city_code='BER' and area_level='bzr'.
+      Key columns only -- the full 1722-column source is not carried forward.
+      ODbL-licensed; see reference/goldens/ODbL_LICENCE.
+      Area names (raum_desc) are Berlin proper nouns and are kept in German.
     meta:
       dbt_meta_owner: data-engineer
     columns:
@@ -15,7 +17,7 @@ models:
         tests:
           - not_null
       - name: raum_desc
-        description: BZR area name (German; latin-1 decoded).
+        description: BZR area name (German proper noun; latin-1 decoded).
         tests:
           - not_null
       - name: zeit
@@ -36,24 +38,33 @@ models:
           - accepted_values:
               arguments:
                 values: ["bezirk", "bzr", "plr"]
-      - name: status_klasse_prj_bi
-        description: Projected status class (binary; hoch/mittel/niedrig).
+      - name: status_class_bi
+        description: >
+          Projected status class (binary English label).
+          high = low deprivation / high POI status score (was 'niedrig' in the 2018 thesis).
+          low = high deprivation / low POI status score (was 'hoch' in the 2018 thesis).
+          See B5-findings-check.md for the label polarity explanation.
         tests:
           - accepted_values:
               arguments:
-                values: ["hoch", "mittel", "niedrig"]
-      - name: dynamik_klasse_prj_bi
-        description: Projected dynamik class (binary; positiv/neutral/negativ).
+                values: ["high", "medium", "low"]
+      - name: dynamism_class_bi
+        description: >
+          Projected dynamism class (binary English label).
+          positive = high gentrification pressure / above-average POI churn (was 'positiv').
+          negative = low gentrification pressure / below-average POI churn (was 'negativ').
+          See B5-findings-check.md for the label polarity explanation.
         tests:
           - accepted_values:
               arguments:
-                values: ["positiv", "neutral", "negativ"]
+                values: ["positive", "neutral", "negative"]
 
   - name: stg_thesis_2018_result_plr
     description: >
       Staging view over the 2018 thesis golden CSV at PLR (Planungsraum) level.
       Same structure as stg_thesis_2018_result_bzr; area_level='plr'.
       436 rows. ODbL-licensed.
+      Area names are Berlin proper nouns and are kept in German.
     meta:
       dbt_meta_owner: data-engineer
     columns:
@@ -62,7 +73,7 @@ models:
         tests:
           - not_null
       - name: raum_desc
-        description: PLR area name (German; latin-1 decoded).
+        description: PLR area name (German proper noun; latin-1 decoded).
         tests:
           - not_null
       - name: zeit
@@ -83,18 +94,18 @@ models:
           - accepted_values:
               arguments:
                 values: ["bezirk", "bzr", "plr"]
-      - name: status_klasse_prj_bi
-        description: Projected status class (binary).
+      - name: status_class_bi
+        description: Projected status class (binary English label; high/medium/low).
         tests:
           - accepted_values:
               arguments:
-                values: ["hoch", "mittel", "niedrig"]
-      - name: dynamik_klasse_prj_bi
-        description: Projected dynamik class (binary).
+                values: ["high", "medium", "low"]
+      - name: dynamism_class_bi
+        description: Projected dynamism class (binary English label; positive/neutral/negative).
         tests:
           - accepted_values:
               arguments:
-                values: ["positiv", "neutral", "negativ"]
+                values: ["positive", "neutral", "negative"]
 
   - name: stg_thesis_2018_result_plr_distcalc
     description: >
@@ -104,7 +115,7 @@ models:
       In Gentriduck the distance-weighted variant will be reproduced via DuckDB
       ST_Distance / ST_DWithin (Epic B3/C); for now this staging model surfaces
       the golden output as the reference for that variant.
-      ODbL-licensed.
+      ODbL-licensed. Area names are Berlin proper nouns and are kept in German.
     meta:
       dbt_meta_owner: data-engineer
     columns:
@@ -113,7 +124,7 @@ models:
         tests:
           - not_null
       - name: raum_desc
-        description: PLR area name (German; latin-1 decoded).
+        description: PLR area name (German proper noun; latin-1 decoded).
         tests:
           - not_null
       - name: zeit
@@ -141,21 +152,21 @@ models:
         tests:
           - not_null
 
-  # --- Stubs (no tests — zero rows; populated by Epic B2/C ingestion) ---
+  # --- Stubs (no tests -- zero rows; populated by Epic B2/C ingestion) ---
 
   - name: stg_osm_poi
     description: >
-      STUB — zero rows until Epic B2/C OSM ingestion lands.
+      STUB -- zero rows until Epic B2/C OSM ingestion lands.
       See ADR-0002 (OSM POI history sourcing). When populated, each row represents
       one OSM POI feature at a given snapshot_year for a city/area.
       Schema matches the expected output of the ohsome-API ingestion adapter
-      (ingestion/berlin/osm/ — not yet implemented).
+      (ingestion/berlin/osm/ -- not yet implemented).
     meta:
       dbt_meta_owner: data-engineer
 
   - name: stg_berlin_lor
     description: >
-      STUB — zero rows until Epic B2/C LOR geometry ingestion lands.
+      STUB -- zero rows until Epic B2/C LOR geometry ingestion lands.
       See ADR-0003 (Berlin geographies). When populated, each row represents one
       LOR area polygon at a given vintage (pre-2021 or LOR 2021), conformed to the
       city-agnostic area_level vocabulary (bezirk/bzr/plr).
@@ -166,7 +177,7 @@ models:
 
   - name: stg_berlin_ewr
     description: >
-      STUB — zero rows until Epic B2/C3b EWR ingestion lands.
+      STUB -- zero rows until Epic B2/C3b EWR ingestion lands.
       See ADR-0003 (Berlin geographies + open sources). When populated, each row
       represents one socio-economic indicator value per area per year, sourced
       from the Einwohnerregister (EWR) per-PLR CSV published by Amt fur Statistik

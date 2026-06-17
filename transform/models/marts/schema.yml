@@ -6,13 +6,17 @@ models:
       Governed gentrification index mart (ADR-0004). One row per
       (city_code, area_level, area_code, period_yyyymm, variant).
       This is the core output of the Gentriduck warehouse; its schema
-      is governed by ADR-0004 and stable — changes require a deliberate
+      is governed by ADR-0004 and stable -- changes require a deliberate
       contract edit.
 
       Current state (Epic B baseline): sourced from the 2018 thesis goldens
       via int_thesis_2018_area_index. When Epic B3/C re-computes the index
       from fresh OSM/EWR inputs, the upstream intermediate model is updated
       and this mart rebuilds without schema changes.
+
+      All class labels use English values (translated at the staging boundary).
+      Label polarity note: status_class 'low' = low deprivation / wealthier area;
+      dynamism_class 'negative' = high gentrification pressure. See B5-findings-check.md.
 
       Index definition reference: docs/adr/0004-data-governance-and-index-definition.md
     meta:
@@ -48,7 +52,7 @@ models:
         tests:
           - not_null
       - name: area_name
-        description: Area name (human-readable; German with umlauts).
+        description: Area name (German proper noun; Berlin place names).
         data_type: varchar
         tests:
           - not_null
@@ -74,33 +78,40 @@ models:
         description: Status sub-index (z-score of POI-based status features).
         data_type: double
       - name: status_class
-        description: Projected status class (three values; from thesis projected scheme).
+        description: >
+          Projected status class (three values).
+          Polarity note: 'low' = low social deprivation / high POI status score (wealthier area).
+          'high' = high deprivation / low POI status score.
         data_type: varchar
       - name: status_class_bi
-        description: Binary projected status class (hoch/mittel/niedrig).
+        description: Binary projected status class (high/medium/low English labels).
         data_type: varchar
         tests:
           - accepted_values:
               arguments:
-                values: ["hoch", "mittel", "niedrig"]
-      - name: dynamik_index
-        description: Dynamik sub-index (z-score of POI-based dynamik features).
+                values: ["high", "medium", "low"]
+      - name: dynamism_index
+        description: Dynamism sub-index (z-score of POI-based dynamism features).
         data_type: double
-      - name: dynamik_class
-        description: Projected dynamik class (three values; negativ/neutral/positiv).
+      - name: dynamism_class
+        description: >
+          Projected dynamism class (three values; positive/neutral/negative).
+          Polarity note: 'negative' = high gentrification pressure / above-average POI churn.
+          'positive' = low gentrification pressure / below-average POI churn.
+          See B5-findings-check.md for full explanation.
         data_type: varchar
-      - name: dynamik_class_bi
-        description: Binary projected dynamik class (positiv/neutral/negativ).
+      - name: dynamism_class_bi
+        description: Binary projected dynamism class (positive/neutral/negative English labels).
         data_type: varchar
         tests:
           - accepted_values:
               arguments:
-                values: ["positiv", "neutral", "negativ"]
+                values: ["positive", "neutral", "negative"]
       - name: own_idx_class
-        description: Own index class (5 buckets; socio-economic EWR-based index).
+        description: Own index class (3 buckets; socio-economic EWR-based index; positive/neutral/negative).
         data_type: varchar
       - name: own_idx_class_bi
-        description: Binary own index class.
+        description: Binary own index class (positive/neutral/negative English labels).
         data_type: varchar
     tests:
       - dbt_utils.unique_combination_of_columns:

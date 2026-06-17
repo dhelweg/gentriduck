@@ -10,6 +10,7 @@ models:
       mart. When Epic B3/C ingestion lands, this model is replaced/extended with
       computed values; until then it serves as the directional baseline per the
       Epic B strategy (docs/epic-b/B0-input-inventory.md).
+      All German data values are translated to English by the upstream staging models.
     meta:
       dbt_meta_owner: data-engineer
     columns:
@@ -32,7 +33,7 @@ models:
         tests:
           - not_null
       - name: area_name
-        description: Area name (raum_desc; German, latin-1 decoded).
+        description: Area name (raum_desc; German proper noun; latin-1 decoded).
         tests:
           - not_null
       - name: period_yyyymm
@@ -51,17 +52,24 @@ models:
               arguments:
                 values: ["standard", "distance_weighted"]
       - name: status_class_bi
-        description: Projected status class (binary; hoch/mittel/niedrig).
+        description: >
+          Projected status class (binary English label; high/medium/low).
+          high = low deprivation / high POI status score.
+          low = high deprivation / low POI status score.
+          See B5-findings-check.md for the label polarity explanation.
         tests:
           - accepted_values:
               arguments:
-                values: ["hoch", "mittel", "niedrig"]
-      - name: dynamik_class_bi
-        description: Projected dynamik class (binary; positiv/neutral/negativ).
+                values: ["high", "medium", "low"]
+      - name: dynamism_class_bi
+        description: >
+          Projected dynamism class (binary English label; positive/neutral/negative).
+          positive = high gentrification pressure / above-average POI churn.
+          negative = low gentrification pressure / below-average POI churn.
         tests:
           - accepted_values:
               arguments:
-                values: ["positiv", "neutral", "negativ"]
+                values: ["positive", "neutral", "negative"]
     tests:
       - dbt_utils.unique_combination_of_columns:
           arguments:
@@ -103,6 +111,7 @@ models:
       populated (Epic B2/C). When the LOR geometry ingestion lands, add the parent
       crosswalk via a join on (city_code, area_code, area_level). See model SQL for
       details.
+      Area names are Berlin proper nouns and are kept in German.
     meta:
       dbt_meta_owner: data-engineer
     columns:
@@ -126,7 +135,7 @@ models:
         tests:
           - not_null
       - name: area_name
-        description: Area name (human-readable; German).
+        description: Area name (German proper noun; Berlin place names).
         tests:
           - not_null
       - name: level_name
