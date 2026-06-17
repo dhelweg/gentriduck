@@ -22,11 +22,16 @@ repos:
         entry: uv run sqlfmt
         language: system
         types: [sql]
+        # reference/ holds verbatim Hive SQL from the 2018 thesis — read-only,
+        # not for re-formatting (sqlfmt mangles non-DuckDB syntax).
+        exclude: ^reference/
       - id: sqlfluff-lint
         name: sqlfluff lint (sql)
         entry: uv run sqlfluff lint
         language: system
         types: [sql]
+        # Same: don't lint the imported thesis SQL against the DuckDB dialect.
+        exclude: ^reference/
 
       # --- push stage: correctness (the deterministic gate) ---
       - id: dbt-build

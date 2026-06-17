@@ -1,0 +1,164 @@
+domain;category;type
+Tourismus;Uebernachtung;Hostel
+Tourismus;Uebernachtung;Hotel
+Tourismus;Uebernachtung;Sonstige
+Tourismus;Sehenswuerdigkeit;Kunstwerk
+Vergnuegung;Kultur;Kunstzentrum
+Vergnuegung;Kultur;Gallerie
+Tourismus;Info;Info
+Vergnuegung;Kultur;Museum
+Tourismus;Sehenswuerdigkeit;Aussichtspunkt
+Vergnuegung;Kultur;Zoo
+Sport und Erholung;Sport;Schwimmen
+Sport und Erholung;Sport;Basketball
+Sport und Erholung;Sport;Fussball
+Sport und Erholung;Sport;Sportzentrum
+Sport und Erholung;Sport;Tischtennis
+Sport und Erholung;Erholung;Sauna
+Sport und Erholung;Sport;Tennis
+Sport und Erholung;Sport;Kampfsport
+Sport und Erholung;Sport;Fitnesszentrum
+Sport und Erholung;Erholung;Spielplatz
+Sport und Erholung;Erholung;Wassersport
+Vergnuegung;Zwielicht;Spielothek
+Sport und Erholung;Sport;Sonstige Sportarten
+Public Service;Bildung;Kindergarten
+Buero;Buero;Buero
+Mobilitaet;Individual;Tankstelle
+Sonstiges;Hipster;Coworking-Space
+Public Service;Bildung;Universitaet
+Public Service;Sicherheit;Poilzei
+Public Service;Sicherheit;Feuerwehr
+Public Service;Bildung;KiTa
+Public Service;Bildung;Hoehere Schule
+Public Service;Sonstiges;Wochenmarkt
+Vergnuegung;Ausgehen;Kino
+Vergnuegung;Gaststaetten;Biergarten
+Mobilitaet;Individual;Autovermietung
+Public Service;Bildung;Buecherei
+Public Service;Sozial;Nachbarschaftszentrum
+Vergnuegung;Kultur;Theater
+Gastronomie;Cafe;Eisdiele
+Vergnuegung;Ausgehen;Nachtclub
+Religion;Religioese Gebaeude;Kirche
+Religion;Religioese Gebaeude;Moschee
+Religion;Religioese Gebaeude;Sonstige Tempel
+Public Service;Bildung;Schule
+Vergnuegung;Zwielicht;Bordell
+Oeffentlicher Raum;Post;Post Filiale
+Public Service;Sozial;Sozialeinrichtung
+Mobilitaet;Individual;Ladestation
+Public Service;Gesundheit;Zahnarzt
+Mobilitaet;Individual;Fahrradverleih
+Public Service;Sonstiges;Fahrschule
+Public Service;Gesundheit;Tierarzt
+Sonstiges;Sonstiges;Botschaft
+Mobilitaet;Individual;Taxistand
+Oeffentlicher Raum;WC;WC
+Public Service;Bank;Bankfiliale
+Public Service;Gesundheit;Arzt
+Mobilitaet;Individual;Parkplatz
+Vergnuegung;Gaststaetten;Bar
+Public Service;Gesundheit;Apotheke
+Vergnuegung;Gaststaetten;Pub
+Oeffentlicher Raum;Telefon;Telefon
+Gastronomie;Cafe;Kaffee
+Gastronomie;Cafe;Sonstige Cafes
+Mobilitaet;Individual;Fahrrad Parkplatz
+Oeffentlicher Raum;Recycling;Muelleimer
+Oeffentlicher Raum;Parkbank;Parkbank
+Public Service;Gesundheit;Krankenhaus
+Public Service;Gesundheit;Klinik
+Public Service;Bank;Geldautomat
+Oeffentlicher Raum;Briefe und Pakete;Briefkasten
+Religion;Friedhof;Friedhof
+Public Service;Sonstiges;Musikschule
+Oeffentlicher Raum;Briefe und Pakete;Paketautomat
+Oeffentlicher Raum;Automaten;Sonstige Automaten
+Mobilitaet;OEPNV;Fahrscheinautomat
+Mobilitaet;Individual;Parkticketautomat
+Oeffentlicher Raum;Automaten;Kotbeutelautomat
+Oeffentlicher Raum;Automaten;Zigarettenautomat
+Oeffentlicher Raum;Automaten;Suessigkeitenautomat
+Oeffentlicher Raum;Briefe und Pakete;Briefmarkenautomat
+Oeffentlicher Raum;Automaten;Kondomautomat
+Oeffentlicher Raum;Automaten;Getraenke und Suessigkeitenautomat
+Oeffentlicher Raum;Automaten;Getraenkeautomat
+Oeffentlicher Raum;Sonstiges;Grillplatz
+Oeffentlicher Raum;Recycling;Glascontainer
+Oeffentlicher Raum;Recycling;Glas- und Kleidungscontainer
+Oeffentlicher Raum;Recycling;Kleidungscontainer
+Oeffentlicher Raum;Recycling;Sonstige Container
+Gastronomie;Restaurant;Restaurant Italiener
+Gastronomie;Restaurant;Restaurant Deutsch
+Gastronomie;Restaurant;Restaurant Indisch
+Gastronomie;Restaurant;Restaurant Asiatisch
+Gastronomie;Restaurant;Restaurant Sushi
+Gastronomie;Restaurant;Restaurant Griechisch
+Gastronomie;Restaurant;Restaurant Steakhouse
+Gastronomie;Restaurant;Restaurant International
+Gastronomie;Restaurant;Restaurant Tuerkisch
+Gastronomie;Fast Food;Fastfood Kebap
+Gastronomie;Fast Food;Fastfood Burger
+Gastronomie;Fast Food;Fastfood Asiatisch
+Gastronomie;Fast Food;Fastfood Pizza
+Gastronomie;Fast Food;Fastfood Pommesbude
+Gastronomie;Fast Food;fast_food Sonstiges
+Gastronomie;Restaurant;restaurant Sonstiges
+Dienstleistung;Friseur;Friseur
+Waren;Essen & Trinken;Baeckerei
+Waren;Kleidung;Kleidung
+Waren;Essen & Trinken;Supermarkt
+Waren;Essen & Trinken;Kiosk
+Waren;Sonstige Waren;Florist
+Waren;Werkstatt;Fahrrad
+Dienstleistung;Kosmetik und Beauty;Kosmetik und Beauty
+Waren;Medical;Optiker
+Waren;Kleidung;Schuhe
+Waren;Print;Buecher
+Dienstleistung;Massage;Massage
+Waren;Sonstige Waren;Schmuck
+Waren;Werkstatt;Autoreperatur
+Waren;Drogerie;Drogerie
+Dienstleistung;Reisen;Reisen
+Waren;Technik;Mobilfunk
+Waren;Sonstige Waren;Moebel
+Waren;Essen & Trinken;Getraenke
+Waren;Essen & Trinken;Feinkost
+Waren;Technik;Elektronik
+Waren;Kleidung;Boutique
+Waren;Werkstatt;Autohaus
+Waren;Essen & Trinken;Spirituosen
+Waren;Spielzeug & Geschenke;Geschenke
+Waren;Sonstige Waren;Postenmarkt
+Waren;Essen & Trinken;Schlachter
+Dienstleistung;Waescherei;Waescherei
+Waren;Sonstige Waren;Computer
+Waren;Spielzeug & Geschenke;Spielzeug
+Waren;Print;Copyshop
+Waren;Kleidung;Schneider
+Waren;Kunst;Foto
+Waren;Kunst;Kunst
+Waren;Essen & Trinken;Suessigkeiten
+Waren;Sonstige Waren;Dekoration
+Dienstleistung;Waescherei;Reinigung
+Dienstleistung;Beerdigung;Beerdigung
+Waren;Kleidung;Sport
+Waren;Sonstige Waren;Zoofachgeschaeft
+Waren;Sonstige Waren;Textilgeschaeft
+Waren;Medical;Hoergeraete
+Waren;Handwerk;Baumarkt
+Leerstand;Leerstand;Leerstand
+Waren;Medical;Medical
+Waren;Kleidung;Second Hand
+Waren;Print;Zeitung
+Waren;Handwerk;Eisenwarenhandlung
+Waren;Sonstiger Shop;Sonstiger Shop
+Tourismus;Sehenswuerdigkeit;Baudenkmal
+Mobilitaet;OEPNV;Haltestelle
+Oeffentlicher Raum;Sonstiges Gebaeude;Sonstiges Gebaeude
+Oeffentlicher Raum;Sonstiges Gelaende;Sonstiges Gelaende
+Tourismus;Sehenswuerdigkeit;Sonstiges Denkmal
+Tourismus;Sonstiges Tourismus;Sonstiges Tourismus
+Sport und Erholung;Sport;Sonstiges Sport
+Sport und Erholung;Erholung;Sonstiges Erholung
