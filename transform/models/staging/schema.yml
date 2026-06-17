@@ -152,21 +152,105 @@ models:
         tests:
           - not_null
 
-  # --- Stubs (no tests -- zero rows; populated by Epic B2/C ingestion) ---
+  # --- C1: OSM POI history (real model; data populated by ingestion script) ---
 
   - name: stg_osm_poi
     description: >
-      STUB -- zero rows until Epic B2/C OSM ingestion lands.
-      See ADR-0002 (OSM POI history sourcing). When populated, each row represents
-      one OSM POI feature at a given snapshot_year for a city/area.
-      Schema matches the expected output of the ohsome-API ingestion adapter
-      (ingestion/berlin/osm/ -- not yet implemented).
+      Staging view over annual OSM POI GeoParquet snapshots for Berlin.
+      Produced by ingestion/berlin/osm/ingest_osm_history.py (ADR-0002, Option B):
+      Geofabrik Germany full-history .osh.pbf processed with the osmium Python package
+      (BSL-1.0) -> one parquet per year under data/raw/osm/berlin/<year>.parquet
+      (gitignored per ADR-0008). Each row is one OSM node feature visible at
+      YYYY-01-01T00:00:00Z within the Berlin bounding box, matched to the poi_mapping
+      tag set. ODbL-licensed; source_attribution column carries the attribution string.
+      Returns zero rows (typed stub) when no parquet files have been ingested yet,
+      so downstream models and dbt build pass before data download.
     meta:
       dbt_meta_owner: data-engineer
+    columns:
+      - name: city_code
+        description: >
+          City identifier; always 'berlin' for this adapter (ADR-0005).
+          Note: Epic B thesis models use 'BER'; this model uses lowercase 'berlin'
+          per the ingestion convention (normalized at the staging boundary).
+        tests:
+          - not_null:
+              config:
+                where: "osm_id is not null"
+          - accepted_values:
+              arguments:
+                values: ["berlin"]
+              config:
+                where: "osm_id is not null"
+      - name: snapshot_year
+        description: >
+          Calendar year of the snapshot (integer). Features visible at
+          YYYY-01-01T00:00:00Z. Range: 2008-present. 2018 is included for
+          directional comparison with the Epic B thesis outputs.
+        tests:
+          - not_null:
+              config:
+                where: "osm_id is not null"
+      - name: osm_id
+        description: >
+          OSM feature identifier in 'node/<id>' form. Unique within a snapshot_year.
+        tests:
+          - not_null:
+              config:
+                where: "snapshot_year is not null"
+          - unique:
+              config:
+                where: "snapshot_year is not null"
+      - name: poi_domain
+        description: >
+          Top-level POI domain from seed_poi_mapping.csv (e.g. 'Gastronomy',
+          'Retail', 'Public Service'). Assigned by the ingestion OSM tag mapping.
+        tests:
+          - not_null:
+              config:
+                where: "osm_id is not null"
+      - name: poi_category
+        description: >
+          Mid-level POI category from seed_poi_mapping.csv (e.g. 'Restaurant',
+          'Clothing', 'Health'). Assigned by the ingestion OSM tag mapping.
+        tests:
+          - not_null:
+              config:
+                where: "osm_id is not null"
+      - name: poi_type
+        description: >
+          Specific POI type from seed_poi_mapping.csv (e.g. 'Other Restaurant',
+          'Bakery', 'Dentist'). Assigned by the ingestion OSM tag mapping.
+        tests:
+          - not_null:
+              config:
+                where: "osm_id is not null"
+      - name: lon
+        description: WGS-84 longitude of the OSM node (decimal degrees).
+        tests:
+          - not_null:
+              config:
+                where: "osm_id is not null"
+      - name: lat
+        description: WGS-84 latitude of the OSM node (decimal degrees).
+        tests:
+          - not_null:
+              config:
+                where: "osm_id is not null"
+      - name: source_attribution
+        description: >
+          ODbL attribution string (mandatory per OSM licence). Value:
+          "OSM via Geofabrik full-history .osh.pbf / ODbL -- https://www.openstreetmap.org/copyright"
+        tests:
+          - not_null:
+              config:
+                where: "osm_id is not null"
+
+  # --- Stubs (no tests -- zero rows; populated by later epics) ---
 
   - name: stg_berlin_lor
     description: >
-      STUB -- zero rows until Epic B2/C LOR geometry ingestion lands.
+      STUB -- zero rows until Epic C LOR geometry ingestion lands.
       See ADR-0003 (Berlin geographies). When populated, each row represents one
       LOR area polygon at a given vintage (pre-2021 or LOR 2021), conformed to the
       city-agnostic area_level vocabulary (bezirk/bzr/plr).
@@ -177,7 +261,7 @@ models:
 
   - name: stg_berlin_ewr
     description: >
-      STUB -- zero rows until Epic B2/C3b EWR ingestion lands.
+      STUB -- zero rows until Epic C3b EWR ingestion lands.
       See ADR-0003 (Berlin geographies + open sources). When populated, each row
       represents one socio-economic indicator value per area per year, sourced
       from the Einwohnerregister (EWR) per-PLR CSV published by Amt fur Statistik

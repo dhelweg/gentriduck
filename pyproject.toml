@@ -12,6 +12,7 @@ dependencies = [
     "scikit-learn>=1.5",
     "scipy>=1.13",
     "quackosm>=0.11",
+    "osmium>=4.0",
 ]
 
 # Dev tooling lives in an isolated group; installed via `uv sync`.
