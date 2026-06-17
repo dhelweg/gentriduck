@@ -1,0 +1,40 @@
+version: 2
+
+sources:
+  - name: thesis_2018
+    description: >
+      Read-only golden output CSVs from the 2018 Berlin gentrification thesis
+      (dhelweg/masterthesis2018_gentrification), committed under reference/goldens/.
+      These three CSV files are the directional comparison baseline for Epic B (B5/B6).
+      The CSVs are latin-1 encoded; dbt-duckdb reads them via read_csv with
+      encoding='latin-1'. ODbL-licensed (see reference/goldens/ODbL_LICENCE).
+      Staging models reference these as documentation / lineage anchors only;
+      the actual path is resolved in each staging model via the project variable
+      'project_root' (see dbt_project.yml vars).
+    meta:
+      source_type: reference_golden
+      licence: ODbL
+      attribution: >
+        OpenStreetMap contributors / dhelweg/masterthesis2018_gentrification
+        (2018 Berlin gentrification thesis). See reference/goldens/ODbL_LICENCE.
+
+    tables:
+      - name: result_full_bzr
+        description: >
+          Per-BZR (Bezirksregion, ~137 rows) golden output from the 2018 thesis,
+          generated 2018-09-09. Contains every index metric the paper reports; columns
+          are prefixed 'r.' from the original Hive SELECT *. Area level: bzr.
+          Read by stg_thesis_2018_result_bzr via read_csv with encoding='latin-1'.
+
+      - name: result_full_plr
+        description: >
+          Per-PLR (Planungsraum, 436 rows) golden output from the 2018 thesis,
+          generated 2018-09-09. Columns prefixed 'r.'. Area level: plr.
+          Read by stg_thesis_2018_result_plr via read_csv with encoding='latin-1'.
+
+      - name: result_full_plr_distcalc
+        description: >
+          Per-PLR golden output using distance-weighted POI features (the Java UDF
+          variant from the 2018 thesis). 436 rows. Columns prefixed 'r.'. Area level: plr.
+          Exposes the 'distance_weighted' variant of the gentrification index.
+          Read by stg_thesis_2018_result_plr_distcalc via read_csv with encoding='latin-1'.
