@@ -259,11 +259,25 @@ data and see whether the paper's conclusions reproduce; exact 2018 inputs are no
   · *DE pair* · A2,A5 · snapshots land for the agreed time range.
 - **C2** Staging + **harmonize POI taxonomy across time** (OSM tag-schema drift). · *DE pair (+ scientist consult)* · C1.
 - **C3** Fact `poi_development` (POI counts/categories per area per time). · *DE pair* · C2.
+  *Pre-requisite — LOR geometry ingestion + dual-vintage spatial join (issue #22):*
+  OSM parquets have `area_code = NULL`; POIs must be spatially assigned to PLR before aggregation.
+  Three sub-steps: **(C3-geo)** ingest LOR PLR shapefiles for both boundary vintages
+  (pre-2021 447 PLRs + LOR 2021 542 PLRs, CC BY 3.0 DE from daten.berlin.de) into `stg_lor_geometries`;
+  **(C3-join)** `ST_Within(ST_Point(lon, lat), plr_geometry)` per snapshot year against the correct
+  vintage (snapshots ≤2020 → pre-2021 boundaries; ≥2021 → LOR 2021 boundaries) — avoids a count
+  discontinuity at the 2021 reform; **(C3-fact)** aggregate to
+  `fct_poi_development(area_code, area_vintage, poi_category, snapshot_year, poi_count)`.
 - **C3b** **Socio-economic time series:** ingest multi-year **EWR** (and later price/rent) per area,
   conformed to `dim_area`/`dim_city` + a `year` grain — so the over-time index reflects social change,
   not just POIs. (Berlin publishes EWR by LOR annually.) · *DE pair (+ scientist on indicator choice)* · C1.
+- **C3b-fix** *(bug #50)* Fix EWR ingestion data-quality issues before C4 can use the series:
+  (1) German decimal separator (`,`) in 2012/2013/2015 CSVs corrupts all numeric parsing → 0.0;
+  (2) `E_A` (foreigners) and `MH_E` (migration background) are absent from the Matrix CSV —
+  they live in a companion publication (`EWR<YYYY>12H_Matrix.csv`); needs separate ingestion;
+  (3) grouped under-18 bins renamed `E_U1` → `E_EU1` in 2012+, breaking `age_under18_share`
+  and `mean_age_years`. · *DE pair* · C3b.
 - **C4** Time-series index + `gentrification_change` (delta + rank movement over time), combining POI
-  development **and** the socio-economic series. · *DE pair* · C3,C3b,B4.
+  development **and** the socio-economic series. · *DE pair* · C3,C3b,C3b-fix,B4.
 - **C5** **OSM completeness-bias control:** POI counts rise partly because OSM *coverage* grew, not
    the neighborhood — normalize (e.g. POI category share, or counts against an overall-coverage
    denominator from ohsome) so growth reflects real change. Add data-quality tests for anomalous
