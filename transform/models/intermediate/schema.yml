@@ -140,3 +140,324 @@ models:
           - not_null
       - name: level_name
         description: Human-readable level name from seed_dim_area_level.
+
+  - name: int_ewr_series
+    description: >
+      EWR socio-economic time series joined to the conformed area dimension
+      (ADR-0005). Selects from stg_berlin_ewr (long-format, PLR grain,
+      13 indicators) and inner-joins dim_area to attach area metadata.
+      Graceful-degradation: returns zero rows when stg_berlin_ewr has no data
+      (ingestion not yet run) OR when dim_area does not yet include PLR rows
+      with city_code='berlin' (stg_berlin_lor stub). Both conditions must be
+      met for rows to appear; zero rows is correct at this stage.
+      One output row = one indicator for one PLR area for one reference year.
+    meta:
+      dbt_meta_owner: data-engineer
+    tests:
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns:
+              - city_code
+              - area_code
+              - reference_year
+              - indicator
+          config:
+            where: "area_code is not null"
+      - dbt_utils.expression_is_true:
+          arguments:
+            expression: "indicator_value between 0 and 1"
+          config:
+            where: "area_code is not null and indicator not in ('residents_total', 'mean_age_years') and indicator_value is not null"
+    columns:
+      - name: city_code
+        description: City identifier (ADR-0005). Always 'berlin' from EWR ingestion.
+        tests:
+          - not_null:
+              config:
+                where: "area_code is not null"
+      - name: area_code
+        description: PLR identifier (zero-padded to 8 chars). FK -> dim_area.area_code.
+        tests:
+          - not_null:
+              config:
+                where: "reference_year is not null"
+      - name: area_vintage
+        description: >
+          LOR scheme vintage: 'lor_pre2021' (reference_year <= 2020) or
+          'lor_2021' (reference_year >= 2021).
+        tests:
+          - not_null:
+              config:
+                where: "area_code is not null"
+          - accepted_values:
+              arguments:
+                values: ["lor_pre2021", "lor_2021"]
+              config:
+                where: "area_code is not null"
+      - name: reference_year
+        description: Calendar year of the 31-Dec snapshot (integer, 2008-2024).
+        tests:
+          - not_null:
+              config:
+                where: "area_code is not null"
+      - name: reference_date
+        description: 31-Dec snapshot date as DATE (e.g. 2018-12-31).
+        tests:
+          - not_null:
+              config:
+                where: "area_code is not null"
+      - name: indicator
+        description: >
+          Indicator key from the 13-indicator approved set
+          (see seed_ewr_indicator_meta for definitions).
+        tests:
+          - not_null:
+              config:
+                where: "area_code is not null"
+          - accepted_values:
+              arguments:
+                values:
+                  - residents_total
+                  - residents_male_share
+                  - residents_female_share
+                  - age_under18_share
+                  - age_18_27_share
+                  - age_27_45_share
+                  - age_45_65_share
+                  - age_65plus_share
+                  - mean_age_years
+                  - foreigners_share
+                  - migration_background_share
+                  - residence_duration_5y_share
+                  - residence_duration_10y_share
+              config:
+                where: "area_code is not null"
+      - name: indicator_value
+        description: >
+          Computed indicator value. Shares in [0, 1]; residents_total is a count;
+          mean_age_years in decimal years. May be NULL where source column absent.
+      - name: source_attribution
+        description: CC BY 3.0 DE attribution string from the EWR source.
+        tests:
+          - not_null:
+              config:
+                where: "area_code is not null"
+      - name: area_name
+        description: Area name from dim_area (German proper noun; Berlin place names).
+        tests:
+          - not_null:
+              config:
+                where: "area_code is not null"
+      - name: area_level
+        description: Area level from dim_area (e.g. 'plr').
+        tests:
+          - not_null:
+              config:
+                where: "area_code is not null"
+      - name: level_name
+        description: Human-readable level name from dim_area / seed_dim_area_level.
+
+  - name: int_berlin_ewr_plr2021
+    description: >
+      Aligns the EWR socio-economic time series to the unified LOR 2021 PLR scheme.
+      Rows with area_vintage='lor_2021' are passed through directly.
+      Rows with area_vintage='lor_pre2021' are joined to seed_lor_crosswalk_2006_to_2021
+      and indicator_value is multiplied by the crosswalk weight (1.0 for 1:1 maps,
+      fractional for splits).
+
+      Current state: seed_lor_crosswalk_2006_to_2021 is a STUB (single placeholder
+      row with dummy codes). Until the official concordance is loaded, pre-2021 rows
+      produce zero output. LOR 2021 rows (2021-2024) pass through normally.
+
+      TODO: replace stub crosswalk with official_concordance data from the
+      Senatsverwaltung fuer Stadtentwicklung Berlin. See seed_lor_crosswalk_2006_to_2021
+      schema.yml for provenance.
+
+      Known breaks (inherited):
+        - LOR 2021 reform: resolved by this model for aligned analysis.
+        - Migrationshintergrund ~2017: see seed_ewr_indicator_meta (stable_from_year=2017).
+          This model does not filter; consumers should apply reference_year >= 2017
+          for migration_background_share.
+    meta:
+      dbt_meta_owner: data-engineer
+    tests:
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns:
+              - reference_year
+              - plr_id_2021
+              - indicator
+          config:
+            where: "plr_id_2021 is not null"
+    columns:
+      - name: city_code
+        description: City identifier; always 'berlin' (ADR-0005).
+        tests:
+          - not_null:
+              config:
+                where: "plr_id_2021 is not null"
+      - name: plr_id_2021
+        description: PLR area code in the LOR 2021 scheme (8-digit, zero-padded).
+        tests:
+          - not_null:
+              config:
+                where: "reference_year is not null"
+      - name: area_vintage
+        description: LOR scheme vintage of the source row ('lor_pre2021' or 'lor_2021').
+        tests:
+          - not_null:
+              config:
+                where: "plr_id_2021 is not null"
+          - accepted_values:
+              arguments:
+                values: ["lor_pre2021", "lor_2021"]
+              config:
+                where: "plr_id_2021 is not null"
+      - name: reference_year
+        description: Calendar year of the 31-Dec snapshot.
+        tests:
+          - not_null:
+              config:
+                where: "plr_id_2021 is not null"
+      - name: reference_date
+        description: 31-Dec snapshot date as DATE.
+        tests:
+          - not_null:
+              config:
+                where: "plr_id_2021 is not null"
+      - name: indicator
+        description: Indicator key from the 13-indicator approved set.
+        tests:
+          - not_null:
+              config:
+                where: "plr_id_2021 is not null"
+          - accepted_values:
+              arguments:
+                values:
+                  - residents_total
+                  - residents_male_share
+                  - residents_female_share
+                  - age_under18_share
+                  - age_18_27_share
+                  - age_27_45_share
+                  - age_45_65_share
+                  - age_65plus_share
+                  - mean_age_years
+                  - foreigners_share
+                  - migration_background_share
+                  - residence_duration_5y_share
+                  - residence_duration_10y_share
+              config:
+                where: "plr_id_2021 is not null"
+      - name: indicator_value
+        description: >
+          Weighted indicator value. For shares: value * crosswalk_weight.
+          For residents_total: value * crosswalk_weight. NULL if suppressed.
+      - name: is_suppressed_any
+        description: Propagated from stg_berlin_ewr. True if any indicator was suppressed for this PLR.
+        tests:
+          - not_null:
+              config:
+                where: "plr_id_2021 is not null"
+      - name: source_attribution
+        description: CC BY 3.0 DE attribution string propagated from stg_berlin_ewr.
+        tests:
+          - not_null:
+              config:
+                where: "plr_id_2021 is not null"
+      - name: crosswalk_weight
+        description: Weight applied from the crosswalk (1.0 for passthrough/identity; fractional for splits).
+        tests:
+          - not_null:
+              config:
+                where: "plr_id_2021 is not null"
+      - name: crosswalk_type
+        description: >
+          How this row was produced: 'passthrough' (lor_2021 rows), 'official_concordance',
+          'areal_pop_weighted', or 'identity' (from crosswalk).
+        tests:
+          - not_null:
+              config:
+                where: "plr_id_2021 is not null"
+
+  - name: int_osm_poi_harmonized
+    description: >
+      C2 POI taxonomy harmonization view.  Selects from stg_osm_poi and applies
+      approved tag-schema drift remapping via seed_poi_tag_drift, resolving each
+      POI to its canonical (poi_domain_h, poi_category_h, poi_type_h) triple.
+      Canonical classifications are sourced from seed_poi_canonical_category.
+      Provenance is recorded in harmonization_provenance so downstream models can
+      filter or weight remapped POIs independently.
+      Graceful-degradation: returns zero rows when stg_osm_poi has no data
+      (no parquet files produced by C1 ingestion); the schema is always present.
+    meta:
+      dbt_meta_owner: data-engineer
+    tests:
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns:
+              - snapshot_year
+              - osm_id
+          config:
+            where: "osm_id is not null"
+    columns:
+      - name: city_code
+        description: City identifier (ADR-0005).
+        tests:
+          - not_null:
+              config:
+                where: "osm_id is not null"
+      - name: snapshot_year
+        description: Calendar year of the OSM snapshot (integer, e.g. 2018).
+        tests:
+          - not_null:
+              config:
+                where: "osm_id is not null"
+      - name: osm_id
+        description: OSM node identifier (e.g. 'node/12345678').
+        tests:
+          - not_null:
+              config:
+                where: "snapshot_year is not null"
+      - name: poi_domain_h
+        description: >
+          Harmonized POI domain.  COALESCE(canonical_poi_domain, poi_domain).
+          Same as poi_domain when no drift rule applies.
+        tests:
+          - not_null:
+              config:
+                where: "osm_id is not null"
+      - name: poi_category_h
+        description: >
+          Harmonized POI category.  COALESCE(canonical_poi_category, poi_category).
+          Same as poi_category when no drift rule applies.
+        tests:
+          - not_null:
+              config:
+                where: "osm_id is not null"
+      - name: poi_type_h
+        description: >
+          Harmonized POI type.  COALESCE(canonical_poi_type, poi_type).
+          Same as poi_type when no drift rule applies.
+        tests:
+          - not_null:
+              config:
+                where: "osm_id is not null"
+      - name: harmonization_provenance
+        description: >
+          Indicates how the harmonized classification was derived.
+          'native'      — no drift rule matched; original classification retained.
+          'drift_remap' — matched exactly one drift rule; remapped to canonical.
+          'ambiguous'   — matched more than one drift rule (guard; should not occur
+                          with the approved seed).
+          'unmapped'    — matched a drift rule but canonical seed has no entry for
+                          the canonical_key/value pair.
+        tests:
+          - not_null:
+              config:
+                where: "osm_id is not null"
+          - accepted_values:
+              arguments:
+                values: ["native", "drift_remap", "ambiguous", "unmapped"]
+              config:
+                where: "osm_id is not null"

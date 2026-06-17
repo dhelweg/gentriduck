@@ -1,0 +1,14 @@
+indicator,label_de,label_en,unit,definition_vintage_from,definition_vintage_to,source_table,caveats
+residents_total,Einwohner gesamt,Total registered residents per PLR area at 31 December snapshot,count,2015,2024,E_E,
+residents_male_share,Maenneranteil,Share of male residents; computed as E_EM / E_E,share,2015,2024,E_EM,
+residents_female_share,Frauenanteil,Share of female residents; computed as E_EW / E_E,share,2015,2024,E_EW,
+age_under18_share,Anteil unter 18 Jahre,Share of residents under 18 years; computed from E_U1+E_1U6+E_6U15+E_15U18 / E_E,share,2015,2024,E_U1+E_1U6+E_6U15+E_15U18,
+age_18_27_share,Anteil 18 bis unter 27 Jahre,Share of residents aged 18 to under 27 years; computed from E_E18_21+E_E21_25+E_E25_27 / E_E,share,2015,2024,E_E18_21+E_E21_25+E_E25_27,
+age_27_45_share,Anteil 27 bis unter 45 Jahre,Share of residents aged 27 to under 45 years; computed from E_E27_30+E_E30_35+E_E35_40+E_E40_45 / E_E,share,2015,2024,E_E27_30+E_E30_35+E_E35_40+E_E40_45,
+age_45_65_share,Anteil 45 bis unter 65 Jahre,Share of residents aged 45 to under 65 years; computed from E_E45_50+E_E50_55+E_E55U65 / E_E,share,2015,2024,E_E45_50+E_E50_55+E_E55U65,
+age_65plus_share,Anteil 65 Jahre und aelter,Share of residents aged 65 years and over; computed from E_65U80+E_80U110 / E_E,share,2015,2024,E_65U80+E_80U110,
+mean_age_years,Durchschnittsalter,Mean age in years; midpoint-weighted over standard age cohorts,years,2015,2024,age cohorts midpoint-weighted,
+foreigners_share,Auslaenderanteil,Share of foreign nationals; computed as E_A / E_E,share,2015,2024,E_A,
+migration_background_share,Anteil Migrationshintergrund,Share of residents with migration background; computed as MH_E / E_E,share,2017,2024,MH_E,Methodological break ~2017: Mikrozensus definition of Migrationshintergrund changed around 2017. Pre-2017 values are present in the data but are not directly comparable to post-2017 values. Use definition_vintage_from=2017 for time-series analysis.
+residence_duration_5y_share,Anteil Wohndauer 5 Jahre und mehr,Share of residents with 5 or more years of continuous residence at current address; derived from DAU5 column,share,2015,2024,DAU5,
+residence_duration_10y_share,Anteil Wohndauer 10 Jahre und mehr,Share of residents with 10 or more years of continuous residence at current address; derived from DAU10 column,share,2015,2024,DAU10,

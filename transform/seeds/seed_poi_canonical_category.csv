@@ -1,0 +1,5 @@
+canonical_key,canonical_value,poi_domain,poi_category,poi_type,gentrification_proxy
+office,coworking,economy,workspace,coworking_space,true
+shop,organic,retail,food,organic_food,true
+leisure,yoga_studio,wellness,fitness,yoga_studio,true
+leisure,fitness_outdoor,recreation,fitness,fitness_outdoor,false
