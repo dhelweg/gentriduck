@@ -1,0 +1,5 @@
+# Generated dbt artifacts — not source files; don't lint them.
+transform/target/
+transform/dbt_packages/
+# The 2018 thesis reference SQL is Hive dialect (not DuckDB) and read-only.
+reference/
