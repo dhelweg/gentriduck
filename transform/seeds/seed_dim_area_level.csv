@@ -1,0 +1,4 @@
+level_code,level_name,description
+bezirk,Bezirk,12 Berlin districts
+bzr,Bezirksregion,~138 sub-districts within Bezirke
+plr,Planungsraum,~447 smallest LOR planning areas
