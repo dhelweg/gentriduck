@@ -1,8 +1,10 @@
 [sqlfluff]
-# DuckDB dialect; lint logic/capitalisation/references only — sqlfmt owns layout.
+# DuckDB dialect; lint logic/capitalisation/references only -- sqlfmt owns layout.
+# structure.column_order (ST06) excluded: interleaved CAST/CASE columns follow semantic
+# ordering from the staging schema contract; reordering would harm readability.
 dialect = duckdb
 templater = jinja
-exclude_rules = layout
+exclude_rules = layout, structure.column_order
 max_line_length = 100
 
 [sqlfluff:templater:jinja]

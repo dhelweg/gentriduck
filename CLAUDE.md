@@ -44,6 +44,22 @@ from open sources — only small golden/reference files are committed.
 `geo-data-scientist` (methodology authority) · `data-analyst` (analysis + site content).
 `web-engineer` (+ reviewer) are added at Epic G.
 
+## Overnight / autonomous local run
+To hand off to the agents and walk away, open a persistent tmux session and invoke the PM:
+```bash
+tmux new -s gentriduck          # or: tmux attach -t gentriduck
+# inside tmux — tell Claude: "start the project manager and work on next best tasks"
+```
+The PM reads `docs/handoff/`, drives the next board task through the coder↔reviewer loop,
+creates a PR, and writes a new handoff. Permissions in `.claude/settings.local.json` are
+pre-approved so no manual prompts are needed. Tomorrow: `tmux attach -t gentriduck` to review.
+
+For a recurring nightly cron (fires at 00:00 Berlin time, logs to `~/.claude/gentriduck-overnight.log`):
+```bash
+(crontab -l 2>/dev/null; echo '0 22 * * * cd ~/git_private/gentriduck && claude --print "start the project manager and work on next best tasks" >> ~/.claude/gentriduck-overnight.log 2>&1') | crontab -
+```
+Remove with: `crontab -e`
+
 ## Epic B framing
 B is a **directional revival** — does the 2018 paper's findings still hold? Exact number-for-number
 reproduction is **not** required; document divergences and move on to the extension (Epic C).

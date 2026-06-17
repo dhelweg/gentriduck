@@ -1,0 +1,164 @@
+domain,category,type
+Tourism,Accommodation,Hostel
+Tourism,Accommodation,Hotel
+Tourism,Accommodation,Other Accommodation
+Tourism,Sights,Artwork
+Entertainment,Culture,Art Center
+Entertainment,Culture,Gallery
+Tourism,Info,Info
+Entertainment,Culture,Museum
+Tourism,Sights,Viewpoint
+Entertainment,Culture,Zoo
+Sports and Recreation,Sport,Swimming
+Sports and Recreation,Sport,Basketball
+Sports and Recreation,Sport,Football
+Sports and Recreation,Sport,Sports Center
+Sports and Recreation,Sport,Table Tennis
+Sports and Recreation,Recreation,Sauna
+Sports and Recreation,Sport,Tennis
+Sports and Recreation,Sport,Martial Arts
+Sports and Recreation,Sport,Fitness Center
+Sports and Recreation,Recreation,Playground
+Sports and Recreation,Recreation,Water Sports
+Entertainment,Nightlife,Gambling
+Sports and Recreation,Sport,Other Sports
+Public Service,Education,Kindergarten
+Office,Office,Office
+Mobility,Individual,Gas Station
+Other,Hipster,Coworking Space
+Public Service,Education,University
+Public Service,Safety,Police
+Public Service,Safety,Fire Station
+Public Service,Education,Daycare
+Public Service,Education,High School
+Public Service,Other,Weekly Market
+Entertainment,Leisure,Cinema
+Gastronomy,Restaurant,Beer Garden
+Mobility,Individual,Car Rental
+Public Service,Education,Library
+Public Service,Social,Community Center
+Entertainment,Culture,Theater
+Gastronomy,Cafe,Ice Cream Shop
+Entertainment,Nightlife,Nightclub
+Religion,Religious Buildings,Church
+Religion,Religious Buildings,Mosque
+Religion,Religious Buildings,Other Temple
+Public Service,Education,School
+Entertainment,Nightlife,Brothel
+Public Space,Post,Post Office
+Public Service,Social,Social Service
+Mobility,Individual,Charging Station
+Public Service,Health,Dentist
+Mobility,Individual,Bike Rental
+Public Service,Other,Driving School
+Public Service,Health,Vet
+Other,Other,Embassy
+Mobility,Individual,Taxi Stand
+Public Space,Toilet,Toilet
+Public Service,Bank,Bank Branch
+Public Service,Health,Doctor
+Mobility,Individual,Parking Lot
+Entertainment,Bar,Bar
+Public Service,Health,Pharmacy
+Entertainment,Bar,Pub
+Public Space,Phone,Phone
+Gastronomy,Cafe,Coffee
+Gastronomy,Cafe,Other Cafes
+Mobility,Individual,Bike Parking
+Public Space,Recycling,Trash Can
+Public Space,Bench,Park Bench
+Public Service,Health,Hospital
+Public Service,Health,Clinic
+Public Service,Bank,ATM
+Public Space,Mail,Mailbox
+Religion,Cemetery,Cemetery
+Public Service,Other,Music School
+Public Space,Mail,Parcel Locker
+Public Space,Vending,Other Vending Machine
+Mobility,Public Transport,Ticket Machine
+Mobility,Individual,Parking Ticket Machine
+Public Space,Vending,Dog Bag Dispenser
+Public Space,Vending,Cigarette Machine
+Public Space,Vending,Candy Machine
+Public Space,Mail,Stamp Machine
+Public Space,Vending,Condom Machine
+Public Space,Vending,Drinks and Candy Machine
+Public Space,Vending,Drinks Machine
+Public Space,Other,Barbecue Area
+Public Space,Recycling,Glass Container
+Public Space,Recycling,Glass and Clothing Container
+Public Space,Recycling,Clothing Container
+Public Space,Recycling,Other Container
+Gastronomy,Restaurant,Italian Restaurant
+Gastronomy,Restaurant,German Restaurant
+Gastronomy,Restaurant,Indian Restaurant
+Gastronomy,Restaurant,Asian Restaurant
+Gastronomy,Restaurant,Sushi Restaurant
+Gastronomy,Restaurant,Greek Restaurant
+Gastronomy,Restaurant,Steakhouse
+Gastronomy,Restaurant,International Restaurant
+Gastronomy,Restaurant,Turkish Restaurant
+Gastronomy,Fast Food,Kebab Fast Food
+Gastronomy,Fast Food,Burger Fast Food
+Gastronomy,Fast Food,Asian Fast Food
+Gastronomy,Fast Food,Pizza Fast Food
+Gastronomy,Fast Food,Fries Fast Food
+Gastronomy,Fast Food,Other Fast Food
+Gastronomy,Restaurant,Other Restaurant
+Services,Hairdresser,Hairdresser
+Retail,Food and Drink,Bakery
+Retail,Clothing,Clothing
+Retail,Food and Drink,Supermarket
+Retail,Food and Drink,Kiosk
+Retail,Other Goods,Florist
+Retail,Workshop,Bicycle
+Services,Beauty,Beauty
+Retail,Medical,Optician
+Retail,Clothing,Shoes
+Retail,Print,Books
+Services,Massage,Massage
+Retail,Other Goods,Jewelry
+Retail,Workshop,Car Repair
+Retail,Drugstore,Drugstore
+Services,Travel,Travel
+Retail,Tech,Mobile
+Retail,Other Goods,Furniture
+Retail,Food and Drink,Beverages
+Retail,Food and Drink,Delicatessen
+Retail,Tech,Electronics
+Retail,Clothing,Boutique
+Retail,Workshop,Car Dealership
+Retail,Food and Drink,Liquor
+Retail,Toys and Gifts,Gifts
+Retail,Other Goods,Discount Market
+Retail,Food and Drink,Butcher
+Services,Laundry,Laundromat
+Retail,Other Goods,Computer
+Retail,Toys and Gifts,Toys
+Retail,Print,Copy Shop
+Retail,Clothing,Tailor
+Retail,Art,Photo
+Retail,Art,Art
+Retail,Food and Drink,Sweets
+Retail,Other Goods,Decoration
+Services,Laundry,Dry Cleaning
+Services,Funeral,Funeral Home
+Retail,Clothing,Sports
+Retail,Other Goods,Pet Shop
+Retail,Other Goods,Textile Shop
+Retail,Medical,Hearing Aid
+Retail,Hardware,Hardware Store
+Vacancy,Vacancy,Vacancy
+Retail,Medical,Medical
+Retail,Clothing,Second Hand
+Retail,Print,Newspaper
+Retail,Hardware,Ironmonger
+Retail,Other Shop,Other Shop
+Tourism,Sights,Listed Building
+Mobility,Public Transport,Stop
+Public Space,Other Building,Other Building
+Public Space,Other Area,Other Area
+Tourism,Sights,Other Monument
+Tourism,Other Tourism,Other Tourism
+Sports and Recreation,Sport,Other Sport
+Sports and Recreation,Recreation,Other Recreation

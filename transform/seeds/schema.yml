@@ -1,0 +1,66 @@
+version: 2
+
+seeds:
+  - name: seed_poi_mapping
+    description: >
+      POI tag-to-taxonomy mapping seed (translated to English from the 2018 thesis
+      reference/poi_mapping.csv). Maps OSM POI types to (domain, category, type)
+      hierarchy used in int_poi_mapping and the POI pivot (Epic C). 163 rows.
+      Original German labels translated at this seed boundary; reference/poi_mapping.csv
+      is the read-only thesis artefact and must not be modified.
+    meta:
+      dbt_meta_owner: data-engineer
+    columns:
+      - name: domain
+        description: Top-level POI domain (English label; e.g. 'Gastronomy', 'Tourism').
+        tests:
+          - not_null
+      - name: category
+        description: Mid-level POI category within the domain (English label).
+        tests:
+          - not_null
+      - name: type
+        description: Specific POI type (English label; maps to OSM tag values).
+        tests:
+          - not_null
+
+  - name: seed_dim_city
+    description: >
+      City dimension seed (ADR-0005 city-agnostic seam). One row per city.
+      Currently Berlin only (BER). Multi-city expansion (Epic H) adds a new row.
+    meta:
+      dbt_meta_owner: data-engineer
+    columns:
+      - name: city_code
+        description: Short city identifier (e.g. 'BER'). Natural key.
+        tests:
+          - not_null
+          - unique
+      - name: city_name
+        description: Human-readable city name (e.g. 'Berlin').
+        tests:
+          - not_null
+      - name: country_code
+        description: ISO 3166-1 alpha-2 country code (e.g. 'DE').
+        tests:
+          - not_null
+
+  - name: seed_dim_area_level
+    description: >
+      Area level taxonomy seed (ADR-0005 city-agnostic seam). Maps Berlin's
+      administrative area codes (bzr, plr) to human-readable level names.
+      'bezirk' level is deferred until Epic C adds the district-level breakdown.
+    meta:
+      dbt_meta_owner: data-engineer
+    columns:
+      - name: level_code
+        description: Area level code (stable administrative abbreviation; e.g. 'bzr', 'plr').
+        tests:
+          - not_null
+          - unique
+      - name: level_name
+        description: Human-readable level name (e.g. 'Bezirksregion').
+        tests:
+          - not_null
+      - name: description
+        description: Brief description of the administrative level.
