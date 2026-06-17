@@ -126,6 +126,30 @@ SOURCE_ATTRIBUTION = (
 
 CKAN_API_BASE = "https://daten.berlin.de/api/3/action/package_search"
 
+# Companion CSV URLs (12H suffix) — contain E_A, MH_E, DAU5, DAU10 columns that
+# are absent from the main 12E Matrix CSV.
+# NOTE: statistik-berlin-brandenburg.de blocks programmatic HTTP access (returns
+# text/html for CSV requests). Download manually and place as EWR{YYYY}12H_Matrix.csv
+# (or {year}H.csv) in the --local-csv-dir directory.
+VINTAGE_H_URLS: dict[int, str] = {
+    2008: "https://www.statistik-berlin-brandenburg.de/opendata/EWR200812H_Matrix.csv",
+    2009: "https://www.statistik-berlin-brandenburg.de/opendata/EWR200912H_Matrix.csv",
+    2010: "https://www.statistik-berlin-brandenburg.de/opendata/EWR201012H_Matrix.csv",
+    2011: "https://www.statistik-berlin-brandenburg.de/opendata/EWR201112H_Matrix.csv",
+    2012: "https://www.statistik-berlin-brandenburg.de/opendata/EWR201212H_Matrix.csv",
+    2013: "https://www.statistik-berlin-brandenburg.de/opendata/EWR201312H_Matrix.csv",
+    2015: "https://www.statistik-berlin-brandenburg.de/opendata/EWR201512H_Matrix.csv",
+    2016: "https://www.statistik-berlin-brandenburg.de/opendata/EWR201612H_Matrix.csv",
+    2017: "https://www.statistik-berlin-brandenburg.de/opendata/EWR201712H_Matrix.csv",
+    2018: "https://www.statistik-berlin-brandenburg.de/opendata/EWR201812H_Matrix.csv",
+    2019: "https://www.statistik-berlin-brandenburg.de/opendata/EWR201912H_Matrix.csv",
+    2020: "https://www.statistik-berlin-brandenburg.de/opendata/EWR202012H_Matrix.csv",
+    2024: "https://www.statistik-berlin-brandenburg.de/opendata/EWR_L21_202412H_Matrix.csv",
+}
+
+# Companion CSV columns that live exclusively in the 12H Matrix file.
+COMPANION_COLS = ["E_A", "MH_E", "DAU5", "DAU10"]
+
 # Known direct download URLs for the 31-Dec snapshot per year (fast path).
 # Source: daten.berlin.de dataset pages (ADR-0003).
 # When a URL is present here, the CKAN API discovery call is skipped for that year.
@@ -154,6 +178,20 @@ VINTAGE_URLS: dict[int, str] = {
 # Values that represent privacy suppression in the EWR CSV cells.
 SUPPRESSION_SENTINELS = frozenset({"-", ".", "", "X", "x"})
 
+# 2014+ EWR CSVs renamed the grouped age-bin columns (added "E_" prefix).
+# Map new names -> canonical old names so compute_indicators always sees one name set.
+_GROUPED_BIN_ALIASES: dict[str, str] = {
+    "E_EU1": "E_U1",
+    "E_E1U6": "E_1U6",
+    "E_E6U15": "E_6U15",
+    "E_E15U18": "E_15U18",
+    "E_E18U25": "E_18U25",
+    "E_E25U55": "E_25U55",
+    "E_E55U65": "E_55U65",
+    "E_E65U80": "E_65U80",
+    "E_E80U110": "E_80U110",
+}
+
 # Age cohort midpoints (years) for mean_age computation.
 # Bins: [lower, upper) with midpoint = (lower + upper) / 2.
 AGE_COHORTS: list[tuple[float, str]] = [
@@ -170,7 +208,7 @@ AGE_COHORTS: list[tuple[float, str]] = [
     (42.5, "E_E40_45"),  # 40-44
     (47.5, "E_E45_50"),  # 45-49
     (52.5, "E_E50_55"),  # 50-54
-    (60.0, "E_E55U65"),  # 55-64
+    (60.0, "E_55U65"),  # 55-64
     (72.5, "E_65U80"),  # 65-79
     (90.0, "E_80U110"),  # 80-109
 ]
@@ -293,9 +331,17 @@ def _to_numeric_with_suppression(series: pd.Series) -> tuple[pd.Series, pd.Serie
     Returns (numeric_series, suppression_mask).
     Suppressed sentinels ('-', '.', etc.) become NaN in numeric_series and
     True in suppression_mask.
+
+    German decimal separator: some vintage CSVs (e.g. 2012, 2013, 2015) quote
+    all values and use ',' as the decimal separator ("2930,00"). We normalise
+    by replacing ',' with '.' in the stripped string before parsing. This is
+    safe because EWR PLR-level counts never use German thousands separators.
     """
-    suppression_mask = series.astype(str).str.strip().isin(SUPPRESSION_SENTINELS)
-    numeric = pd.to_numeric(series, errors="coerce")
+    stripped = series.astype(str).str.strip()
+    suppression_mask = stripped.isin(SUPPRESSION_SENTINELS)
+    # Normalise German decimal separator before numeric conversion.
+    normalised = stripped.str.replace(",", ".", regex=False)
+    numeric = pd.to_numeric(normalised, errors="coerce")
     return numeric, suppression_mask
 
 
@@ -360,6 +406,14 @@ def compute_indicators(df: pd.DataFrame, year: int) -> pd.DataFrame:
     # Normalise column names (strip whitespace, uppercase).
     df.columns = df.columns.str.strip().str.upper()
 
+    # Normalise 2014+ grouped age-bin column names to the canonical pre-2014 names
+    # so the rest of compute_indicators can use a single name set.
+    df = df.rename(
+        columns={
+            k: v for k, v in _GROUPED_BIN_ALIASES.items() if k in df.columns and v not in df.columns
+        }
+    )
+
     # PLR identifier column — EWR CSVs use 'PLR', 'RAUMID', or 'RAUMID_PLR'.
     plr_col = next((c for c in ("RAUMID", "RAUMID_PLR", "PLR_ID", "PLR") if c in df.columns), None)
     if plr_col is None:
@@ -403,9 +457,20 @@ def compute_indicators(df: pd.DataFrame, year: int) -> pd.DataFrame:
     indicators["age_under18_share"] = _share(["E_U1", "E_1U6", "E_6U15", "E_15U18"])
     indicators["age_18_27_share"] = _share(["E_E18_21", "E_E21_25", "E_E25_27"])
     indicators["age_27_45_share"] = _share(["E_E27_30", "E_E30_35", "E_E35_40", "E_E40_45"])
-    indicators["age_45_65_share"] = _share(["E_E45_50", "E_E50_55", "E_E55U65"])
+    indicators["age_45_65_share"] = _share(["E_E45_50", "E_E50_55", "E_55U65"])
     indicators["age_65plus_share"] = _share(["E_65U80", "E_80U110"])
-    indicators["foreigners_share"] = _share(["E_A"])
+
+    # foreigners_share — E_A is only in the companion 12H CSV (not the main 12E Matrix).
+    # When the companion has not been loaded, log a debug note and emit NaN (not 0.0).
+    if "E_A" in df.columns:
+        indicators["foreigners_share"] = _share(["E_A"])
+    else:
+        log.debug(
+            "E_A column absent for year %d (companion 12H CSV not loaded) — "
+            "foreigners_share will be NULL",
+            year,
+        )
+        indicators["foreigners_share"] = pd.Series(float("nan"), index=df.index)
 
     # mean_age: midpoint-weighted sum over cohorts / total residents.
     weighted_age = pd.Series(0.0, index=df.index)
@@ -515,6 +580,36 @@ def load_local_csv(local_dir: Path, year: int) -> Optional[pd.DataFrame]:
     return None
 
 
+def load_companion_local_csv(local_dir: Path, year: int) -> Optional[pd.DataFrame]:
+    """
+    Load the companion 12H CSV from local_dir if it exists.
+
+    The companion CSV contains E_A, MH_E, DAU5, DAU10 which are absent from
+    the main 12E Matrix.  Tries filenames analogous to load_local_csv:
+      EWR{year}12H_Matrix.csv  (most years)
+      EWR_L21_{year}12H_Matrix.csv  (2024+)
+      {year}H.csv  (manual fallback name)
+    See VINTAGE_H_URLS for reference URLs (manual download required).
+    """
+    for name in (
+        f"EWR{year}12H_Matrix.csv",
+        f"EWR_L21_{year}12H_Matrix.csv",
+        f"{year}H.csv",
+    ):
+        path = local_dir / name
+        if path.exists():
+            log.info("Using local companion 12H CSV for EWR %d: %s", year, path)
+            return _parse_csv_bytes(path.read_bytes(), year)
+    log.debug(
+        "No companion 12H CSV found for year %d in %s — "
+        "E_A / MH_E / DAU5 / DAU10 will be NULL. "
+        "See VINTAGE_H_URLS for the download URL.",
+        year,
+        local_dir,
+    )
+    return None
+
+
 def download_csv(url: str, year: int) -> pd.DataFrame:
     """Download a CSV from url and parse it; tries ';', ',', and tab separators."""
     log.info("Downloading EWR %d from %s", year, url)
@@ -558,6 +653,62 @@ def process_year(
         except Exception as exc:
             log.error("Failed to download EWR %d: %s", year, exc)
             return False
+
+    # Attempt to load and merge companion 12H CSV (contains E_A, MH_E, DAU5, DAU10).
+    if local_dir:
+        companion_df = load_companion_local_csv(local_dir, year)
+        if companion_df is not None:
+            # Normalise companion column names to match main CSV treatment.
+            companion_df.columns = companion_df.columns.str.strip().str.upper()
+            # Identify the join key (RAUMID / PLR identifier) in the companion.
+            companion_plr_col = next(
+                (c for c in ("RAUMID", "RAUMID_PLR", "PLR_ID", "PLR") if c in companion_df.columns),
+                None,
+            )
+            if companion_plr_col is not None:
+                companion_df = companion_df.rename(columns={companion_plr_col: "_JOIN_KEY"})
+                companion_df["_JOIN_KEY"] = (
+                    companion_df["_JOIN_KEY"].astype(str).str.strip().str.zfill(8)
+                )
+                # Identify the join key in the main CSV (normalised same way later in
+                # compute_indicators; normalise here so the merge key matches).
+                main_df = raw_df.copy()
+                main_df.columns = main_df.columns.str.strip().str.upper()
+                main_plr_col = next(
+                    (c for c in ("RAUMID", "RAUMID_PLR", "PLR_ID", "PLR") if c in main_df.columns),
+                    None,
+                )
+                if main_plr_col is not None:
+                    main_df["_JOIN_KEY"] = (
+                        main_df[main_plr_col].astype(str).str.strip().str.zfill(8)
+                    )
+                    # Columns to pull from companion (only those absent from main).
+                    # Apply alias normalisation so downstream code uses canonical names.
+                    companion_df = companion_df.rename(
+                        columns={
+                            k: v
+                            for k, v in _GROUPED_BIN_ALIASES.items()
+                            if k in companion_df.columns and v not in companion_df.columns
+                        }
+                    )
+                    cols_to_merge = [
+                        c
+                        for c in COMPANION_COLS
+                        if c in companion_df.columns and c not in main_df.columns
+                    ]
+                    if cols_to_merge:
+                        companion_subset = companion_df[["_JOIN_KEY"] + cols_to_merge]
+                        merged = main_df.merge(companion_subset, on="_JOIN_KEY", how="left")
+                        # Restore original column order + add companion cols; drop temp key.
+                        raw_df = merged.drop(columns=["_JOIN_KEY"])
+                        # Restore original column names for main CSV columns
+                        # (compute_indicators will normalise again).
+                        log.info(
+                            "Merged companion 12H cols %s for EWR %d (%d rows matched)",
+                            cols_to_merge,
+                            year,
+                            companion_subset["_JOIN_KEY"].isin(main_df["_JOIN_KEY"]).sum(),
+                        )
 
     try:
         wide_df = compute_indicators(raw_df, year)
