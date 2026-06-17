@@ -165,8 +165,17 @@ models:
       tag set. ODbL-licensed; source_attribution column carries the attribution string.
       Returns zero rows (typed stub) when no parquet files have been ingested yet,
       so downstream models and dbt build pass before data download.
+      Nodes only (C1 scope): way/relation POIs deferred to C2 tag-drift work.
     meta:
       dbt_meta_owner: data-engineer
+    tests:
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns:
+              - snapshot_year
+              - osm_id
+          config:
+            where: "osm_id is not null"
     columns:
       - name: city_code
         description: >
@@ -193,12 +202,10 @@ models:
                 where: "osm_id is not null"
       - name: osm_id
         description: >
-          OSM feature identifier in 'node/<id>' form. Unique within a snapshot_year.
+          OSM feature identifier in 'node/<id>' form.
+          Unique within a (snapshot_year, osm_id) combination (tested at model level).
         tests:
           - not_null:
-              config:
-                where: "snapshot_year is not null"
-          - unique:
               config:
                 where: "snapshot_year is not null"
       - name: poi_domain
