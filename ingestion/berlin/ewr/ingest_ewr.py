@@ -361,7 +361,7 @@ def compute_indicators(df: pd.DataFrame, year: int) -> pd.DataFrame:
     df.columns = df.columns.str.strip().str.upper()
 
     # PLR identifier column — EWR CSVs use 'PLR', 'RAUMID', or 'RAUMID_PLR'.
-    plr_col = next((c for c in ("PLR", "RAUMID", "RAUMID_PLR", "PLR_ID") if c in df.columns), None)
+    plr_col = next((c for c in ("RAUMID", "RAUMID_PLR", "PLR_ID", "PLR") if c in df.columns), None)
     if plr_col is None:
         raise ValueError(
             f"Cannot find PLR identifier column in CSV for {year}. "
