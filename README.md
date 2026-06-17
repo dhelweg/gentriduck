@@ -28,17 +28,44 @@ Project board. Epics: **A** foundations · **B** revive the 2018 concept · **C*
 history · **D** price/rent dimension · **E** analysis & ML · **F** serving + MotherDuck ·
 **G** public website · **H** multi-city.
 
-## Setup
+## Setup on macOS / Windows / Linux
 
-> Detailed per-OS setup (macOS / Windows / Linux) is added in task A11.
+The repo is checked out and run on **all three** OSes. All commands below go through
+[`uv`](https://docs.astral.sh/uv/) so the toolchain stays identical across machines — Python,
+dbt and Poe live inside the repo-local `.venv`, never global.
 
-Prerequisites: [`uv`](https://docs.astral.sh/uv/), [`gh`](https://cli.github.com/), and the
-[`duckdb`](https://duckdb.org/docs/installation/) CLI.
+### 1. Install prerequisites (per-OS, once)
+
+| Tool | Why | macOS (Homebrew) | Windows (winget / PowerShell) | Linux (apt / install script) |
+|---|---|---|---|---|
+| [`uv`](https://docs.astral.sh/uv/getting-started/installation/) | Python + venv + lockfile | `brew install uv` | `winget install --id=astral-sh.uv` *or* `irm https://astral.sh/uv/install.ps1 \| iex` | `curl -LsSf https://astral.sh/uv/install.sh \| sh` |
+| [`gh`](https://cli.github.com/) | GitHub issues / PRs / Project board | `brew install gh` | `winget install --id=GitHub.cli` | `sudo apt install gh` *or* see [cli.github.com](https://cli.github.com/) |
+| [`duckdb`](https://duckdb.org/docs/installation/) | Optional local CLI for ad-hoc queries against `data/gentriduck.duckdb` | `brew install duckdb` | `winget install --id=DuckDB.cli` *or* download the binary from [duckdb.org](https://duckdb.org/docs/installation/) | Download the binary from [duckdb.org](https://duckdb.org/docs/installation/) |
+
+> The `dbt` CLI is **not** installed globally. `dbt-duckdb` lives only inside the repo's `.venv`
+> and is invoked through `uv run poe …`. The repo-local dbt profile (`transform/profiles.yml`)
+> is used via `DBT_PROFILES_DIR=transform`; your `~/.dbt/profiles.yml` is never touched.
+
+### 2. Clone & install
 
 ```bash
-uv sync                 # create the isolated .venv and install deps
-uv run poe build        # run the dbt build (added in A5/A11)
+gh repo clone dhelweg/gentriduck     # or: git clone https://github.com/dhelweg/gentriduck
+cd gentriduck
+uv sync                              # creates .venv and installs locked deps (incl. dev tools)
+uv run pre-commit install            # installs commit-stage hooks (format + lint)
+uv run pre-commit install --hook-type pre-push  # installs push-stage hook (dbt build + tests)
 ```
+
+### 3. Verify
+
+```bash
+uv run poe debug   # dbt debug — confirms DuckDB + spatial extension load
+uv run poe build   # dbt build (currently a no-op until Epic B models land)
+```
+
+If `poe debug` reports a successful connection, the toolchain is set up correctly. The same
+commands run identically on every OS — line endings are normalised by `.gitattributes`
+(`* text=auto eol=lf`).
 
 ## Licence
 
