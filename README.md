@@ -67,6 +67,51 @@ If `poe debug` reports a successful connection, the toolchain is set up correctl
 commands run identically on every OS — line endings are normalised by `.gitattributes`
 (`* text=auto eol=lf`).
 
+## Rebuilding the data
+
+Gentriduck is **local-first** and **public**. Large or raw artefacts (OSM PBF / history,
+`*.duckdb` files, intermediate parquet) are **gitignored** — every machine rebuilds them from
+free, openly licensed sources via the Python ingestion in `ingestion/`. Only small **golden /
+reference files** (e.g. the 2018 `result_full_*` CSVs, `poi_mapping`) and SQL references live
+in `reference/` and are committed for reproducibility / reconciliation.
+
+### What's tracked vs rebuilt
+
+| Path | Tracked in git? | How to (re)create |
+|---|---|---|
+| `data/raw/` | **no** (gitignored) | Run the ingestion scripts below (downloads from open sources). |
+| `data/gentriduck.duckdb` | **no** (gitignored) | `uv run poe build` (re-materialises dbt models from `data/raw/`). |
+| `reference/` (SQL, golden CSVs, `poi_mapping`) | **yes** | Committed; treat as read-only reference. |
+| `transform/seeds/` (small dim seeds) | **yes** | Committed; loaded by `dbt seed` / `uv run poe build`. |
+
+### Steps (stub — wired up across Epics B–D)
+
+```bash
+# 1. Set up the env (one-off, per machine — see Setup section above)
+uv sync
+
+# 2. Pull open-data inputs into data/raw/ (gitignored).
+#    Implemented incrementally across the Epic B / C / D ingestion tasks:
+#      uv run python -m ingestion.osm_poi_snapshot   # B0/B1, then C1 for the time series
+#      uv run python -m ingestion.berlin_lor         # B0/B1: LOR/PLR/BZR geometries (ADR-0003)
+#      uv run python -m ingestion.berlin_ewr         # B0/B1, then C3b for multi-year
+#      uv run python -m ingestion.berlin_prices_rents  # D1: open price/rent sources
+
+# 3. Rebuild the warehouse from the raw inputs.
+uv run poe build       # dbt build (staging -> intermediate -> marts) + tests
+uv run poe test        # dbt tests only
+```
+
+The ingestion modules above are **stubs until the matching Epic ticket lands** — see the
+GitHub Project board. The contract is that re-running `uv run poe build` on a fresh clone
+(after `data/raw/` is populated) is sufficient to materialise every mart end-to-end. No
+proprietary or paid sources are involved — see the data ADRs (`docs/adr/`) for the source
+list and licences.
+
+> **Why the split.** Raw OSM history + Berlin EWR can run to many GB; the public repo would
+> bloat and the data is freely re-downloadable. Goldens and SQL references are tiny and are
+> the basis of the directional reproducibility check in Epic B, so they live in the repo.
+
 ## Licence
 
 Code: [MIT](LICENSE). Data: under the respective source licences (OSM = ODbL, with attribution).
