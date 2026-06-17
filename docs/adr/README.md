@@ -6,7 +6,7 @@ ADR before adopting a new tool, library, or data source** (no "first tool that w
 | ADR | Title | Status |
 |---|---|---|
 | [0001](0001-stack-and-monorepo-architecture.md) | Stack & monorepo architecture | Accepted |
-| 0002 | OSM POI history sourcing | Proposed (task A2) |
+| [0002](0002-osm-poi-history-sourcing.md) | OSM POI history sourcing | Proposed |
 | 0003 | Berlin geographies + open price/rent sources | Proposed (task A3) |
 | [0004](0004-data-governance-and-index-definition.md) | Data governance & governed index definition | Accepted |
 | [0005](0005-city-agnostic-data-model.md) | City-agnostic data model | Accepted |
