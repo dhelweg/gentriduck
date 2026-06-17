@@ -461,3 +461,109 @@ models:
                 values: ["native", "drift_remap", "ambiguous", "unmapped"]
               config:
                 where: "osm_id is not null"
+
+  - name: int_osm_poi_plr
+    description: >
+      C3-join — Spatial join model that assigns each OSM POI to its PLR area_code
+      using the correct LOR vintage geometry (geo-DS approved methodology).
+      Vintage assignment: snapshot_year <= 2020 uses pre-2021 PLR geometries
+      (448 PLRs); snapshot_year >= 2021 uses LOR 2021 geometries (542 PLRs).
+      Spatial predicate: ST_Within (exact point-in-polygon; no buffer).
+      Left join: POIs outside all PLRs receive area_code = NULL (known exclusions:
+      water bodies, airport perimeter outside PLR boundaries).
+      Graceful-degradation: returns zero rows when OSM or LOR parquet files are
+      absent so dbt build passes before ingestion is run.
+      Materialised as table (spatial join is expensive; avoids recomputation on
+      every downstream ref).
+      Source: LOR WFS from GDI Berlin, CC BY 3.0 DE.
+    meta:
+      dbt_meta_owner: data-engineer
+    tests:
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns:
+              - snapshot_year
+              - osm_id
+          config:
+            where: "osm_id is not null"
+    columns:
+      - name: city_code
+        description: City identifier (ADR-0005).
+        tests:
+          - not_null:
+              config:
+                where: "osm_id is not null"
+      - name: snapshot_year
+        description: Calendar year of the OSM snapshot (integer, e.g. 2018).
+        tests:
+          - not_null:
+              config:
+                where: "osm_id is not null"
+      - name: osm_id
+        description: OSM node identifier (e.g. 'node/12345678').
+        tests:
+          - not_null:
+              config:
+                where: "snapshot_year is not null"
+      - name: area_code
+        description: >
+          PLR area code from spatial join (8-digit, zero-padded). NULL when the
+          POI falls outside all PLR boundaries (water bodies, airport perimeter).
+        tests:
+          - assert_null_rate_below:
+              arguments:
+                column_name: area_code
+                partition_by: snapshot_year
+                max_null_fraction: 0.02
+              config:
+                severity: warn
+                where: "snapshot_year is not null"
+          - relationships:
+              arguments:
+                to: ref('dim_area')
+                field: area_code
+              config:
+                severity: warn
+                where: "area_code is not null"
+      - name: area_vintage
+        description: >
+          LOR vintage of the geometry used for the spatial join.
+          'lor_pre2021' for snapshot_year <= 2020; 'lor_2021' for snapshot_year >= 2021.
+        tests:
+          - accepted_values:
+              arguments:
+                values: ["lor_pre2021", "lor_2021"]
+              config:
+                where: "area_code is not null"
+      - name: poi_domain_h
+        description: >
+          Harmonized POI domain (from int_osm_poi_harmonized).
+          COALESCE(canonical_poi_domain, poi_domain).
+        tests:
+          - not_null:
+              config:
+                where: "osm_id is not null"
+      - name: poi_category_h
+        description: >
+          Harmonized POI category (from int_osm_poi_harmonized).
+          COALESCE(canonical_poi_category, poi_category).
+        tests:
+          - not_null:
+              config:
+                where: "osm_id is not null"
+      - name: poi_type_h
+        description: >
+          Harmonized POI type (from int_osm_poi_harmonized).
+          COALESCE(canonical_poi_type, poi_type).
+        tests:
+          - not_null:
+              config:
+                where: "osm_id is not null"
+      - name: harmonization_provenance
+        description: >
+          Provenance of the harmonized classification (from int_osm_poi_harmonized).
+          'native', 'drift_remap', 'ambiguous', or 'unmapped'.
+        tests:
+          - not_null:
+              config:
+                where: "osm_id is not null"

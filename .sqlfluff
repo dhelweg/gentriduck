@@ -21,6 +21,8 @@ run_query = "{% macro run_query(q) %}{% set ns = namespace() %}{% set ns.result 
 # SQLFluff templates the else-branch (zero-row stub) which is always valid SQL.
 file_count = 0
 execute = False
+# Stub for generic dbt test macros — 'model' is injected by dbt at runtime.
+model = gentriduck__main__test_model
 
 [sqlfluff:rules:capitalisation.keywords]
 capitalisation_policy = lower

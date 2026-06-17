@@ -122,3 +122,60 @@ models:
               - area_code
               - period_yyyymm
               - variant
+
+  - name: fct_poi_development
+    description: >
+      C3-fact — POI development fact table. Aggregates OSM POI counts per
+      (city_code, snapshot_year, area_code, area_vintage, poi_category_h) at PLR grain.
+      Source: int_osm_poi_plr (C3 spatial join). Excludes rows where area_code IS NULL
+      (POIs outside PLR boundaries). One row per unique combination of the five
+      grouping dimensions; poi_count is the count of POIs in that cell.
+      Materialised as table (aggregation over spatial join result).
+    meta:
+      dbt_meta_owner: data-engineer
+    columns:
+      - name: city_code
+        description: City identifier (ADR-0005).
+        tests:
+          - not_null
+      - name: snapshot_year
+        description: Calendar year of the OSM snapshot.
+        tests:
+          - not_null
+      - name: area_code
+        description: PLR area code (8-digit, zero-padded). Never NULL (NULL rows excluded upstream).
+        tests:
+          - not_null
+      - name: area_vintage
+        description: LOR vintage used for the spatial join ('lor_pre2021' or 'lor_2021').
+        tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ["lor_pre2021", "lor_2021"]
+      - name: poi_category_h
+        description: Harmonized POI category.
+        tests:
+          - not_null
+      - name: poi_count
+        description: Count of POIs in this (city, year, area, vintage, category) cell.
+        tests:
+          - not_null
+      - name: source_attribution
+        description: CC BY attribution string (ODbL — OpenStreetMap contributors).
+        tests:
+          - not_null
+    tests:
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns:
+              - city_code
+              - snapshot_year
+              - area_code
+              - area_vintage
+              - poi_category_h
+          config:
+            where: "area_code is not null"
+      - dbt_utils.expression_is_true:
+          arguments:
+            expression: "poi_count > 0"
