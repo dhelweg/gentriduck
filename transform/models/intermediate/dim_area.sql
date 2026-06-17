@@ -5,11 +5,7 @@
 -- NOTE — parent_area_code is intentionally omitted at this stage.
 -- Populating parent_area_code requires the LOR geometry crosswalk
 -- (stg_berlin_lor, which is currently a stub — Epic B2/C).
--- A dbt_utils.expression_is_true test below documents the omission and acts
--- as a reminder; it passes vacuously on the current data set because
--- the column is not present.
---
--- When stg_berlin_lor is populated, add:
+-- TODO(Epic C): when stg_berlin_lor is populated, add:
 -- lor.parent_area_code
 -- in a join on (city_code, area_code, area_level).
 {{

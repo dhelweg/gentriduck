@@ -9,7 +9,7 @@ no new data sources).
 
 ### Seeds (`transform/seeds/`)
 - `seed_dim_city.csv` — Berlin (`BER,Berlin,DE`)
-- `seed_dim_area_level.csv` — three levels (`bezirk / bzr / plr`)
+- `seed_dim_area_level.csv` — two active levels (`bzr / plr`); `bezirk` deferred to Epic C
 
 ### Staging (`transform/models/staging/`)
 - `stg_thesis_2018_result_bzr` — 2018 thesis golden at BZR level; 137 rows; latin-1 decoded
@@ -44,10 +44,11 @@ no new data sources).
 2. **`parent_area_code` in `dim_area`** — needs LOR geometry crosswalk from
    `stg_berlin_lor`. Documented in model SQL; deferred to Epic B2/C.
 
-3. **dbt deprecation warnings** — `MissingArgumentsPropertyInGenericTestDeprecation` x13.
-   This is a non-breaking dbt 1.9+ style change: `accepted_values` test `values:` parameter
-   should be nested under `arguments:`. Tests pass; cleanup can be done before dbt 2.0.
-   Task: change `values: [...]` to `arguments: { values: [...] }` in all schema.yml files.
+3. **dbt deprecation warnings** — `MissingArgumentsPropertyInGenericTestDeprecation` x10
+   (confirmed in latest run). Non-breaking dbt 1.9+ style change: `accepted_values` test
+   `values:` parameter should be nested under `arguments:`. Tests pass; cleanup can be done
+   before dbt 2.0. Task: change `values: [...]` to `arguments: { values: [...] }` in all
+   schema.yml files.
 
 ## Path resolver
 
@@ -59,14 +60,19 @@ where `project_root` defaults to `env_var('PWD', '.')` in `dbt_project.yml`. Thi
 `poe build` is run from the repo root (CWD = repo root). Override via
 `--vars 'project_root: /absolute/path'` if needed.
 
-## Next steps for B2 session
+## Next steps (Epic C ingestion — ratified 2026-06-18)
 
-1. Implement `ingestion/berlin/osm/` — fetch one ohsome snapshot at 2018-09-09 and
-   one at today (per B0 strategy) → GeoParquet → `data/raw/osm/`.
-2. Implement `ingestion/berlin/geographies/` — fetch LOR polygons (pre-2021 vintage)
-   from FIS-Broker WFS → GeoParquet → `data/raw/berlin/geographies/`.
-3. Implement `ingestion/berlin/ewr/` — fetch EWR 2017 from daten.berlin.de →
-   `data/raw/berlin/ewr/`.
-4. Replace stubs with real `read_parquet()` calls in staging models.
-5. Add `int_poi_mapping`, `int_poi_pivot`, `int_poi_distance` to intermediate layer.
-6. Add h1–h3c hypothesis marts.
+B0 decisions updated the OSM strategy — see `docs/epic-b/B0-input-inventory.md`.
+
+1. **Download** Geofabrik Germany `.osh.pbf` into `data/raw/osm/` (OSM contributor login).
+2. **Implement** `ingestion/berlin/osm/` — process `.osh.pbf` with `quackosm` into
+   `(poi_id, valid_from, valid_to, geometry, tags)` GeoParquet. Update `stg_osm_poi` stub
+   to `valid_from`/`valid_to` schema (not `snapshot_year`).
+3. **Implement** `ingestion/berlin/geographies/` — LOR WFS (pre-2021 + 2021 vintages) →
+   GeoParquet → `data/raw/berlin/geographies/`.
+4. **Implement** `ingestion/berlin/ewr/` — all available years (31 Dec per year) from
+   `daten.berlin.de` → `data/raw/berlin/ewr/`.
+5. **Add intermediate** `int_poi_development` — annual new/closed POI counts per area
+   derived from `valid_from`/`valid_to` timestamps.
+6. **Add** `int_poi_mapping`, `int_poi_pivot`, `int_poi_distance` (ST_Distance/ST_DWithin).
+7. **Add** h1–h3c hypothesis marts.

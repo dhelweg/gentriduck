@@ -8,6 +8,9 @@
 -- fresh OSM/EWR inputs, the intermediate model is updated and this mart re-builds
 -- without schema changes (mart contract is stable).
 --
+-- TODO(Epic B5/C): prev_zeit (201412 previous-period) is present in the goldens but
+-- not exposed here. Reinstate as prev_period_yyyymm when h1/h2 time-series marts land.
+--
 -- Contract (ADR-0004): column names and types below are the governed contract.
 -- Changes require a deliberate contract edit and reviewer sign-off.
 {{
