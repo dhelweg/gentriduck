@@ -613,6 +613,49 @@ def load_companion_local_csv(local_dir: Path, year: int) -> Optional[pd.DataFram
     return None
 
 
+def load_whndauer_local_csv(local_dir: Path, year: int) -> Optional[pd.DataFrame]:
+    """
+    Load the Wohndauer companion CSV from local_dir if it exists.
+
+    WHNDAUER{YYYY}_Matrix.csv contains PDAU5 and PDAU10 — the share of PLR
+    residents who have lived at their current address for ≥5 and ≥10 years
+    respectively, expressed as percentages (0–100). Divided by 100 on load
+    to produce DAU5/DAU10 shares (0–1) matching the thesis convention.
+
+    Published as a separate dataset series on daten.berlin.de:
+    "Einwohnerinnen und Einwohner in Berlin in LOR-Planungsräumen nach Wohndauer"
+    Available years: 2007-2020.
+    Licence: CC BY 3.0 DE — Amt für Statistik Berlin-Brandenburg.
+
+    Direct download URLs (browser required — server blocks programmatic access):
+      2007-2020: https://www.statistik-berlin-brandenburg.de/opendata/WHNDAUER{YYYY}_Matrix.csv
+    """
+    for name in (f"WHNDAUER{year}_Matrix.csv", f"{year}WHNDAUER.csv"):
+        path = local_dir / name
+        if path.exists():
+            log.info("Using local Wohndauer CSV for EWR %d: %s", year, path)
+            df = _parse_csv_bytes(path.read_bytes(), year)
+            df.columns = df.columns.str.strip().str.upper()
+            # Convert PDAU5/PDAU10 from percentage to 0-1 share and rename to
+            # DAU5/DAU10 so compute_indicators can use them directly.
+            for pct_col, share_col in (("PDAU5", "DAU5"), ("PDAU10", "DAU10")):
+                if pct_col in df.columns:
+                    stripped = df[pct_col].astype(str).str.strip()
+                    df[share_col] = (
+                        pd.to_numeric(stripped.str.replace(",", ".", regex=False), errors="coerce")
+                        / 100.0
+                    )
+            return df
+    log.debug(
+        "No Wohndauer CSV found for year %d in %s — residence_duration_*_share will be NULL. "
+        "Download WHNDAUER%d_Matrix.csv from daten.berlin.de and place in --local-csv-dir.",
+        year,
+        local_dir,
+        year,
+    )
+    return None
+
+
 def load_migra_local_csv(local_dir: Path, year: int) -> Optional[pd.DataFrame]:
     """
     Load the EWRMIGRA companion CSV from local_dir if it exists.
@@ -781,6 +824,46 @@ def process_year(
                             migra_cols,
                             year,
                             work_df["_JOIN_KEY"].isin(migra_subset["_JOIN_KEY"]).sum(),
+                        )
+
+    # Attempt to load and merge Wohndauer companion CSV (contains DAU5/DAU10).
+    if local_dir:
+        whndauer_df = load_whndauer_local_csv(local_dir, year)
+        if whndauer_df is not None:
+            # Column names already normalised to upper-case by load_whndauer_local_csv.
+            whndauer_plr_col = next(
+                (c for c in ("RAUMID", "RAUMID_PLR", "PLR_ID", "PLR") if c in whndauer_df.columns),
+                None,
+            )
+            if whndauer_plr_col is not None:
+                whndauer_df = whndauer_df.rename(columns={whndauer_plr_col: "_JOIN_KEY"})
+                whndauer_df["_JOIN_KEY"] = (
+                    whndauer_df["_JOIN_KEY"].astype(str).str.strip().str.zfill(8)
+                )
+                work_df = raw_df.copy()
+                work_df.columns = work_df.columns.str.strip().str.upper()
+                main_plr_col = next(
+                    (c for c in ("RAUMID", "RAUMID_PLR", "PLR_ID", "PLR") if c in work_df.columns),
+                    None,
+                )
+                if main_plr_col is not None:
+                    work_df["_JOIN_KEY"] = (
+                        work_df[main_plr_col].astype(str).str.strip().str.zfill(8)
+                    )
+                    dau_cols = [
+                        c
+                        for c in ("DAU5", "DAU10")
+                        if c in whndauer_df.columns and c not in work_df.columns
+                    ]
+                    if dau_cols:
+                        dau_subset = whndauer_df[["_JOIN_KEY"] + dau_cols]
+                        merged = work_df.merge(dau_subset, on="_JOIN_KEY", how="left")
+                        raw_df = merged.drop(columns=["_JOIN_KEY"])
+                        log.info(
+                            "Merged Wohndauer cols %s for EWR %d (%d rows matched)",
+                            dau_cols,
+                            year,
+                            work_df["_JOIN_KEY"].isin(dau_subset["_JOIN_KEY"]).sum(),
                         )
 
     try:
