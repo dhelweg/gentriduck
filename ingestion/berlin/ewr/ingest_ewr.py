@@ -373,7 +373,9 @@ def _col_sum_numeric(df: pd.DataFrame, cols: list[str]) -> tuple[pd.Series, pd.S
     masks = []
     for col in present:
         num, mask = _to_numeric_with_suppression(df[col])
-        numerics.append(num.fillna(0))
+        # Bug #57: do not fillna(0) here -- let NaN propagate so suppressed
+        # cells are not silently zeroed before the share numerator is computed.
+        numerics.append(num)
         masks.append(mask)
 
     combined_num = sum(numerics)  # type: ignore[arg-type]
@@ -452,7 +454,10 @@ def compute_indicators(df: pd.DataFrame, year: int) -> pd.DataFrame:
 
     indicators: dict[str, pd.Series] = {}
 
-    indicators["residents_total"] = total
+    # Bug #58: residents_total must be NaN for suppressed PLRs, not 0.0.
+    # total_raw retains NaN; total (fillna(0)) is kept only as a denominator
+    # for _safe_div, which already maps 0 -> NaN before dividing.
+    indicators["residents_total"] = total_raw
     indicators["residents_male_share"] = _share(["E_EM"])
     indicators["residents_female_share"] = _share(["E_EW"])
     indicators["age_under18_share"] = _share(["E_U1", "E_1U6", "E_6U15", "E_15U18"])
