@@ -370,7 +370,9 @@ def _aggregate_to_bucket(
             total_w += ov
             w_low += ov * r["low"]
             w_mid += ov * r["mid"]
-            w_high += ov * (r["high"] or r["mid"])  # fallback if high missing
+            w_high += ov * (
+                r["high"] if r["high"] is not None else r["mid"]
+            )  # fallback if high missing
     if total_w == 0:
         return None
     return (

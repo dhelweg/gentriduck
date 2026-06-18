@@ -218,7 +218,9 @@ def parse_feature(feat: dict, idx: int) -> Optional[dict]:
     brw_id = str(raw_id).strip()
 
     # --- value_eur_per_m2 ---
-    raw_val = props.get(ATTR_BRW_VALUE) or props.get(ATTR_BRW_VALUE.upper())
+    raw_val = props.get(ATTR_BRW_VALUE)
+    if raw_val is None:
+        raw_val = props.get(ATTR_BRW_VALUE.upper())
     if raw_val is None:
         log.warning(
             "Feature %s (idx=%d) missing BRW value attribute '%s'; skipping.",
@@ -298,8 +300,10 @@ def write_parquet(rows: list[dict], out_path: Path) -> None:
         },
         schema=BRW_PARQUET_SCHEMA,
     )
+    tmp_path = out_path.with_suffix(".tmp.parquet")
     out_path.parent.mkdir(parents=True, exist_ok=True)
-    pq.write_table(table, out_path, compression="snappy")
+    pq.write_table(table, tmp_path, compression="snappy")
+    tmp_path.rename(out_path)
     log.info("Wrote %d rows to %s", len(rows), out_path)
 
 

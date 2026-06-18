@@ -295,7 +295,7 @@ seeds:
       PDFs available at mietspiegel.berlin.de/berliner-mietspiegel/archiv/ —
       NOT redistributable in automated form (ADR-0003 item 11); only transcribed
       numeric values are committed.
-      Vintages available: 2017 (complete), 2019/2021/2023/2024 (pending transcription).
+      Vintages available: 2017, 2019, 2021, 2023, 2024, 2026 (all fully transcribed).
     meta:
       dbt_meta_owner: data-engineer
     tests:
@@ -312,7 +312,7 @@ seeds:
     columns:
       - name: vintage
         description: >
-          Mietspiegel edition year (integer; 2017, 2019, 2021, 2023, or 2024).
+          Mietspiegel edition year (integer; 2017, 2019, 2021, 2023, 2024, or 2026).
         tests:
           - not_null
           - accepted_values:

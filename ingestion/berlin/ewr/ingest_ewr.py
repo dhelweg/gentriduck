@@ -472,6 +472,7 @@ def compute_indicators(df: pd.DataFrame, year: int) -> pd.DataFrame:
             year,
         )
         indicators["foreigners_share"] = pd.Series(float("nan"), index=df.index)
+        suppressed_any = suppressed_any | pd.Series(True, index=df.index)
 
     # mean_age: midpoint-weighted sum over cohorts / total residents.
     weighted_age = pd.Series(0.0, index=df.index)
