@@ -170,7 +170,7 @@ models:
             where: "area_code is not null and indicator not in ('residents_total', 'mean_age_years') and indicator_value is not null"
     columns:
       - name: city_code
-        description: City identifier (ADR-0005). Always 'berlin' from EWR ingestion.
+        description: City identifier (ADR-0005). Always 'BER' (normalized from 'berlin' at stg_berlin_ewr staging boundary).
         tests:
           - not_null:
               config:
@@ -291,7 +291,7 @@ models:
             where: "plr_id_2021 is not null"
     columns:
       - name: city_code
-        description: City identifier; always 'berlin' (ADR-0005).
+        description: City identifier; always 'BER' (ADR-0005; normalized at stg_berlin_ewr staging boundary).
         tests:
           - not_null:
               config:

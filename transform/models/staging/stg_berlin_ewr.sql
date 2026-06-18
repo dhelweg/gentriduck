@@ -52,7 +52,8 @@
 -- for suppressed cells is NULL, not 0 (never coerced).
 --
 -- Schema (long format, one row per PLR x indicator):
--- city_code           varchar  -- always 'berlin' (ADR-0005)
+-- city_code           varchar  -- always 'BER' (ADR-0005 canonical; normalised from
+-- parquet 'berlin')
 -- area_code           varchar  -- PLR identifier (zero-padded to 8 chars)
 -- area_vintage        varchar  -- 'lor_pre2021' (<=2020) or 'lor_2021' (>=2021)
 -- reference_year      integer  -- calendar year of the 31-Dec snapshot
@@ -83,8 +84,10 @@
 
     -- UNPIVOT wide parquet (one row per PLR) to long format (one row per PLR x
     -- indicator).
+    -- city_code is normalized from parquet value ('berlin') to canonical 'BER'
+    -- (ADR-0005) so it matches dim_city and dim_area (fix for #52 / int_ewr_series).
     select
-        city_code,
+        'BER' as city_code,
         area_code,
         area_vintage,
         reference_year,

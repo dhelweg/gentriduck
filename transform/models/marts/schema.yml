@@ -64,13 +64,14 @@ models:
       - name: variant
         description: >
           Index variant. 'standard' uses non-distance-weighted POI features;
-          'distance_weighted' uses POI inverse-distance weighting.
+          'distance_weighted' uses POI inverse-distance weighting;
+          'live_data' uses the C4 time-series pipeline (OSM + EWR, all years).
         data_type: varchar
         tests:
           - not_null
           - accepted_values:
               arguments:
-                values: ["standard", "distance_weighted"]
+                values: ["standard", "distance_weighted", "live_data"]
       - name: population
         description: Area population (Einwohner) at the reporting period.
         data_type: double
@@ -85,11 +86,14 @@ models:
         data_type: varchar
       - name: status_class_bi
         description: Binary projected status class (high/medium/low English labels).
+          NULL for live_data variant rows (classification not yet implemented).
         data_type: varchar
         tests:
           - accepted_values:
               arguments:
                 values: ["high", "medium", "low"]
+              config:
+                where: "status_class_bi is not null"
       - name: dynamism_index
         description: Dynamism sub-index (z-score of POI-based dynamism features).
         data_type: double
@@ -102,11 +106,14 @@ models:
         data_type: varchar
       - name: dynamism_class_bi
         description: Binary projected dynamism class (positive/neutral/negative English labels).
+          NULL for live_data variant rows (classification not yet implemented).
         data_type: varchar
         tests:
           - accepted_values:
               arguments:
                 values: ["positive", "neutral", "negative"]
+              config:
+                where: "dynamism_class_bi is not null"
       - name: own_idx_class
         description: Own index class (3 buckets; socio-economic EWR-based index; positive/neutral/negative).
         data_type: varchar
@@ -122,6 +129,67 @@ models:
               - area_code
               - period_yyyymm
               - variant
+
+
+  - name: fct_gentrification_change
+    description: >
+      C4 mart: per-PLR per-year gentrification change metrics. From int_gentrification_ts,
+      adds previous-year score, year-over-year delta, and rank movement metrics.
+      Output grain: (city_code, area_code, area_vintage, snapshot_year).
+      LAG computations are within (city_code, area_code, area_vintage) to avoid
+      cross-vintage rank comparisons at the 2021 LOR boundary change.
+      Rows with NULL gentrification_score (sparse EWR or suppressed cells) are
+      included but have NULL delta/rank columns.
+      Geo-data-scientist sign-off: PENDING (issue #24).
+    meta:
+      dbt_meta_owner: data-engineer
+    tests:
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns:
+              - city_code
+              - area_code
+              - area_vintage
+              - snapshot_year
+    columns:
+      - name: city_code
+        description: City identifier (ADR-0005). Always 'BER'.
+        tests:
+          - not_null
+      - name: snapshot_year
+        description: Calendar year of the OSM snapshot.
+        tests:
+          - not_null
+      - name: area_code
+        description: PLR area code (8-digit, zero-padded).
+        tests:
+          - not_null
+      - name: area_vintage
+        description: LOR vintage ('lor_pre2021' or 'lor_2021').
+        tests:
+          - not_null
+      - name: total_poi_count
+        description: Total POI count for this PLR in this year.
+      - name: yoy_change
+        description: Year-over-year change in total_poi_count. NULL for first year of each vintage.
+      - name: status_score
+        description: Z-score of total_poi_count across all PLRs for this year.
+      - name: dynamism_score
+        description: Z-score of YoY change in total_poi_count across all PLRs for this year.
+      - name: ewr_composite
+        description: Sum of EWR indicator z-scores (5 key indicators). NULL when EWR data absent.
+      - name: gentrification_score
+        description: Equal-weight mean of status_score, dynamism_score, ewr_composite. NULL when any component NULL.
+      - name: gentrification_score_prev
+        description: gentrification_score from the previous year. NULL for first year of each vintage.
+      - name: gentrification_delta
+        description: gentrification_score minus gentrification_score_prev. NULL when either is NULL.
+      - name: rank_current
+        description: Rank of this PLR by gentrification_score within city x year (1=highest score).
+      - name: rank_prev
+        description: Rank from the previous year. NULL for first year of each vintage.
+      - name: rank_change
+        description: rank_prev minus rank_current (positive means improved rank). NULL when either rank NULL.
 
   - name: fct_poi_development
     description: >
