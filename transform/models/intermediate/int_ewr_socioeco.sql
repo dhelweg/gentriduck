@@ -113,12 +113,14 @@ with
                 ),
                 0
             ) as z_migration_background_share,
-            -- Z-score: mean_age_years (inverted: higher mean age -> lower
-            -- vulnerability)
-            (
+            -- Z-score: mean_age_years (negated: higher mean age -> lower
+            -- vulnerability, so high z = lower vulnerability -> subtract from
+            -- composite)
+            -1.0 * (
                 mean_age_years
                 - avg(mean_age_years) over (partition by city_code, reference_year)
-            ) / nullif(
+            )
+            / nullif(
                 stddev(mean_age_years) over (partition by city_code, reference_year), 0
             ) as z_mean_age_years,
             -- Z-score: residence_duration_5y_share
@@ -135,9 +137,15 @@ with
         from pivoted
     ),
 
-    -- EWR composite: sum of z-scores for the 5 key indicators.
+    -- EWR composite: mean of z-scores for the 5 key indicators (not sum).
+    -- Using mean keeps ewr_composite on the same unit-variance scale as
+    -- status_score and dynamism_score in int_poi_status_dynamism, so the
+    -- equal-weight 1/3 average in int_gentrification_ts is actually equal.
+    -- (Summing 5 z-scores would produce SD ~√5 and silently dominate.)
     -- NULL if any z-score is NULL (i.e., any key indicator was suppressed or absent).
-    -- See methodology notes in model header re: NULL handling.
+    -- Higher ewr_composite = more socio-economically vulnerable population.
+    -- Sign convention: negated when entering gentrification_score in
+    -- int_gentrification_ts.
     with_composite as (
         select
             *,
@@ -147,7 +155,8 @@ with
                 + z_migration_background_share
                 + z_mean_age_years
                 + z_residence_duration_5y_share
-            ) as ewr_composite
+            )
+            / 5.0 as ewr_composite
         from with_z
     )
 

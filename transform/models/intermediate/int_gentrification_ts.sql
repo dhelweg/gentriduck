@@ -66,9 +66,14 @@ with
             ewr.residence_duration_5y_share,
             ewr.residents_total,
             -- Gentrification score: equal-weight mean of the three z-scored components.
+            -- ewr_composite is NEGATED: high vulnerability (high ewr_composite) means
+            -- the area is NOT YET gentrified; gentrified areas have displaced
+            -- vulnerable
+            -- populations and show low ewr_composite. Negating aligns the sign with
+            -- status_score and dynamism_score (high = more gentrified).
             -- NULL if any component is NULL (sparse EWR coverage or suppressed cells).
-            -- Geo-DS: confirm weight choice or adjust to a weighted sum.
-            (poi.status_score + poi.dynamism_score + ewr.ewr_composite)
+            -- Geo-DS C4 sign-off: PASS WITH CONDITIONS (docs/epic-c/C4-geo-signoff.md).
+            (poi.status_score + poi.dynamism_score - ewr.ewr_composite)
             / 3.0 as gentrification_score
         from poi
         left join
