@@ -1,13 +1,19 @@
 """
 ingestion/berlin/price_rent/ingest_wohnlage.py
 ===============================================
-D1 — Wohnlagen nach Adressen (Mietspiegel 2023) ingestion for Berlin.
+D1 — Wohnlagen nach Adressen (Mietspiegel) ingestion for Berlin.
+
+Supports historical vintages via the --year flag:
+  wohnlagenadr2017  (Stichtag 01.09.2016, confirmed available 2026-06-18)
+  wohnlagenadr2019  (Stichtag 01.09.2018, confirmed available 2026-06-18)
+  wohnlagenadr2021  (Stichtag 01.09.2020, confirmed available 2026-06-18)
+  wohnlagenadr2023  (Stichtag 01.09.2022, confirmed available 2026-06-18)
 
 Source: GDI Berlin OGC WFS, dl-de-zero-2.0
-  https://gdi.berlin.de/services/wfs/wohnlagenadr2023
-  Feature type: wohnlagenadr2023:wohnlagenadr2023
+  URL pattern: https://gdi.berlin.de/services/wfs/wohnlagenadr{year}
+  Feature type: wohnlagenadr{year}:wohnlagenadr{year}
   Native CRS: EPSG:25833 (ETRS89 / UTM zone 33N). NOT reprojected.
-  Total features: ~397,542 (confirmed 2026-06-18).
+  Total features: ~397k (varies by vintage, 5-15 minutes per run).
 
 Confirmed attribute names (from live WFS probe, 2026-06-18):
   schluessel   -- address/block identifier (string, e.g. '00001001')
@@ -19,7 +25,7 @@ Confirmed attribute names (from live WFS probe, 2026-06-18):
   laerm        -- noise classification ('Ja'/'Nein')
   stadtteil    -- city district
   plr_name     -- PLR (Planungsraum) name
-  Feature ID format: wohnlagenadr2023.<schluessel>
+  Feature ID format: wohnlagenadr{year}.<schluessel>
   Geometry type: MultiPoint (EPSG:25833)
 
 Paginated WFS GeoJSON: count=500 + startIndex.
@@ -30,8 +36,8 @@ Partial-data safety: if the download takes > 15 minutes or is interrupted,
   The output file is written once at the end (not per-page) to avoid
   partial Parquet corruption.
 
-Output parquet schema (data/raw/berlin/price_rent/wohnlage_2023.parquet):
-  vintage            (int32):  2023
+Output parquet schema (data/raw/berlin/price_rent/wohnlage_{year}.parquet):
+  vintage            (int32):  {year}
   geometry_wkb       (bytes):  MultiPoint WKB, EPSG:25833
   wohnlage           (string): Wohnlage classification (wol attribute)
   address_id         (string, nullable): schluessel attribute
@@ -40,6 +46,10 @@ Output parquet schema (data/raw/berlin/price_rent/wohnlage_2023.parquet):
 Usage:
   uv run python ingestion/berlin/price_rent/ingest_wohnlage.py \\
       --out-dir data/raw/berlin/price_rent
+
+  # Specific vintage:
+  uv run python ingestion/berlin/price_rent/ingest_wohnlage.py \\
+      --out-dir data/raw/berlin/price_rent --year 2019
 
   # Dry run (no HTTP calls):
   uv run python ingestion/berlin/price_rent/ingest_wohnlage.py \\
@@ -84,20 +94,49 @@ except ImportError as exc:
     ) from exc
 
 # ---------------------------------------------------------------------------
-# Constants
+# Per-year configuration
 # ---------------------------------------------------------------------------
 
-SOURCE_ATTRIBUTION = (
+SUPPORTED_YEARS = {2017, 2019, 2021, 2023}
+DEFAULT_YEAR = 2023
+
+# Attribution text template per year.
+_ATTRIBUTION_TEMPLATE = (
     "Senatsverwaltung fuer Stadtentwicklung, Bauen und Wohnen Berlin, "
-    "Wohnlagen Mietspiegel 2023, dl-de-zero-2.0 -- "
-    "https://daten.berlin.de/datensaetze/wohnlagen-nach-adressen-zum-berliner-mietspiegel-2023-wfs-b9979169"
+    "Wohnlagen Mietspiegel {year}, dl-de-zero-2.0 -- "
+    "https://daten.berlin.de/datensaetze/"
+    "wohnlagen-nach-adressen-zum-berliner-mietspiegel-{year}-wfs"
 )
 
-WFS_BASE_URL = "https://gdi.berlin.de/services/wfs/wohnlagenadr2023"
-WFS_TYPE_NAMES = "wohnlagenadr2023:wohnlagenadr2023"
+# 2023 has a stable dataset URL slug; earlier years use the generic pattern.
+_ATTRIBUTION_2023 = (
+    "Senatsverwaltung fuer Stadtentwicklung, Bauen und Wohnen Berlin, "
+    "Wohnlagen Mietspiegel 2023, dl-de-zero-2.0 -- "
+    "https://daten.berlin.de/datensaetze/"
+    "wohnlagen-nach-adressen-zum-berliner-mietspiegel-2023-wfs-b9979169"
+)
+
+
+def _build_year_config(year: int) -> dict:
+    """Return the WFS constants for a given vintage year."""
+    if year not in SUPPORTED_YEARS:
+        raise ValueError(f"Year {year} not supported. Choose from: {sorted(SUPPORTED_YEARS)}")
+    layer = f"wohnlagenadr{year}"
+    attribution = _ATTRIBUTION_2023 if year == 2023 else _ATTRIBUTION_TEMPLATE.format(year=year)
+    return {
+        "wfs_base_url": f"https://gdi.berlin.de/services/wfs/{layer}",
+        "wfs_type_names": f"{layer}:{layer}",
+        "vintage": year,
+        "output_filename": f"wohnlage_{year}.parquet",
+        "source_attribution": attribution,
+    }
+
+
+# ---------------------------------------------------------------------------
+# Constants (set at runtime via main())
+# ---------------------------------------------------------------------------
+
 WFS_PAGE_SIZE = 500
-VINTAGE = 2023
-OUTPUT_FILENAME = "wohnlage_2023.parquet"
 
 # Maximum time budget in seconds (15 minutes).
 MAX_RUNTIME_SECONDS = 15 * 60
@@ -136,23 +175,23 @@ log = logging.getLogger("wohnlage_ingest")
 # ---------------------------------------------------------------------------
 
 
-def build_wfs_url(offset: int) -> str:
+def build_wfs_url(wfs_base_url: str, wfs_type_names: str, offset: int) -> str:
     """Build the WFS 2.0.0 GetFeature URL for a given startIndex."""
     params = {
         "service": "WFS",
         "version": "2.0.0",
         "request": "GetFeature",
-        "typeNames": WFS_TYPE_NAMES,
+        "typeNames": wfs_type_names,
         "outputFormat": "application/json",
         "count": str(WFS_PAGE_SIZE),
         "startIndex": str(offset),
     }
-    return WFS_BASE_URL + "?" + urllib.parse.urlencode(params)
+    return wfs_base_url + "?" + urllib.parse.urlencode(params)
 
 
-def fetch_page(offset: int, timeout: int = 120) -> dict:
+def fetch_page(wfs_base_url: str, wfs_type_names: str, offset: int, timeout: int = 120) -> dict:
     """Fetch one WFS page as a parsed GeoJSON dict."""
-    url = build_wfs_url(offset)
+    url = build_wfs_url(wfs_base_url, wfs_type_names, offset)
     log.debug("Fetching Wohnlage WFS page: startIndex=%d", offset)
     try:
         with urllib.request.urlopen(url, timeout=timeout, context=_SSL_CONTEXT) as resp:  # noqa: S310
@@ -175,7 +214,11 @@ def fetch_page(offset: int, timeout: int = 120) -> dict:
     return data
 
 
-def fetch_all_features(max_pages: Optional[int] = None) -> tuple[list[dict], bool]:
+def fetch_all_features(
+    wfs_base_url: str,
+    wfs_type_names: str,
+    max_pages: Optional[int] = None,
+) -> tuple[list[dict], bool]:
     """
     Paginate through the WFS endpoint and return all raw GeoJSON features.
 
@@ -207,7 +250,7 @@ def fetch_all_features(max_pages: Optional[int] = None) -> tuple[list[dict], boo
             is_complete = False
             break
 
-        page = fetch_page(offset)
+        page = fetch_page(wfs_base_url, wfs_type_names, offset)
         page_features = page.get("features", [])
         n = len(page_features)
 
@@ -249,7 +292,7 @@ def fetch_all_features(max_pages: Optional[int] = None) -> tuple[list[dict], boo
 # ---------------------------------------------------------------------------
 
 
-def parse_feature(feat: dict, idx: int) -> Optional[dict]:
+def parse_feature(feat: dict, idx: int, vintage: int, source_attribution: str) -> Optional[dict]:
     """Parse one GeoJSON feature into a row dict. Returns None on failure."""
     props = feat.get("properties") or {}
     feature_id = feat.get("id", "")
@@ -296,20 +339,20 @@ def parse_feature(feat: dict, idx: int) -> Optional[dict]:
         return None
 
     return {
-        "vintage": VINTAGE,
+        "vintage": vintage,
         "geometry_wkb": wkb_bytes,
         "wohnlage": wohnlage,
         "address_id": address_id,
-        "source_attribution": SOURCE_ATTRIBUTION,
+        "source_attribution": source_attribution,
     }
 
 
-def parse_features(features: list[dict]) -> list[dict]:
+def parse_features(features: list[dict], vintage: int, source_attribution: str) -> list[dict]:
     """Parse all raw GeoJSON features, skipping invalid ones."""
     rows: list[dict] = []
     skipped = 0
     for idx, feat in enumerate(features):
-        row = parse_feature(feat, idx)
+        row = parse_feature(feat, idx, vintage, source_attribution)
         if row is not None:
             rows.append(row)
         else:
@@ -355,7 +398,7 @@ def write_parquet(rows: list[dict], out_path: Path, is_complete: bool) -> None:
         log.info("Wrote %d rows to %s", len(rows), out_path)
     else:
         log.warning(
-            "PARTIAL DATA: only %d of ~397,542 features downloaded. "
+            "PARTIAL DATA: only %d features downloaded. "
             "Kept as %s — will NOT be picked up by dbt. "
             "Re-run without --max-pages (or within the 15-min budget) to get full data.",
             len(rows),
@@ -371,10 +414,20 @@ def write_parquet(rows: list[dict], out_path: Path, is_complete: bool) -> None:
 def build_parser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(
         description=(
-            "Download Berlin Wohnlagen Mietspiegel 2023 from GDI Berlin WFS "
-            "and write Parquet (data/raw/berlin/price_rent/wohnlage_2023.parquet). "
-            "WARNING: ~397k features -- expect 5-15 minutes download time."
+            "Download Berlin Wohnlagen Mietspiegel from GDI Berlin WFS "
+            "and write Parquet (data/raw/berlin/price_rent/wohnlage_{year}.parquet). "
+            "WARNING: ~397k features per vintage -- expect 5-15 minutes download time."
         )
+    )
+    p.add_argument(
+        "--year",
+        type=int,
+        default=DEFAULT_YEAR,
+        choices=sorted(SUPPORTED_YEARS),
+        help=(
+            f"Mietspiegel vintage year to ingest (default: {DEFAULT_YEAR}). "
+            f"Supported: {sorted(SUPPORTED_YEARS)}."
+        ),
     )
     p.add_argument(
         "--out-dir",
@@ -408,25 +461,35 @@ def main(argv: Optional[list[str]] = None) -> int:
     if args.verbose:
         logging.getLogger().setLevel(logging.DEBUG)
 
-    out_dir = args.out_dir.resolve()
-    out_path = out_dir / OUTPUT_FILENAME
+    cfg = _build_year_config(args.year)
+    wfs_base_url = cfg["wfs_base_url"]
+    wfs_type_names = cfg["wfs_type_names"]
+    vintage = cfg["vintage"]
+    output_filename = cfg["output_filename"]
+    source_attribution = cfg["source_attribution"]
 
-    log.info("Wohnlagen Mietspiegel 2023 ingestion started.")
-    log.info("Attribution: %s", SOURCE_ATTRIBUTION)
+    out_dir = args.out_dir.resolve()
+    out_path = out_dir / output_filename
+
+    log.info("Wohnlagen Mietspiegel %d ingestion started.", vintage)
+    log.info("WFS endpoint: %s", wfs_base_url)
+    log.info("Attribution: %s", source_attribution)
     log.info(
         "WFS attribute mapping confirmed (2026-06-18): "
         "wohnlage=wol, address_id=schluessel, "
         "geometry=MultiPoint EPSG:25833"
     )
-    log.info("Total features: ~397,542. Expected pages: ~796. ETA: 5-15 min.")
+    log.info("Total features: ~397k. Expected pages: ~796. ETA: 5-15 min.")
 
     if args.dry_run:
-        log.info("[dry-run] Would paginate %s -> %s", WFS_BASE_URL, out_path)
+        log.info("[dry-run] Would paginate %s -> %s", wfs_base_url, out_path)
         log.info("[dry-run] Page size: %d features per request", WFS_PAGE_SIZE)
         return 0
 
     try:
-        features, is_complete = fetch_all_features(max_pages=args.max_pages)
+        features, is_complete = fetch_all_features(
+            wfs_base_url, wfs_type_names, max_pages=args.max_pages
+        )
     except RuntimeError as exc:
         log.error("Failed to fetch Wohnlage WFS: %s", exc)
         return 1
@@ -435,7 +498,7 @@ def main(argv: Optional[list[str]] = None) -> int:
         log.error("No features returned from WFS -- not writing parquet.")
         return 1
 
-    rows = parse_features(features)
+    rows = parse_features(features, vintage, source_attribution)
 
     if not rows:
         log.error("No valid rows parsed -- not writing parquet.")
@@ -443,7 +506,7 @@ def main(argv: Optional[list[str]] = None) -> int:
 
     if not is_complete:
         log.warning(
-            "PARTIAL DATA WARNING: Only %d of ~397,542 features were downloaded. "
+            "PARTIAL DATA WARNING: Only %d features were downloaded. "
             "Re-run without --max-pages (or within the 15-min budget) for full data.",
             len(rows),
         )
@@ -455,7 +518,8 @@ def main(argv: Optional[list[str]] = None) -> int:
         return 1
 
     log.info(
-        "Wohnlagen 2023 ingestion complete: %d rows -> %s (complete=%s)",
+        "Wohnlagen %d ingestion complete: %d rows -> %s (complete=%s)",
+        vintage,
         len(rows),
         out_path,
         is_complete,

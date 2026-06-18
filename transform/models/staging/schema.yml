@@ -557,13 +557,11 @@ models:
 
   - name: stg_berlin_mietspiegel
     description: >
-      D1 staging view over the Berliner Mietspiegel 2024 seed (ADR-0003 item 11).
-      Source: berlin_mietspiegel_2024 seed — re-tabulated numeric values from the
-      official PDF (Senatsverwaltung fuer Stadtentwicklung, Bauen und Wohnen Berlin).
-      PDF is not redistributed. See seeds/berlin_mietspiegel_2024_methodology.md.
-      Currently zero rows (stub) pending manual transcription.
-      Each row is one cell of the Mietspiegeltabelle 2024:
-      (year_built_bucket, size_bucket, ausstattung, wohnlage) -> rent range.
+      D1 staging view over the multi-vintage Berliner Mietspiegel seed (ADR-0003 item 11).
+      Source: berlin_mietspiegel seed — transcribed numeric values from official PDFs.
+      PDFs not redistributed. All cells represent standard equipment (mit SH, Bad, IWC).
+      ausstattung is NOT a table dimension; footnote deductions handle non-standard units.
+      2017 vintage complete (92 rows); 2019/2021/2023/2024 pending transcription.
     meta:
       dbt_meta_owner: data-engineer
     tests:
@@ -581,65 +579,47 @@ models:
             where: "vintage is not null"
     columns:
       - name: vintage
-        description: Mietspiegel edition year; always 2024 for this model.
+        description: Mietspiegel edition year (2017, 2019, 2021, 2023, 2024).
         tests:
-          - not_null:
-              config:
-                where: "year_built_bucket is not null"
+          - not_null
       - name: city_code
         description: City identifier; always 'berlin' (ADR-0005).
         tests:
-          - not_null:
-              config:
-                where: "vintage is not null"
+          - not_null
           - accepted_values:
               arguments:
                 values: ["berlin"]
-              config:
-                where: "vintage is not null"
       - name: year_built_bucket
-        description: Construction year bucket (e.g. 'bis_1918', '1919_1949').
+        description: Construction year bucket (e.g. 'pre_1918', '2003_2015').
         tests:
-          - not_null:
-              config:
-                where: "city_code is not null"
+          - not_null
       - name: size_bucket
-        description: Apartment floor area bucket in m2 (e.g. 'unter_40', '40_59').
+        description: Apartment floor area bucket ('under_40', '40_to_60', '60_to_90', '90_plus').
         tests:
-          - not_null:
-              config:
-                where: "city_code is not null"
-      - name: ausstattung
-        description: Equipment level (einfach/mittel/gehoben).
-        tests:
-          - not_null:
-              config:
-                where: "city_code is not null"
+          - not_null
           - accepted_values:
               arguments:
-                values: ["einfach", "mittel", "gehoben"]
-              config:
-                where: "city_code is not null"
+                values: ["under_40", "40_to_60", "60_to_90", "90_plus"]
       - name: wohnlage
         description: Location quality tier (einfach/mittel/gut).
         tests:
-          - not_null:
-              config:
-                where: "city_code is not null"
+          - not_null
           - accepted_values:
               arguments:
                 values: ["einfach", "mittel", "gut"]
-              config:
-                where: "city_code is not null"
       - name: rent_low
-        description: Lower bound of the net cold rent range (EUR/m2/month).
-      - name: rent_mid
-        description: Midpoint net cold rent value (EUR/m2/month).
-      - name: rent_high
-        description: Upper bound of the net cold rent range (EUR/m2/month).
-      - name: source_attribution
-        description: Source citation from the seed (Berliner Mietspiegel 2024, Senatsverwaltung ...).
+        description: Lower bound of the 3/4-Spanne (EUR/m2/month, net cold rent).
         tests:
-          - not_null:
-              config:
-                where: "vintage is not null"
+          - not_null
+      - name: rent_mid
+        description: Median net cold rent (EUR/m2/month).
+        tests:
+          - not_null
+      - name: rent_high
+        description: Upper bound of the 3/4-Spanne (EUR/m2/month, net cold rent).
+        tests:
+          - not_null
+      - name: source_attribution
+        description: Source citation including edition year, publisher, and reference date.
+        tests:
+          - not_null

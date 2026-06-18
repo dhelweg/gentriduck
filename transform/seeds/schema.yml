@@ -283,18 +283,19 @@ seeds:
               arguments:
                 values: ["true", "false"]
 
-  - name: berlin_mietspiegel_2024
+  - name: berlin_mietspiegel
     description: >
-      D1 — Berliner Mietspiegel 2024 rent table seed.
-      Stub seed (header-only, zero data rows) pending manual transcription of the
-      PDF table from mietspiegel.berlin.de/berliner-mietspiegel/archiv/.
-      Once populated, each row represents one cell of the Mietspiegeltabelle 2024:
-      a (year_built_bucket, size_bucket, ausstattung, wohnlage) combination with
-      the corresponding net cold rent range (low/mid/high EUR/m2).
-      The PDF is NOT redistributable in automated form (ADR-0003 item 11); only
-      the transcribed numeric values are committed.
-      See transform/seeds/berlin_mietspiegel_2024_methodology.md for population
-      instructions and column definitions.
+      D1 — Berliner Mietspiegel multi-vintage rent table seed (2017-present).
+      Each row is one cell of the Mietspiegeltabelle: a (vintage, year_built_bucket,
+      size_bucket, wohnlage) combination with the net cold rent range (low/mid/high
+      EUR/m2/month, representing the 3/4-Spanne and Median).
+      All cells represent standard-equipped apartments (mit Sammelheizung, Bad, IWC).
+      Apartments without SH or Bath use fixed footnote deductions; these are NOT rows.
+      ausstattung is not a dimension in the Mietspiegel table structure.
+      PDFs available at mietspiegel.berlin.de/berliner-mietspiegel/archiv/ —
+      NOT redistributable in automated form (ADR-0003 item 11); only transcribed
+      numeric values are committed.
+      Vintages available: 2017 (complete), 2019/2021/2023/2024 (pending transcription).
     meta:
       dbt_meta_owner: data-engineer
     tests:
@@ -310,31 +311,51 @@ seeds:
             severity: warn
     columns:
       - name: vintage
-        description: Mietspiegel edition year (integer; always 2024 for this seed).
+        description: >
+          Mietspiegel edition year (integer; 2017, 2019, 2021, 2023, or 2024).
+        tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: [2017, 2019, 2021, 2023, 2024]
+              config:
+                severity: warn
       - name: year_built_bucket
         description: >
-          Construction year bucket (e.g. 'bis_1918', '1919_1949', '1950_1964',
-          '1965_1972', '1973_1990', '1991_2002', 'ab_2003').
+          Construction year bucket. 2017 values: 'pre_1918', '1919_1949', '1950_1964',
+          '1965_1972', '1973_1990_west', '1973_1990_ost', '1991_2002', '2003_2015'.
+          Later editions may merge west/ost and use 'ab_2003' for the newest bucket.
+        tests:
+          - not_null
       - name: size_bucket
         description: >
-          Apartment floor area bucket in m2
-          ('unter_40', '40_59', '60_89', '90_und_mehr').
-      - name: ausstattung
-        description: >
-          Equipment / fitting level ('einfach', 'mittel', 'gehoben').
+          Apartment floor area bucket: 'under_40' (<40 m2), '40_to_60' (40-<60 m2),
+          '60_to_90' (60-<90 m2), '90_plus' (>=90 m2).
+        tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: [under_40, 40_to_60, 60_to_90, 90_plus]
       - name: wohnlage
-        description: >
-          Location quality tier ('einfach', 'mittel', 'gut').
+        description: Location quality tier ('einfach', 'mittel', 'gut').
+        tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: [einfach, mittel, gut]
       - name: rent_low
-        description: >
-          Lower bound of the net cold rent range (EUR/m2/month).
+        description: Lower bound of the 3/4-Spanne (EUR/m2/month, net cold rent).
+        tests:
+          - not_null
       - name: rent_mid
-        description: >
-          Midpoint / reference net cold rent value (EUR/m2/month).
+        description: Median net cold rent (EUR/m2/month).
+        tests:
+          - not_null
       - name: rent_high
-        description: >
-          Upper bound of the net cold rent range (EUR/m2/month).
+        description: Upper bound of the 3/4-Spanne (EUR/m2/month, net cold rent).
+        tests:
+          - not_null
       - name: source
         description: >
-          Source citation: 'Berliner Mietspiegel 2024,
-          Senatsverwaltung fuer Stadtentwicklung, Bauen und Wohnen Berlin'.
+          Source citation including edition year, publisher, reference date, and
+          equipment standard.
