@@ -257,12 +257,13 @@ models:
 
   - name: stg_berlin_lor
     description: >
-      STUB -- zero rows until Epic C LOR geometry ingestion lands.
-      See ADR-0003 (Berlin geographies). When populated, each row represents one
-      LOR area polygon at a given vintage (pre-2021 or LOR 2021), conformed to the
-      city-agnostic area_level vocabulary (bezirk/bzr/plr).
-      Source: gdi.berlin.de WFS (CC BY 3.0 DE).
-      Ingestion adapter: ingestion/berlin/geographies/ (not yet implemented).
+      Staging view over LOR PLR geometry parquets for Berlin (C3-geo).
+      Source: GDI Berlin OGC WFS, CC BY 3.0 DE.
+        Pre-2021: https://gdi.berlin.de/services/wfs/lor_2019 (448 PLRs, lor_pre2021)
+        LOR 2021:  https://gdi.berlin.de/services/wfs/lor_2021 (542 PLRs, lor_2021)
+      Ingestion adapter: ingestion/berlin/lor/ingest_lor_geometries.py.
+      Storage: data/raw/berlin/lor/pre2021.parquet + lor_2021.parquet (gitignored).
+      Returns zero rows (typed stub) when no parquets have been ingested.
     meta:
       dbt_meta_owner: data-engineer
 
@@ -423,16 +424,39 @@ models:
         description: Reference date for the BRW; always 2024-01-01.
       - name: city_code
         description: City identifier; always 'berlin' (ADR-0005).
+        tests:
+          - not_null:
+              config:
+                where: "brw_id is not null"
+          - accepted_values:
+              arguments:
+                values: ["berlin"]
+              config:
+                where: "brw_id is not null"
       - name: geometry_wkb
         description: Zone polygon in WKB, CRS EPSG:25833.
       - name: brw_id
         description: BRW zone identifier (brwid WFS attribute).
+        tests:
+          - not_null:
+              config:
+                where: "city_code is not null"
       - name: value_eur_per_m2
         description: Bodenrichtwert land value in EUR per m2 (brw WFS attribute).
+        tests:
+          - dbt_utils.expression_is_true:
+              arguments:
+                expression: "> 0"
+              config:
+                where: "brw_id is not null and value_eur_per_m2 is not null"
       - name: nutzung
         description: Land use code (nutzung WFS attribute; e.g. 'W - Wohngebiet').
       - name: source_attribution
         description: dl-de-zero-2.0 attribution string.
+        tests:
+          - not_null:
+              config:
+                where: "brw_id is not null"
 
   - name: stg_berlin_wohnlage
     description: >
@@ -449,24 +473,173 @@ models:
     columns:
       - name: vintage
         description: Mietspiegel edition year; always 2023 for this model.
+        tests:
+          - not_null:
+              config:
+                where: "wohnlage is not null"
       - name: city_code
         description: City identifier; always 'berlin' (ADR-0005).
+        tests:
+          - not_null:
+              config:
+                where: "wohnlage is not null"
+          - accepted_values:
+              arguments:
+                values: ["berlin"]
+              config:
+                where: "wohnlage is not null"
       - name: geometry_wkb
         description: Address point in WKB (MultiPoint), CRS EPSG:25833.
       - name: wohnlage
         description: Wohnlage classification (wol WFS attribute; einfach/mittel/gut).
+        tests:
+          - not_null:
+              config:
+                where: "city_code is not null"
+          - accepted_values:
+              arguments:
+                values: ["einfach", "mittel", "gut"]
+              config:
+                where: "city_code is not null"
       - name: address_id
         description: Address/block identifier (schluessel WFS attribute; nullable).
       - name: source_attribution
         description: dl-de-zero-2.0 attribution string.
+        tests:
+          - not_null:
+              config:
+                where: "wohnlage is not null"
 
-  - name: stg_berlin_kauffaelle
+  - name: stg_berlin_verkaufte_grundstuecke
     description: >
-      D1 STUB — Kauffaelle (Verkaufte Grundstücke) 2024.
+      D1 STUB — Verkaufte Grundstücke (Kauffälle) 2024 per ADR-0003 item 10.
       The WFS endpoint https://gdi.berlin.de/services/wfs/kauffaelle2024 returned
       HTTP 404 during D1 implementation (2026-06-18). URL needs manual discovery
       from daten.berlin.de. See issue D1b for resolution.
       Always returns zero rows until the endpoint is found and ingestion is
-      implemented.
+      implemented. Licence: dl-de-zero-2.0 (expected).
     meta:
       dbt_meta_owner: data-engineer
+    columns:
+      - name: reference_date
+        description: Reference date; expected 2024-01-01.
+      - name: city_code
+        description: City identifier; always 'berlin' (ADR-0005).
+        tests:
+          - not_null:
+              config:
+                where: "transaction_id is not null"
+          - accepted_values:
+              arguments:
+                values: ["berlin"]
+              config:
+                where: "transaction_id is not null"
+      - name: geometry_wkb
+        description: Geometry WKB, EPSG:25833.
+      - name: transaction_id
+        description: Feature identifier.
+        tests:
+          - not_null:
+              config:
+                where: "city_code is not null"
+      - name: price_eur
+        description: Transaction price in EUR.
+      - name: area_m2
+        description: Plot area in m2.
+      - name: nutzung
+        description: Land use / property type.
+      - name: source_attribution
+        description: dl-de-zero-2.0 attribution string.
+        tests:
+          - not_null:
+              config:
+                where: "transaction_id is not null"
+
+  - name: stg_berlin_mietspiegel
+    description: >
+      D1 staging view over the Berliner Mietspiegel 2024 seed (ADR-0003 item 11).
+      Source: berlin_mietspiegel_2024 seed — re-tabulated numeric values from the
+      official PDF (Senatsverwaltung fuer Stadtentwicklung, Bauen und Wohnen Berlin).
+      PDF is not redistributed. See seeds/berlin_mietspiegel_2024_methodology.md.
+      Currently zero rows (stub) pending manual transcription.
+      Each row is one cell of the Mietspiegeltabelle 2024:
+      (year_built_bucket, size_bucket, ausstattung, wohnlage) -> rent range.
+    meta:
+      dbt_meta_owner: data-engineer
+    tests:
+      - dbt_utils.expression_is_true:
+          arguments:
+            expression: "rent_low <= rent_mid"
+          config:
+            severity: warn
+            where: "vintage is not null"
+      - dbt_utils.expression_is_true:
+          arguments:
+            expression: "rent_mid <= rent_high"
+          config:
+            severity: warn
+            where: "vintage is not null"
+    columns:
+      - name: vintage
+        description: Mietspiegel edition year; always 2024 for this model.
+        tests:
+          - not_null:
+              config:
+                where: "year_built_bucket is not null"
+      - name: city_code
+        description: City identifier; always 'berlin' (ADR-0005).
+        tests:
+          - not_null:
+              config:
+                where: "vintage is not null"
+          - accepted_values:
+              arguments:
+                values: ["berlin"]
+              config:
+                where: "vintage is not null"
+      - name: year_built_bucket
+        description: Construction year bucket (e.g. 'bis_1918', '1919_1949').
+        tests:
+          - not_null:
+              config:
+                where: "city_code is not null"
+      - name: size_bucket
+        description: Apartment floor area bucket in m2 (e.g. 'unter_40', '40_59').
+        tests:
+          - not_null:
+              config:
+                where: "city_code is not null"
+      - name: ausstattung
+        description: Equipment level (einfach/mittel/gehoben).
+        tests:
+          - not_null:
+              config:
+                where: "city_code is not null"
+          - accepted_values:
+              arguments:
+                values: ["einfach", "mittel", "gehoben"]
+              config:
+                where: "city_code is not null"
+      - name: wohnlage
+        description: Location quality tier (einfach/mittel/gut).
+        tests:
+          - not_null:
+              config:
+                where: "city_code is not null"
+          - accepted_values:
+              arguments:
+                values: ["einfach", "mittel", "gut"]
+              config:
+                where: "city_code is not null"
+      - name: rent_low
+        description: Lower bound of the net cold rent range (EUR/m2/month).
+      - name: rent_mid
+        description: Midpoint net cold rent value (EUR/m2/month).
+      - name: rent_high
+        description: Upper bound of the net cold rent range (EUR/m2/month).
+      - name: source_attribution
+        description: Source citation from the seed (Berliner Mietspiegel 2024, Senatsverwaltung ...).
+        tests:
+          - not_null:
+              config:
+                where: "vintage is not null"

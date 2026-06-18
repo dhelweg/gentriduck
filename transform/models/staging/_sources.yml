@@ -84,15 +84,8 @@ sources:
           Berlin, Wohnlagen Mietspiegel 2023, dl-de-zero-2.0 --
           https://daten.berlin.de/datensaetze/wohnlagen-nach-adressen-zum-berliner-mietspiegel-2023-wfs-b9979169
 
-      - name: berlin_mietspiegel_2024
-        description: >
-          Berliner Mietspiegel 2024 rent table (PDF-only source).
-          Published by Senatsverwaltung fuer Stadtentwicklung, Bauen und Wohnen
-          Berlin. NOT available via open machine-readable API; values must be
-          manually transcribed from the PDF at
-          mietspiegel.berlin.de/berliner-mietspiegel/archiv/.
-          Committed as a header-only seed stub (zero data rows).
-          The PDF itself must not be redistributed (ADR-0003 item 11).
-          Seed: transform/seeds/berlin_mietspiegel_2024.csv.
-          See transform/seeds/berlin_mietspiegel_2024_methodology.md for
-          population instructions.
+      # NOTE: berlin_mietspiegel_2024 is a seed (seeds/berlin_mietspiegel_2024.csv),
+      # not a WFS source. It is documented in seeds/schema.yml under berlin_mietspiegel_2024.
+      # Do not add it here — the price_rent source block is for WFS-backed parquet
+      # tables only (dl-de-zero-2.0 licence); the Mietspiegeltabelle has a different
+      # provenance (manually transcribed from PDF; factual data only, ADR-0003 item 11).

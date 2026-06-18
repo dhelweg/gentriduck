@@ -328,13 +328,14 @@ def parse_features(features: list[dict]) -> list[dict]:
 
 
 def write_parquet(rows: list[dict], out_path: Path, is_complete: bool) -> None:
-    """Write parsed rows to Parquet using the Wohnlage schema."""
-    if not is_complete:
-        log.warning(
-            "Writing PARTIAL data (%d rows). Full dataset is ~397,542. "
-            "Re-run ingestion to complete.",
-            len(rows),
-        )
+    """Write parsed rows to Parquet using the Wohnlage schema.
+
+    Safety: always writes to a .tmp path first.  If is_complete=True the tmp
+    file is atomically renamed to out_path so dbt never sees a partial file.
+    If is_complete=False the .tmp file is kept for manual inspection but the
+    canonical out_path is not updated.
+    """
+    tmp_path = out_path.with_suffix(".tmp.parquet")
     table = pa.table(
         {
             "vintage": pa.array([r["vintage"] for r in rows], type=pa.int32()),
@@ -348,8 +349,18 @@ def write_parquet(rows: list[dict], out_path: Path, is_complete: bool) -> None:
         schema=WOHNLAGE_PARQUET_SCHEMA,
     )
     out_path.parent.mkdir(parents=True, exist_ok=True)
-    pq.write_table(table, out_path, compression="snappy")
-    log.info("Wrote %d rows to %s", len(rows), out_path)
+    pq.write_table(table, tmp_path, compression="snappy")
+    if is_complete:
+        tmp_path.rename(out_path)
+        log.info("Wrote %d rows to %s", len(rows), out_path)
+    else:
+        log.warning(
+            "PARTIAL DATA: only %d of ~397,542 features downloaded. "
+            "Kept as %s — will NOT be picked up by dbt. "
+            "Re-run without --max-pages (or within the 15-min budget) to get full data.",
+            len(rows),
+            tmp_path,
+        )
 
 
 # ---------------------------------------------------------------------------
