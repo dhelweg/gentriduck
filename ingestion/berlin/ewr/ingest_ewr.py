@@ -145,9 +145,9 @@ VINTAGE_A_URLS: dict[int, str] = {
     2025: "https://www.statistik-berlin-brandenburg.de/opendata/EWR_L21_202512A_Matrix.csv",
 }
 
-# Columns to pull from the 12A companion CSV.
-# MH_E (migration background), DAU5, DAU10 live in the separate EWRMIGRA series
-# and are handled in a follow-up ingestion task.
+# Columns to pull from the 12A companion CSV (Ausländische Einwohner series).
+# MH_E is handled separately via load_migra_local_csv() (EWRMIGRA series).
+# DAU5/DAU10 (residence duration) are not published in any known open CSV series.
 COMPANION_COLS = ["E_A"]
 
 # Known direct download URLs for the 31-Dec snapshot per year (fast path).
@@ -613,6 +613,40 @@ def load_companion_local_csv(local_dir: Path, year: int) -> Optional[pd.DataFram
     return None
 
 
+def load_migra_local_csv(local_dir: Path, year: int) -> Optional[pd.DataFrame]:
+    """
+    Load the EWRMIGRA companion CSV from local_dir if it exists.
+
+    The EWRMIGRA 12E Matrix contains MH_E (total residents with migration
+    background) which is absent from the main 12E and 12A matrices.
+    Published as a separate dataset series on daten.berlin.de:
+    "Einwohnerinnen und Einwohner mit Migrationshintergrund in Berlin in
+    LOR-Planungsräumen"
+    Available years: 2014-2020.
+    Licence: CC BY 3.0 DE — Amt für Statistik Berlin-Brandenburg.
+
+    Direct download URLs (browser required — server blocks programmatic access):
+      2014-2020: https://www.statistik-berlin-brandenburg.de/opendata/EWRMIGRA{YYYY}12E_Matrix.csv
+    """
+    for name in (
+        f"EWRMIGRA{year}12E_Matrix.csv",
+        f"EWRMIGRA_L21_{year}12E_Matrix.csv",
+        f"{year}MIGRA.csv",
+    ):
+        path = local_dir / name
+        if path.exists():
+            log.info("Using local EWRMIGRA CSV for EWR %d: %s", year, path)
+            return _parse_csv_bytes(path.read_bytes(), year)
+    log.debug(
+        "No EWRMIGRA CSV found for year %d in %s — migration_background_share will be NULL. "
+        "Download EWRMIGRA%d12E_Matrix.csv from daten.berlin.de and place in --local-csv-dir.",
+        year,
+        local_dir,
+        year,
+    )
+    return None
+
+
 def download_csv(url: str, year: int) -> pd.DataFrame:
     """Download a CSV from url and parse it; tries ';', ',', and tab separators."""
     log.info("Downloading EWR %d from %s", year, url)
@@ -711,6 +745,42 @@ def process_year(
                             cols_to_merge,
                             year,
                             main_df["_JOIN_KEY"].isin(companion_subset["_JOIN_KEY"]).sum(),
+                        )
+
+    # Attempt to load and merge EWRMIGRA companion CSV (contains MH_E).
+    if local_dir:
+        migra_df = load_migra_local_csv(local_dir, year)
+        if migra_df is not None:
+            migra_df.columns = migra_df.columns.str.strip().str.upper()
+            migra_plr_col = next(
+                (c for c in ("RAUMID", "RAUMID_PLR", "PLR_ID", "PLR") if c in migra_df.columns),
+                None,
+            )
+            if migra_plr_col is not None:
+                migra_df = migra_df.rename(columns={migra_plr_col: "_JOIN_KEY"})
+                migra_df["_JOIN_KEY"] = migra_df["_JOIN_KEY"].astype(str).str.strip().str.zfill(8)
+                work_df = raw_df.copy()
+                work_df.columns = work_df.columns.str.strip().str.upper()
+                main_plr_col = next(
+                    (c for c in ("RAUMID", "RAUMID_PLR", "PLR_ID", "PLR") if c in work_df.columns),
+                    None,
+                )
+                if main_plr_col is not None:
+                    work_df["_JOIN_KEY"] = (
+                        work_df[main_plr_col].astype(str).str.strip().str.zfill(8)
+                    )
+                    migra_cols = [
+                        c for c in ("MH_E",) if c in migra_df.columns and c not in work_df.columns
+                    ]
+                    if migra_cols:
+                        migra_subset = migra_df[["_JOIN_KEY"] + migra_cols]
+                        merged = work_df.merge(migra_subset, on="_JOIN_KEY", how="left")
+                        raw_df = merged.drop(columns=["_JOIN_KEY"])
+                        log.info(
+                            "Merged EWRMIGRA cols %s for EWR %d (%d rows matched)",
+                            migra_cols,
+                            year,
+                            work_df["_JOIN_KEY"].isin(migra_subset["_JOIN_KEY"]).sum(),
                         )
 
     try:
