@@ -291,6 +291,10 @@ data and see whether the paper's conclusions reproduce; exact 2018 inputs are no
 ### Epic D — Property & rent dimension (open sources only)
 - **D1** Integrate **open** price/rent sources (Bodenrichtwerte/Gutachterausschuss, Mietspiegel,
   Wohnungsmarktbericht) as staging→mart dimensions, each with recorded licence. · *DE pair* · A3.
+- **D1b** Discover and ingest Kauffälle (property transaction) WFS endpoint (#53). · *DE pair* · A3.
+- **D1c** Strassenverzeichnis → PLR geocoding: parse Mietspiegel street-index PDFs (2017–2026),
+  join to LOR PLR polygons, build address→PLR crosswalk for area-level rent lookups (#56).
+  · *DE pair (+ geo-data-scientist)* · D1.
 - **D2** Source-completeness/coverage check on the price/rent data (years/areas available, gaps). ·
   *DE pair (+ geo-data-scientist)* · D1.
 - **D3** Extend index with the price/rent dimension. · *DE pair (+ scientist sign-off)* · D1,D2.
