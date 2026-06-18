@@ -300,15 +300,16 @@ models:
     columns:
       - name: city_code
         description: >
-          City identifier; always 'berlin' for this adapter (ADR-0005).
-          Lowercase, matching the C1 ingestion convention.
+          City identifier; canonical 'BER' (ADR-0005). Normalised from the
+          parquet source value ('berlin') at the staging boundary so that it
+          matches dim_city and dim_area for downstream joins.
         tests:
           - not_null:
               config:
                 where: "area_code is not null"
           - accepted_values:
               arguments:
-                values: ["berlin"]
+                values: ["BER"]
               config:
                 where: "area_code is not null"
       - name: area_code
