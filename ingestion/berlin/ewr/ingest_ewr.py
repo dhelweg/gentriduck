@@ -173,6 +173,7 @@ VINTAGE_URLS: dict[int, str] = {
     2020: "https://www.statistik-berlin-brandenburg.de/opendata/EWR202012E_Matrix.csv",
     # 2021-2023: not yet published on the open-data portal (CKAN API miss confirmed).
     2024: "https://www.statistik-berlin-brandenburg.de/opendata/EWR_L21_202412E_Matrix.csv",
+    2025: "https://www.statistik-berlin-brandenburg.de/opendata/EWR_L21_202512E_Matrix.csv",
 }
 
 # Values that represent privacy suppression in the EWR CSV cells.
