@@ -126,29 +126,29 @@ SOURCE_ATTRIBUTION = (
 
 CKAN_API_BASE = "https://daten.berlin.de/api/3/action/package_search"
 
-# Companion CSV URLs (12H suffix) — contain E_A, MH_E, DAU5, DAU10 columns that
-# are absent from the main 12E Matrix CSV.
+# Companion CSV URLs (12A suffix = Ausländische Einwohner) — contain E_A (foreigners
+# total) which is absent from the main 12E Matrix CSV.
+# Published as a separate dataset series on daten.berlin.de:
+#   "Ausländische Einwohnerinnen und Einwohner in Berlin in LOR-Planungsräumen"
+# Available: 2014–2020, 2025 (not 2008–2013 or 2024 — those years have no 12A publication).
 # NOTE: statistik-berlin-brandenburg.de blocks programmatic HTTP access (returns
-# text/html for CSV requests). Download manually and place as EWR{YYYY}12H_Matrix.csv
-# (or {year}H.csv) in the --local-csv-dir directory.
-VINTAGE_H_URLS: dict[int, str] = {
-    2008: "https://www.statistik-berlin-brandenburg.de/opendata/EWR200812H_Matrix.csv",
-    2009: "https://www.statistik-berlin-brandenburg.de/opendata/EWR200912H_Matrix.csv",
-    2010: "https://www.statistik-berlin-brandenburg.de/opendata/EWR201012H_Matrix.csv",
-    2011: "https://www.statistik-berlin-brandenburg.de/opendata/EWR201112H_Matrix.csv",
-    2012: "https://www.statistik-berlin-brandenburg.de/opendata/EWR201212H_Matrix.csv",
-    2013: "https://www.statistik-berlin-brandenburg.de/opendata/EWR201312H_Matrix.csv",
-    2015: "https://www.statistik-berlin-brandenburg.de/opendata/EWR201512H_Matrix.csv",
-    2016: "https://www.statistik-berlin-brandenburg.de/opendata/EWR201612H_Matrix.csv",
-    2017: "https://www.statistik-berlin-brandenburg.de/opendata/EWR201712H_Matrix.csv",
-    2018: "https://www.statistik-berlin-brandenburg.de/opendata/EWR201812H_Matrix.csv",
-    2019: "https://www.statistik-berlin-brandenburg.de/opendata/EWR201912H_Matrix.csv",
-    2020: "https://www.statistik-berlin-brandenburg.de/opendata/EWR202012H_Matrix.csv",
-    2024: "https://www.statistik-berlin-brandenburg.de/opendata/EWR_L21_202412H_Matrix.csv",
+# text/html for CSV requests). Download manually and place as EWR{YYYY}12A_Matrix.csv
+# (or {year}A.csv) in the --local-csv-dir directory.
+VINTAGE_A_URLS: dict[int, str] = {
+    2014: "https://www.statistik-berlin-brandenburg.de/opendata/EWR201412A_Matrix.csv",
+    2015: "https://www.statistik-berlin-brandenburg.de/opendata/EWR201512A_Matrix.csv",
+    2016: "https://www.statistik-berlin-brandenburg.de/opendata/EWR201612A_Matrix.csv",
+    2017: "https://www.statistik-berlin-brandenburg.de/opendata/EWR201712A_Matrix.csv",
+    2018: "https://www.statistik-berlin-brandenburg.de/opendata/EWR201812A_Matrix.csv",
+    2019: "https://www.statistik-berlin-brandenburg.de/opendata/EWR201912A_Matrix.csv",
+    2020: "https://www.statistik-berlin-brandenburg.de/opendata/EWR202012A_Matrix.csv",
+    2025: "https://www.statistik-berlin-brandenburg.de/opendata/EWR_L21_202512A_Matrix.csv",
 }
 
-# Companion CSV columns that live exclusively in the 12H Matrix file.
-COMPANION_COLS = ["E_A", "MH_E", "DAU5", "DAU10"]
+# Columns to pull from the 12A companion CSV.
+# MH_E (migration background), DAU5, DAU10 live in the separate EWRMIGRA series
+# and are handled in a follow-up ingestion task.
+COMPANION_COLS = ["E_A"]
 
 # Known direct download URLs for the 31-Dec snapshot per year (fast path).
 # Source: daten.berlin.de dataset pages (ADR-0003).
@@ -582,30 +582,33 @@ def load_local_csv(local_dir: Path, year: int) -> Optional[pd.DataFrame]:
 
 def load_companion_local_csv(local_dir: Path, year: int) -> Optional[pd.DataFrame]:
     """
-    Load the companion 12H CSV from local_dir if it exists.
+    Load the companion 12A CSV (Ausländische Einwohner) from local_dir if it exists.
 
-    The companion CSV contains E_A, MH_E, DAU5, DAU10 which are absent from
-    the main 12E Matrix.  Tries filenames analogous to load_local_csv:
-      EWR{year}12H_Matrix.csv  (most years)
-      EWR_L21_{year}12H_Matrix.csv  (2024+)
-      {year}H.csv  (manual fallback name)
-    See VINTAGE_H_URLS for reference URLs (manual download required).
+    The 12A Matrix contains E_A (total foreigners) which is absent from the main
+    12E Matrix. Published as a separate dataset series on daten.berlin.de:
+    "Ausländische Einwohnerinnen und Einwohner in Berlin in LOR-Planungsräumen"
+    Available years: 2014-2020, 2025 (not 2008-2013 or 2024).
+    Licence: CC BY 3.0 DE — Amt für Statistik Berlin-Brandenburg.
+
+    Direct download URLs (browser required — server blocks programmatic access):
+      2014-2020: https://www.statistik-berlin-brandenburg.de/opendata/EWR{YYYY}12A_Matrix.csv
+      2025:      https://www.statistik-berlin-brandenburg.de/opendata/EWR_L21_202512A_Matrix.csv
     """
     for name in (
-        f"EWR{year}12H_Matrix.csv",
-        f"EWR_L21_{year}12H_Matrix.csv",
-        f"{year}H.csv",
+        f"EWR{year}12A_Matrix.csv",
+        f"EWR_L21_{year}12A_Matrix.csv",
+        f"{year}A.csv",
     ):
         path = local_dir / name
         if path.exists():
-            log.info("Using local companion 12H CSV for EWR %d: %s", year, path)
+            log.info("Using local companion 12A CSV for EWR %d: %s", year, path)
             return _parse_csv_bytes(path.read_bytes(), year)
     log.debug(
-        "No companion 12H CSV found for year %d in %s — "
-        "E_A / MH_E / DAU5 / DAU10 will be NULL. "
-        "See VINTAGE_H_URLS for the download URL.",
+        "No companion 12A CSV found for year %d in %s — foreigners_share will be NULL. "
+        "Download EWR%d12A_Matrix.csv from daten.berlin.de and place in --local-csv-dir.",
         year,
         local_dir,
+        year,
     )
     return None
 
@@ -704,7 +707,7 @@ def process_year(
                         # Restore original column names for main CSV columns
                         # (compute_indicators will normalise again).
                         log.info(
-                            "Merged companion 12H cols %s for EWR %d (%d rows matched)",
+                            "Merged companion 12A cols %s for EWR %d (%d rows matched)",
                             cols_to_merge,
                             year,
                             main_df["_JOIN_KEY"].isin(companion_subset["_JOIN_KEY"]).sum(),
