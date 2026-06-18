@@ -8,6 +8,8 @@ Supports historical vintages via the --year flag:
   wohnlagenadr2019  (Stichtag 01.09.2018, confirmed available 2026-06-18)
   wohnlagenadr2021  (Stichtag 01.09.2020, confirmed available 2026-06-18)
   wohnlagenadr2023  (Stichtag 01.09.2022, confirmed available 2026-06-18)
+  wohnlagenadr2024  (Stichtag 01.09.2023, confirmed available 2026-06-18)
+  wohnlagenadr2026  (Stichtag 01.09.2025, confirmed available 2026-06-18)
 
 Source: GDI Berlin OGC WFS, dl-de-zero-2.0
   URL pattern: https://gdi.berlin.de/services/wfs/wohnlagenadr{year}
@@ -97,8 +99,8 @@ except ImportError as exc:
 # Per-year configuration
 # ---------------------------------------------------------------------------
 
-SUPPORTED_YEARS = {2017, 2019, 2021, 2023}
-DEFAULT_YEAR = 2023
+SUPPORTED_YEARS = {2017, 2019, 2021, 2023, 2024, 2026}
+DEFAULT_YEAR = 2026
 
 # Attribution text template per year.
 _ATTRIBUTION_TEMPLATE = (
@@ -108,13 +110,21 @@ _ATTRIBUTION_TEMPLATE = (
     "wohnlagen-nach-adressen-zum-berliner-mietspiegel-{year}-wfs"
 )
 
-# 2023 has a stable dataset URL slug; earlier years use the generic pattern.
-_ATTRIBUTION_2023 = (
-    "Senatsverwaltung fuer Stadtentwicklung, Bauen und Wohnen Berlin, "
-    "Wohnlagen Mietspiegel 2023, dl-de-zero-2.0 -- "
-    "https://daten.berlin.de/datensaetze/"
-    "wohnlagen-nach-adressen-zum-berliner-mietspiegel-2023-wfs-b9979169"
-)
+# Years with known stable dataset URL slugs on daten.berlin.de.
+_ATTRIBUTION_OVERRIDES = {
+    2023: (
+        "Senatsverwaltung fuer Stadtentwicklung, Bauen und Wohnen Berlin, "
+        "Wohnlagen Mietspiegel 2023, dl-de-zero-2.0 -- "
+        "https://daten.berlin.de/datensaetze/"
+        "wohnlagen-nach-adressen-zum-berliner-mietspiegel-2023-wfs-b9979169"
+    ),
+    2026: (
+        "Senatsverwaltung fuer Stadtentwicklung, Bauen und Wohnen Berlin, "
+        "Wohnlagen Mietspiegel 2026, dl-de-zero-2.0 -- "
+        "https://daten.berlin.de/datensaetze/"
+        "wohnlagen-nach-adressen-zum-berliner-mietspiegel-2026-wfs-809faebe"
+    ),
+}
 
 
 def _build_year_config(year: int) -> dict:
@@ -122,7 +132,7 @@ def _build_year_config(year: int) -> dict:
     if year not in SUPPORTED_YEARS:
         raise ValueError(f"Year {year} not supported. Choose from: {sorted(SUPPORTED_YEARS)}")
     layer = f"wohnlagenadr{year}"
-    attribution = _ATTRIBUTION_2023 if year == 2023 else _ATTRIBUTION_TEMPLATE.format(year=year)
+    attribution = _ATTRIBUTION_OVERRIDES.get(year, _ATTRIBUTION_TEMPLATE.format(year=year))
     return {
         "wfs_base_url": f"https://gdi.berlin.de/services/wfs/{layer}",
         "wfs_type_names": f"{layer}:{layer}",
