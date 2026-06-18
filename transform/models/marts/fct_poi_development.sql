@@ -12,6 +12,12 @@
 --
 -- Source: int_osm_poi_plr (C3-join spatial join result).
 --
+-- Known: city_code='berlin' (lowercase, from C1 OSM ingestion) diverges from
+-- dim_city where city_code='BER' (from 2018 thesis golden seed). This is a
+-- pre-existing convention mismatch that will be resolved when the OSM staging
+-- layer is normalised to use 'BER'. See stg_berlin_lor population TODO in
+-- dim_area.sql and the follow-up issue for stg_berlin_lor + dim_area wiring.
+--
 -- dbt_meta_owner: data-engineer
 {{ config(materialized="table", meta={"dbt_meta_owner": "data-engineer"}) }}
 

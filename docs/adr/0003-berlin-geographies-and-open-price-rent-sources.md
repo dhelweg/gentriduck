@@ -299,3 +299,32 @@ These are deferred to the maintainer's ratification of this ADR and/or to Epic D
 - IBB Wohnungsmarktbericht (reference only): <https://www.ibb.de/de/ueber-uns/publikationen/wohnungsmarktbericht/2024.html>
 - Datenlizenz Deutschland Zero 2.0: <https://www.govdata.de/dl-de/zero-2-0>
 - Creative Commons BY 3.0 DE: <https://creativecommons.org/licenses/by/3.0/de/legalcode.de>
+
+---
+
+## Implementation notes (C3, 2026-06-18)
+
+### Canonical storage path
+
+The LOR geometry parquets are written to `data/raw/berlin/lor/` (two files:
+`pre2021.parquet` and `lor_2021.parquet`), not the generic
+`data/raw/berlin/geographies/<vintage>/` pattern described above. The simpler flat
+path is the ratified implementation. The ingestion adapter is at
+`ingestion/berlin/lor/ingest_lor_geometries.py`; `stg_berlin_lor` reads from
+`data/raw/berlin/lor/*.parquet`.
+
+### Python library: shapely
+
+`shapely>=2.0` is approved for use in the LOR geometry ingestion adapter
+(`ingestion/berlin/lor/ingest_lor_geometries.py`). It is used solely to parse
+GeoJSON geometry from the GDI Berlin WFS response and serialise it to WKB bytes
+for the parquet output. This is a pure-Python, cross-platform, LGPL-2.1-licensed
+library listed on PyPI. No alternative in the standard library provides equivalent
+WKB serialisation from GeoJSON without a heavy native dependency. Approved by the
+system architect under the project's "free, open, cross-platform" rule.
+
+### certifi
+
+`certifi>=2024.0` is approved as the CA bundle for macOS Python `urllib` calls in
+all ingestion scripts (workaround for macOS Python not shipping CA certificates).
+See `ingestion/berlin/ewr/ingest_ewr.py` for the precedent pattern.

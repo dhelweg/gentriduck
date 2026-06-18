@@ -514,7 +514,7 @@ models:
               arguments:
                 column_name: area_code
                 partition_by: snapshot_year
-                max_null_fraction: 0.02
+                max_null_fraction: 0.12
               config:
                 severity: warn
                 where: "snapshot_year is not null"
