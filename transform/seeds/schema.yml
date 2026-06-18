@@ -282,3 +282,80 @@ seeds:
           - accepted_values:
               arguments:
                 values: ["true", "false"]
+
+  - name: berlin_mietspiegel
+    description: >
+      D1 — Berliner Mietspiegel multi-vintage rent table seed (2017-present).
+      Each row is one cell of the Mietspiegeltabelle: a (vintage, year_built_bucket,
+      size_bucket, wohnlage) combination with the net cold rent range (low/mid/high
+      EUR/m2/month, representing the 3/4-Spanne and Median).
+      All cells represent standard-equipped apartments (mit Sammelheizung, Bad, IWC).
+      Apartments without SH or Bath use fixed footnote deductions; these are NOT rows.
+      ausstattung is not a dimension in the Mietspiegel table structure.
+      PDFs available at mietspiegel.berlin.de/berliner-mietspiegel/archiv/ —
+      NOT redistributable in automated form (ADR-0003 item 11); only transcribed
+      numeric values are committed.
+      Vintages available: 2017, 2019, 2021, 2023, 2024, 2026 (all fully transcribed).
+    meta:
+      dbt_meta_owner: data-engineer
+    tests:
+      - dbt_utils.expression_is_true:
+          arguments:
+            expression: "rent_low <= rent_mid"
+          config:
+            severity: warn
+      - dbt_utils.expression_is_true:
+          arguments:
+            expression: "rent_mid <= rent_high"
+          config:
+            severity: warn
+    columns:
+      - name: vintage
+        description: >
+          Mietspiegel edition year (integer; 2017, 2019, 2021, 2023, 2024, or 2026).
+        tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: [2017, 2019, 2021, 2023, 2024, 2026]
+              config:
+                severity: warn
+      - name: year_built_bucket
+        description: >
+          Construction year bucket. 2017 values: 'pre_1918', '1919_1949', '1950_1964',
+          '1965_1972', '1973_1990_west', '1973_1990_ost', '1991_2002', '2003_2015'.
+          Later editions may merge west/ost and use 'ab_2003' for the newest bucket.
+        tests:
+          - not_null
+      - name: size_bucket
+        description: >
+          Apartment floor area bucket: 'under_40' (<40 m2), '40_to_60' (40-<60 m2),
+          '60_to_90' (60-<90 m2), '90_plus' (>=90 m2).
+        tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: [under_40, 40_to_60, 60_to_90, 90_plus]
+      - name: wohnlage
+        description: Location quality tier ('einfach', 'mittel', 'gut').
+        tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: [einfach, mittel, gut]
+      - name: rent_low
+        description: Lower bound of the 3/4-Spanne (EUR/m2/month, net cold rent).
+        tests:
+          - not_null
+      - name: rent_mid
+        description: Median net cold rent (EUR/m2/month).
+        tests:
+          - not_null
+      - name: rent_high
+        description: Upper bound of the 3/4-Spanne (EUR/m2/month, net cold rent).
+        tests:
+          - not_null
+      - name: source
+        description: >
+          Source citation including edition year, publisher, reference date, and
+          equipment standard.

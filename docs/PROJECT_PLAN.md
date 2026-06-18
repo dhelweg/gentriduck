@@ -279,8 +279,16 @@ data and see whether the paper's conclusions reproduce; exact 2018 inputs are no
   they live in a companion publication (`EWR<YYYY>12H_Matrix.csv`); needs separate ingestion;
   (3) grouped under-18 bins renamed `E_U1` → `E_EU1` in 2012+, breaking `age_under18_share`
   and `mean_age_years`. · *DE pair* · C3b.
+- **C3-dedup** *(bug #59)* Fix `int_osm_poi_plr`: `ST_Within` spatial join has no deduplication —
+  POIs that fall on PLR boundaries fan-out into multiple rows and break the unique test on the model.
+  Add a `QUALIFY ROW_NUMBER() OVER (PARTITION BY poi_id ORDER BY plr_id)` (or equivalent) dedup step
+  so each POI maps to at most one PLR. **Must be resolved before C4** — `fct_poi_development`
+  aggregation double-counts boundary POIs without this fix. · *DE pair* · C3,C3b-fix.
+- **C3-ref** *(refactor #60)* `int_osm_poi_plr` reads LOR geometry via raw parquet file paths instead of
+  `ref('stg_berlin_lor')`. Swap to the dbt ref so lineage is captured and the model is portable.
+  Lower-priority structural cleanup; can follow C3-dedup as it touches the same model. · *DE pair* · C3-dedup.
 - **C4** Time-series index + `gentrification_change` (delta + rank movement over time), combining POI
-  development **and** the socio-economic series. · *DE pair* · C3,C3b,C3b-fix,B4.
+  development **and** the socio-economic series. · *DE pair* · C3,C3b,C3b-fix,C3-dedup,D1-ewr-fix1,D1-ewr-fix2,B4.
 - **C5** **OSM completeness-bias control:** POI counts rise partly because OSM *coverage* grew, not
    the neighborhood — normalize (e.g. POI category share, or counts against an overall-coverage
    denominator from ohsome) so growth reflects real change. Add data-quality tests for anomalous
@@ -291,6 +299,20 @@ data and see whether the paper's conclusions reproduce; exact 2018 inputs are no
 ### Epic D — Property & rent dimension (open sources only)
 - **D1** Integrate **open** price/rent sources (Bodenrichtwerte/Gutachterausschuss, Mietspiegel,
   Wohnungsmarktbericht) as staging→mart dimensions, each with recorded licence. · *DE pair* · A3.
+- **D1b** Discover and ingest Kauffälle (property transaction) WFS endpoint (#53). · *DE pair* · A3.
+- **D1c** Strassenverzeichnis → PLR geocoding: parse Mietspiegel street-index PDFs (2017–2026),
+  join to LOR PLR polygons, build address→PLR crosswalk for area-level rent lookups (#56).
+  · *DE pair (+ geo-data-scientist)* · D1.
+- **D1-ewr-fix1** *(bug #57)* Fix `_col_sum_numeric fillna(0)` in EWR ingestion: applying `fillna(0)`
+  before the column sum runs corrupts suppression logic — suppressed cells (sentinel values) are zeroed
+  before the numerator/denominator are computed, producing wrong indicator shares instead of NaN.
+  Fix: propagate NaN through the sum; only fill after the share is computed (or leave suppressed
+  rows as NaN). **Must be fixed before D2 and C4** — both consume `int_ewr_series` derived
+  indicator shares. · *DE pair* · C3b-fix.
+- **D1-ewr-fix2** *(bug #58)* Fix `residents_total` stored as `0.0` instead of `NaN` for suppressed
+  PLRs in the EWR ingestion. Suppressed PLRs should carry `NaN` (not zero) for `residents_total`
+  so they are excluded from aggregations rather than dragging means and totals down. Fix alongside
+  D1-ewr-fix1 (same ingestion module). · *DE pair* · C3b-fix.
 - **D2** Source-completeness/coverage check on the price/rent data (years/areas available, gaps). ·
   *DE pair (+ geo-data-scientist)* · D1.
 - **D3** Extend index with the price/rent dimension. · *DE pair (+ scientist sign-off)* · D1,D2.

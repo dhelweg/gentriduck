@@ -32,8 +32,8 @@ Indicator set (geo-data-scientist approved):
   4  age_under18_share            — (E_U1+E_1U6+E_6U15+E_15U18)/E_E
   5  age_18_27_share              — (E_E18_21+E_E21_25+E_E25_27)/E_E
   6  age_27_45_share              — (E_E27_30+E_E30_35+E_E35_40+E_E40_45)/E_E
-  7  age_45_65_share              — (E_E45_50+E_E50_55+E_E55U65)/E_E
-  8  age_65plus_share             — (E_65U80+E_80U110)/E_E
+  7  age_45_65_share              — (E_E45_50+E_E50_55+E_55U65)/E_E  (canonical; 2014+ E_E55U65 aliased)
+  8  age_65plus_share             — (E_65U80+E_80U110)/E_E  (canonical; 2014+ E_E65U80/E_E80U110 aliased)
   9  mean_age_years               — midpoint-weighted over age cohorts (years)
   10 foreigners_share             — E_A / E_E                    (share)
   11 migration_background_share   — MH_E / E_E (NULL when column absent)
@@ -126,6 +126,30 @@ SOURCE_ATTRIBUTION = (
 
 CKAN_API_BASE = "https://daten.berlin.de/api/3/action/package_search"
 
+# Companion CSV URLs (12A suffix = Ausländische Einwohner) — contain E_A (foreigners
+# total) which is absent from the main 12E Matrix CSV.
+# Published as a separate dataset series on daten.berlin.de:
+#   "Ausländische Einwohnerinnen und Einwohner in Berlin in LOR-Planungsräumen"
+# Available: 2014–2020, 2025 (not 2008–2013 or 2024 — those years have no 12A publication).
+# NOTE: statistik-berlin-brandenburg.de blocks programmatic HTTP access (returns
+# text/html for CSV requests). Download manually and place as EWR{YYYY}12A_Matrix.csv
+# (or {year}A.csv) in the --local-csv-dir directory.
+VINTAGE_A_URLS: dict[int, str] = {
+    2014: "https://www.statistik-berlin-brandenburg.de/opendata/EWR201412A_Matrix.csv",
+    2015: "https://www.statistik-berlin-brandenburg.de/opendata/EWR201512A_Matrix.csv",
+    2016: "https://www.statistik-berlin-brandenburg.de/opendata/EWR201612A_Matrix.csv",
+    2017: "https://www.statistik-berlin-brandenburg.de/opendata/EWR201712A_Matrix.csv",
+    2018: "https://www.statistik-berlin-brandenburg.de/opendata/EWR201812A_Matrix.csv",
+    2019: "https://www.statistik-berlin-brandenburg.de/opendata/EWR201912A_Matrix.csv",
+    2020: "https://www.statistik-berlin-brandenburg.de/opendata/EWR202012A_Matrix.csv",
+    2025: "https://www.statistik-berlin-brandenburg.de/opendata/EWR_L21_202512A_Matrix.csv",
+}
+
+# Columns to pull from the 12A companion CSV (Ausländische Einwohner series).
+# MH_E is handled separately via load_migra_local_csv() (EWRMIGRA series).
+# DAU5/DAU10 (residence duration) are not published in any known open CSV series.
+COMPANION_COLS = ["E_A"]
+
 # Known direct download URLs for the 31-Dec snapshot per year (fast path).
 # Source: daten.berlin.de dataset pages (ADR-0003).
 # When a URL is present here, the CKAN API discovery call is skipped for that year.
@@ -149,10 +173,25 @@ VINTAGE_URLS: dict[int, str] = {
     2020: "https://www.statistik-berlin-brandenburg.de/opendata/EWR202012E_Matrix.csv",
     # 2021-2023: not yet published on the open-data portal (CKAN API miss confirmed).
     2024: "https://www.statistik-berlin-brandenburg.de/opendata/EWR_L21_202412E_Matrix.csv",
+    2025: "https://www.statistik-berlin-brandenburg.de/opendata/EWR_L21_202512E_Matrix.csv",
 }
 
 # Values that represent privacy suppression in the EWR CSV cells.
 SUPPRESSION_SENTINELS = frozenset({"-", ".", "", "X", "x"})
+
+# 2014+ EWR CSVs renamed the grouped age-bin columns (added "E_" prefix).
+# Map new names -> canonical old names so compute_indicators always sees one name set.
+# Note: E_E18U25/E_E25U55 aliases omitted — compute_indicators uses fine-grained sub-bins
+# (E_E18_21, E_E21_25, etc.) which are present in all vintages, not the grouped mid-range bins.
+_GROUPED_BIN_ALIASES: dict[str, str] = {
+    "E_EU1": "E_U1",
+    "E_E1U6": "E_1U6",
+    "E_E6U15": "E_6U15",
+    "E_E15U18": "E_15U18",
+    "E_E55U65": "E_55U65",
+    "E_E65U80": "E_65U80",
+    "E_E80U110": "E_80U110",
+}
 
 # Age cohort midpoints (years) for mean_age computation.
 # Bins: [lower, upper) with midpoint = (lower + upper) / 2.
@@ -170,7 +209,7 @@ AGE_COHORTS: list[tuple[float, str]] = [
     (42.5, "E_E40_45"),  # 40-44
     (47.5, "E_E45_50"),  # 45-49
     (52.5, "E_E50_55"),  # 50-54
-    (60.0, "E_E55U65"),  # 55-64
+    (60.0, "E_55U65"),  # 55-64
     (72.5, "E_65U80"),  # 65-79
     (90.0, "E_80U110"),  # 80-109
 ]
@@ -293,9 +332,17 @@ def _to_numeric_with_suppression(series: pd.Series) -> tuple[pd.Series, pd.Serie
     Returns (numeric_series, suppression_mask).
     Suppressed sentinels ('-', '.', etc.) become NaN in numeric_series and
     True in suppression_mask.
+
+    German decimal separator: some vintage CSVs (e.g. 2012, 2013, 2015) quote
+    all values and use ',' as the decimal separator ("2930,00"). We normalise
+    by replacing ',' with '.' in the stripped string before parsing. This is
+    safe because EWR PLR-level counts never use German thousands separators.
     """
-    suppression_mask = series.astype(str).str.strip().isin(SUPPRESSION_SENTINELS)
-    numeric = pd.to_numeric(series, errors="coerce")
+    stripped = series.astype(str).str.strip()
+    suppression_mask = stripped.isin(SUPPRESSION_SENTINELS)
+    # Normalise German decimal separator before numeric conversion.
+    normalised = stripped.str.replace(",", ".", regex=False)
+    numeric = pd.to_numeric(normalised, errors="coerce")
     return numeric, suppression_mask
 
 
@@ -360,6 +407,14 @@ def compute_indicators(df: pd.DataFrame, year: int) -> pd.DataFrame:
     # Normalise column names (strip whitespace, uppercase).
     df.columns = df.columns.str.strip().str.upper()
 
+    # Normalise 2014+ grouped age-bin column names to the canonical pre-2014 names
+    # so the rest of compute_indicators can use a single name set.
+    df = df.rename(
+        columns={
+            k: v for k, v in _GROUPED_BIN_ALIASES.items() if k in df.columns and v not in df.columns
+        }
+    )
+
     # PLR identifier column — EWR CSVs use 'PLR', 'RAUMID', or 'RAUMID_PLR'.
     plr_col = next((c for c in ("RAUMID", "RAUMID_PLR", "PLR_ID", "PLR") if c in df.columns), None)
     if plr_col is None:
@@ -403,9 +458,21 @@ def compute_indicators(df: pd.DataFrame, year: int) -> pd.DataFrame:
     indicators["age_under18_share"] = _share(["E_U1", "E_1U6", "E_6U15", "E_15U18"])
     indicators["age_18_27_share"] = _share(["E_E18_21", "E_E21_25", "E_E25_27"])
     indicators["age_27_45_share"] = _share(["E_E27_30", "E_E30_35", "E_E35_40", "E_E40_45"])
-    indicators["age_45_65_share"] = _share(["E_E45_50", "E_E50_55", "E_E55U65"])
+    indicators["age_45_65_share"] = _share(["E_E45_50", "E_E50_55", "E_55U65"])
     indicators["age_65plus_share"] = _share(["E_65U80", "E_80U110"])
-    indicators["foreigners_share"] = _share(["E_A"])
+
+    # foreigners_share — E_A is only in the companion 12H CSV (not the main 12E Matrix).
+    # When the companion has not been loaded, log a debug note and emit NaN (not 0.0).
+    if "E_A" in df.columns:
+        indicators["foreigners_share"] = _share(["E_A"])
+    else:
+        log.debug(
+            "E_A column absent for year %d (companion 12H CSV not loaded) — "
+            "foreigners_share will be NULL",
+            year,
+        )
+        indicators["foreigners_share"] = pd.Series(float("nan"), index=df.index)
+        suppressed_any = suppressed_any | pd.Series(True, index=df.index)
 
     # mean_age: midpoint-weighted sum over cohorts / total residents.
     weighted_age = pd.Series(0.0, index=df.index)
@@ -515,6 +582,116 @@ def load_local_csv(local_dir: Path, year: int) -> Optional[pd.DataFrame]:
     return None
 
 
+def load_companion_local_csv(local_dir: Path, year: int) -> Optional[pd.DataFrame]:
+    """
+    Load the companion 12A CSV (Ausländische Einwohner) from local_dir if it exists.
+
+    The 12A Matrix contains E_A (total foreigners) which is absent from the main
+    12E Matrix. Published as a separate dataset series on daten.berlin.de:
+    "Ausländische Einwohnerinnen und Einwohner in Berlin in LOR-Planungsräumen"
+    Available years: 2014-2020, 2025 (not 2008-2013 or 2024).
+    Licence: CC BY 3.0 DE — Amt für Statistik Berlin-Brandenburg.
+
+    Direct download URLs (browser required — server blocks programmatic access):
+      2014-2020: https://www.statistik-berlin-brandenburg.de/opendata/EWR{YYYY}12A_Matrix.csv
+      2025:      https://www.statistik-berlin-brandenburg.de/opendata/EWR_L21_202512A_Matrix.csv
+    """
+    for name in (
+        f"EWR{year}12A_Matrix.csv",
+        f"EWR_L21_{year}12A_Matrix.csv",
+        f"{year}A.csv",
+    ):
+        path = local_dir / name
+        if path.exists():
+            log.info("Using local companion 12A CSV for EWR %d: %s", year, path)
+            return _parse_csv_bytes(path.read_bytes(), year)
+    log.debug(
+        "No companion 12A CSV found for year %d in %s — foreigners_share will be NULL. "
+        "Download EWR%d12A_Matrix.csv from daten.berlin.de and place in --local-csv-dir.",
+        year,
+        local_dir,
+        year,
+    )
+    return None
+
+
+def load_whndauer_local_csv(local_dir: Path, year: int) -> Optional[pd.DataFrame]:
+    """
+    Load the Wohndauer companion CSV from local_dir if it exists.
+
+    WHNDAUER{YYYY}_Matrix.csv contains PDAU5 and PDAU10 — the share of PLR
+    residents who have lived at their current address for ≥5 and ≥10 years
+    respectively, expressed as percentages (0–100). Divided by 100 on load
+    to produce DAU5/DAU10 shares (0–1) matching the thesis convention.
+
+    Published as a separate dataset series on daten.berlin.de:
+    "Einwohnerinnen und Einwohner in Berlin in LOR-Planungsräumen nach Wohndauer"
+    Available years: 2007-2020.
+    Licence: CC BY 3.0 DE — Amt für Statistik Berlin-Brandenburg.
+
+    Direct download URLs (browser required — server blocks programmatic access):
+      2007-2020: https://www.statistik-berlin-brandenburg.de/opendata/WHNDAUER{YYYY}_Matrix.csv
+    """
+    for name in (f"WHNDAUER{year}_Matrix.csv", f"{year}WHNDAUER.csv"):
+        path = local_dir / name
+        if path.exists():
+            log.info("Using local Wohndauer CSV for EWR %d: %s", year, path)
+            df = _parse_csv_bytes(path.read_bytes(), year)
+            df.columns = df.columns.str.strip().str.upper()
+            # Convert PDAU5/PDAU10 from percentage to 0-1 share and rename to
+            # DAU5/DAU10 so compute_indicators can use them directly.
+            for pct_col, share_col in (("PDAU5", "DAU5"), ("PDAU10", "DAU10")):
+                if pct_col in df.columns:
+                    stripped = df[pct_col].astype(str).str.strip()
+                    df[share_col] = (
+                        pd.to_numeric(stripped.str.replace(",", ".", regex=False), errors="coerce")
+                        / 100.0
+                    )
+            return df
+    log.debug(
+        "No Wohndauer CSV found for year %d in %s — residence_duration_*_share will be NULL. "
+        "Download WHNDAUER%d_Matrix.csv from daten.berlin.de and place in --local-csv-dir.",
+        year,
+        local_dir,
+        year,
+    )
+    return None
+
+
+def load_migra_local_csv(local_dir: Path, year: int) -> Optional[pd.DataFrame]:
+    """
+    Load the EWRMIGRA companion CSV from local_dir if it exists.
+
+    The EWRMIGRA 12E Matrix contains MH_E (total residents with migration
+    background) which is absent from the main 12E and 12A matrices.
+    Published as a separate dataset series on daten.berlin.de:
+    "Einwohnerinnen und Einwohner mit Migrationshintergrund in Berlin in
+    LOR-Planungsräumen"
+    Available years: 2014-2020.
+    Licence: CC BY 3.0 DE — Amt für Statistik Berlin-Brandenburg.
+
+    Direct download URLs (browser required — server blocks programmatic access):
+      2014-2020: https://www.statistik-berlin-brandenburg.de/opendata/EWRMIGRA{YYYY}12E_Matrix.csv
+    """
+    for name in (
+        f"EWRMIGRA{year}12E_Matrix.csv",
+        f"EWRMIGRA_L21_{year}12E_Matrix.csv",
+        f"{year}MIGRA.csv",
+    ):
+        path = local_dir / name
+        if path.exists():
+            log.info("Using local EWRMIGRA CSV for EWR %d: %s", year, path)
+            return _parse_csv_bytes(path.read_bytes(), year)
+    log.debug(
+        "No EWRMIGRA CSV found for year %d in %s — migration_background_share will be NULL. "
+        "Download EWRMIGRA%d12E_Matrix.csv from daten.berlin.de and place in --local-csv-dir.",
+        year,
+        local_dir,
+        year,
+    )
+    return None
+
+
 def download_csv(url: str, year: int) -> pd.DataFrame:
     """Download a CSV from url and parse it; tries ';', ',', and tab separators."""
     log.info("Downloading EWR %d from %s", year, url)
@@ -558,6 +735,138 @@ def process_year(
         except Exception as exc:
             log.error("Failed to download EWR %d: %s", year, exc)
             return False
+
+    # Attempt to load and merge companion 12H CSV (contains E_A, MH_E, DAU5, DAU10).
+    if local_dir:
+        companion_df = load_companion_local_csv(local_dir, year)
+        if companion_df is not None:
+            # Normalise companion column names to match main CSV treatment.
+            companion_df.columns = companion_df.columns.str.strip().str.upper()
+            # Identify the join key (RAUMID / PLR identifier) in the companion.
+            companion_plr_col = next(
+                (c for c in ("RAUMID", "RAUMID_PLR", "PLR_ID", "PLR") if c in companion_df.columns),
+                None,
+            )
+            if companion_plr_col is not None:
+                companion_df = companion_df.rename(columns={companion_plr_col: "_JOIN_KEY"})
+                companion_df["_JOIN_KEY"] = (
+                    companion_df["_JOIN_KEY"].astype(str).str.strip().str.zfill(8)
+                )
+                # Identify the join key in the main CSV (normalised same way later in
+                # compute_indicators; normalise here so the merge key matches).
+                main_df = raw_df.copy()
+                main_df.columns = main_df.columns.str.strip().str.upper()
+                main_plr_col = next(
+                    (c for c in ("RAUMID", "RAUMID_PLR", "PLR_ID", "PLR") if c in main_df.columns),
+                    None,
+                )
+                if main_plr_col is not None:
+                    main_df["_JOIN_KEY"] = (
+                        main_df[main_plr_col].astype(str).str.strip().str.zfill(8)
+                    )
+                    # Columns to pull from companion (only those absent from main).
+                    # Apply alias normalisation so downstream code uses canonical names.
+                    companion_df = companion_df.rename(
+                        columns={
+                            k: v
+                            for k, v in _GROUPED_BIN_ALIASES.items()
+                            if k in companion_df.columns and v not in companion_df.columns
+                        }
+                    )
+                    cols_to_merge = [
+                        c
+                        for c in COMPANION_COLS
+                        if c in companion_df.columns and c not in main_df.columns
+                    ]
+                    if cols_to_merge:
+                        companion_subset = companion_df[["_JOIN_KEY"] + cols_to_merge]
+                        merged = main_df.merge(companion_subset, on="_JOIN_KEY", how="left")
+                        # Restore original column order + add companion cols; drop temp key.
+                        raw_df = merged.drop(columns=["_JOIN_KEY"])
+                        # Restore original column names for main CSV columns
+                        # (compute_indicators will normalise again).
+                        log.info(
+                            "Merged companion 12A cols %s for EWR %d (%d rows matched)",
+                            cols_to_merge,
+                            year,
+                            main_df["_JOIN_KEY"].isin(companion_subset["_JOIN_KEY"]).sum(),
+                        )
+
+    # Attempt to load and merge EWRMIGRA companion CSV (contains MH_E).
+    if local_dir:
+        migra_df = load_migra_local_csv(local_dir, year)
+        if migra_df is not None:
+            migra_df.columns = migra_df.columns.str.strip().str.upper()
+            migra_plr_col = next(
+                (c for c in ("RAUMID", "RAUMID_PLR", "PLR_ID", "PLR") if c in migra_df.columns),
+                None,
+            )
+            if migra_plr_col is not None:
+                migra_df = migra_df.rename(columns={migra_plr_col: "_JOIN_KEY"})
+                migra_df["_JOIN_KEY"] = migra_df["_JOIN_KEY"].astype(str).str.strip().str.zfill(8)
+                work_df = raw_df.copy()
+                work_df.columns = work_df.columns.str.strip().str.upper()
+                main_plr_col = next(
+                    (c for c in ("RAUMID", "RAUMID_PLR", "PLR_ID", "PLR") if c in work_df.columns),
+                    None,
+                )
+                if main_plr_col is not None:
+                    work_df["_JOIN_KEY"] = (
+                        work_df[main_plr_col].astype(str).str.strip().str.zfill(8)
+                    )
+                    migra_cols = [
+                        c for c in ("MH_E",) if c in migra_df.columns and c not in work_df.columns
+                    ]
+                    if migra_cols:
+                        migra_subset = migra_df[["_JOIN_KEY"] + migra_cols]
+                        merged = work_df.merge(migra_subset, on="_JOIN_KEY", how="left")
+                        raw_df = merged.drop(columns=["_JOIN_KEY"])
+                        log.info(
+                            "Merged EWRMIGRA cols %s for EWR %d (%d rows matched)",
+                            migra_cols,
+                            year,
+                            work_df["_JOIN_KEY"].isin(migra_subset["_JOIN_KEY"]).sum(),
+                        )
+
+    # Attempt to load and merge Wohndauer companion CSV (contains DAU5/DAU10).
+    if local_dir:
+        whndauer_df = load_whndauer_local_csv(local_dir, year)
+        if whndauer_df is not None:
+            # Column names already normalised to upper-case by load_whndauer_local_csv.
+            whndauer_plr_col = next(
+                (c for c in ("RAUMID", "RAUMID_PLR", "PLR_ID", "PLR") if c in whndauer_df.columns),
+                None,
+            )
+            if whndauer_plr_col is not None:
+                whndauer_df = whndauer_df.rename(columns={whndauer_plr_col: "_JOIN_KEY"})
+                whndauer_df["_JOIN_KEY"] = (
+                    whndauer_df["_JOIN_KEY"].astype(str).str.strip().str.zfill(8)
+                )
+                work_df = raw_df.copy()
+                work_df.columns = work_df.columns.str.strip().str.upper()
+                main_plr_col = next(
+                    (c for c in ("RAUMID", "RAUMID_PLR", "PLR_ID", "PLR") if c in work_df.columns),
+                    None,
+                )
+                if main_plr_col is not None:
+                    work_df["_JOIN_KEY"] = (
+                        work_df[main_plr_col].astype(str).str.strip().str.zfill(8)
+                    )
+                    dau_cols = [
+                        c
+                        for c in ("DAU5", "DAU10")
+                        if c in whndauer_df.columns and c not in work_df.columns
+                    ]
+                    if dau_cols:
+                        dau_subset = whndauer_df[["_JOIN_KEY"] + dau_cols]
+                        merged = work_df.merge(dau_subset, on="_JOIN_KEY", how="left")
+                        raw_df = merged.drop(columns=["_JOIN_KEY"])
+                        log.info(
+                            "Merged Wohndauer cols %s for EWR %d (%d rows matched)",
+                            dau_cols,
+                            year,
+                            work_df["_JOIN_KEY"].isin(dau_subset["_JOIN_KEY"]).sum(),
+                        )
 
     try:
         wide_df = compute_indicators(raw_df, year)
