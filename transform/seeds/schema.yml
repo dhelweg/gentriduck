@@ -282,3 +282,59 @@ seeds:
           - accepted_values:
               arguments:
                 values: ["true", "false"]
+
+  - name: berlin_mietspiegel_2024
+    description: >
+      D1 — Berliner Mietspiegel 2024 rent table seed.
+      Stub seed (header-only, zero data rows) pending manual transcription of the
+      PDF table from mietspiegel.berlin.de/berliner-mietspiegel/archiv/.
+      Once populated, each row represents one cell of the Mietspiegeltabelle 2024:
+      a (year_built_bucket, size_bucket, ausstattung, wohnlage) combination with
+      the corresponding net cold rent range (low/mid/high EUR/m2).
+      The PDF is NOT redistributable in automated form (ADR-0003 item 11); only
+      the transcribed numeric values are committed.
+      See transform/seeds/berlin_mietspiegel_2024_methodology.md for population
+      instructions and column definitions.
+    meta:
+      dbt_meta_owner: data-engineer
+    tests:
+      - dbt_utils.expression_is_true:
+          arguments:
+            expression: "rent_low <= rent_mid"
+          config:
+            severity: warn
+      - dbt_utils.expression_is_true:
+          arguments:
+            expression: "rent_mid <= rent_high"
+          config:
+            severity: warn
+    columns:
+      - name: vintage
+        description: Mietspiegel edition year (integer; always 2024 for this seed).
+      - name: year_built_bucket
+        description: >
+          Construction year bucket (e.g. 'bis_1918', '1919_1949', '1950_1964',
+          '1965_1972', '1973_1990', '1991_2002', 'ab_2003').
+      - name: size_bucket
+        description: >
+          Apartment floor area bucket in m2
+          ('unter_40', '40_59', '60_89', '90_und_mehr').
+      - name: ausstattung
+        description: >
+          Equipment / fitting level ('einfach', 'mittel', 'gehoben').
+      - name: wohnlage
+        description: >
+          Location quality tier ('einfach', 'mittel', 'gut').
+      - name: rent_low
+        description: >
+          Lower bound of the net cold rent range (EUR/m2/month).
+      - name: rent_mid
+        description: >
+          Midpoint / reference net cold rent value (EUR/m2/month).
+      - name: rent_high
+        description: >
+          Upper bound of the net cold rent range (EUR/m2/month).
+      - name: source
+        description: >
+          Source citation: 'Berliner Mietspiegel 2024,
+          Senatsverwaltung fuer Stadtentwicklung, Bauen und Wohnen Berlin'.

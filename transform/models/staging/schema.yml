@@ -404,3 +404,69 @@ models:
           - not_null:
               config:
                 where: "area_code is not null"
+
+  # --- D1: Berlin price/rent data (Bodenrichtwerte, Wohnlage, Kauffälle stub) ---
+
+  - name: stg_berlin_bodenrichtwert
+    description: >
+      D1 staging view over Bodenrichtwerte (land reference values) 2024 for Berlin.
+      Source: WFS GDI Berlin brw2024, feature type brw2024:brw_2024_vector,
+      CRS EPSG:25833. Licence: dl-de-zero-2.0.
+      Populated by ingestion/berlin/price_rent/ingest_bodenrichtwerte.py.
+      Returns zero rows (typed stub) until data/raw/berlin/price_rent/bodenrichtwert_2024.parquet
+      exists. Each row is one BRW land value zone polygon with the EUR/m2 value
+      and land use code.
+    meta:
+      dbt_meta_owner: data-engineer
+    columns:
+      - name: reference_date
+        description: Reference date for the BRW; always 2024-01-01.
+      - name: city_code
+        description: City identifier; always 'berlin' (ADR-0005).
+      - name: geometry_wkb
+        description: Zone polygon in WKB, CRS EPSG:25833.
+      - name: brw_id
+        description: BRW zone identifier (brwid WFS attribute).
+      - name: value_eur_per_m2
+        description: Bodenrichtwert land value in EUR per m2 (brw WFS attribute).
+      - name: nutzung
+        description: Land use code (nutzung WFS attribute; e.g. 'W - Wohngebiet').
+      - name: source_attribution
+        description: dl-de-zero-2.0 attribution string.
+
+  - name: stg_berlin_wohnlage
+    description: >
+      D1 staging view over Wohnlagen nach Adressen (Mietspiegel 2023) for Berlin.
+      Source: WFS GDI Berlin wohnlagenadr2023, feature type
+      wohnlagenadr2023:wohnlagenadr2023, CRS EPSG:25833. Licence: dl-de-zero-2.0.
+      ~397,542 address-level point features. Populated by
+      ingestion/berlin/price_rent/ingest_wohnlage.py (5-15 min download).
+      Returns zero rows (typed stub) until data/raw/berlin/price_rent/wohnlage_2023.parquet
+      exists. Each row is one address with its Wohnlage classification
+      (einfach/mittel/gut) from the 2023 Mietspiegel.
+    meta:
+      dbt_meta_owner: data-engineer
+    columns:
+      - name: vintage
+        description: Mietspiegel edition year; always 2023 for this model.
+      - name: city_code
+        description: City identifier; always 'berlin' (ADR-0005).
+      - name: geometry_wkb
+        description: Address point in WKB (MultiPoint), CRS EPSG:25833.
+      - name: wohnlage
+        description: Wohnlage classification (wol WFS attribute; einfach/mittel/gut).
+      - name: address_id
+        description: Address/block identifier (schluessel WFS attribute; nullable).
+      - name: source_attribution
+        description: dl-de-zero-2.0 attribution string.
+
+  - name: stg_berlin_kauffaelle
+    description: >
+      D1 STUB — Kauffaelle (Verkaufte Grundstücke) 2024.
+      The WFS endpoint https://gdi.berlin.de/services/wfs/kauffaelle2024 returned
+      HTTP 404 during D1 implementation (2026-06-18). URL needs manual discovery
+      from daten.berlin.de. See issue D1b for resolution.
+      Always returns zero rows until the endpoint is found and ingestion is
+      implemented.
+    meta:
+      dbt_meta_owner: data-engineer

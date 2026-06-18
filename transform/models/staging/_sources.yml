@@ -38,3 +38,61 @@ sources:
           variant from the 2018 thesis). 436 rows. Columns prefixed 'r.'. Area level: plr.
           Exposes the 'distance_weighted' variant of the gentrification index.
           Read by stg_thesis_2018_result_plr_distcalc via read_csv with encoding='latin-1'.
+
+  - name: price_rent
+    description: >
+      D1 Berlin price and rent open data sources (reference year 2023/2024).
+      All three sources are published by the Senatsverwaltung fuer Stadtentwicklung,
+      Bauen und Wohnen Berlin under dl-de-zero-2.0 (Datenlizenz Deutschland Zero)
+      and require attribution. Raw data is gitignored (ADR-0008) and rebuilt from
+      open source WFS endpoints by the ingestion scripts in
+      ingestion/berlin/price_rent/.
+    meta:
+      source_type: wfs_parquet
+      licence: dl-de-zero-2.0
+      attribution: >
+        Senatsverwaltung fuer Stadtentwicklung, Bauen und Wohnen Berlin /
+        Gutachterausschuss fuer Grundstueckswerte in Berlin.
+        Datenlizenz Deutschland Zero 2.0 (dl-de-zero-2.0).
+
+    tables:
+      - name: bodenrichtwert_2024
+        description: >
+          Bodenrichtwerte (land reference values) as of 2024-01-01 for Berlin.
+          Polygon WFS layer: brw2024:brw_2024_vector from
+          https://gdi.berlin.de/services/wfs/brw2024 (CRS EPSG:25833).
+          Populated by ingestion/berlin/price_rent/ingest_bodenrichtwerte.py.
+          Output: data/raw/berlin/price_rent/bodenrichtwert_2024.parquet.
+          Staging model: stg_berlin_bodenrichtwert.
+          Key attributes: brwid (zone ID), brw (EUR/m2), nutzung (land use).
+          Attribution: Senatsverwaltung fuer Stadtentwicklung, Bauen und Wohnen
+          Berlin / Gutachterausschuss fuer Grundstueckswerte in Berlin,
+          Bodenrichtwerte Berlin 2024, dl-de-zero-2.0 --
+          https://daten.berlin.de/datensaetze/bodenrichtwerte-01-01-2024-wfs-c2092cb3
+
+      - name: wohnlage_2023
+        description: >
+          Wohnlagen nach Adressen zum Berliner Mietspiegel 2023.
+          Address-level point WFS layer: wohnlagenadr2023:wohnlagenadr2023 from
+          https://gdi.berlin.de/services/wfs/wohnlagenadr2023 (CRS EPSG:25833).
+          ~397,542 features; paginated at 500 features per request.
+          Populated by ingestion/berlin/price_rent/ingest_wohnlage.py (5-15 min).
+          Output: data/raw/berlin/price_rent/wohnlage_2023.parquet.
+          Staging model: stg_berlin_wohnlage.
+          Key attributes: wol (Wohnlage: einfach/mittel/gut), schluessel (address ID).
+          Attribution: Senatsverwaltung fuer Stadtentwicklung, Bauen und Wohnen
+          Berlin, Wohnlagen Mietspiegel 2023, dl-de-zero-2.0 --
+          https://daten.berlin.de/datensaetze/wohnlagen-nach-adressen-zum-berliner-mietspiegel-2023-wfs-b9979169
+
+      - name: berlin_mietspiegel_2024
+        description: >
+          Berliner Mietspiegel 2024 rent table (PDF-only source).
+          Published by Senatsverwaltung fuer Stadtentwicklung, Bauen und Wohnen
+          Berlin. NOT available via open machine-readable API; values must be
+          manually transcribed from the PDF at
+          mietspiegel.berlin.de/berliner-mietspiegel/archiv/.
+          Committed as a header-only seed stub (zero data rows).
+          The PDF itself must not be redistributed (ADR-0003 item 11).
+          Seed: transform/seeds/berlin_mietspiegel_2024.csv.
+          See transform/seeds/berlin_mietspiegel_2024_methodology.md for
+          population instructions.
