@@ -144,6 +144,25 @@ SIZE_BUCKETS: list[tuple[str, int, int]] = [
     ("90_plus", 90, 9999),
 ]
 
+# Mapping of single-table row index (0-based, skipping header) to
+# (size_lo, size_hi, wohnlage).  The 2017–2023 Mietspiegel table has exactly
+# 12 data rows: 4 size groups × 3 wohnlage levels, always in this order.
+# size_lo/size_hi must match SIZE_BUCKETS so _aggregate_to_bucket() maps 1:1.
+_SINGLE_TABLE_ROW_MAP: list[tuple[int, int, str]] = [
+    (0, 40, "einfach"),  # A: unter 40 m², einfache Wohnlage
+    (0, 40, "mittel"),  # B: unter 40 m², mittlere Wohnlage
+    (0, 40, "gut"),  # C: unter 40 m², gute Wohnlage
+    (40, 60, "einfach"),  # D: 40 bis unter 60 m², einfache Wohnlage
+    (40, 60, "mittel"),  # E: 40 bis unter 60 m², mittlere Wohnlage
+    (40, 60, "gut"),  # F: 40 bis unter 60 m², gute Wohnlage
+    (60, 90, "einfach"),  # G: 60 bis unter 90 m², einfache Wohnlage
+    (60, 90, "mittel"),  # H: 60 bis unter 90 m², mittlere Wohnlage
+    (60, 90, "gut"),  # I: 60 bis unter 90 m², gute Wohnlage
+    (90, 9999, "einfach"),  # J: 90 m² und mehr, einfache Wohnlage
+    (90, 9999, "mittel"),  # K: 90 m² und mehr, mittlere Wohnlage
+    (90, 9999, "gut"),  # L: 90 m² und mehr, gute Wohnlage
+]
+
 # ---------------------------------------------------------------------------
 # Parquet schema
 # ---------------------------------------------------------------------------
@@ -223,10 +242,10 @@ def _parse_m2(s: Optional[str]) -> Optional[int]:
 
 
 # ---------------------------------------------------------------------------
-# PDF table parsing
+# PDF table parsing — 2024/2026 layout (one table per wohnlage)
 # ---------------------------------------------------------------------------
 
-# Row structure from pdfplumber extract_tables():
+# Row structure from pdfplumber extract_tables() for 2024/2026 layout:
 #   col0: Zeile (row number)
 #   col1: Bezugsfertigkeit (year-built label; only on first row of each group)
 #   col2: size_from (lower size bound m², or 'bis unter', or 'alle Wohnflächen')
@@ -339,6 +358,155 @@ def _parse_granular_rows(table: list[list], wohnlage: str) -> list[dict]:
 
 
 # ---------------------------------------------------------------------------
+# PDF table parsing — 2017–2023 single-table layout
+# ---------------------------------------------------------------------------
+
+# The 2017–2023 Mietspiegel uses a transposed layout relative to 2024/2026:
+#
+#   Rows    = (size_bucket, wohnlage) pairs — 12 data rows, labelled A–L
+#   Columns = year-built buckets (8 columns for most vintages)
+#   Cells   = multiline text: line 1 = Mittelwert, line 2 = "low – high"
+#             (pdfplumber returns cell text with \n separating the lines)
+#
+# Header row (row 0) contains the year-built labels in columns 2+ (cols 0 and 1
+# are the row-letter and size-description labels).
+#
+# Row ordering follows _SINGLE_TABLE_ROW_MAP above (einfach/mittel/gut interleaved
+# within each size group, which is the canonical Mietspiegel ordering).
+
+
+def _parse_cell_midlowhigh(
+    cell_text: Optional[str],
+) -> tuple[Optional[float], Optional[float], Optional[float]]:
+    """
+    Parse a 2017–2023 single-table cell that contains multiline text:
+      line 1: Mittelwert (mid), e.g. "7,45"
+      line 2: "untere – obere" Spanne, e.g. "5,44 – 10,00" or "5,44 - 10,00"
+
+    Returns (low, mid, high) as floats or None if not parseable.
+    Missing/suppressed cells (dash, asterisk, None) return (None, None, None).
+    """
+    if not cell_text:
+        return None, None, None
+    cell_text = cell_text.strip()
+    if not cell_text or cell_text in ("-", "–", "*", "**", "***"):
+        return None, None, None
+
+    lines = [ln.strip() for ln in cell_text.splitlines() if ln.strip()]
+    if not lines:
+        return None, None, None
+
+    mid_v = _parse_eur(lines[0])
+    if mid_v is None:
+        return None, None, None
+
+    if len(lines) >= 2:
+        # Second line: "low – high" separated by em-dash, en-dash, or hyphen
+        span_line = lines[1]
+        # Normalise dashes before splitting
+        span_line = span_line.replace("–", "-").replace("—", "-")
+        parts = re.split(r"\s*-\s*", span_line, maxsplit=1)
+        low_v = _parse_eur(parts[0]) if len(parts) >= 1 else None
+        high_v = _parse_eur(parts[1]) if len(parts) >= 2 else None
+    else:
+        # Only one line — treat it as mid; low/high unavailable
+        low_v = None
+        high_v = None
+
+    return low_v, mid_v, high_v
+
+
+def _parse_single_table_2017_2023(table: list[list], vintage: int) -> list[dict]:
+    """
+    Parse the unified single-table layout used in 2017–2023 Mietspiegel PDFs.
+
+    Table orientation:
+      - Row 0 (header): ["Zeile", <size_desc>, <year1_label>, <year2_label>, ...]
+      - Rows 1–12 (data): ["A", <size+wohnlage_desc>, <cell1>, <cell2>, ...]
+        where each cell is multiline "mid\\nlow – high".
+
+    Returns a list of granular dicts in the same format as _parse_granular_rows:
+      {year: str, size_lo: int, size_hi: int, low: float|None,
+       mid: float|None, high: float|None, wohnlage: str}
+    """
+    if not table or len(table) < 2:
+        log.warning("vintage=%d: single-table parser received empty or header-only table", vintage)
+        return []
+
+    # Extract year-built labels from header row.
+    # The header typically has 2 leading label columns (Zeile + size description)
+    # then one column per year-built bucket.
+    header = table[0]
+    # Find the first column index that looks like a year-built label
+    # (non-empty and not a row-letter or size-range description).
+    # Strategy: columns 0+1 are the row-label + size-description; the rest are years.
+    year_col_start = 2  # default: first 2 cols are labels
+    # Attempt heuristic: if col 0 is empty/None and col 1 looks like a year, shift.
+    if len(header) > 1 and not (header[0] or "").strip():
+        year_col_start = 1
+
+    year_labels: list[str] = []
+    for c in range(year_col_start, len(header)):
+        raw_label = (header[c] or "").strip()
+        if raw_label:
+            # Strip footnote markers from header labels
+            raw_label = re.sub(r"\*+$", "", raw_label).strip()
+            year_labels.append(raw_label)
+        else:
+            year_labels.append("")
+
+    log.debug(
+        "vintage=%d: single-table year labels: %s",
+        vintage,
+        [lbl for lbl in year_labels if lbl],
+    )
+
+    data_rows = table[1:]  # skip header
+    granular: list[dict] = []
+
+    for row_idx, row in enumerate(data_rows):
+        if row_idx >= len(_SINGLE_TABLE_ROW_MAP):
+            # Extra rows (footnotes, totals) — skip
+            log.debug("vintage=%d: extra row beyond 12 at index %d — skipped", vintage, row_idx)
+            break
+
+        size_lo, size_hi, wohnlage = _SINGLE_TABLE_ROW_MAP[row_idx]
+
+        for col_offset, year_label in enumerate(year_labels):
+            if not year_label:
+                continue
+            actual_col = year_col_start + col_offset
+            if actual_col >= len(row):
+                continue
+            cell = row[actual_col]
+            low_v, mid_v, high_v = _parse_cell_midlowhigh(cell)
+            if mid_v is None:
+                log.debug(
+                    "vintage=%d: no mid value at row_idx=%d col=%d year=%r — skipped",
+                    vintage,
+                    row_idx,
+                    actual_col,
+                    year_label,
+                )
+                continue
+
+            granular.append(
+                {
+                    "year": year_label,
+                    "size_lo": size_lo,
+                    "size_hi": size_hi,
+                    "low": low_v,
+                    "mid": mid_v,
+                    "high": high_v,
+                    "wohnlage": wohnlage,
+                }
+            )
+
+    log.debug("vintage=%d: single-table parser produced %d granular rows", vintage, len(granular))
+    return granular
+
+
+# ---------------------------------------------------------------------------
 # Bucket aggregation
 # ---------------------------------------------------------------------------
 
@@ -368,7 +536,9 @@ def _aggregate_to_bucket(
         ov = _overlap(lo, hi, blo, bhi)
         if ov > 0:
             total_w += ov
-            w_low += ov * r["low"]
+            w_low += ov * (
+                r["low"] if r["low"] is not None else r["mid"]
+            )  # fallback if low missing
             w_mid += ov * r["mid"]
             w_high += ov * (
                 r["high"] if r["high"] is not None else r["mid"]
@@ -462,10 +632,16 @@ def _normalise_year_label(raw: str) -> Optional[str]:
 def _extract_2017_to_2023(pdf_path: Path, vintage: int) -> list[dict]:
     """
     Extract rows from 2017–2023 PDFs.
-    Layout: typically one or more pages with the wohnlage sections stacked.
-    pdfplumber usually returns one table per wohnlage section.
-    Falls back to treating the first table as containing all three wohnlage blocks
-    if only one table is detected.
+
+    Layout detection:
+    - >= 3 tables: one table per wohnlage (same as 2024/2026 format) — use
+      _parse_granular_rows per table.
+    - 1 table: single unified table with transposed orientation (rows =
+      size/wohnlage pairs, columns = year-built buckets) — use
+      _parse_single_table_2017_2023 which is the correct parser for this layout.
+      This was previously a broken fallback; now fully implemented.
+    - 2 tables or other counts: iterate tables and assign wohnlage in order
+      (fallback; covers partial-parse artefacts from some PDF renderers).
     """
     import pdfplumber  # noqa: PLC0415
 
@@ -485,20 +661,28 @@ def _extract_2017_to_2023(pdf_path: Path, vintage: int) -> list[dict]:
             if i < len(all_tables):
                 granular.extend(_parse_granular_rows(all_tables[i], wohnlage))
     elif len(all_tables) == 1:
-        # Unified table — split by wohnlage based on row content
-        # (fallback: treat all rows as unknown wohnlage and log a warning)
-        log.warning(
-            "vintage=%d: only 1 table detected; layout may differ from expected. "
-            "Parsing as single wohnlage block 'unknown'. "
-            "Manual review recommended.",
+        # Single unified table: rows = (size, wohnlage) pairs,
+        # columns = year-built buckets.  This is the primary layout for 2017–2023.
+        log.info(
+            "vintage=%d: 1-table layout detected — using single-table parser "
+            "(rows=size+wohnlage, cols=year-built)",
             vintage,
         )
-        granular.extend(_parse_granular_rows(all_tables[0], "unknown"))
-    else:
-        # 2 tables or other counts — iterate and assign in order
+        granular.extend(_parse_single_table_2017_2023(all_tables[0], vintage))
+    elif len(all_tables) == 2:
+        # 2 tables — covers cases where einfach+mittel merge into one table and
+        # gut is a second table, or other renderer artefacts.  Assign in order.
+        log.warning(
+            "vintage=%d: 2 tables detected; assigning first 2 wohnlage in order. "
+            "Output may be incomplete.",
+            vintage,
+        )
         for i, table in enumerate(all_tables):
-            w = wohnlage_order[i] if i < len(wohnlage_order) else "unknown"
+            w = wohnlage_order[i]
             granular.extend(_parse_granular_rows(table, w))
+    else:
+        # 0 tables — nothing to parse
+        log.warning("vintage=%d: no tables detected in PDF", vintage)
 
     return granular
 
