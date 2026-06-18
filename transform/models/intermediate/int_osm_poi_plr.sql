@@ -33,6 +33,17 @@
 -- Performance: POI point coordinates are pre-materialised in a CTE (poi_points)
 -- before the join — see geo-DS note in C3 sign-off.
 --
+-- Deduplication (C3-dedup, issue #59):
+-- A POI whose coordinates fall exactly on the shared boundary of two adjacent
+-- PLRs can match more than one geometry via ST_Within. Without deduplication
+-- this fans out to N rows and breaks the unique_combination_of_columns test on
+-- (snapshot_year, osm_id) as well as double-counting in fct_poi_development.
+-- Fix: QUALIFY ROW_NUMBER() OVER (PARTITION BY snapshot_year, osm_id
+-- ORDER BY area_code) = 1
+-- applied inside joined_pre2021 and joined_2021. Tie-break is deterministic
+-- (alphabetical area_code); the choice of which PLR "wins" is arbitrary but
+-- consistent and affects < 0.1% of POIs in practice.
+--
 -- Known excluded areas (area_code = NULL):
 -- - Water bodies (Spree, Havel, Tegeler See, Mueggelsee) that lack PLR coverage
 -- - Airport perimeter areas outside PLR boundaries (e.g. BER airport zone)
@@ -53,31 +64,32 @@
 --
 -- Graceful degradation:
 -- When no OSM parquet files exist (stg_osm_poi returns zero rows) OR no LOR
--- parquet files exist, this model returns a zero-row typed stub with all
--- output columns so that downstream models and `uv run poe build` continue
--- to pass before ingestion data is available.
+-- parquet files exist (stg_berlin_lor returns zero rows), this model returns a
+-- zero-row typed stub with all output columns so that downstream models and
+-- `uv run poe build` continue to pass before ingestion data is available.
+--
+-- Geometry source (C3-ref, issue #60):
+-- LOR geometries are now sourced via ref('stg_berlin_lor') instead of raw
+-- read_parquet() calls. This captures lineage in the dbt DAG and means the
+-- staging model is the single point of path management. stg_berlin_lor exposes
+-- geometry_wkb (BLOB); ST_GeomFromWKB() converts to a geometry object for the
+-- spatial join.
 --
 -- dbt_meta_owner: data-engineer
 -- depends_on: {{ ref('int_osm_poi_harmonized') }}
+-- depends_on: {{ ref('stg_berlin_lor') }}
 {{ config(materialized="table", meta={"dbt_meta_owner": "data-engineer"}) }}
-
-{% set lor_pre2021_glob = var("project_root") ~ "/data/raw/berlin/lor/pre2021.parquet" %}
-{% set lor_2021_glob = var("project_root") ~ "/data/raw/berlin/lor/lor_2021.parquet" %}
 
 {% if execute %}
     {%- set osm_count_result = run_query("SELECT count(*) FROM glob('" ~ var("project_root") ~ "/data/raw/osm/berlin/*.parquet')") -%}
     {%- set osm_file_count = osm_count_result.columns[0][0] -%}
-    {%- set lor_pre_result = run_query("SELECT count(*) FROM glob('" ~ lor_pre2021_glob ~ "')") -%}
-    {%- set lor_pre_count = lor_pre_result.columns[0][0] -%}
-    {%- set lor_2021_result = run_query("SELECT count(*) FROM glob('" ~ lor_2021_glob ~ "')") -%}
-    {%- set lor_2021_count = lor_2021_result.columns[0][0] -%}
-{% else %}
-    {%- set osm_file_count = 0 -%}
-    {%- set lor_pre_count = 0 -%}
-    {%- set lor_2021_count = 0 -%}
+    {%- set lor_glob = var("project_root") ~ "/data/raw/berlin/lor/*.parquet" -%}
+    {%- set lor_result = run_query("SELECT count(*) FROM glob('" ~ lor_glob ~ "')") -%}
+    {%- set lor_file_count = lor_result.columns[0][0] -%}
+{% else %} {%- set osm_file_count = 0 -%} {%- set lor_file_count = 0 -%}
 {% endif %}
 
-{% if osm_file_count > 0 and lor_pre_count > 0 and lor_2021_count > 0 %}
+{% if osm_file_count > 0 and lor_file_count > 0 %}
 
     -- Both OSM and LOR data are available: perform the spatial join.
     with
@@ -105,21 +117,17 @@
             from {{ ref("int_osm_poi_harmonized") }}
         ),
 
-        -- Load pre-2021 LOR geometries (for snapshot_year <= 2020)
-        lor_pre2021 as (
-            select
-                area_code, vintage as area_vintage, st_geomfromwkb(geometry_wkb) as geom
-            from read_parquet('{{ lor_pre2021_glob }}')
-        ),
-
-        -- Load LOR 2021 geometries (for snapshot_year >= 2021)
-        lor_2021 as (
-            select
-                area_code, vintage as area_vintage, st_geomfromwkb(geometry_wkb) as geom
-            from read_parquet('{{ lor_2021_glob }}')
+        -- LOR geometries from stg_berlin_lor (C3-ref: ref() instead of raw parquet).
+        -- Both vintages are in one CTE; the vintage filter is applied per join below.
+        lor_geoms as (
+            select area_code, area_vintage, st_geomfromwkb(geometry_wkb) as geom
+            from {{ ref("stg_berlin_lor") }}
+            where geometry_wkb is not null
         ),
 
         -- Spatial join for pre-2021 POIs (snapshot_year <= 2020)
+        -- QUALIFY deduplicates boundary POIs (C3-dedup, issue #59):
+        -- a POI can match multiple adjacent PLRs; keep the first alphabetically.
         joined_pre2021 as (
             select
                 poi.city_code,
@@ -135,11 +143,20 @@
                 lor.area_code,
                 lor.area_vintage
             from poi_points as poi
-            left join lor_pre2021 as lor on st_within(poi.geom_25833, lor.geom)
+            left join
+                lor_geoms as lor
+                on st_within(poi.geom_25833, lor.geom)
+                and lor.area_vintage = 'lor_pre2021'
             where poi.snapshot_year <= 2020
+            qualify
+                row_number() over (
+                    partition by poi.snapshot_year, poi.osm_id order by lor.area_code
+                )
+                = 1
         ),
 
         -- Spatial join for 2021+ POIs (snapshot_year >= 2021)
+        -- QUALIFY deduplicates boundary POIs (C3-dedup, issue #59).
         joined_2021 as (
             select
                 poi.city_code,
@@ -155,8 +172,16 @@
                 lor.area_code,
                 lor.area_vintage
             from poi_points as poi
-            left join lor_2021 as lor on st_within(poi.geom_25833, lor.geom)
+            left join
+                lor_geoms as lor
+                on st_within(poi.geom_25833, lor.geom)
+                and lor.area_vintage = 'lor_2021'
             where poi.snapshot_year >= 2021
+            qualify
+                row_number() over (
+                    partition by poi.snapshot_year, poi.osm_id order by lor.area_code
+                )
+                = 1
         ),
 
         -- Union both vintage cohorts

@@ -10,11 +10,12 @@
 -- parquet files have been ingested, so downstream models and uv run poe build
 -- continue to pass.
 --
--- NOTE: dim_area currently sources PLR rows only from int_thesis_2018_area_index
--- (2018 thesis golden). Wiring stg_berlin_lor into dim_area so that OSM-style
--- 8-digit zero-padded WFS area_codes appear in the dimension is deferred to a
--- follow-up issue (stg_berlin_lor + dim_area wiring). Until then the relationships
--- test on int_osm_poi_plr.area_code fires as a warn-severity signal.
+-- Column notes:
+-- city_code    -- canonical 'BER' (ADR-0005; matches dim_city.city_code)
+-- area_vintage -- LOR vintage discriminator: 'lor_pre2021' or 'lor_2021'
+-- (renamed from parquet column 'vintage' for semantic clarity)
+-- geometry_wkb -- raw WKB blob exposed for spatial join consumers
+-- (int_osm_poi_plr uses ST_GeomFromWKB(geometry_wkb))
 --
 -- dbt_meta_owner: data-engineer
 {{
@@ -35,13 +36,13 @@
 {% if file_count > 0 %}
 
     select
-        'berlin' as city_code,
-        vintage as lor_vintage,
+        'BER' as city_code,
+        vintage as area_vintage,
         'plr' as area_level,
         area_code,
         area_name,
         cast(null as varchar) as parent_area_code,
-        cast(null as varchar) as geometry_wkt,
+        geometry_wkb,
         source_attribution
     from read_parquet('{{ lor_glob }}', union_by_name = true)
     where area_code is not null and area_code ~ '^\d{8}$'
@@ -53,12 +54,12 @@
     -- data/raw/berlin/lor/
     select
         cast(null as varchar) as city_code,
-        cast(null as varchar) as lor_vintage,
+        cast(null as varchar) as area_vintage,
         cast(null as varchar) as area_level,
         cast(null as varchar) as area_code,
         cast(null as varchar) as area_name,
         cast(null as varchar) as parent_area_code,
-        cast(null as varchar) as geometry_wkt,
+        cast(null as blob) as geometry_wkb,
         cast(null as varchar) as source_attribution
     where false
 
