@@ -3,16 +3,15 @@
 -- is governed: inputs, formula, per-city parameters, and limitations are documented
 -- in ADR-0004 and in the public methodology page (Epic G2).
 --
--- Current state (Epic B baseline): sourced entirely from the 2018 thesis goldens
--- via int_thesis_2018_area_index. When Epic B3/C re-computes the index from
--- fresh OSM/EWR inputs, the intermediate model is updated and this mart re-builds
--- without schema changes (mart contract is stable).
---
--- TODO(Epic B5/C): prev_zeit (201412 previous-period) is present in the goldens but
--- not exposed here. Reinstate as prev_period_yyyymm when h1/h2 time-series marts land.
+-- Sources (UNIONed):
+-- 1. int_thesis_2018_area_index — 2018 thesis goldens
+-- (variant='standard'/'distance_weighted')
+-- 2. int_gentrification_ts — C4 live-data index (variant='live_data')
 --
 -- Contract (ADR-0004): column names and types below are the governed contract.
 -- Changes require a deliberate contract edit and reviewer sign-off.
+-- Contract extended in C4 (#24): added 'live_data' to variant accepted values;
+-- class columns are NULL for live_data rows (classification not yet implemented).
 {{
     config(
         materialized="table",
@@ -21,16 +20,16 @@
             "dbt_meta_owner": "data-engineer",
             "governed_definition": "ADR-0004",
             "index_inputs": (
-                "status_index (POI-based status z-score), "
-                "dynamism_index (POI-based dynamism z-score), "
-                "own_idx_class (socio-economic index from EWR k11/dau5/dau10/d2/ea/mh/ee)"
+                "2018_thesis: status_index/dynamism_index/own_idx_class from thesis goldens | "
+                "live_data: status_score (POI z-score), dynamism_score (POI YoY z-score), "
+                "ewr_composite (socio-eco z-score sum from EWR)"
             ),
-            "index_period": "201612 (current), 201412 (previous) from 2018 thesis golden",
-            "directional_baseline": True,
+            "index_period": "201612 / 201412 (thesis); YYYY12 per snapshot_year (live_data)",
         },
     )
 }}
 
+-- 2018 thesis baseline (unchanged)
 select
     city_code,
     area_level,
@@ -48,3 +47,31 @@ select
     own_idx_class,
     own_idx_class_bi
 from {{ ref("int_thesis_2018_area_index") }}
+
+union all
+
+-- C4 live-data index (variant='live_data')
+-- Joins int_gentrification_ts to dim_area for area_name and area_level.
+-- class columns are NULL: area classification requires a separate step (follow-up).
+-- period_yyyymm is constructed as YYYY12 (31-Dec snapshot convention).
+select
+    ts.city_code,
+    da.area_level,
+    ts.area_code,
+    da.area_name,
+    cast(ts.snapshot_year as varchar) || '12' as period_yyyymm,
+    'live_data' as variant,
+    cast(ts.residents_total as double) as population,
+    cast(ts.status_score as double) as status_index,
+    cast(null as varchar) as status_class,
+    cast(null as varchar) as status_class_bi,
+    cast(ts.dynamism_score as double) as dynamism_index,
+    cast(null as varchar) as dynamism_class,
+    cast(null as varchar) as dynamism_class_bi,
+    cast(null as varchar) as own_idx_class,
+    cast(null as varchar) as own_idx_class_bi
+from {{ ref("int_gentrification_ts") }} as ts
+inner join
+    {{ ref("dim_area") }} as da
+    on ts.city_code = da.city_code
+    and ts.area_code = da.area_code
