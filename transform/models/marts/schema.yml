@@ -141,6 +141,10 @@ models:
       Rows with NULL gentrification_score (sparse EWR or suppressed cells) are
       included but have NULL delta/rank columns.
       Geo-data-scientist sign-off: PENDING (issue #24).
+
+      C5 update (2026-06-19): yoy_change (raw POI count delta) replaced by
+      share_yoy_change (PLR POI share delta) per C5 normalization. Dynamism score
+      is now OSM completeness-bias controlled. See docs/epic-c/C5-geo-signoff.md.
     meta:
       dbt_meta_owner: data-engineer
     tests:
@@ -170,12 +174,18 @@ models:
           - not_null
       - name: total_poi_count
         description: Total POI count for this PLR in this year.
-      - name: yoy_change
-        description: Year-over-year change in total_poi_count. NULL for first year of each vintage.
+      - name: share_yoy_change
+        description: >
+          C5 normalized: year-over-year change in PLR POI share
+          (share = plr_poi_count / berlin_total_poi_count). Replaces raw yoy_change
+          (count delta) to control for OSM completeness-bias. NULL for first year
+          of each vintage. Positive = PLR gained share relative to Berlin.
       - name: status_score
         description: Z-score of total_poi_count across all PLRs for this year.
       - name: dynamism_score
-        description: Z-score of YoY change in total_poi_count across all PLRs for this year.
+        description: >
+          C5 normalized: z-score of share_yoy_change across all PLRs for this year.
+          Controls OSM completeness-bias vs pre-C5 raw count delta z-score.
       - name: ewr_composite
         description: Sum of EWR indicator z-scores (5 key indicators). NULL when EWR data absent.
       - name: gentrification_score
@@ -193,7 +203,7 @@ models:
 
   - name: fct_poi_development
     description: >
-      C3-fact — POI development fact table. Aggregates OSM POI counts per
+      C3-fact -- POI development fact table. Aggregates OSM POI counts per
       (city_code, snapshot_year, area_code, area_vintage, poi_category_h) at PLR grain.
       Source: int_osm_poi_plr (C3 spatial join). Excludes rows where area_code IS NULL
       (POIs outside PLR boundaries). One row per unique combination of the five
@@ -230,7 +240,7 @@ models:
         tests:
           - not_null
       - name: source_attribution
-        description: CC BY attribution string (ODbL — OpenStreetMap contributors).
+        description: CC BY attribution string (ODbL -- OpenStreetMap contributors).
         tests:
           - not_null
     tests:

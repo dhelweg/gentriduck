@@ -26,6 +26,16 @@
 -- (Mikrozensus reform); pre-2017 values are present but not directly comparable.
 -- C4 consumers should apply reference_year >= 2017 for migration comparisons.
 --
+-- Note on #51 (C3-crosswalk, 2026-06-19):
+-- int_berlin_ewr_plr2021 was built to reapportion pre-2021 EWR data to 2021 PLR codes.
+-- However, this model continues to read from int_ewr_series (vintage-split) because
+-- int_gentrification_ts joins POI data (which retains pre-2021 area codes for years
+-- <= 2020) with EWR on (area_code, area_vintage). Switching int_ewr_socioeco to read
+-- from int_berlin_ewr_plr2021 would require also remapping POI area codes to the 2021
+-- scheme for years <= 2020 — a more substantial change. The 2020->2021 vintage delta
+-- remains NULL in fct_gentrification_change; resolving this fully is deferred to a
+-- follow-up task (see issue #51 commentary).
+--
 -- Graceful degradation: returns zero rows when int_ewr_series has no rows.
 --
 -- dbt_meta_owner: data-engineer
