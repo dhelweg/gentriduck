@@ -77,6 +77,8 @@ with
             -- vulnerable
             -- populations and show low ewr_composite. Negating aligns the sign with
             -- status_score and dynamism_score (high = more gentrified).
+            -- All five ewr_composite inputs are vulnerability-positive; single outer
+            -- negation is the only sign flip.
             -- NULL if any component is NULL (sparse EWR coverage or suppressed cells).
             -- Geo-DS C4 sign-off: PASS WITH CONDITIONS (docs/epic-c/C4-geo-signoff.md).
             (poi.status_score + poi.dynamism_score - ewr.ewr_composite)
