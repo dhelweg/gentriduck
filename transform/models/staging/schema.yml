@@ -734,3 +734,110 @@ models:
           - not_null:
               config:
                 where: "area_code is not null"
+
+  # --- R-A4: Berlin MSS indexind SES indicators ---
+
+  - name: stg_berlin_mss_indicators
+    description: >
+      Staging view over MSS indexind Parquet files produced by
+      ingestion/berlin/mss/ingest_mss_indicators.py (ADR-0007, GDI Berlin WFS,
+      dl-de-zero-2.0). Long format: one row per (edition, PLR, indicator).
+      Editions: 2013, 2015, 2017, 2019, 2021, 2023, 2025 (2013 is 404/skipped;
+      2015/2017 are best-effort; 2019–2025 are firm).
+      Boundary-vintage break: editions <=2019 use lor_pre2021 (447 PLR);
+      editions >=2021 use lor_2021 (542 PLR). Uninhabited PLR rows have null values.
+      The transferbezug_* indicators carry null values in editions <=2021 (WFS
+      published 's2_x'/'d2_x' columns which were always null in that span).
+      Returns zero rows (typed stub) until parquets are ingested.
+      Primary SES predictor input for R-A1 re-grounding of the gentrification index.
+    meta:
+      dbt_meta_owner: data-engineer
+    tests:
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns:
+              - city_code
+              - edition
+              - area_code
+              - indicator
+          config:
+            where: "area_code is not null"
+    columns:
+      - name: city_code
+        description: City identifier; always 'BER' (ADR-0005).
+        tests:
+          - not_null:
+              config:
+                where: "area_code is not null"
+          - accepted_values:
+              arguments:
+                values: ["BER"]
+              config:
+                where: "area_code is not null"
+      - name: edition
+        description: MSS publication year (2013, 2015, 2017, 2019, 2021, 2023, 2025).
+        tests:
+          - not_null:
+              config:
+                where: "area_code is not null"
+      - name: area_code
+        description: PLR identifier zero-padded to 8 characters. Joins to stg_berlin_lor.
+        tests:
+          - not_null:
+              config:
+                where: "edition is not null"
+      - name: area_name
+        description: Human-readable Planungsraum name (German proper noun from WFS).
+      - name: area_vintage
+        description: >
+          LOR boundary vintage. 'lor_pre2021' for editions <=2019 (447 PLR);
+          'lor_2021' for editions >=2021 (542 PLR). See ADR-0003/ADR-0007.
+        tests:
+          - not_null:
+              config:
+                where: "area_code is not null"
+          - accepted_values:
+              arguments:
+                values: ["lor_pre2021", "lor_2021"]
+              config:
+                where: "area_code is not null"
+      - name: indicator
+        description: >
+          Canonical snake_case indicator name. Status-level set:
+          arbeitslose_anteil (unemployment SGB II),
+          transferbezug_anteil (transfer benefit receipt SGB II/XII; null pre-2023),
+          kinderarmut_anteil (child poverty SGB II u15),
+          alleinerziehende_anteil (children in single-parent households; all editions 2015+;
+          present despite ADR-0006 stating 2023+ only — WFS probing confirmed).
+          Dynamik set (change versions): arbeitslose_dynamik, transferbezug_dynamik,
+          kinderarmut_dynamik, alleinerziehende_dynamik (all editions 2015+).
+        tests:
+          - not_null:
+              config:
+                where: "area_code is not null"
+          - accepted_values:
+              values:
+                - arbeitslose_anteil
+                - transferbezug_anteil
+                - kinderarmut_anteil
+                - alleinerziehende_anteil
+                - arbeitslose_dynamik
+                - transferbezug_dynamik
+                - kinderarmut_dynamik
+                - alleinerziehende_dynamik
+              config:
+                where: "area_code is not null"
+      - name: indicator_value
+        description: >
+          Float indicator value (percentage or ratio as published by WFS).
+          Null for uninhabited PLR rows (WFS sentinel -9999) or where the WFS
+          column was absent/suspended for that edition (transferbezug_* in <=2021).
+      - name: source_attribution
+        description: >
+          dl-de-zero-2.0 attribution string. Value:
+          "Senatsverwaltung für Stadtentwicklung, Bauen und Wohnen Berlin
+          — Monitoring Soziale Stadtentwicklung <edition>"
+        tests:
+          - not_null:
+              config:
+                where: "area_code is not null"

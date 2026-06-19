@@ -55,4 +55,5 @@ analysis = { sequence = ["python analysis/e1_regressions.py", "python analysis/e
 ingest = { sequence = [
     "python ingestion/berlin/lor/ingest_lor_geometries.py --out-dir data/raw/berlin/lor",
     "python ingestion/berlin/mss/ingest_mss.py --out-dir data/raw/berlin/mss",
+    "python ingestion/berlin/mss/ingest_mss_indicators.py --out-dir data/raw/berlin/mss",
 ], default_item_type = "cmd" }

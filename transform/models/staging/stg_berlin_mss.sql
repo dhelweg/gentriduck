@@ -32,7 +32,7 @@
     )
 }}
 
-{% set mss_glob = var("project_root") ~ "/data/raw/berlin/mss/*.parquet" %}
+{% set mss_glob = var("project_root") ~ "/data/raw/berlin/mss/mss_????.parquet" %}
 
 {% if execute %}
     {%- set file_count_result = run_query("SELECT count(*) FROM glob('" ~ mss_glob ~ "')") -%}
