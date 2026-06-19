@@ -426,6 +426,10 @@ D3(#29)/G2(#38)/C6(#26) until R-A1 lands.*
   leakage guard). · *DE pair* · A7 · `uv run poe analysis` reproducible; analysis tests in the gate. · **#75**
 - **R-C4** Structured machine-readable handoff + PM board auto-sync at task close. · *project-manager* · A6
   · `docs/handoff/state.json` schema; PM reads at start / updates board + state at close. · **#76**
+- **R-C5** **Adopt ADR-0009 (selective Superpowers):** install pinned; enable `brainstorming`,
+  `systematic-debugging`, `verification-before-completion`, `writing-skills`; keep the bespoke core + binding
+  gate; adapt TDD→dbt tests; document in O1. · *architect + PM* · ADR-0009, A6 · agreed skills enabled, no
+  gate/loop regression, version pinned + documented; ADR-0009 → Accepted. · **#84**
 
 **Thesis critical-assessment coverage.** The honest critical read of the 2018 work lives in
 `docs/assessment/2018-thesis-critical-assessment.md` (a critical assessment only — **no grade**). Every
