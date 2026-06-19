@@ -1,6 +1,6 @@
 # ADR-0006: Berlin MSS (Monitoring Soziale Stadtentwicklung) data source
 
-- **Status:** Proposed
+- **Status:** Accepted
 - **Date:** 2026-06-19
 
 ## Context
