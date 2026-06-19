@@ -10,8 +10,8 @@
 -- - plr_poi_share: each PLR's fraction of total Berlin POI count for that year
 -- (pre-computed in int_poi_share_base to avoid DuckDB nested window limitation).
 -- - share_yoy_change: YoY change in plr_poi_share.
--- Only computed within the same area_vintage to avoid cross-vintage discontinuity
--- (the 2021 LOR reform changes PLR boundaries). Delta across vintages is NULL.
+-- Computed within the same area_code after remapping all rows to the lor_2021 scheme
+-- via int_poi_share_base_2021. The 2020->2021 delta is now computable (issue #63).
 -- - dynamism_score: z-score of share_yoy_change across all PLRs for that year.
 -- Captures how fast an area's share of total POIs is changing relative to others.
 -- Mirrors the 2018 thesis dynamism_index.
@@ -51,13 +51,15 @@
 -- Graceful degradation: returns zero rows when int_poi_features_pivot has no rows.
 --
 -- dbt_meta_owner: data-engineer
--- depends_on: {{ ref('int_poi_share_base') }}
+-- depends_on: {{ ref('int_poi_share_base_2021') }}
 {{ config(materialized="table", meta={"dbt_meta_owner": "data-engineer"}) }}
 
 with
     -- Subquery: apply LAG to pre-computed plr_poi_share and compute share_yoy_change.
-    -- LAG is partitioned by (city_code, area_code, area_vintage) so cross-vintage
-    -- year-over-year comparisons produce NULL (correct for the 2021 LOR reform break).
+    -- LAG is partitioned by (city_code, area_code, area_vintage). Because
+    -- int_poi_share_base_2021 remaps all pre-2021 PLR codes to their 2021 equivalents
+    -- and outputs area_vintage='lor_2021' for all rows, the LAG window now spans the
+    -- 2020->2021 vintage boundary and produces non-NULL deltas at snapshot_year=2021.
     lag_base as (
         select
             city_code,
@@ -73,7 +75,7 @@ with
             plr_poi_share - lag(plr_poi_share) over (
                 partition by city_code, area_code, area_vintage order by snapshot_year
             ) as share_yoy_change
-        from {{ ref("int_poi_share_base") }}
+        from {{ ref("int_poi_share_base_2021") }}
     )
 
 -- Compute all z-scores in a single pass using named WINDOW clauses.

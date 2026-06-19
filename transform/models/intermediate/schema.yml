@@ -409,8 +409,10 @@ models:
       spurious share dynamics. Option B (ohsome edit-density normalization) is available
       for a future epic.
 
-      YoY deltas are computed within (area_code, area_vintage) to avoid cross-vintage
-      discontinuity at the 2021 LOR reform. The 2020->2021 NULL is intentional.
+      YoY deltas are computed within (area_code, area_vintage). Because the upstream
+      int_poi_share_base_2021 remaps all rows to the lor_2021 scheme before this model
+      reads them, the LAG window spans the 2020->2021 boundary and produces non-NULL
+      deltas at snapshot_year=2021 (fixes issue #63).
 
       C5 anomaly checks (implemented as standalone test SQL files, not schema.yml tests,
       because DuckDB does not allow window functions in WHERE clauses):
@@ -447,14 +449,16 @@ models:
               config:
                 where: "snapshot_year is not null"
       - name: area_vintage
-        description: LOR scheme vintage ('lor_pre2021' or 'lor_2021').
+        description: >
+          LOR scheme vintage. Always 'lor_2021' since int_poi_share_base_2021 remaps
+          all pre-2021 PLR codes to their 2021 equivalents before this model reads them.
         tests:
           - not_null:
               config:
                 where: "area_code is not null"
           - accepted_values:
               arguments:
-                values: ["lor_pre2021", "lor_2021"]
+                values: ["lor_2021"]
               config:
                 where: "area_code is not null"
       - name: total_poi_count
@@ -677,3 +681,144 @@ models:
           - not_null:
               config:
                 where: "osm_id is not null"
+
+  - name: int_poi_share_base
+    description: >
+      C5 helper: pre-materializes PLR POI share per year before dynamism computation.
+      DuckDB does not support nested window functions; materializing this as a separate
+      table breaks the chain at this boundary.
+
+      Grain: (city_code, snapshot_year, area_code, area_vintage). Contains both
+      lor_pre2021 (snapshot_year <= 2020) and lor_2021 (snapshot_year >= 2021) rows
+      with vintage-specific PLR codes. Direct consumers should use int_poi_share_base_2021
+      (which remaps all rows to the 2021 PLR scheme) unless they need the raw vintage split.
+
+      This model is consumed exclusively by int_poi_share_base_2021.
+    meta:
+      dbt_meta_owner: data-engineer
+    tests:
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns:
+              - city_code
+              - snapshot_year
+              - area_code
+              - area_vintage
+          config:
+            where: "area_code is not null"
+    columns:
+      - name: city_code
+        description: City identifier (ADR-0005). Always 'BER'.
+        tests:
+          - not_null:
+              config:
+                where: "area_code is not null"
+      - name: snapshot_year
+        description: Calendar year of the OSM snapshot (integer, 2008-2026).
+        tests:
+          - not_null:
+              config:
+                where: "area_code is not null"
+      - name: area_code
+        description: PLR area code (8-digit, zero-padded). Vintage-specific (pre-2021 or 2021 scheme).
+        tests:
+          - not_null:
+              config:
+                where: "snapshot_year is not null"
+      - name: area_vintage
+        description: >
+          LOR scheme vintage: 'lor_pre2021' (snapshot_year <= 2020) or
+          'lor_2021' (snapshot_year >= 2021).
+        tests:
+          - not_null:
+              config:
+                where: "area_code is not null"
+          - accepted_values:
+              arguments:
+                values: ["lor_pre2021", "lor_2021"]
+              config:
+                where: "area_code is not null"
+      - name: total_poi_count
+        description: Total POI count for this PLR in this snapshot year.
+      - name: berlin_total_poi_count
+        description: Sum of total_poi_count across all PLRs for this city and year.
+      - name: plr_poi_share
+        description: >
+          This PLR's fraction of total Berlin POIs for this year:
+          total_poi_count / berlin_total_poi_count. Ranges 0-1; city-wide sum = 1.0.
+
+  - name: int_poi_share_base_2021
+    description: >
+      Remaps int_poi_share_base to a unified LOR 2021 PLR scheme for all snapshot years.
+      Fixes issue #63: before this model, int_poi_status_dynamism read int_poi_share_base
+      directly, causing the LAG window (partitioned by area_code + area_vintage) to produce
+      NULL at snapshot_year=2021 because pre-2021 rows had different PLR codes and a
+      different area_vintage value.
+
+      Crosswalk strategy (mirrors int_berlin_ewr_plr2021):
+      - lor_2021 rows (snapshot_year >= 2021): passed through unchanged.
+      - lor_pre2021 rows (snapshot_year <= 2020): joined to seed_lor_crosswalk_2006_to_2021;
+        total_poi_count (an extensive/count indicator) is apportioned as SUM(count * weight).
+
+      All output rows use area_vintage='lor_2021'. berlin_total_poi_count and plr_poi_share
+      are recomputed after aggregation (ratio recomputation is exact for counts).
+
+      Consumed exclusively by int_poi_status_dynamism.
+    meta:
+      dbt_meta_owner: data-engineer
+    tests:
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns:
+              - city_code
+              - snapshot_year
+              - area_code
+          config:
+            where: "area_code is not null"
+    columns:
+      - name: city_code
+        description: City identifier (ADR-0005). Always 'BER'.
+        tests:
+          - not_null:
+              config:
+                where: "area_code is not null"
+      - name: area_code
+        description: PLR area code in the LOR 2021 scheme (8-digit, zero-padded).
+        tests:
+          - not_null:
+              config:
+                where: "snapshot_year is not null"
+      - name: area_vintage
+        description: >
+          LOR scheme vintage. Always 'lor_2021': pre-2021 source rows are crosswalk-mapped
+          to 2021 PLR codes; 2021+ source rows pass through directly.
+        tests:
+          - not_null:
+              config:
+                where: "area_code is not null"
+          - accepted_values:
+              arguments:
+                values: ["lor_2021"]
+              config:
+                where: "area_code is not null"
+      - name: snapshot_year
+        description: Calendar year of the OSM snapshot (integer, 2008-2026).
+        tests:
+          - not_null:
+              config:
+                where: "area_code is not null"
+      - name: total_poi_count
+        description: >
+          Aggregated total POI count for this 2021 PLR in this year.
+          For lor_2021 passthrough rows: same as int_poi_share_base.
+          For lor_pre2021 remapped rows: SUM(source_count * crosswalk_weight) across all
+          pre-2021 PLRs that map to this 2021 PLR (exact for count/extensive data).
+      - name: berlin_total_poi_count
+        description: >
+          Sum of total_poi_count across all 2021 PLRs for this city and year.
+          City-wide total is invariant to PLR boundary remapping (same city, same POIs).
+      - name: plr_poi_share
+        description: >
+          This 2021 PLR's fraction of total Berlin POIs for this year:
+          total_poi_count / berlin_total_poi_count. Recomputed after aggregation.
+          Ranges 0-1; city-wide sum per year = 1.0.
