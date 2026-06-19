@@ -20,11 +20,13 @@ Attribute vocabulary (per-edition WFS column -> canonical indicator name):
   s2  -> transferbezug_anteil    (Transferbezug SGB II/XII nicht-Erwerbstätige;
                                    column name 's2' in 2023+; 's2_x' (always null) pre-2023)
   s3  -> kinderarmut_anteil      (Kinderarmut, SGB II transfer u15; status level; all editions)
-  s4  -> alleinerziehende_anteil (Kinder in alleinerziehenden Haushalten; all editions)
+  s4  -> alleinerziehende_anteil (Kinder in alleinerziehenden Haushalten; all editions
+                                   2015+. Note: ADR-0006 stated 2023+ only, but WFS
+                                   probing confirms the column is populated in all editions.)
   d1  -> arbeitslose_dynamik     (Dynamik version of s1; all editions)
   d2  -> transferbezug_dynamik   (Dynamik version of s2; column 'd2'/'d2_x' per edition)
   d3  -> kinderarmut_dynamik     (Dynamik version of s3; all editions)
-  d4  -> alleinerziehende_dynamik(Dynamik version of s4; all editions)
+  d4  -> alleinerziehende_dynamik(Dynamik version of s4; all editions 2015+)
 
 Column-name quirk (confirmed by WFS probing):
   Editions 2015–2021 publish 's2_x' and 'd2_x' instead of 's2'/'d2', and those
@@ -303,6 +305,11 @@ def parse_features_long(geojson: dict, edition: int) -> list[dict]:
     editions). The actual attribute name used is recorded in ``raw_attr``.
     """
     features = geojson.get("features", [])
+    if edition not in LOR_VINTAGE_MAP:
+        raise RuntimeError(
+            f"Edition {edition} is not in LOR_VINTAGE_MAP. "
+            "Add it to LOR_VINTAGE_MAP before ingesting."
+        )
     vintage = LOR_VINTAGE_MAP[edition]
     attribution = _source_attribution(edition)
     log.info("[%d] Parsing %d features (vintage=%s)", edition, len(features), vintage)

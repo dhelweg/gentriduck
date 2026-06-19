@@ -807,11 +807,24 @@ models:
           arbeitslose_anteil (unemployment SGB II),
           transferbezug_anteil (transfer benefit receipt SGB II/XII; null pre-2023),
           kinderarmut_anteil (child poverty SGB II u15),
-          alleinerziehende_anteil (children in single-parent households).
+          alleinerziehende_anteil (children in single-parent households; all editions 2015+;
+          present despite ADR-0006 stating 2023+ only — WFS probing confirmed).
           Dynamik set (change versions): arbeitslose_dynamik, transferbezug_dynamik,
-          kinderarmut_dynamik, alleinerziehende_dynamik.
+          kinderarmut_dynamik, alleinerziehende_dynamik (all editions 2015+).
         tests:
           - not_null:
+              config:
+                where: "area_code is not null"
+          - accepted_values:
+              values:
+                - arbeitslose_anteil
+                - transferbezug_anteil
+                - kinderarmut_anteil
+                - alleinerziehende_anteil
+                - arbeitslose_dynamik
+                - transferbezug_dynamik
+                - kinderarmut_dynamik
+                - alleinerziehende_dynamik
               config:
                 where: "area_code is not null"
       - name: indicator_value

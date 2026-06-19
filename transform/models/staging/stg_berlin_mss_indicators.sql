@@ -27,6 +27,9 @@
 --                   transferbezug_* has null values in editions <=2021 (WFS column s2_x)
 -- value          -- Float indicator value (null for uninhabited PLRs or suspended cols)
 -- source_attribution -- dl-de-zero-2.0 attribution string
+-- raw_attr is intentionally excluded from this view; it is written to the raw
+-- Parquet files for traceability (e.g. 's2_x' vs 's2' per edition) and can be
+-- queried directly via DuckDB on data/raw/berlin/mss/*_indicators.parquet.
 --
 -- dbt_meta_owner: data-engineer
 {{
