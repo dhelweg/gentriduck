@@ -433,6 +433,25 @@ weakness maps to a ticket: **W1** spatial autocorrelation → #79/#65 · **W2** 
 **W3** causal/temporal → #78/#64 + #80 (deferred) · **W4** OSM completeness bias → C5 (done)/#69 ·
 **W5** ad-hoc weights/categories (no sensitivity) → #77/#64/#69 · **conceptual flatness** → #77/#78.
 
+### Outputs & dissemination (cross-cutting)
+*Deliverables that turn the work into reusable, citable, and shareable outputs — factual and transparent.
+Pure project deliverables; no scope creep into the core data work.*
+- **O1** **Method showcase + engineering retrospective:** document the AI-assisted multi-agent operating model
+  (agents, coder↔reviewer↔gate, ADR gate, structured handoffs) as a reusable reference, with a retrospective
+  (what worked, what the gates caught, pitfalls). · *architect + PM (+ data-analyst)* · A6 · `docs/method/`
+  published + linked from README; reproducible. · **#81**
+- **O2** **Reproducible methodology whitepaper:** a versioned, citable write-up (data, methods, validation,
+  limitations, ethics) regenerated from the repo — deeper than the G2 page; adds `CITATION.cff`. ·
+  *geo-DS + domain + data-analyst* · R-A7, R-A8, R-A9, R-B2, G2 · builds reproducibly; citable. · **#82**
+- **O3** **Policy-relevance & ethics emphasis (re-prioritization + stance):** elevate displacement (#70),
+  early-warning (#80) and the ethics page (G3 #39) to first-class, and adopt an explicit **non-advocacy /
+  transparency** editorial stance — an analytical tool that lets the data speak (also encoded in ADR-0008,
+  #77). · *domain expert + architect* · #70, #80, #39, #77 · stance documented; all outputs framed accordingly.
+- **O4** **Open release + communication artifacts:** publish the derived dataset (open licence + attribution)
+  and package the ingestion tooling for external reuse; produce accurate, shareable milestone summaries. ·
+  *DE pair + data-analyst* · F1/F2, E3 (#32), G3 (#39) · dataset + tooling reproducibly published; ≥1 milestone
+  artifact. · **#83**
+
 ---
 
 ## Verification
@@ -453,6 +472,8 @@ weakness maps to a ticket: **W1** spatial autocorrelation → #79/#65 · **W2** 
   lead-lag restored); MSS ingested and the live index back-tests against it; E1/E2 re-run with cited
   hypotheses; the methodology gate mechanically blocks un-signed-off methodology work; and the conceptual
   model is multi-dimensional (ADR-0008) with longitudinal stages and spatially-robust inference.
+- **O (outputs):** the operating-model reference + the reproducible methodology whitepaper build; the dataset
+  and ingestion tooling are openly published with attribution; outputs carry the non-advocacy/transparency stance.
 
 ## Notes / open items
 - Original thesis repo is **read-only** — only cloned, never modified.
