@@ -1,7 +1,7 @@
 # ADR-0008: Multi-dimensional gentrification model (conceptual architecture)
 
-- **Status:** Proposed (requires geo-data-scientist AND gentrification-domain-expert `pass`
-  before it may be set to Accepted — methodology gate R-C1)
+- **Status:** Accepted (geo-DS PASS WITH CONDITIONS `docs/methodology/R-A7-geo-signoff.md`;
+  domain-expert PASS WITH CONDITIONS `docs/methodology/R-A7-domain-signoff.md`; 2026-06-19)
 - **Date:** 2026-06-19
 
 ## Context
