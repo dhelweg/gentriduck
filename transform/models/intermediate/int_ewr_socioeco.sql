@@ -1,8 +1,12 @@
 -- int_ewr_socioeco.sql
--- C4 intermediate: pivot int_ewr_series from long format to wide format and
+-- C4 intermediate: pivot int_berlin_ewr_plr2021 from long format to wide format and
 -- compute the EWR composite socio-economic score.
 --
--- Selects from int_ewr_series (long-format, 13 indicators, city_code='BER').
+-- Selects from int_berlin_ewr_plr2021 (long-format, 13 indicators, city_code='BER').
+-- All rows carry area_vintage='lor_2021' (pre-2021 EWR data reapportioned via crosswalk,
+-- 2021+ data passed through). This matches the lor_2021 vintage used by
+-- int_poi_status_dynamism (updated in #63) so that int_gentrification_ts can join on
+-- (area_code, area_vintage) without vintage mismatch for 2015-2020 years.
 -- Pivots to one row per (city_code, area_code, area_vintage, reference_year).
 -- Key indicators selected match the 2018 thesis own_idx (reference/system/71_oa.sql):
 -- - foreigners_share          (thesis: k11 = E_A / E_E)
@@ -26,24 +30,34 @@
 -- (Mikrozensus reform); pre-2017 values are present but not directly comparable.
 -- C4 consumers should apply reference_year >= 2017 for migration comparisons.
 --
--- Note on #51 (C3-crosswalk, 2026-06-19):
--- int_berlin_ewr_plr2021 was built to reapportion pre-2021 EWR data to 2021 PLR codes.
--- However, this model continues to read from int_ewr_series (vintage-split) because
--- int_gentrification_ts joins POI data (which retains pre-2021 area codes for years
--- <= 2020) with EWR on (area_code, area_vintage). Switching int_ewr_socioeco to read
--- from int_berlin_ewr_plr2021 would require also remapping POI area codes to the 2021
--- scheme for years <= 2020 — a more substantial change. The 2020->2021 vintage delta
--- remains NULL in fct_gentrification_change; resolving this fully is deferred to a
--- follow-up task (see issue #51 commentary).
+-- Note on #63 (POI PLR2021 remap, 2026-06-19):
+-- int_poi_status_dynamism was updated to assign area_vintage='lor_2021' for all years
+-- by remapping pre-2021 OSM POI area codes via the 2021 PLR crosswalk. To keep the
+-- area_vintage join in int_gentrification_ts consistent, this model now reads from
+-- int_berlin_ewr_plr2021 (which also carries area_vintage='lor_2021' for all years)
+-- instead of int_ewr_series (which used vintage-split codes). The plr_id_2021 column
+-- is aliased to area_code to match the downstream column name used throughout this model.
 --
--- Graceful degradation: returns zero rows when int_ewr_series has no rows.
+-- Graceful degradation: returns zero rows when int_berlin_ewr_plr2021 has no rows.
 --
 -- dbt_meta_owner: data-engineer
--- depends_on: {{ ref('int_ewr_series') }}
+-- depends_on: {{ ref('int_berlin_ewr_plr2021') }}
 {{ config(materialized="table", meta={"dbt_meta_owner": "data-engineer"}) }}
 
 with
-    ewr as (select * from {{ ref("int_ewr_series") }}),
+    ewr as (
+        select
+            city_code,
+            plr_id_2021 as area_code,  -- alias to match downstream column name
+            area_vintage,
+            reference_year,
+            reference_date,
+            indicator,
+            indicator_value,
+            is_suppressed_any,
+            source_attribution
+        from {{ ref("int_berlin_ewr_plr2021") }}
+    ),
 
     -- Pivot long -> wide: one row per area x year with key indicator columns.
     pivoted as (
