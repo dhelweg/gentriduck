@@ -1,6 +1,6 @@
 # ADR-0007: Berlin per-PLR socio-economic status (SES) indicators
 
-- **Status:** Proposed
+- **Status:** Accepted
 - **Date:** 2026-06-19
 
 ## Context
