@@ -284,6 +284,37 @@ seeds:
               arguments:
                 values: ["true", "false"]
 
+  - name: seed_mss_expected_counts
+    description: >
+      R-A3 row-count reconciliation reference. Published per-edition PLR counts for
+      Berlin MSS (Monitoring Soziale Stadtentwicklung), hard-coded from ADR-0006.
+      Used by test_mss_plr_row_count to assert that each ingested edition matches
+      the expected number of PLR rows (±5 tolerance).
+      447 PLR for pre-2021 LOR editions (<=2019); 542 PLR for LOR 2021 (>=2021).
+    meta:
+      dbt_meta_owner: data-engineer
+    columns:
+      - name: edition
+        description: MSS publication year (2013, 2015, 2017, 2019, 2021, 2023, 2025).
+        tests:
+          - not_null
+          - unique
+      - name: expected_plr_count
+        description: >
+          Published PLR count for this edition. 447 for pre-2021 LOR editions;
+          542 for LOR 2021 editions. Source: ADR-0006 / MSS reports.
+        tests:
+          - not_null
+      - name: lor_vintage
+        description: >
+          LOR boundary vintage for this edition. 'lor_pre2021' for editions <=2019;
+          'lor_2021' for editions >=2021.
+        tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ["lor_pre2021", "lor_2021"]
+
   - name: berlin_mietspiegel
     description: >
       D1 — Berliner Mietspiegel multi-vintage rent table seed (2017-present).
