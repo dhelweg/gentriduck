@@ -624,3 +624,108 @@ models:
         description: Source citation including edition year, publisher, and reference date.
         tests:
           - not_null
+
+  # --- R-A3: Berlin MSS (Monitoring Soziale Stadtentwicklung) ---
+
+  - name: stg_berlin_mss
+    description: >
+      Staging view over MSS (Monitoring Soziale Stadtentwicklung) Parquet files produced
+      by ingestion/berlin/mss/ingest_mss.py (ADR-0006, GDI Berlin WFS, dl-de-zero-2.0).
+      One row per (edition, PLR). Editions: 2013, 2015, 2017, 2019, 2021, 2023, 2025
+      (2013 has no WFS service; 2015/2017 are best-effort). Firm editions: 2019–2025.
+      Boundary-vintage break: editions <=2019 use lor_pre2021 (447 PLR);
+      editions >=2021 use lor_2021 (542 PLR). Uninhabited PLR rows have null index
+      values. Returns zero rows (typed stub) until parquets are ingested.
+      Primary outcome variable for R-A1 re-grounding of the gentrification index.
+    meta:
+      dbt_meta_owner: data-engineer
+    tests:
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns:
+              - city_code
+              - edition
+              - area_code
+          config:
+            where: "area_code is not null"
+    columns:
+      - name: city_code
+        description: City identifier; always 'BER' (ADR-0005).
+        tests:
+          - not_null:
+              config:
+                where: "area_code is not null"
+          - accepted_values:
+              arguments:
+                values: ["BER"]
+              config:
+                where: "area_code is not null"
+      - name: area_vintage
+        description: >
+          LOR boundary vintage. 'lor_pre2021' for editions <=2019 (447 PLR);
+          'lor_2021' for editions >=2021 (542 PLR). See ADR-0003/ADR-0006.
+        tests:
+          - not_null:
+              config:
+                where: "area_code is not null"
+          - accepted_values:
+              arguments:
+                values: ["lor_pre2021", "lor_2021"]
+              config:
+                where: "area_code is not null"
+      - name: area_code
+        description: PLR identifier zero-padded to 8 characters. Joins to stg_berlin_lor.
+        tests:
+          - not_null:
+              config:
+                where: "edition is not null"
+      - name: area_name
+        description: Human-readable Planungsraum name (German proper noun from WFS).
+      - name: edition
+        description: MSS publication year (2013, 2015, 2017, 2019, 2021, 2023, 2025).
+        tests:
+          - not_null:
+              config:
+                where: "area_code is not null"
+      - name: status_index
+        description: >
+          MSS Status-Index class: 1=hoch, 2=mittel, 3=niedrig, 4=sehr niedrig.
+          Null for uninhabited PLR rows (WFS sentinel -9999).
+        tests:
+          - not_null:
+              config:
+                where: "area_code is not null and gesamtindex is not null"
+          - accepted_values:
+              arguments:
+                values: [1, 2, 3, 4]
+              config:
+                where: "status_index is not null"
+      - name: dynamik_index
+        description: >
+          MSS Dynamik-Index class (normalised): 1=positiv, 2=stabil, 3=negativ.
+          Mapped from WFS di_n {1,3,5}. Null for uninhabited PLR rows.
+        tests:
+          - not_null:
+              config:
+                where: "area_code is not null and gesamtindex is not null"
+          - accepted_values:
+              arguments:
+                values: [1, 2, 3]
+              config:
+                where: "dynamik_index is not null"
+      - name: gesamtindex
+        description: >
+          MSS Gesamtindex sozialer Ungleichheit — official 2-digit group code.
+          Tens digit = status class (1–4); units digit = dynamik WFS code (1=pos, 3=stab, 5=neg).
+          Valid codes: 11, 13, 15, 21, 23, 25, 31, 33, 35, 41, 43, 45 (12 groups).
+          Null for uninhabited PLR rows. Corresponds to the Status-Dynamik-Index
+          published in MSS reports.
+      - name: source_attribution
+        description: >
+          dl-de-zero-2.0 attribution string. Value:
+          "Senatsverwaltung für Stadtentwicklung, Bauen und Wohnen Berlin
+          — Monitoring Soziale Stadtentwicklung <edition>"
+        tests:
+          - not_null:
+              config:
+                where: "area_code is not null"

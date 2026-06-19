@@ -50,3 +50,9 @@ lint     = { sequence = ["ruff check .", "sqlfluff lint transform"], default_ite
 # R-C3: analysis scripts are deterministic (random_state=42) and require ingested data.
 # Run after `poe build` when dev.duckdb is populated.
 analysis = { sequence = ["python analysis/e1_regressions.py", "python analysis/e2_classification.py"], default_item_type = "cmd" }
+# Ingestion scripts — rebuild raw data from open sources (gitignored artefacts).
+# Run once before `poe build` on a fresh checkout.
+ingest = { sequence = [
+    "python ingestion/berlin/lor/ingest_lor_geometries.py --out-dir data/raw/berlin/lor",
+    "python ingestion/berlin/mss/ingest_mss.py --out-dir data/raw/berlin/mss",
+], default_item_type = "cmd" }

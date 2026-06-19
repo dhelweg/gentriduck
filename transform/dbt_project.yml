@@ -43,6 +43,8 @@ tests:
       +severity: warn
     test_c5_poi_count_drop:
       +severity: warn
+    test_mss_plr_row_count:
+      +severity: error
 
 # Project-level variables.
 # project_root resolves the absolute repo root at build time via PWD, so
