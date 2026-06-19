@@ -45,5 +45,8 @@ deps  = "dbt deps --project-dir transform"
 build = "dbt build --project-dir transform --profiles-dir transform"
 test  = "dbt test --project-dir transform --profiles-dir transform"
 docs  = "dbt docs generate --project-dir transform --profiles-dir transform"
-fmt   = { sequence = ["ruff format .", "sqlfmt transform"], default_item_type = "cmd" }
-lint  = { sequence = ["ruff check .", "sqlfluff lint transform"], default_item_type = "cmd" }
+fmt      = { sequence = ["ruff format .", "sqlfmt transform"], default_item_type = "cmd" }
+lint     = { sequence = ["ruff check .", "sqlfluff lint transform"], default_item_type = "cmd" }
+# R-C3: analysis scripts are deterministic (random_state=42) and require ingested data.
+# Run after `poe build` when dev.duckdb is populated.
+analysis = { sequence = ["python analysis/e1_regressions.py", "python analysis/e2_classification.py"], default_item_type = "cmd" }

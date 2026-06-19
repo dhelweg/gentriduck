@@ -1,6 +1,6 @@
 # ADR-0009: Agent-skill tooling — selectively adopt Superpowers
 
-- **Status:** Proposed
+- **Status:** Accepted (R-C5 implemented 2026-06-19)
 - **Date:** 2026-06-19
 
 ## Context
@@ -55,4 +55,6 @@ existing setup.
   authoritative.
 - A pinned external dependency to track; bumps are deliberate, behind this ADR.
 - The method-showcase (O1) documents the install + version so reproduction is exact.
-- Implementation, trial, and the flip of this ADR to **Accepted** are tracked in **R-C5 (#84)**.
+- Implementation: installed Superpowers v7 (harness-level plugin); enabled `brainstorming`,
+  `systematic-debugging`, `verification-before-completion`, `writing-skills`; documented in
+  CLAUDE.md §Superpowers. Tracked in **R-C5 (#84)** (closed 2026-06-19).
