@@ -264,3 +264,60 @@ and its use in the gentrification score are methodologically sound.
   common-polarity requirement before aggregation; equal-weight default as transparent baseline.
 - Prior Gentriduck sign-offs: `docs/epic-c/C4-geo-signoff.md` (the open sign condition this audit closes).
 ```
+
+---
+
+## 9. Post-fix re-signoff (2026-06-19, after PR #89)
+
+Issue #85 / PR #89 (branch `fix/85-mean-age-sign`, commit `6bb4857`) implemented the acceptable
+alternative from §7: it removed the `-1.0 *` negation on `mean_age_years` so it enters the composite
+**positively**, rather than substituting `age_65plus_share`. I re-read the two touched models and
+re-evaluate the three §8 conditions below.
+
+**Files re-read:**
+- `transform/models/intermediate/int_ewr_socioeco.sql` (z-score block, lines ~100–195)
+- `transform/models/intermediate/int_gentrification_ts.sql` (gentrification_score block, lines ~70–96)
+
+### Condition 1 — [BLOCKING] mean_age_years sign — **MET (cleared)**
+
+- The `-1.0 *` negation is **gone**. `z_mean_age_years` is now a plain z-score:
+  `(mean_age_years - avg(...) over (...)) / nullif(stddev(...) over (...), 0)` (lines ~148–153), with
+  no leading `-1.0 *`.
+- It enters `ewr_composite` **additively** alongside the other four z-scores, divided by `5.0`
+  (lines ~183–190): `(z_foreigners_share + z_age_under18_share + z_migration_background_share +
+  z_mean_age_years + z_residence_duration_5y_share) / 5.0`.
+- Consequence: an **older** PLR now raises `ewr_composite` (more vulnerable / pre-gentrification),
+  which after the single outer `- ewr_composite` in `int_gentrification_ts` lowers
+  `gentrification_score`. This reverses the §5 defect (older neighbourhoods are no longer scored as
+  more gentrified) and makes `mean_age_years` agree in polarity with its strongly-correlated partner
+  `residence_duration_5y_share`. All five composite inputs are now vulnerability-positive.
+- **This BLOCKING condition is closed.** The fix matches the "acceptable alternative" in §7; the
+  `age_65plus_share` substitution remains the cleaner long-term option but is not required.
+
+### Condition 2 — [DOC] comment/code/direction alignment — **MET (cleared)**
+
+- `int_ewr_socioeco.sql`: the inline comment on the mean-age term now reads "positive: older
+  population = more pre-gentrification/vulnerable" (lines ~142–147), and the `with_composite` header
+  explicitly states "All five z-score inputs are vulnerability-positive" and that the sign is negated
+  only when entering `gentrification_score` (lines ~168–179). Code and comment agree.
+- `int_gentrification_ts.sql`: the `gentrification_score` comment confirms the outer `- ewr_composite`
+  is the intended single sign flip and that "All five ewr_composite inputs are vulnerability-positive;
+  single outer negation is the only sign flip" (lines ~74–85). No second negation was introduced.
+- **This condition is closed.** This also closes the inherited C4 sign condition that R-A5 was opened
+  to resolve.
+
+### Condition 3 — [DOC, non-blocking] G2 levels-vs-changes divergence — **OPEN (non-blocking)**
+
+- The pipeline still uses indicator **levels** where the 2018 thesis used YoY **changes** (§2, §5).
+  This is an accepted Epic-B directional divergence and was never a merge blocker. It must still be
+  documented on the public G2 methodology page (Epic G2), together with the `migration_background_share`
+  ≥2017 comparison restriction.
+- **Remains open by design; does not block this PR or R-A1.**
+
+### Re-verdict
+
+```
+Verdict: PASS
+Conditions cleared: #1 (mean_age sign), #2 (comment alignment)
+Remaining (non-blocking): #3 — G2 methodology page to document levels-vs-changes divergence
+```
