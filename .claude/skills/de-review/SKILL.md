@@ -18,6 +18,10 @@ report findings for the coder to fix.
    - No large/binary/secret files added; only small goldens committed.
    - For B: findings agree *directionally* with the paper (exact match not required); divergences documented.
    - Any new tool/library/source was cleared via an ADR.
+   - **Grounding rule (R-C2):** For each new or changed methodology choice (indicator, weight,
+     normalization, spatial method), verify a citation appears in the SQL/Python comment naming
+     the thesis section, codebook entry, or literature source. Flag any uncited methodology change
+     as `high` severity in the verdict.
 4. **Verdict (JSON):**
    ```json
    { "verdict": "approve" | "changes",

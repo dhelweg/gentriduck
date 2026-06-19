@@ -1,0 +1,133 @@
+{
+  "_schema": "gentriduck-handoff-v1",
+  "_description": "Machine-readable PM session state. Written at session close; read at session start. Fields are updated incrementally — only changed sections need updating.",
+  "session": "2026-06-19-overnight",
+  "updated_at": "2026-06-19T22:00:00Z",
+  "build_status": {
+    "result": "PASS",
+    "pass": 264,
+    "warn": 1,
+    "error": 0,
+    "warn_detail": "test_c5_poi_share_spike fires on 17 PLRs (by design, warn severity)",
+    "timestamp": "2026-06-19T20:00:00Z"
+  },
+  "open_prs": [
+    {
+      "pr": null,
+      "branch": "feat/rc-process-hardening",
+      "issues": [72, 73, 74, 75, 76, 84],
+      "status": "open",
+      "notes": "R-C process hardening: domain agent, methodology gate, grounding rule, analysis gate, handoff schema, Superpowers"
+    },
+    {
+      "pr": null,
+      "branch": "feat/63-poi-plr2021-remap",
+      "issues": [63],
+      "status": "in_progress_by_agent",
+      "notes": "DE implementing POI area_code crosswalk to 2021 PLR scheme"
+    }
+  ],
+  "in_progress": [
+    {
+      "issue": 63,
+      "title": "C3-crosswalk: remap POI area_codes to 2021 PLR scheme for cross-vintage delta",
+      "branch": "feat/63-poi-plr2021-remap",
+      "assignee": "data-engineer",
+      "status": "de_implementing",
+      "notes": "Crosswalk seed exists. Need int_poi_share_base_2021 model + update int_poi_status_dynamism."
+    }
+  ],
+  "completed_this_session": [
+    {
+      "issue": 72,
+      "title": "R-C0: gentrification-domain-expert agent definition",
+      "closed_at": "2026-06-19",
+      "notes": "Agent file written at .claude/agents/gentrification-domain-expert.md; CLAUDE.md roster updated"
+    },
+    {
+      "issue": 73,
+      "title": "R-C1: methodology gate enforcement in CLAUDE.md",
+      "closed_at": "2026-06-19",
+      "notes": "Methodology-bearing path globs defined; PM pre-merge check documented; dual gate (geo-DS + domain expert)"
+    },
+    {
+      "issue": 74,
+      "title": "R-C2: grounding rule in de-implement + de-review skills",
+      "closed_at": "2026-06-19",
+      "notes": "Citation requirement added to both SKILL.md files"
+    },
+    {
+      "issue": 76,
+      "title": "R-C4: structured machine-readable handoff + state.json schema",
+      "closed_at": "2026-06-19",
+      "notes": "This file is the schema implementation"
+    },
+    {
+      "issue": 84,
+      "title": "R-C5: ADR-0009 Superpowers selective adoption",
+      "closed_at": "2026-06-19",
+      "notes": "ADR flipped to Accepted; CLAUDE.md Superpowers section added; install docs written"
+    }
+  ],
+  "geo_ds_pending": [
+    {
+      "issue": 26,
+      "title": "C6 temporal methodology validation",
+      "sign_off_doc": "docs/epic-c/C6-geo-signoff.md",
+      "status": "agent_running"
+    },
+    {
+      "issue": null,
+      "title": "E1/E2 findings sign-off",
+      "sign_off_doc": "docs/epic-e/E1-E2-geo-signoff.md",
+      "status": "agent_running"
+    }
+  ],
+  "blocked": [
+    {
+      "issue": 66,
+      "title": "R-A3: Ingest Berlin MSS",
+      "blocked_by": ["architect_ADR_needed"],
+      "reason": "Needs architect ADR for MSS data source before DE implements"
+    },
+    {
+      "issue": 67,
+      "title": "R-A4: Add SES indicators",
+      "blocked_by": [66],
+      "reason": "Depends on MSS ingestion (#66)"
+    },
+    {
+      "issue": 77,
+      "title": "R-A7: ADR-0008 multi-dimensional conceptual model",
+      "blocked_by": [66, 67],
+      "reason": "Depends on MSS (#66) and SES indicators (#67)"
+    },
+    {
+      "issue": 64,
+      "title": "R-A1: Re-ground gentrification index",
+      "blocked_by": [66, 67, 77],
+      "reason": "Keystone; needs MSS, SES, and conceptual model first"
+    },
+    {
+      "issue": 65,
+      "title": "R-A2: Fix E1/E2 against real hypotheses",
+      "blocked_by": [64],
+      "reason": "Depends on R-A1 re-grounded index"
+    }
+  ],
+  "next_recommended": {
+    "issue": 68,
+    "title": "R-A5: EWR indicator-semantics audit (geo-DS)",
+    "reason": "Quick geo-DS win; unblocked; produces indicator-semantics.md which informs R-A1"
+  },
+  "dependency_order_remaining": [
+    "63 (DE in progress)",
+    "68 R-A5 (geo-DS, next)",
+    "66 R-A3 (architect ADR first)",
+    "67 R-A4 (after 66)",
+    "77 R-A7 (after 66, 67)",
+    "64 R-A1 (keystone, after 66/67/77)",
+    "65 R-A2 (after 64)",
+    "28 D2 / 53 D1b (secondary, when capacity)"
+  ]
+}
