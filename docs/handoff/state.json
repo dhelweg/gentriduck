@@ -1,47 +1,59 @@
 {
   "_schema": "gentriduck-session-state/v1",
-  "session": "2026-06-19-overnight",
-  "updated_at": "2026-06-19T22:00:00Z",
+  "session": "2026-06-19-overnight-session2",
+  "updated_at": "2026-06-19T19:20:00Z",
   "build_status": {
     "result": "PASS",
-    "pass": 277,
+    "pass": 309,
     "warn": 1,
     "error": 0,
-    "warn_detail": "test_c5_poi_share_spike (expected by design)"
+    "warn_detail": "test_c5_poi_share_spike (expected by design)",
+    "branch": "feat/67-ses-indicators",
+    "note": "Main branch is at PASS=299 (after #66 merge). feat/67 adds 10 more."
   },
   "open_prs": [
     {
-      "number": 86,
-      "branch": "feat/rc-process-hardening",
-      "title": "R-C process hardening + methodology sign-offs + ADR-0006",
-      "issues": [72, 73, 74, 75, 76, 84, 26]
-    },
-    {
-      "number": 87,
-      "branch": "feat/63-poi-plr2021-remap",
-      "title": "fix(#63): remap OSM POI + EWR to unified lor_2021 scheme",
-      "issues": [63]
+      "number": 91,
+      "branch": "feat/67-ses-indicators",
+      "title": "feat(#67): ingest MSS indexind SES indicators + stg_berlin_mss_indicators (R-A4)",
+      "issues": [67],
+      "status": "review_in_progress",
+      "reviewers_in_flight": ["DE-reviewer", "geo-data-scientist", "gentrification-domain-expert"]
     }
   ],
-  "completed_this_session": [51, 63, 72, 73, 74, 75, 76, 84, 26],
-  "new_issues_opened": [
-    {"number": 85, "title": "fix: mean_age_years sign defect in int_ewr_socioeco", "blocking": [64]}
+  "completed_this_session": [85, 66],
+  "merged_prs_this_session": [
+    {"number": 89, "issues": [85], "title": "fix(#85): mean_age_years negation removed"},
+    {"number": 90, "issues": [66], "title": "feat(#66): MSS WFS ingestion + stg_berlin_mss"}
   ],
   "blocked": [
-    {"issue": 64, "blocked_by": [85, 66, 67, 77]},
-    {"issue": 66, "blocked_by": ["ADR-0006 ratification (maintainer)"]},
-    {"issue": 67, "blocked_by": [66]},
-    {"issue": 77, "blocked_by": [66, 67]}
+    {"issue": 67, "status": "in_review", "pr": 91},
+    {"issue": 77, "blocked_by": [67]},
+    {"issue": 64, "blocked_by": [67, 77]},
+    {"issue": 65, "blocked_by": [64]},
+    {"issue": 71, "blocked_by": [64]},
+    {"issue": 69, "blocked_by": ["ADR-gated, architect needed"]}
   ],
   "next_recommended": [
-    "Merge PR #87 (#63 fix) after reviewer verification",
-    "Merge PR #86 (R-C hardening) + maintainer ratifies ADR-0006",
-    "Spawn data-engineer for #85 mean_age_years sign fix",
-    "Start #66 MSS ingestion after ADR-0006 ratification"
+    "Complete #67 review: DE-reviewer + geo-DS + domain-expert sign-offs → merge PR #91",
+    "Start #77 R-A7 (ADR-0008 multi-dimensional model): architect + geo-DS + domain-expert draft",
+    "Start #64 R-A1 (keystone): geo-DS + domain-expert write index-definition.md; DE pair implements",
+    "Secondary: #28 D2 price/rent completeness check, #53 D1b Kauffälle WFS discovery"
   ],
   "methodology_sign_offs_this_session": [
-    {"scope": "E1/E2", "agent": "geo-data-scientist", "verdict": "PASS_WITH_CONDITIONS", "file": "docs/epic-e/E1-E2-geo-signoff.md"},
-    {"scope": "C6 temporal validation", "agent": "geo-data-scientist", "verdict": "PASS_WITH_CONDITIONS", "file": "docs/epic-c/C6-geo-signoff.md"},
-    {"scope": "R-A5 EWR indicator audit", "agent": "geo-data-scientist", "verdict": "PASS_WITH_CONDITIONS", "file": "docs/methodology/indicator-semantics.md"}
+    {"scope": "R-A5 post-fix re-signoff", "agent": "geo-data-scientist", "verdict": "PASS", "file": "docs/methodology/R-A5-geo-signoff.md"},
+    {"scope": "R-A5 post-fix re-signoff", "agent": "gentrification-domain-expert", "verdict": "PASS", "file": "docs/methodology/R-A5-domain-signoff.md"},
+    {"scope": "R-A3 MSS ingestion", "agent": "geo-data-scientist", "verdict": "PASS_WITH_CONDITIONS", "file": "docs/methodology/R-A3-geo-signoff.md"},
+    {"scope": "R-A3 MSS ingestion", "agent": "gentrification-domain-expert", "verdict": "PASS_WITH_CONDITIONS", "file": "docs/methodology/R-A3-domain-signoff.md"},
+    {"scope": "R-A4 SES indicators", "agent": "geo-data-scientist", "verdict": "PENDING", "file": "docs/methodology/R-A4-geo-signoff.md"},
+    {"scope": "R-A4 SES indicators", "agent": "gentrification-domain-expert", "verdict": "PENDING", "file": "docs/methodology/R-A4-domain-signoff.md"}
+  ],
+  "key_r_a1_notes": [
+    "stg_berlin_mss polarity: 1=hoch (high status), 4=sehr_niedrig (lowest status) — lower code = higher status (INVERSE of 2018 thesis status_summe convention)",
+    "dynamik_index: 1=positiv, 2=stabil, 3=negativ (mapped from WFS codes 1/3/5)",
+    "gesamtindex: 2-digit codes 11,13,...,45 (tens=status, units=WFS dynamik code)",
+    "Exclude uninhabited PLRs (gesamtindex is not null) from R-A1 regression",
+    "Cross-boundary MSS comparison (2019→2021) requires LOR crosswalk",
+    "Indicator set: 3 indicators through 2021, 4 from 2023 (alleinerziehende added earlier than ADR anticipated)"
   ]
 }
