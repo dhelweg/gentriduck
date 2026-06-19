@@ -92,7 +92,8 @@ never shares the coder's context, so it verifies rather than rubber-stamps).
 | **system-architect** | Owns overall architecture & **tool selection**. Writes ADRs. **Every other agent must consult it (read the relevant ADR / ask) before adopting a new tool, library, or data source** — no "first tool that works". | opus | Read, Grep/Glob, Web search/fetch, Write (docs/ADRs only). No code edits. |
 | **data-engineer** *(coder)* | Implements ingestion, dbt models, DuckDB/spatial, tests. | sonnet (opus for hard tasks) | Read, Grep, Edit, Write, Bash, dbt MCP. |
 | **data-engineer-reviewer** | **Checks the coder's work** in a fresh context: reviews the diff, runs `dbt build`/tests, checks reconciliation, reports pass/fail + required changes. Does **not** edit — the coder fixes. | opus | Read, Grep, Bash (run tests/git diff). **No Edit/Write.** |
-| **geo-data-scientist** | Expert sign-off on **methodology**: gentrification index validity, spatial methods, OSM temporal pitfalls (tag drift, survivorship, completeness bias), regression/ML soundness. | opus | Read, Web search/fetch, Bash (read-only analysis), Write (methodology notes). |
+| **geo-data-scientist** | Expert sign-off on **quantitative methodology**: gentrification index validity, spatial methods, OSM temporal pitfalls (tag drift, survivorship, completeness bias), regression/ML soundness (leakage, metrics). | opus | Read, Web search/fetch, Bash (read-only analysis), Write (methodology notes). |
+| **gentrification-domain expert** *(added via R-C0 / #72)* | **Urban-sociology / housing-policy authority**: gentrification *theory* fidelity (Dangschat invasion-succession, Döring-Ulbricht, rent-gap, displacement), indicator/outcome selection, the per-city open-data landscape (MSS/EWR/Milieuschutz/Mietspiegel; future cities), and public methodology & **ethics** framing. **Pairs with the geo-data-scientist** (domain-fidelity ↔ statistical-soundness) and co-gates methodology-bearing work. | opus (effort high, thinking) | Read, Grep/Glob, Bash (read-only), Web search/fetch, Write (methodology notes). No production-code edits. |
 | **data-analyst** | Consumes marts to produce analyses, maps, narratives, comparisons over time. Owns **website content & UX** (which stats, how framed). | sonnet | Read, Bash (python/duckdb), Write, NotebookEdit. |
 | **web-engineer** *(coder, activates Epic G)* | **Builds the frontend/website** per the architect's serving/web ADR (F1): pages, components, maps, theming, build & deploy. | sonnet | Read, Grep, Edit, Write, Bash (node/npm, dev server, build/deploy). |
 | **web-engineer-reviewer** *(activates Epic G)* | Independently reviews the web-engineer's diff, runs the build/dev server, checks it renders; reports pass/fail. Mirrors the DE reviewer — **no edits**. | opus | Read, Grep, Bash (build/run). **No Edit/Write.** |
@@ -118,7 +119,9 @@ the bulk. These two web agents are defined now but **activate at Epic G** (no fr
 3. **Review** — `data-engineer-reviewer` independently reviews the diff + runs `uv run dbt build`
    and tests; emits a structured verdict (approve / changes-required with specifics).
 4. **Loop** — coder addresses changes; reviewer re-checks until approved.
-5. **Methodology gate** — for methodical tasks, `geo-data-scientist` signs off before merge.
+5. **Methodology gate (binding)** — for methodology-bearing tasks the `geo-data-scientist` **and** (once
+   #72 lands) the `gentrification-domain expert` must record a `pass` before merge. The gate is
+   **enforced**, not advisory (R-C1/#73): work may not merge with a verdict pending or `concerns`.
 6. **Merge & close** — open PR, link the GitHub issue; PM merges once green, updates the board,
    records capacity used, and selects the next task.
 
@@ -166,6 +169,14 @@ not installed on this machine. Execution is **interactive and step-by-step** —
 commands and explain each; the maintainer runs/authorizes them. Steps that need your account or a
 browser (`gh auth login`, creating the GitHub repo + Project) are done by you with my commands. We
 confirm each step worked before moving to the next, so you stay in control and nothing runs unseen.
+
+> **2026-06-19 update — methodology remediation wave.** A PM+architect deep review
+> (`docs/assessment/2026-06-19-pm-architect-review.md`) found the live index drifted from the thesis's
+> construct (POI activity is treated *as* social status rather than as its *predictor*; the lead-lag —
+> the thesis's core finding — was lost), the committed E1/E2 "thesis validation" tests invented
+> hypotheses, and Berlin's official **MSS** ground-truth dataset is not ingested. The fixes are tracked
+> as **Remediation wave R (#64–#76)** at the end of this backlog and are the **current priority**: hold
+> index-dependent work — **D3 (#29), G2 (#38), C6 (#26)** — until **R-A1 (#64)** lands.
 
 ### Epic A — Architecture & foundations
 - **A1** ADR-0001: stack & **monorepo** architecture (dbt/DuckDB/MotherDuck layering; uv venv;
@@ -345,6 +356,59 @@ data and see whether the paper's conclusions reproduce; exact 2018 inputs are no
   source adapters + index params; no model rewrite) — validates the city-agnostic seam. · *DE pair
   (+ scientist for local methodology)* · A1b, mature Berlin pipeline.
 
+### Remediation wave R — Methodology re-grounding & process hardening (2026-06-19 review)
+*Triggered by the PM+architect deep review (`docs/assessment/2026-06-19-pm-architect-review.md`; full
+SPECs in `docs/assessment/tickets/`). The review found the live index conflates POI activity with social
+status, the E1/E2 validation tests invented hypotheses, the official **MSS** ground truth is missing, and
+the methodology gate is advisory (it leaked in PR #62). This wave re-grounds the methodology and makes the
+gate binding. **Order:** R-C0 + R-C1 + R-C2 → R-A1 → R-A2 + R-A5 → R-A3 → R-A4 → R-B2 → R-B1; R-A6,
+R-C3, R-C4 as capacity allows. Hold D3(#29)/G2(#38)/C6(#26) until R-A1 lands.*
+
+**R-A — Methodology / index validity**
+- **R-A1** Re-ground the index: separate POI **predictors** from the **social** status/dynamik outcome;
+  restore the lead-lag (thesis core finding); justify weights. · *geo-data-scientist + gentrification-domain
+  expert (spec) → DE pair* · C4, R-A3, R-A4 · governed `docs/methodology/index-definition.md` signed off
+  (POI = features, outcome = social status; lead-lag exposed; weights justified). · **#64** *(keystone)*
+- **R-A2** Fix & re-run E1/E2 against the real H1–H3c (lead-lag, POI→MSS); rewrite the findings docs. ·
+  *DE pair + geo-DS + domain expert* · R-A1 (or golden), R-C2 · directions cited from the thesis; POI
+  features used; lead-lag + spatial-autocorrelation caveat reported. · **#65**
+- **R-A3** Ingest Berlin **MSS** (Monitoring Soziale Stadtentwicklung) Status/Dynamik index — ground truth
+  + social outcome. · *architect (ADR) → DE pair* · A3 · `stg_berlin_mss` builds with tests; editions
+  ~2013–2025; reconciles to published counts. · **#66**
+- **R-A4** Add socio-economic-status indicators (transfer recipients / SGB II / unemployment / income). ·
+  *architect (ADR) → DE pair* · R-A3 · per-PLR SES series staged; wired to the R-A1 outcome with documented
+  signs. · **#67**
+- **R-A5** EWR indicator-semantics & sign audit (DAU5/DAU10, residence-duration, age band) vs. the official
+  codebook. · *geo-data-scientist* · C3b · `docs/methodology/indicator-semantics.md`; sign corrections
+  applied. · **#68** *(quick win)*
+- **R-A6** Reproduce distance-weighting in the **live** pipeline + modern spatial methods (distance-decay
+  with mass conservation, Getis-Ord Gi* hotspots, MAUP scale-sensitivity). · *architect (ADR: H3/PySAL) →
+  DE pair; geo-DS + domain sign-off* · C3, R-A1, #51 · live `distance_weighted` variant + Gi* hotspots +
+  MAUP doc. · **#69**
+
+**R-B — Data / product white-spots**
+- **R-B1** Displacement & affordability dimension (Milieuschutzgebiete, rent-burden, turnover). ·
+  *architect (ADR) → DE pair (+ domain expert)* · D1/D3, R-A4 · displacement sub-index wired per R-A1;
+  limits documented. · **#70**
+- **R-B2** Ground-truth back-test harness: validate the live index vs. MSS classes & known hotspots
+  (Reuterkiez, Prenzlauer Berg). · *geo-DS + data-analyst* · R-A1, R-A3 · ground-truth seed; agreement /
+  hotspot-recall thresholds; runs under the gate. · **#71**
+
+**R-C — Agent process hardening** *(extends Epic A foundations)*
+- **R-C0** Author the **gentrification-domain expert** agent (urban-sociology/housing-policy), paired with
+  the geo-DS. · *architect* · A6 · agent merged (opus, effort high, no code edits); CLAUDE.md/PROJECT_PLAN
+  roster + dual gate updated. · **#72**
+- **R-C1** Enforce the methodology gate — no merge of methodology-bearing work with a geo-DS/domain verdict
+  pending or `concerns`. · *architect + PM* · R-C0 · "methodology-bearing" defined (label + path globs);
+  mechanical pre-merge check blocks a missing `pass`; PM step de-parenthesised. · **#73**
+- **R-C2** Grounding rule — methodology choices must cite the thesis/literature they operationalize;
+  reviewer checks it. · *architect* · A6 · `de-implement`/`de-review` + CLAUDE.md updated; demonstrated on
+  R-A2. · **#74**
+- **R-C3** Bring `analysis/*.py` under the gate — deterministic, tested, run in `poe build`/CI (incl. a
+  leakage guard). · *DE pair* · A7 · `uv run poe analysis` reproducible; analysis tests in the gate. · **#75**
+- **R-C4** Structured machine-readable handoff + PM board auto-sync at task close. · *project-manager* · A6
+  · `docs/handoff/state.json` schema; PM reads at start / updates board + state at close. · **#76**
+
 ---
 
 ## Verification
@@ -361,6 +425,9 @@ data and see whether the paper's conclusions reproduce; exact 2018 inputs are no
 - **G:** public website renders the Berlin index/time-series/maps, with methodology + attribution +
   privacy pages live; hosted free.
 - **H (future):** a second city appears on the site via adapters only — no changes to core models.
+- **R (2026-06-19 review):** governed index definition signed off (POI = predictors, social-status outcome,
+  lead-lag restored); MSS ingested and the live index back-tests against it; E1/E2 re-run with cited
+  hypotheses; the methodology gate mechanically blocks un-signed-off methodology work.
 
 ## Notes / open items
 - Original thesis repo is **read-only** — only cloned, never modified.
