@@ -27,6 +27,13 @@ models:
 seeds:
   gentriduck:
     +schema: seeds
+    seed_lor_crosswalk_2006_to_2021:
+      +column_types:
+        # PLR codes are zero-padded 8-digit strings; must not be read as INTEGER.
+        plr_id_pre2021: varchar
+        plr_id_2021: varchar
+        # Weights are fractional floats; CSV may use scientific notation (e.g. 9.286e-05).
+        weight: double
 
 # Project-level variables.
 # project_root resolves the absolute repo root at build time via PWD, so

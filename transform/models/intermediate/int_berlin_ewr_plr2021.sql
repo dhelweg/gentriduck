@@ -16,13 +16,30 @@
 -- - mapping_type='stub': crosswalk not yet populated; pre-2021 rows dropped
 -- with a NULL plr_id_2021 (not silently coerced).
 --
--- Current state:
--- seed_lor_crosswalk_2006_to_2021 is a STUB (single placeholder row with
--- dummy codes 00000000). Until the official concordance is loaded:
--- - lor_2021 rows pass through normally (2021-2024 data fully available).
--- - lor_pre2021 rows produce zero output rows (no matching crosswalk entries).
--- TODO: replace stub crosswalk with official_concordance data from
--- Senatsverwaltung fuer Stadtentwicklung Berlin. See seed schema.yml for provenance.
+-- Current state (as of 2026-06-19):
+-- seed_lor_crosswalk_2006_to_2021 is POPULATED with 3055 areal_pop_weighted rows
+-- derived from GDI Berlin WFS geometries (EPSG:25833) via
+-- ingestion/berlin/lor/ingest_lor_crosswalk.py. Geo-DS approved 2026-06-19
+-- (docs/epic-c/C3-crosswalk-geo-signoff.md -- verdict: PASS).
+-- Weight-sum validation passed: all 448 pre-2021 PLRs within +/-0.01 tolerance.
+-- Both lor_2021 and lor_pre2021 rows now produce output; the 2020->2021 vintage
+-- boundary in fct_gentrification_change is bridged by the crosswalk.
+--
+-- Intensive vs extensive indicator note (geo-DS condition):
+-- For extensive indicators (counts: residents_total): areal-weighted apportionment
+-- is exact: count_2021_plr = SUM(count_pre2021 * weight).
+-- For intensive indicators (rates/shares: foreigners_share, migration_background_share,
+-- mean_age_years, residence_duration_5y_share): the areal-weighted sum approximates a
+-- population-weighted average under the uniform-population-within-PLR assumption.
+-- This is standard practice at the Berlin PLR spatial scale (median ~0.35 km2) and is
+-- the best available approach absent sub-PLR population grids for historical years.
+--
+-- Aggregation note:
+-- When multiple pre-2021 PLRs contribute to the same 2021 PLR (many-to-one mapping),
+-- indicator_value is SUM(indicator_value_pre2021 * weight) across all contributing
+-- pre-2021 PLRs. For extensive indicators this is exact; for intensive indicators
+-- this is the areal-weighted approximation described above. The final SELECT aggregates
+-- to the output grain (reference_year, plr_id_2021, indicator).
 --
 -- Output grain: (reference_year, plr_id_2021, indicator)
 -- One row per (reference_year, plr_id_2021, indicator) combination.
@@ -32,10 +49,14 @@
 -- - LOR 2021 reform: this model resolves the break for aligned analysis.
 -- - Migrationshintergrund ~2017: see seed_ewr_indicator_meta (stable_from_year=2017).
 -- This model does not filter by stable_from_year; consumers should apply that filter.
+--
+-- Materialization: table (not view) to work around DuckDB UNPIVOT-in-view chaining
+-- limitation: stg_berlin_ewr uses UNPIVOT; referencing it in a view-over-view
+-- causes a DuckDB bind error. Materializing as table resolves this at build time.
 -- dbt_meta_owner: data-engineer
 {{
     config(
-        materialized="view",
+        materialized="table",
         meta={"dbt_meta_owner": "data-engineer"},
     )
 }}
@@ -69,7 +90,9 @@ with
     ),
 
     -- lor_pre2021 rows: join to crosswalk and apply weight.
-    -- When crosswalk has no matching row (stub or missing), these rows are dropped.
+    -- When multiple pre-2021 PLRs map to the same 2021 PLR, this produces
+    -- multiple rows per (reference_year, plr_id_2021, indicator) that are
+    -- aggregated in the final SELECT.
     lor_pre2021_mapped as (
         select
             ewr.city_code,
@@ -78,11 +101,8 @@ with
             ewr.reference_year,
             ewr.reference_date,
             ewr.indicator,
-            -- For indicator_value: apply crosswalk weight.
-            -- For count indicators (residents_total): weight * value.
-            -- For share indicators: value * weight (weighted average component;
-            -- NOTE: true weighted average requires summing weights per plr_id_2021
-            -- which is handled by callers if needed).
+            -- Apply crosswalk weight. For many-to-one mappings, SUM() in the
+            -- outer aggregation accumulates contributions from all pre-2021 PLRs.
             case
                 when ewr.indicator_value is null
                 then null
@@ -105,16 +125,25 @@ with
         from lor_pre2021_mapped
     )
 
+-- Aggregate to output grain: (city_code, reference_year, plr_id_2021, indicator).
+-- For lor_2021 passthrough rows: each group has exactly one row (weight=1.0).
+-- For lor_pre2021 mapped rows: SUM aggregates contributions from all pre-2021 PLRs
+-- that map to this 2021 PLR. is_suppressed_any uses MAX (True if any source was
+-- suppressed). source_attribution uses MIN (arbitrary choice; all share same source).
+-- crosswalk_weight and crosswalk_type: not meaningful post-aggregation (set to NULL).
 select
     city_code,
     plr_id_2021,
-    area_vintage,
+    -- Use 'lor_2021' as the output vintage for all rows (they are all mapped
+    -- to the 2021 PLR scheme, regardless of origin vintage).
+    'lor_2021' as area_vintage,
     reference_year,
-    reference_date,
+    min(reference_date) as reference_date,
     indicator,
-    indicator_value,
-    is_suppressed_any,
-    source_attribution,
-    crosswalk_weight,
-    crosswalk_type
+    sum(indicator_value) as indicator_value,
+    max(is_suppressed_any) as is_suppressed_any,
+    min(source_attribution) as source_attribution,
+    cast(null as double) as crosswalk_weight,
+    cast(null as varchar) as crosswalk_type
 from combined
+group by city_code, plr_id_2021, reference_year, indicator

@@ -128,22 +128,22 @@ seeds:
       reference_year >= 2021). Required by int_berlin_ewr_plr2021 to align the
       EWR socio-economic time series across the LOR 2021 boundary.
 
-      CURRENT STATUS: STUB. The single data row uses dummy area codes (00000000)
-      and mapping_type='stub'. int_berlin_ewr_plr2021 detects this and passes
-      through lor_2021 rows only, producing zero output for lor_pre2021 rows.
+      STATUS (as of 2026-06-19): POPULATED with 3055 areal_pop_weighted rows derived
+      from GDI Berlin WFS geometries (EPSG:25833) via
+      ingestion/berlin/lor/ingest_lor_crosswalk.py. Geo-DS approved 2026-06-19
+      (docs/epic-c/C3-crosswalk-geo-signoff.md, verdict PASS). Weight-sum validation
+      passed: all 448 pre-2021 PLRs have weights summing to 1.0 +/- 0.01.
+      Zero-weight rows (numerical precision artifacts) are excluded from the seed.
 
-      PROVENANCE: The official concordance is published by the Senatsverwaltung
-      fuer Stadtentwicklung und Wohnen Berlin as an Excel file alongside the LOR
-      2021 reform documentation. Obtain from:
-        https://www.stadtentwicklung.berlin.de/planen/basisdaten_stadtentwicklung/lor/
-      or via the FIS-Broker geodata service (SenSW).
+      PROVENANCE: GDI Berlin WFS geometries, CC BY 3.0 DE.
+        https://gdi.berlin.de/
 
-      TODO: Replace stub rows with real concordance data. Use mapping_type values:
-        'official_concordance' -- direct 1:1 or split from Senate publication.
-        'areal_pop_weighted'   -- areal-interpolation weight (fractional for splits).
-        'identity'             -- area code unchanged between schemes (many PLRs).
-      weight=1.0 for 1:1 maps; fractional for splits (e.g. 0.6 + 0.4 for a PLR
-      split into two 2021 PLRs).
+      Mapping types used:
+        'areal_pop_weighted' -- intersection_area / pre2021_plr_area (all rows).
+      weight=1.0 for 1:1 maps; fractional for PLRs split across new boundaries.
+    config:
+      column_types:
+        weight: double
     meta:
       dbt_meta_owner: data-engineer
     columns:
@@ -177,13 +177,14 @@ seeds:
         description: >
           Fractional weight for this mapping (1.0 for 1:1 maps; <1.0 for splits
           where one pre-2021 PLR maps to multiple 2021 PLRs). Weights for a given
-          plr_id_pre2021 should sum to 1.0.
+          plr_id_pre2021 should sum to 1.0. Type: double (enforced via column_types
+          to ensure scientific-notation values in the CSV are parsed correctly).
         tests:
           - not_null
       - name: note
         description: >
-          Free-text provenance note for this mapping row. For stub rows, documents
-          where to obtain the official concordance.
+          Free-text provenance note for this mapping row. Documents the computation
+          method and source geometry attribution.
 
   - name: seed_poi_tag_drift
     description: >
