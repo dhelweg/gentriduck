@@ -267,6 +267,14 @@ All pitched tickets were created on the Gentriduck board with full agent-ready S
 | A4 | #67 | C0 | #72 | C4 | #76 |
 | A5 | #68 | | | | |
 
-Suggested start: **#72 (C0) + #73 (C1) + #74 (C2)** → **#64 (A1)** → **#65 (A2) + #68 (A5)** →
-**#66 (A3)** → **#67 (A4)** → **#71 (B2)** → **#70 (B1)**; **#75 (C3)** anytime; **#76 (C4)** anytime.
+**Focused conceptual upgrade (2026-06-19):** **A7 #77** (ADR-0008 multi-dimensional typology), **A8 #78**
+(longitudinal trajectories/stages), **A9 #79** (spatial-dynamic diffusion + spatial inference). Existing
+**#64 / #65 / #69** were tightened so the rigor findings — spatial autocorrelation, leakage/nested-CV, and
+weight/category sensitivity — are first-class. The 2018 critical assessment is committed at
+`docs/assessment/2018-thesis-critical-assessment.md` (no grade); its deferred finding (causal inference, W3)
+is tracked as **A10 #80**.
+
+Suggested start: **#72 (C0) + #73 (C1) + #74 (C2)** → **#77 (A7, ADR-0008)** → **#64 (A1)** →
+**#65 (A2) + #68 (A5)** → **#66 (A3)** → **#67 (A4)** → **#79 (A9)** → **#78 (A8)** → **#71 (B2)** →
+**#70 (B1)**; **#69 (A6)**, **#75 (C3)**, **#76 (C4)** as capacity allows.
 Hold #29/#38/#26 until #64 (A1) lands.

@@ -16,7 +16,9 @@ lead-lag into a contemporaneous equal-weighted mean. See `docs/assessment/2026-0
 ## Goal
 A single governed index definition (per ADR-0004) that is faithful to the thesis's construct and defensible
 under current literature: POI metrics are **features/predictors**; the **outcome** is a social-status index;
-the **temporal (lead-lag) relationship** is first-class; weights are justified, not asserted.
+the **temporal (lead-lag) relationship** is first-class; weights are justified, not asserted. This is the
+first implementation of the multi-dimensional model in **ADR-0008 (R-A7 #77)** — a typology over dimensions,
+not a single 1/3 z-score blend.
 
 ## Scope & approach
 This is a **spec-first** task. The geo-data-scientist + gentrification-domain expert (see C0) author the
@@ -41,7 +43,7 @@ corrected index definition; the data-engineer then implements it. Do NOT start c
 - Governed `docs/methodology/index-definition.md` exists and is signed off by geo-DS **and** the domain expert.
 - POI metrics are clearly features; the published index's outcome is a social-status measure (A3 and/or A4).
 - The lead-lag relationship is computed and exposed in a mart, not lost.
-- Weighting is justified in writing (derivation or sensitivity analysis); no undocumented constants.
+- Weighting is justified in writing, with a **sensitivity analysis over weights and category groupings**; no undocumented constants.
 - `uv run poe build` green; mart contract still satisfied; docs/lineage updated.
 
 ## Gate / sign-off
@@ -50,7 +52,8 @@ sections and literature the definition operationalizes (see C2).
 
 ## Dependencies / relations
 Keystone. Blocks/should precede #26 (C6 temporal validation), #29 (D3 price into index), #38 (G2 methodology
-page). Consumes A3 (MSS), A4 (SES). Interacts with A6 (spatial method) and A2 (validation).
+page). Consumes A3 (MSS), A4 (SES). Governed by **ADR-0008 (R-A7 #77)**; feeds R-A8 (#78) trajectories. Interacts
+with A6 (spatial method) and A2 (validation).
 
 ## References
 - `docs/assessment/2026-06-19-pm-architect-review.md` §2.1-2.5

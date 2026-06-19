@@ -361,8 +361,10 @@ data and see whether the paper's conclusions reproduce; exact 2018 inputs are no
 SPECs in `docs/assessment/tickets/`). The review found the live index conflates POI activity with social
 status, the E1/E2 validation tests invented hypotheses, the official **MSS** ground truth is missing, and
 the methodology gate is advisory (it leaked in PR #62). This wave re-grounds the methodology and makes the
-gate binding. **Order:** R-C0 + R-C1 + R-C2 → R-A1 → R-A2 + R-A5 → R-A3 → R-A4 → R-B2 → R-B1; R-A6,
-R-C3, R-C4 as capacity allows. Hold D3(#29)/G2(#38)/C6(#26) until R-A1 lands.*
+gate binding, and **upgrades the conceptual model** beyond 2018 (multi-dimensional typology, longitudinal
+stages, spatial diffusion + proper spatial inference). **Order:** R-C0 + R-C1 + R-C2 → R-A7 (ADR-0008) →
+R-A1 → R-A2 + R-A5 → R-A3 → R-A4 → R-A9 → R-A8 → R-B2 → R-B1; R-A6, R-C3, R-C4 as capacity allows. Hold
+D3(#29)/G2(#38)/C6(#26) until R-A1 lands.*
 
 **R-A — Methodology / index validity**
 - **R-A1** Re-ground the index: separate POI **predictors** from the **social** status/dynamik outcome;
@@ -385,6 +387,22 @@ R-C3, R-C4 as capacity allows. Hold D3(#29)/G2(#38)/C6(#26) until R-A1 lands.*
   with mass conservation, Getis-Ord Gi* hotspots, MAUP scale-sensitivity). · *architect (ADR: H3/PySAL) →
   DE pair; geo-DS + domain sign-off* · C3, R-A1, #51 · live `distance_weighted` variant + Gi* hotspots +
   MAUP doc. · **#69**
+- **R-A7** **ADR-0008 — multi-dimensional conceptual model:** gentrification as a **typology** over four
+  dimensions (social status & change, commercial/amenity, real-estate/rent, displacement), not a single
+  z-score blend; mandates a sensitivity analysis. · *architect + domain expert + geo-DS* · A9 (ADR-0004),
+  R-A3, R-A4 · ADR-0008 merged; R-A1 implements its first cut. · **#77** *(conceptual keystone)*
+- **R-A8** **Longitudinal trajectory & stage model (2008–2024):** classify each PLR's path into
+  invasion-succession stages (realizes the thesis's "phase one" hint). · *geo-DS + domain (spec) →
+  DE/analyst* · R-A7, R-A1, R-A3, R-B2 · `fct_gentrification_trajectory` + per-year stage, validated vs
+  MSS/hotspots. · **#78**
+- **R-A9** **Spatial-dynamic diffusion + spatial-econometric inference:** spatial weights, Moran's I/LISA,
+  spatial-lag/error models (`spreg`), neighbour-diffusion feature — fixes the ignored spatial autocorrelation
+  *and* adds the frontier mechanism. · *geo-DS (+ domain)* · R-A6, R-A2, R-A8 · spatial inference used for
+  all claims; diffusion feature available. · **#79**
+- **R-A10** *(deferred — tracked)* Causal / early-warning design (DiD on Milieuschutz designation,
+  event-study, out-of-time validation) — formalizes the thesis's lead-lag (finding W3). Scheduled after
+  R-A8/R-A9. · *geo-DS + domain expert* · R-A8, R-A9, R-B1 · early-warning score + ≥1 quasi-experiment with
+  documented identifying assumptions. · **#80**
 
 **R-B — Data / product white-spots**
 - **R-B1** Displacement & affordability dimension (Milieuschutzgebiete, rent-burden, turnover). ·
@@ -409,6 +427,12 @@ R-C3, R-C4 as capacity allows. Hold D3(#29)/G2(#38)/C6(#26) until R-A1 lands.*
 - **R-C4** Structured machine-readable handoff + PM board auto-sync at task close. · *project-manager* · A6
   · `docs/handoff/state.json` schema; PM reads at start / updates board + state at close. · **#76**
 
+**Thesis critical-assessment coverage.** The honest critical read of the 2018 work lives in
+`docs/assessment/2018-thesis-critical-assessment.md` (a critical assessment only — **no grade**). Every
+weakness maps to a ticket: **W1** spatial autocorrelation → #79/#65 · **W2** overfitting/leakage → #65/#75 ·
+**W3** causal/temporal → #78/#64 + #80 (deferred) · **W4** OSM completeness bias → C5 (done)/#69 ·
+**W5** ad-hoc weights/categories (no sensitivity) → #77/#64/#69 · **conceptual flatness** → #77/#78.
+
 ---
 
 ## Verification
@@ -427,7 +451,8 @@ R-C3, R-C4 as capacity allows. Hold D3(#29)/G2(#38)/C6(#26) until R-A1 lands.*
 - **H (future):** a second city appears on the site via adapters only — no changes to core models.
 - **R (2026-06-19 review):** governed index definition signed off (POI = predictors, social-status outcome,
   lead-lag restored); MSS ingested and the live index back-tests against it; E1/E2 re-run with cited
-  hypotheses; the methodology gate mechanically blocks un-signed-off methodology work.
+  hypotheses; the methodology gate mechanically blocks un-signed-off methodology work; and the conceptual
+  model is multi-dimensional (ADR-0008) with longitudinal stages and spatially-robust inference.
 
 ## Notes / open items
 - Original thesis repo is **read-only** — only cloned, never modified.

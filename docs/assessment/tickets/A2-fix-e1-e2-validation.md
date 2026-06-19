@@ -33,15 +33,18 @@ A validation that reproduces the thesis's actual hypotheses and reports them hon
 2. Use **POI features** as predictors and the **MSS social** status/dynamik as outcomes (this requires A3; if
    A3 not yet landed, validate against the golden `status_index`/`dynamism_index` but label it clearly).
 3. Test temporal ordering on the live time series (lagged correlations / Granger-style or panel lead-lag).
-4. Account for **spatial autocorrelation** (the original OLS/Weka ignored it): report Moran's I and use
-   spatially-robust inference (`spreg`) or note the caveat (ties to A6).
+4. Handle **spatial autocorrelation** (the original OLS/Weka ignored it) via **R-A9 (#79)**: report Moran's I
+   and use spatial-lag/-error models (`spreg`); document how conclusions change vs. naïve OLS.
 5. Rewrite `docs/epic-e/E1-regression-findings.md` and `E2-classification-findings.md` with the corrected
    framing and a clear "what replicates / what diverges" section per the Epic-B directional remit.
+6. **Modeling rigor** for any ML: regularization, **nested cross-validation**, a reduced feature set (not the
+   thesis's 1,722 columns), and explicit **leakage guards** as tested assertions (per R-C3 #75).
 
 ## Acceptance criteria
 - `THESIS_DIRECTION` (or its replacement) is derived from cited thesis text, not assumed.
 - Docstring matches implementation; the tested relationships use POI features as predictors.
-- Lead-lag is tested and reported; spatial-autocorrelation caveat addressed.
+- Lead-lag is tested and reported; spatial autocorrelation handled via R-A9 (#79) (Moran's I + spatial regression).
+- ML re-run uses regularization + nested CV + a reduced feature set + tested leakage guards (no overfitting/leakage).
 - Findings docs no longer claim a blanket "thesis failed"; they state the lead-lag result.
 - `uv run poe build` green; if A6/C3 landed, the analysis runs under the gate.
 

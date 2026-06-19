@@ -42,6 +42,7 @@ geo-DS `pass` (spatial-method authority) + domain-expert `pass`. Cite methods (C
 
 ## Dependencies / relations
 Interacts with A1 (index definition) and #51 (tobler areal interpolation reusable for the LOR crosswalk).
+The spatial weights built here feed the spatial-econometric inference + diffusion model in **R-A9 (#79)**.
 Supersedes the deferred "Epic B3/C" distance-weighting comment.
 
 ## References
