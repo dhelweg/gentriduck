@@ -3,7 +3,8 @@
 -- compute the EWR composite socio-economic score.
 --
 -- Selects from int_berlin_ewr_plr2021 (long-format, 13 indicators, city_code='BER').
--- All rows carry area_vintage='lor_2021' (pre-2021 EWR data reapportioned via crosswalk,
+-- All rows carry area_vintage='lor_2021' (pre-2021 EWR data reapportioned via
+-- crosswalk,
 -- 2021+ data passed through). This matches the lor_2021 vintage used by
 -- int_poi_status_dynamism (updated in #63) so that int_gentrification_ts can join on
 -- (area_code, area_vintage) without vintage mismatch for 2015-2020 years.
@@ -36,7 +37,8 @@
 -- area_vintage join in int_gentrification_ts consistent, this model now reads from
 -- int_berlin_ewr_plr2021 (which also carries area_vintage='lor_2021' for all years)
 -- instead of int_ewr_series (which used vintage-split codes). The plr_id_2021 column
--- is aliased to area_code to match the downstream column name used throughout this model.
+-- is aliased to area_code to match the downstream column name used throughout this
+-- model.
 --
 -- Graceful degradation: returns zero rows when int_berlin_ewr_plr2021 has no rows.
 --
@@ -137,14 +139,16 @@ with
                 ),
                 0
             ) as z_migration_background_share,
-            -- Z-score: mean_age_years (negated: higher mean age -> lower
-            -- vulnerability, so high z = lower vulnerability -> subtract from
-            -- composite)
-            -1.0 * (
+            -- Z-score: mean_age_years (positive: older population = more
+            -- pre-gentrification/vulnerable → higher ewr_composite → lower
+            -- gentrification_score after the outer negation in int_gentrification_ts).
+            -- Thesis: no direct mean_age term; sign follows Döring-Ulbricht
+            -- vulnerability
+            -- polarity (all five composite inputs must be vulnerability-positive).
+            (
                 mean_age_years
                 - avg(mean_age_years) over (partition by city_code, reference_year)
-            )
-            / nullif(
+            ) / nullif(
                 stddev(mean_age_years) over (partition by city_code, reference_year), 0
             ) as z_mean_age_years,
             -- Z-score: residence_duration_5y_share
@@ -170,6 +174,9 @@ with
     -- Higher ewr_composite = more socio-economically vulnerable population.
     -- Sign convention: negated when entering gentrification_score in
     -- int_gentrification_ts.
+    -- All five z-score inputs are vulnerability-positive (high z = more
+    -- pre-gentrification/vulnerable): foreigners_share, age_under18_share,
+    -- migration_background_share, mean_age_years, residence_duration_5y_share.
     with_composite as (
         select
             *,
