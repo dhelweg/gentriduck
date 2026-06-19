@@ -50,9 +50,12 @@ commands work. All required permissions are pre-approved in `.claude/settings.lo
 
 **Start now and detach (one command):**
 ```bash
-tmux new-session -d -s overnight \
-  "cd ~/git_private/gentriduck && claude --print 'start the project manager and work on next best tasks' >> ~/.claude/gentriduck-overnight.log 2>&1"
+tmux new-session -d -s overnight "~/.claude/gentriduck-overnight.sh"
 ```
+The script (`~/.claude/gentriduck-overnight.sh`) runs up to 3 `claude --print` sessions
+sequentially. If a run hits the Claude session limit it parses the reset time from the
+output, sleeps until then (+10 min buffer), and retries automatically.
+
 Check progress tomorrow:
 ```bash
 tmux attach -t overnight                       # live session (if still running)
@@ -61,7 +64,7 @@ tail ~/.claude/gentriduck-overnight.log        # if session already ended
 
 **Recurring nightly cron (00:00 Berlin = 22:00 UTC):**
 ```bash
-(crontab -l 2>/dev/null; echo '0 22 * * * cd ~/git_private/gentriduck && claude --print "start the project manager and work on next best tasks" >> ~/.claude/gentriduck-overnight.log 2>&1') | crontab -
+(crontab -l 2>/dev/null; echo '0 22 * * * ~/.claude/gentriduck-overnight.sh') | crontab -
 ```
 Remove with: `crontab -e`
 
