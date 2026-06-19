@@ -390,6 +390,106 @@ models:
           'official_concordance', 'areal_pop_weighted', or 'identity' (from crosswalk).
           Not meaningful as an aggregate value.
 
+  - name: int_poi_status_dynamism
+    description: >
+      C4/C5 intermediate: per-PLR per-year POI status and dynamism scores.
+
+      status_score: z-score of total_poi_count relative to all PLRs for that year.
+      Captures how POI-rich an area is; mirrors the 2018 thesis status_index.
+
+      dynamism_score (C5 normalized, geo-DS approved 2026-06-19): z-score of
+      share_yoy_change, where share = plr_poi_count / berlin_total_poi_count per year.
+      This controls for OSM completeness-bias: a PLR that gains share disproportionately
+      is exhibiting real churn rather than reflecting mapper coverage growth.
+      Prior to C5, dynamism was a z-score of raw YoY count deltas (completeness-biased).
+      C5 geo-DS sign-off: docs/epic-c/C5-geo-signoff.md (verdict PASS).
+
+      Limitation (C5): the share approach assumes uniform OSM coverage growth across
+      PLRs. Non-uniform coverage (some PLRs mapped later than others) may create
+      spurious share dynamics. Option B (ohsome edit-density normalization) is available
+      for a future epic.
+
+      YoY deltas are computed within (area_code, area_vintage) to avoid cross-vintage
+      discontinuity at the 2021 LOR reform. The 2020->2021 NULL is intentional.
+
+      C5 anomaly checks (implemented as standalone test SQL files, not schema.yml tests,
+      because DuckDB does not allow window functions in WHERE clauses):
+        - tests/test_c5_poi_share_spike.sql: warn if any PLR share exceeds 2x 5yr avg.
+        - tests/test_c5_poi_count_drop.sql: warn if city-wide count drops >5% YoY.
+    meta:
+      dbt_meta_owner: data-engineer
+    tests:
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns:
+              - city_code
+              - snapshot_year
+              - area_code
+          config:
+            where: "area_code is not null"
+    columns:
+      - name: city_code
+        description: City identifier (ADR-0005). Always 'BER'.
+        tests:
+          - not_null:
+              config:
+                where: "area_code is not null"
+      - name: snapshot_year
+        description: Calendar year of the OSM snapshot (integer, 2008-2026).
+        tests:
+          - not_null:
+              config:
+                where: "area_code is not null"
+      - name: area_code
+        description: PLR area code (8-digit, zero-padded). Vintage-specific.
+        tests:
+          - not_null:
+              config:
+                where: "snapshot_year is not null"
+      - name: area_vintage
+        description: LOR scheme vintage ('lor_pre2021' or 'lor_2021').
+        tests:
+          - not_null:
+              config:
+                where: "area_code is not null"
+          - accepted_values:
+              arguments:
+                values: ["lor_pre2021", "lor_2021"]
+              config:
+                where: "area_code is not null"
+      - name: total_poi_count
+        description: Total POI count for this PLR in this year (from int_poi_features_pivot).
+      - name: berlin_total_poi_count
+        description: >
+          Sum of total_poi_count across all PLRs for this city and year.
+          Used as the denominator for plr_poi_share computation (C5 normalization).
+      - name: plr_poi_share
+        description: >
+          This PLR's fraction of total Berlin POIs for this year:
+          plr_poi_share = total_poi_count / berlin_total_poi_count.
+          Ranges from 0 to 1; city-wide sum per year = 1.0.
+      - name: plr_poi_share_prev_year
+        description: >
+          plr_poi_share for the prior year (LAG within area_code, area_vintage).
+          NULL for the first year of each PLR/vintage combination.
+      - name: share_yoy_change
+        description: >
+          Year-over-year change in plr_poi_share:
+          share_yoy_change = plr_poi_share - plr_poi_share_prev_year.
+          NULL for the first year per PLR/vintage (no LAG available).
+          Positive = PLR gained share relative to Berlin; negative = lost share.
+      - name: status_score
+        description: >
+          Z-score of total_poi_count relative to all PLRs for that year.
+          Captures how POI-rich this area is compared to the city-wide average.
+          NULL when total_poi_count is NULL or stddev is 0 (< 2 PLRs).
+      - name: dynamism_score
+        description: >
+          C5 normalized: z-score of share_yoy_change relative to all PLRs for
+          that year. Positive = this PLR's share grew more than the city average.
+          NULL for the first year per PLR/vintage or when stddev is 0.
+          Controls OSM completeness-bias vs pre-C5 raw-count-delta z-score.
+
   - name: int_osm_poi_harmonized
     description: >
       C2 POI taxonomy harmonization view.  Selects from stg_osm_poi and applies
@@ -474,7 +574,7 @@ models:
 
   - name: int_osm_poi_plr
     description: >
-      C3-join — Spatial join model that assigns each OSM POI to its PLR area_code
+      C3-join -- Spatial join model that assigns each OSM POI to its PLR area_code
       using the correct LOR vintage geometry (geo-DS approved methodology).
       Vintage assignment: snapshot_year <= 2020 uses pre-2021 PLR geometries
       (448 PLRs); snapshot_year >= 2021 uses LOR 2021 geometries (542 PLRs).

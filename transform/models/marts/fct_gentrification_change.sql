@@ -4,7 +4,7 @@
 -- - gentrification_score_prev: score from the previous year (LAG 1 year)
 -- - gentrification_delta: year-over-year change in gentrification_score
 -- - rank_current: rank of the PLR by gentrification_score within city x year
--- (RANK() — ties get the same rank; higher score -> lower rank number)
+-- (RANK() -- ties get the same rank; higher score -> lower rank number)
 -- - rank_prev: rank from the previous year (LAG on rank_current)
 -- - rank_change: rank_current - rank_prev (positive = moved up in ranking)
 --
@@ -12,9 +12,13 @@
 -- cross-vintage rank comparisons at the 2021 LOR reform boundary.
 -- This produces NULL for the first year of each vintage.
 --
+-- C5 note: yoy_change (raw count delta) is replaced by share_yoy_change (PLR POI
+-- share delta) from int_gentrification_ts/int_poi_status_dynamism. The raw column
+-- total_poi_count remains; share_yoy_change = plr_poi_share - plr_poi_share_prev.
+--
 -- Output grain: (city_code, area_code, area_vintage, snapshot_year).
 -- One row per PLR per year. Rows with NULL gentrification_score (sparse EWR or
--- suppressed cells) are included — rank and delta are NULL for those rows.
+-- suppressed cells) are included -- rank and delta are NULL for those rows.
 --
 -- Contract: see marts/schema.yml for the governed column spec.
 --
@@ -49,7 +53,7 @@ with
             area_code,
             area_vintage,
             total_poi_count,
-            yoy_change,
+            share_yoy_change,
             status_score,
             dynamism_score,
             ewr_composite,
@@ -76,7 +80,7 @@ select
     area_code,
     area_vintage,
     total_poi_count,
-    yoy_change,
+    share_yoy_change,
     status_score,
     dynamism_score,
     ewr_composite,

@@ -20,7 +20,12 @@
 -- correctly propagates NULLs rather than substituting 0.
 -- 5. EWR NULL from suppression: PLRs with suppressed cells in key indicators
 -- will have NULL ewr_composite. gentrification_score is NULL for those PLRs
--- in that year. This is intentional — do not impute.
+-- in that year. This is intentional -- do not impute.
+--
+-- C5 note: dynamism_score is now the z-score of share_yoy_change (PLR POI share
+-- delta), not raw count delta. poi.total_poi_count_prev_year and poi.yoy_change
+-- are replaced by poi.plr_poi_share_prev_year and poi.share_yoy_change.
+-- Geo-DS C5 sign-off: PASS (docs/epic-c/C5-geo-signoff.md, 2026-06-19).
 --
 -- Join strategy:
 -- POI data (int_poi_status_dynamism): city_code='berlin', snapshot_year, area_code
@@ -31,7 +36,7 @@
 -- Only areas that appear in both POI and EWR data produce a row; areas with
 -- POI data only still appear (LEFT JOIN from POI side) with NULL ewr scores.
 --
--- Output grain: (city_code, area_code, area_vintage, snapshot_year) — one row
+-- Output grain: (city_code, area_code, area_vintage, snapshot_year) -- one row
 -- per PLR per year. Years with no POI data are absent (POI is the left side).
 --
 -- Graceful degradation: returns zero rows when either upstream has no rows.
@@ -54,8 +59,9 @@ with
             poi.area_code,
             poi.area_vintage,
             poi.total_poi_count,
-            poi.total_poi_count_prev_year,
-            poi.yoy_change,
+            -- C5: use share-based columns instead of raw count columns.
+            poi.plr_poi_share_prev_year,
+            poi.share_yoy_change,
             poi.status_score,
             poi.dynamism_score,
             ewr.ewr_composite,
@@ -82,7 +88,7 @@ with
             and poi.snapshot_year = ewr.reference_year
             -- Note: area_vintage may differ between POI (snap_year <= 2020 ->
             -- lor_pre2021)
-            -- and EWR (reference_year <= 2020 -> lor_pre2021) — both should match
+            -- and EWR (reference_year <= 2020 -> lor_pre2021) -- both should match
             -- since vintage is assigned by year in both pipelines.
             and poi.area_vintage = ewr.area_vintage
     )

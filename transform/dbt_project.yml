@@ -35,6 +35,15 @@ seeds:
         # Weights are fractional floats; CSV may use scientific notation (e.g. 9.286e-05).
         weight: double
 
+# Test severity overrides for standalone SQL test files.
+# C5 anomaly tests use warn severity: data quality alerts, not hard blockers.
+tests:
+  gentriduck:
+    test_c5_poi_share_spike:
+      +severity: warn
+    test_c5_poi_count_drop:
+      +severity: warn
+
 # Project-level variables.
 # project_root resolves the absolute repo root at build time via PWD, so
 # staging models can call read_csv with an absolute path (cross-platform).
