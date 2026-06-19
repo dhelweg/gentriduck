@@ -1,30 +1,30 @@
 {
   "_schema": "gentriduck-handoff-v1",
-  "_description": "Machine-readable PM session state. Written at session close; read at session start. Fields are updated incrementally — only changed sections need updating.",
+  "_description": "Machine-readable PM session state. Written at session close; read at session start.",
   "session": "2026-06-19-overnight",
-  "updated_at": "2026-06-19T22:00:00Z",
+  "updated_at": "2026-06-19T23:30:00Z",
   "build_status": {
     "result": "PASS",
-    "pass": 264,
+    "pass": 277,
     "warn": 1,
     "error": 0,
     "warn_detail": "test_c5_poi_share_spike fires on 17 PLRs (by design, warn severity)",
-    "timestamp": "2026-06-19T20:00:00Z"
+    "timestamp": "2026-06-19T22:30:00Z"
   },
   "open_prs": [
     {
-      "pr": null,
+      "pr": 86,
       "branch": "feat/rc-process-hardening",
       "issues": [72, 73, 74, 75, 76, 84],
-      "status": "open",
-      "notes": "R-C process hardening: domain agent, methodology gate, grounding rule, analysis gate, handoff schema, Superpowers"
+      "status": "open_ready_to_merge",
+      "notes": "R-C process hardening + E1/E2 sign-off + C6 sign-off + R-A5 indicator audit"
     },
     {
       "pr": null,
       "branch": "feat/63-poi-plr2021-remap",
       "issues": [63],
-      "status": "in_progress_by_agent",
-      "notes": "DE implementing POI area_code crosswalk to 2021 PLR scheme"
+      "status": "reviewer_running",
+      "notes": "DE commit done (PASS=277); reviewer checking EWR join regression concern; push + PR when approved"
     }
   ],
   "in_progress": [
@@ -32,63 +32,90 @@
       "issue": 63,
       "title": "C3-crosswalk: remap POI area_codes to 2021 PLR scheme for cross-vintage delta",
       "branch": "feat/63-poi-plr2021-remap",
-      "assignee": "data-engineer",
-      "status": "de_implementing",
-      "notes": "Crosswalk seed exists. Need int_poi_share_base_2021 model + update int_poi_status_dynamism."
+      "assignee": "data-engineer-reviewer",
+      "status": "review_running",
+      "notes": "DE commit done. Reviewer checking if pre-2021 EWR join broken by POI remap (area_vintage mismatch). If APPROVE: push + PR. If CHANGES: fix int_ewr_socioeco to use int_berlin_ewr_plr2021."
     }
   ],
   "completed_this_session": [
     {
       "issue": 72,
-      "title": "R-C0: gentrification-domain-expert agent definition",
+      "title": "R-C0: gentrification-domain-expert agent",
       "closed_at": "2026-06-19",
-      "notes": "Agent file written at .claude/agents/gentrification-domain-expert.md; CLAUDE.md roster updated"
+      "pr": 86,
+      "notes": ".claude/agents/gentrification-domain-expert.md; CLAUDE.md updated"
     },
     {
       "issue": 73,
-      "title": "R-C1: methodology gate enforcement in CLAUDE.md",
+      "title": "R-C1: methodology gate enforcement",
       "closed_at": "2026-06-19",
-      "notes": "Methodology-bearing path globs defined; PM pre-merge check documented; dual gate (geo-DS + domain expert)"
+      "pr": 86,
+      "notes": "Dual gate (geo-DS + domain expert), path globs, PM pre-merge check in CLAUDE.md"
     },
     {
       "issue": 74,
-      "title": "R-C2: grounding rule in de-implement + de-review skills",
+      "title": "R-C2: grounding citation rule",
       "closed_at": "2026-06-19",
-      "notes": "Citation requirement added to both SKILL.md files"
+      "pr": 86,
+      "notes": "de-implement + de-review SKILL.md updated with citation requirement"
+    },
+    {
+      "issue": 75,
+      "title": "R-C3: analysis under the gate",
+      "closed_at": "2026-06-19",
+      "pr": 86,
+      "notes": "poe analysis task added to pyproject.toml"
     },
     {
       "issue": 76,
-      "title": "R-C4: structured machine-readable handoff + state.json schema",
+      "title": "R-C4: structured handoff state.json",
       "closed_at": "2026-06-19",
-      "notes": "This file is the schema implementation"
+      "pr": 86,
+      "notes": "This file implements the schema"
     },
     {
       "issue": 84,
-      "title": "R-C5: ADR-0009 Superpowers selective adoption",
+      "title": "R-C5: Superpowers ADR-0009 Accepted",
       "closed_at": "2026-06-19",
-      "notes": "ADR flipped to Accepted; CLAUDE.md Superpowers section added; install docs written"
-    }
-  ],
-  "geo_ds_pending": [
-    {
-      "issue": 26,
-      "title": "C6 temporal methodology validation",
-      "sign_off_doc": "docs/epic-c/C6-geo-signoff.md",
-      "status": "agent_running"
+      "pr": 86,
+      "notes": "ADR flipped to Accepted; CLAUDE.md Superpowers section added (v7 pinned)"
     },
     {
-      "issue": null,
-      "title": "E1/E2 findings sign-off",
-      "sign_off_doc": "docs/epic-e/E1-E2-geo-signoff.md",
-      "status": "agent_running"
+      "issue": 26,
+      "title": "C6: temporal methodology validation",
+      "closed_at": "2026-06-19",
+      "pr": 86,
+      "notes": "geo-DS PASS WITH CONDITIONS; docs/epic-c/C6-geo-signoff.md; Reuterkiez spot-check done"
+    },
+    {
+      "issue": 68,
+      "title": "R-A5: EWR indicator-semantics audit",
+      "closed_at": "2026-06-19",
+      "pr": 86,
+      "notes": "docs/methodology/indicator-semantics.md; mean_age_years sign defect found → #85"
+    }
+  ],
+  "new_issues_opened": [
+    {
+      "issue": 85,
+      "title": "R-A5-fix: Fix mean_age_years sign in int_ewr_socioeco",
+      "opened_at": "2026-06-19",
+      "priority": "high",
+      "notes": "Preferred fix: replace mean_age_years with age_65plus_share (positive). Blocking condition for R-A1 (#64)."
     }
   ],
   "blocked": [
     {
+      "issue": 85,
+      "title": "mean_age_years sign fix",
+      "blocked_by": [],
+      "reason": "Unstarted; no branch yet. Blocking R-A1 (#64)."
+    },
+    {
       "issue": 66,
       "title": "R-A3: Ingest Berlin MSS",
       "blocked_by": ["architect_ADR_needed"],
-      "reason": "Needs architect ADR for MSS data source before DE implements"
+      "reason": "Architect must write ADR for MSS data source before DE implements"
     },
     {
       "issue": 67,
@@ -100,13 +127,13 @@
       "issue": 77,
       "title": "R-A7: ADR-0008 multi-dimensional conceptual model",
       "blocked_by": [66, 67],
-      "reason": "Depends on MSS (#66) and SES indicators (#67)"
+      "reason": "Needs MSS and SES indicators"
     },
     {
       "issue": 64,
       "title": "R-A1: Re-ground gentrification index",
-      "blocked_by": [66, 67, 77],
-      "reason": "Keystone; needs MSS, SES, and conceptual model first"
+      "blocked_by": [85, 66, 67, 77],
+      "reason": "Keystone; needs #85 sign fix + MSS + SES + conceptual model"
     },
     {
       "issue": 65,
@@ -116,18 +143,28 @@
     }
   ],
   "next_recommended": {
-    "issue": 68,
-    "title": "R-A5: EWR indicator-semantics audit (geo-DS)",
-    "reason": "Quick geo-DS win; unblocked; produces indicator-semantics.md which informs R-A1"
+    "issue": "86_merge_then_63",
+    "title": "1. Merge PR #86. 2. Resolve #63 reviewer. 3. Implement #85 mean_age_years fix. 4. Architect ADR for #66 MSS.",
+    "reason": "R-C hardening done and signed; #85 is the new blocker for R-A1 which is the keystone"
   },
-  "dependency_order_remaining": [
-    "63 (DE in progress)",
-    "68 R-A5 (geo-DS, next)",
-    "66 R-A3 (architect ADR first)",
-    "67 R-A4 (after 66)",
-    "77 R-A7 (after 66, 67)",
-    "64 R-A1 (keystone, after 66/67/77)",
-    "65 R-A2 (after 64)",
-    "28 D2 / 53 D1b (secondary, when capacity)"
+  "methodology_sign_offs_this_session": [
+    {
+      "topic": "E1/E2 findings",
+      "doc": "docs/epic-e/E1-E2-geo-signoff.md",
+      "verdict": "PASS WITH CONDITIONS",
+      "key_condition": "Frame as hypothesis (lead-lag NOT yet confirmed); re-run under R-A2 after R-A1"
+    },
+    {
+      "topic": "C6 OSM temporal methodology",
+      "doc": "docs/epic-c/C6-geo-signoff.md",
+      "verdict": "PASS WITH CONDITIONS",
+      "key_condition": "No pre-2013 dynamism in analysis; winsorizing still open; #63 gap to land"
+    },
+    {
+      "topic": "R-A5 EWR indicator semantics",
+      "doc": "docs/methodology/indicator-semantics.md",
+      "verdict": "PASS WITH CONDITIONS",
+      "key_condition": "Fix mean_age_years sign (#85) before R-A1"
+    }
   ]
 }
