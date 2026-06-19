@@ -1,43 +1,35 @@
 {
   "_schema": "gentriduck-session-state/v1",
-  "session": "2026-06-19-overnight-session2",
-  "updated_at": "2026-06-19T19:20:00Z",
+  "session": "2026-06-19-overnight-session3",
+  "updated_at": "2026-06-19T22:00:00Z",
   "build_status": {
     "result": "PASS",
-    "pass": 309,
+    "pass": 311,
     "warn": 1,
     "error": 0,
     "warn_detail": "test_c5_poi_share_spike (expected by design)",
-    "branch": "feat/67-ses-indicators",
-    "note": "Main branch is at PASS=299 (after #66 merge). feat/67 adds 10 more."
+    "branch": "main",
+    "note": "All four overnight PRs merged to main."
   },
-  "open_prs": [
-    {
-      "number": 91,
-      "branch": "feat/67-ses-indicators",
-      "title": "feat(#67): ingest MSS indexind SES indicators + stg_berlin_mss_indicators (R-A4)",
-      "issues": [67],
-      "status": "review_in_progress",
-      "reviewers_in_flight": ["DE-reviewer", "geo-data-scientist", "gentrification-domain-expert"]
-    }
-  ],
-  "completed_this_session": [85, 66],
+  "open_prs": [],
+  "completed_this_session": [85, 66, 67, 77],
   "merged_prs_this_session": [
-    {"number": 89, "issues": [85], "title": "fix(#85): mean_age_years negation removed"},
-    {"number": 90, "issues": [66], "title": "feat(#66): MSS WFS ingestion + stg_berlin_mss"}
+    {"number": 89, "issues": [85], "title": "fix(#85): remove mean_age_years negation — vulnerability-positive sign"},
+    {"number": 90, "issues": [66], "title": "feat(#66): ingest MSS WFS + stg_berlin_mss (R-A3)"},
+    {"number": 91, "issues": [67], "title": "feat(#67): ingest MSS indexind SES indicators + stg_berlin_mss_indicators (R-A4)"},
+    {"number": 92, "issues": [77], "title": "docs(#77): ADR-0008 — multi-dimensional gentrification model [Accepted]"}
   ],
   "blocked": [
-    {"issue": 67, "status": "in_review", "pr": 91},
-    {"issue": 77, "blocked_by": [67]},
-    {"issue": 64, "blocked_by": [67, 77]},
+    {"issue": 64, "blocked_by": ["index-definition.md geo-DS+domain-expert sign-off"], "note": "ONLY remaining gate for R-A1"},
     {"issue": 65, "blocked_by": [64]},
     {"issue": 71, "blocked_by": [64]},
-    {"issue": 69, "blocked_by": ["ADR-gated, architect needed"]}
+    {"issue": 78, "blocked_by": [64]},
+    {"issue": 69, "blocked_by": ["ADR-gated (PySAL/H3); architect needed"]},
+    {"issue": 70, "blocked_by": ["Epic D start"]}
   ],
   "next_recommended": [
-    "Complete #67 review: DE-reviewer + geo-DS + domain-expert sign-offs → merge PR #91",
-    "Start #77 R-A7 (ADR-0008 multi-dimensional model): architect + geo-DS + domain-expert draft",
-    "Start #64 R-A1 (keystone): geo-DS + domain-expert write index-definition.md; DE pair implements",
+    "Spawn geo-data-scientist + gentrification-domain-expert in parallel to co-author docs/methodology/index-definition.md",
+    "Both agents sign off the document (Verdict: PASS) — then DE pair can implement R-A1 (#64)",
     "Secondary: #28 D2 price/rent completeness check, #53 D1b Kauffälle WFS discovery"
   ],
   "methodology_sign_offs_this_session": [
@@ -45,15 +37,21 @@
     {"scope": "R-A5 post-fix re-signoff", "agent": "gentrification-domain-expert", "verdict": "PASS", "file": "docs/methodology/R-A5-domain-signoff.md"},
     {"scope": "R-A3 MSS ingestion", "agent": "geo-data-scientist", "verdict": "PASS_WITH_CONDITIONS", "file": "docs/methodology/R-A3-geo-signoff.md"},
     {"scope": "R-A3 MSS ingestion", "agent": "gentrification-domain-expert", "verdict": "PASS_WITH_CONDITIONS", "file": "docs/methodology/R-A3-domain-signoff.md"},
-    {"scope": "R-A4 SES indicators", "agent": "geo-data-scientist", "verdict": "PENDING", "file": "docs/methodology/R-A4-geo-signoff.md"},
-    {"scope": "R-A4 SES indicators", "agent": "gentrification-domain-expert", "verdict": "PENDING", "file": "docs/methodology/R-A4-domain-signoff.md"}
+    {"scope": "R-A4 SES indicators", "agent": "geo-data-scientist", "verdict": "PASS_WITH_CONDITIONS", "file": "docs/methodology/R-A4-geo-signoff.md"},
+    {"scope": "R-A4 SES indicators", "agent": "gentrification-domain-expert", "verdict": "PASS_WITH_CONDITIONS", "file": "docs/methodology/R-A4-domain-signoff.md"},
+    {"scope": "R-A7 multi-dim model ADR-0008", "agent": "geo-data-scientist", "verdict": "PASS_WITH_CONDITIONS", "file": "docs/methodology/R-A7-geo-signoff.md"},
+    {"scope": "R-A7 multi-dim model ADR-0008", "agent": "gentrification-domain-expert", "verdict": "PASS_WITH_CONDITIONS", "file": "docs/methodology/R-A7-domain-signoff.md"}
   ],
   "key_r_a1_notes": [
-    "stg_berlin_mss polarity: 1=hoch (high status), 4=sehr_niedrig (lowest status) — lower code = higher status (INVERSE of 2018 thesis status_summe convention)",
-    "dynamik_index: 1=positiv, 2=stabil, 3=negativ (mapped from WFS codes 1/3/5)",
-    "gesamtindex: 2-digit codes 11,13,...,45 (tens=status, units=WFS dynamik code)",
-    "Exclude uninhabited PLRs (gesamtindex is not null) from R-A1 regression",
-    "Cross-boundary MSS comparison (2019→2021) requires LOR crosswalk",
-    "Indicator set: 3 indicators through 2021, 4 from 2023 (alleinerziehende added earlier than ADR anticipated)"
+    "D1 (MSS Status): 1=hoch (high status), 4=sehr_niedrig (lowest) — INVERSE numeric direction from 2018 thesis status_summe",
+    "D2 (MSS Dynamik): 1=positiv, 2=stabil, 3=negativ (mapped from WFS {1,3,5}; 1=positiv = improving = less at-risk)",
+    "indexind *_dynamik indicators: positive value = worsening — INVERSE polarity to MSS Dynamik class",
+    "transferbezug null in 2019/2021 specifically (suspended); non-null in 2015/2017 and 2023+",
+    "alleinerziehende present all editions 2015+ (not 2023+ only as ADR-0006 assumed)",
+    "C5 OSM completeness correction MUST be applied to D3 before the lead-lag test (geo-DS condition)",
+    "D4 must enter as cross-sectional baseline covariate not contemporaneous predictor (endogeneity risk)",
+    "Ordinal-appropriate methods for D1 MSS Status-Index (never metric-average class codes)",
+    "LOR vintage break: restrict lead-lag within-vintage or use seed_lor_crosswalk_2006_to_2021.csv",
+    "Uninhabited PLRs (gesamtindex IS NULL) excluded from all regression/calibration"
   ]
 }
