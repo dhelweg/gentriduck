@@ -632,7 +632,7 @@ models:
       Staging view over MSS (Monitoring Soziale Stadtentwicklung) Parquet files produced
       by ingestion/berlin/mss/ingest_mss.py (ADR-0006, GDI Berlin WFS, dl-de-zero-2.0).
       One row per (edition, PLR). Editions: 2013, 2015, 2017, 2019, 2021, 2023, 2025
-      (2013 has no WFS service; 2015/2017 are best-effort). Firm editions: 2019–2025.
+      (2013/2015/2017 are best-effort — WFS may not exist for older editions). Firm editions: 2019–2025.
       Boundary-vintage break: editions <=2019 use lor_pre2021 (447 PLR);
       editions >=2021 use lor_2021 (542 PLR). Uninhabited PLR rows have null index
       values. Returns zero rows (typed stub) until parquets are ingested.
@@ -720,6 +720,11 @@ models:
           Valid codes: 11, 13, 15, 21, 23, 25, 31, 33, 35, 41, 43, 45 (12 groups).
           Null for uninhabited PLR rows. Corresponds to the Status-Dynamik-Index
           published in MSS reports.
+        tests:
+          - accepted_values:
+              values: [11, 13, 15, 21, 23, 25, 31, 33, 35, 41, 43, 45]
+              config:
+                where: "gesamtindex is not null"
       - name: source_attribution
         description: >
           dl-de-zero-2.0 attribution string. Value:
