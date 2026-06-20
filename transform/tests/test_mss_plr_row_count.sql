@@ -29,9 +29,7 @@ with
             e.expected_plr_count,
             abs(a.actual_plr_count - e.expected_plr_count) as deviation
         from actual_counts as a
-        inner join
-            expected as e
-            on a.edition = e.edition
+        inner join expected as e on a.edition = e.edition
     )
 
 select edition, actual_plr_count, expected_plr_count, deviation

@@ -76,13 +76,24 @@ models:
         description: Area population (Einwohner) at the reporting period.
         data_type: double
       - name: status_index
-        description: Status sub-index (z-score of POI-based status features).
+        description: >
+          R-A1 update (#64): for live_data variant, now carries D1 MSS Social Status ordinal
+          (cast to DOUBLE: 1.0=hoch/best … 4.0=sehr_niedrig/worst; NULL=uninhabited PLR).
+          For thesis variants (standard/distance_weighted): z-score of POI-based status features
+          (original 2018 definition unchanged).
+          POLARITY of live_data values: INVERSE numeric vs 2018 thesis status_summe; same
+          deprivation gradient. Cross-variant comparison requires explicit D1 flip (index §5).
         data_type: double
       - name: status_class
         description: >
-          Projected status class (three values).
-          Polarity note: 'low' = low social deprivation / high POI status score (wealthier area).
-          'high' = high deprivation / low POI status score.
+          R-A1 update (#64): for live_data variant, now carries the typology stage name from
+          the D1×D2 MSS Status × Dynamik matrix (ADR-0008; index-definition.md §1.5).
+          Values: 'stable-established', 'pre-gentrification', 'pioneer-signal',
+          'active-gentrification', 'consolidation-pressure', 'improving-vulnerable'.
+          NULL for uninhabited PLRs (is_uninhabited=true).
+          For thesis variants: original projected status class (three values; unchanged).
+          PLR-level aggregate; not an individual/building-level statement (G-2 guardrail;
+          ecological-inference disclaimer: index-definition.md §1.2).
         data_type: varchar
       - name: status_class_bi
         description: Binary projected status class (high/medium/low English labels).
@@ -95,7 +106,11 @@ models:
               config:
                 where: "status_class_bi is not null"
       - name: dynamism_index
-        description: Dynamism sub-index (z-score of POI-based dynamism features).
+        description: >
+          R-A1 update (#64): for live_data variant, now carries D2 MSS Dynamik ordinal
+          (cast to DOUBLE: 1.0=positiv/improving … 3.0=negativ/worsening; NULL=uninhabited PLR).
+          For thesis variants (standard/distance_weighted): z-score of POI-based dynamism features.
+          D2 is already vulnerability-positive in numeric order (3=worsening=most vulnerable).
         data_type: double
       - name: dynamism_class
         description: >
@@ -133,18 +148,21 @@ models:
 
   - name: fct_gentrification_change
     description: >
-      C4 mart: per-PLR per-year gentrification change metrics. From int_gentrification_ts,
-      adds previous-year score, year-over-year delta, and rank movement metrics.
+      C4 mart: per-PLR per-year gentrification change metrics.
+      R-A1 update (#64): adds D1/D2 MSS outcome columns (status_index, dynamik_index,
+      typology_stage) and ordinal status transition (status_index_prev, status_transition).
+
       Output grain: (city_code, area_code, area_vintage, snapshot_year).
       LAG computations are within (city_code, area_code, area_vintage) to avoid
-      cross-vintage rank comparisons at the 2021 LOR boundary change.
-      Rows with NULL gentrification_score (sparse EWR or suppressed cells) are
-      included but have NULL delta/rank columns.
-      Geo-data-scientist sign-off: PENDING (issue #24).
+      cross-vintage comparisons at the 2021 LOR boundary.
+      Uninhabited PLRs (is_uninhabited=true) are retained; status/transition columns NULL.
 
-      C5 update (2026-06-19): yoy_change (raw POI count delta) replaced by
-      share_yoy_change (PLR POI share delta) per C5 normalization. Dynamism score
-      is now OSM completeness-bias controlled. See docs/epic-c/C5-geo-signoff.md.
+      gentrification_score (legacy): the pre-R-A1 formula kept for 2018 baseline comparison.
+      = (status_score + dynamism_score - ewr_composite) / 3.0. NOT for new analysis.
+      Use status_index / dynamik_index / typology_stage for outcome analysis (R-A1; ADR-0008).
+
+      C5 update (2026-06-19): dynamism_score is z-score of share_yoy_change (PLR POI share
+      delta; C5 OSM completeness-bias correction). See docs/epic-c/C5-geo-signoff.md.
     meta:
       dbt_meta_owner: data-engineer
     tests:
@@ -161,7 +179,8 @@ models:
         tests:
           - not_null
       - name: snapshot_year
-        description: Calendar year of the OSM snapshot.
+        description: >
+          MSS edition year (biennial: 2013, 2015, 2017, 2019, 2021, 2023, 2025).
         tests:
           - not_null
       - name: area_code
@@ -172,34 +191,85 @@ models:
         description: LOR vintage ('lor_pre2021' or 'lor_2021').
         tests:
           - not_null
+      - name: mss_edition
+        description: MSS publication year (same as snapshot_year; retained for explicit tracking).
       - name: total_poi_count
-        description: Total POI count for this PLR in this year.
+        description: Total POI count for this PLR in this year (D3 density predictor).
       - name: share_yoy_change
         description: >
-          C5 normalized: year-over-year change in PLR POI share
-          (share = plr_poi_count / berlin_total_poi_count). Replaces raw yoy_change
-          (count delta) to control for OSM completeness-bias. NULL for first year
-          of each vintage. Positive = PLR gained share relative to Berlin.
+          C5 normalized: year-over-year change in PLR POI share (D3 dynamism face).
+          NULL for first year of each vintage. Positive = PLR gained share relative to Berlin.
       - name: status_score
-        description: Z-score of total_poi_count across all PLRs for this year.
+        description: >
+          D3 predictor: z-score of total_poi_count (POI density face). NOT a social outcome.
       - name: dynamism_score
         description: >
-          C5 normalized: z-score of share_yoy_change across all PLRs for this year.
-          Controls OSM completeness-bias vs pre-C5 raw count delta z-score.
+          D3 predictor: C5-corrected z-score of share_yoy_change. Commercial succession signal.
+          NOT a social outcome. C5 geo-DS sign-off: PASS (docs/epic-c/C5-geo-signoff.md).
       - name: ewr_composite
-        description: Sum of EWR indicator z-scores (5 key indicators). NULL when EWR data absent.
+        description: D4 baseline covariate (mean of 5 EWR z-scores; higher = more vulnerable).
+      - name: foreigners_share
+        description: D4 component (foreigners share; vulnerability-positive baseline level).
+      - name: migration_background_share
+        description: D4 component (migration background share; vulnerability-positive; ≥2017 only).
+      - name: mean_age_years
+        description: D4 component (mean age; vulnerability-positive; negation removed PR #89).
+      - name: residence_duration_5y_share
+        description: D4 component (≤5yr tenure share; vulnerability-positive; Döring-Ulbricht 2016).
+      - name: residents_total
+        description: Total residents for population weighting (from EWR).
+      - name: status_index
+        description: >
+          D1 outcome: MSS social status ordinal (1=hoch/best … 4=sehr_niedrig/worst).
+          NULL = uninhabited PLR. INVERSE numeric vs 2018 thesis; same deprivation gradient.
+          Treat as ORDINAL; never metric-average (R-A3 C2; index-definition.md §3).
+      - name: dynamik_index
+        description: >
+          D2 outcome: MSS Dynamik (1=positiv/improving, 2=stabil, 3=negativ/worsening).
+          NULL = uninhabited PLR. Already vulnerability-positive in numeric order.
+      - name: typology_stage
+        description: >
+          Typology stage from D1×D2 matrix (ADR-0008; index-definition.md §1.5).
+          NULL = uninhabited PLR. One of: 'stable-established', 'pre-gentrification',
+          'pioneer-signal', 'active-gentrification', 'consolidation-pressure', 'improving-vulnerable'.
+          PLR-level aggregate; not an individual/building-level statement (G-2 guardrail).
+      - name: is_uninhabited
+        description: True if PLR is uninhabited (gesamtindex IS NULL in MSS; §7.1).
+      - name: gesamtindex
+        description: MSS 12-group composite code. NULL = uninhabited PLR.
+      - name: status_index_prev
+        description: >
+          D1 status_index at the prior MSS edition (LAG within area + vintage).
+          NULL for the first edition in each vintage or uninhabited PLR.
+          Used to compute status_transition.
+      - name: status_transition
+        description: >
+          Ordinal status transition: 'improved' (status_index fell = less deprived),
+          'stable' (unchanged), 'worsened' (status_index rose = more deprived).
+          NULL for first edition in vintage or when either status_index is NULL.
+          D1 POLARITY: lower numeric = higher status. 'improved' = status numerically decreased.
+          Use ordered logit for regression (R-A3 C2; §3.2); never treat delta as metric.
+        tests:
+          - accepted_values:
+              arguments:
+                values: ["improved", "stable", "worsened"]
+              config:
+                where: "status_transition is not null"
       - name: gentrification_score
-        description: Equal-weight mean of status_score, dynamism_score, ewr_composite. NULL when any component NULL.
+        description: >
+          LEGACY formula alias (pre-R-A1): = (status_score + dynamism_score - ewr_composite) / 3.0.
+          Kept for 2018 baseline comparison ONLY. NOT for new analysis.
+          Use status_index / dynamik_index / typology_stage for outcome analysis (R-A1; ADR-0008).
       - name: gentrification_score_prev
-        description: gentrification_score from the previous year. NULL for first year of each vintage.
+        description: gentrification_score (legacy) from the prior edition. NULL for first edition.
       - name: gentrification_delta
-        description: gentrification_score minus gentrification_score_prev. NULL when either is NULL.
+        description: gentrification_score minus gentrification_score_prev (legacy; for 2018 comparison).
       - name: rank_current
-        description: Rank of this PLR by gentrification_score within city x year (1=highest score).
+        description: Rank of this PLR by legacy gentrification_score within city x year (1=highest).
       - name: rank_prev
-        description: Rank from the previous year. NULL for first year of each vintage.
+        description: Legacy rank from the prior edition. NULL for first edition.
       - name: rank_change
-        description: rank_prev minus rank_current (positive means improved rank). NULL when either rank NULL.
+        description: rank_prev minus rank_current (positive means improved rank; legacy metric).
 
   - name: fct_poi_development
     description: >
