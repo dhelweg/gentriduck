@@ -124,6 +124,11 @@ distribution channel to standardise on.
 
 ### P-D — Verkaufte Grundstücke (Gutachterausschuss / Senate WFS)
 
+> **Superseded by Amendment P-D (2026-06-20, #53).** This entry was written against a *guessed*
+> `verkaufte_grundstuecke<YEAR>` endpoint before discovery. The actual confirmed open source is the
+> **AKS Kauffälle** at `gdi.berlin.de/services/wfs/kauffaelle_<YEAR>`; see **Amendment P-D** at the
+> end of this ADR for the authoritative facts, status, and conditions.
+
 - **What:** Annual dataset of actual registered property transactions in Berlin, from the
   *Kaufpreissammlung* (purchase price collection) maintained by the *Gutachterausschuss für
   Grundstückswerte*. Covers residential transactions by market segment.
@@ -192,6 +197,8 @@ distribution channel to standardise on.
 10. **Verkaufte Grundstücke:** annual actual transaction prices from the Kaufpreissammlung.
     Staging table **`stg_berlin_verkaufte_grundstuecke`** — `(year, geometry, price_eur,
     segment, …)`. Licence: **dl-de-zero-2.0**.
+    *(See Amendment P-D: the concrete source is the AKS Kauffälle WFS; the endpoint and staging
+    name above are superseded by the amendment.)*
 11. **Mietspiegel:** primary for Epic D, with two ingestion paths because the publication is
     split:
     - **Wohnlagen WFS** → **`stg_berlin_wohnlage`** (`(vintage, address_or_block, wohnlage)`).
@@ -278,7 +285,8 @@ These are deferred to the maintainer's ratification of this ADR and/or to Epic D
    from 2002, but Epic B only needs the 2018 vintage and the current vintage for the
    directional check. Epic D's full back-series scope is a separate decision.
 6. **Verkaufte Grundstücke temporal coverage.** Available at least from 2024; backfill depth
-   for earlier years needs confirming before Epic D begins.
+   for earlier years needs confirming before Epic D begins. *(Now tracked under Amendment P-D
+   as AKS Kauffälle; 2024 and 2025 confirmed live.)*
 
 ## References
 
@@ -328,3 +336,84 @@ system architect under the project's "free, open, cross-platform" rule.
 `certifi>=2024.0` is approved as the CA bundle for macOS Python `urllib` calls in
 all ingestion scripts (workaround for macOS Python not shipping CA certificates).
 See `ingestion/berlin/ewr/ingest_ewr.py` for the precedent pattern.
+
+---
+
+## Amendment P-D — AKS Kauffälle (property transactions) (2026-06-20, #53)
+
+- **Status:** **Adopted (conditional)** — open WFS confirmed live; ingestion is **blocked** on the
+  two conditions in *Open conditions* below until they are cleared.
+
+This amendment **supersedes and concretises** the abstract "P-D — Verkaufte Grundstücke" entry in
+*Options considered (price/rent)* (and the corresponding line 10 of the *Price/rent* decision).
+That entry was written against a *guessed* `verkaufte_grundstuecke<YEAR>` endpoint before
+discovery; the D1b discovery note (#53, `docs/data/kaufFaelle-discovery.md`) located the **actual**
+open source the Senate publishes for registered property transactions: the **AKS Kauffälle**. Where
+the placeholder and this amendment differ, **this amendment is authoritative**.
+
+### What
+
+The **AKS Kauffälle** (*Automatisierte Kaufpreissammlung* — registered, completed property
+transactions) published by the *Gutachterausschuss für Grundstückswerte in Berlin* as annual open
+WFS layers on `gdi.berlin.de`. Three submarkets (*Teilmärkte*) per layer:
+
+- **unbebaute Grundstücke** (undeveloped plots),
+- **bebaute Grundstücke** (developed plots),
+- **Wohnungs- und Teileigentum** (condominiums) — the **most gentrification-relevant** segment, as
+  it tracks the dwelling-ownership market where conversion-driven displacement occurs.
+
+### Source & endpoint
+
+- **WFS service pattern (one service per year):** `gdi.berlin.de/services/wfs/kauffaelle_<YEAR>`.
+- **Confirmed live:** **2024** and **2025**. Earlier years are likely available; the ingestion
+  adapter must **enumerate years** (each completed year is a separate service) rather than assume a
+  single endpoint.
+- Discovered via `daten.berlin.de` per-year dataset pages (tag *Immobilienpreise*); see References.
+- **Login:** None — anonymous HTTPS WFS, consistent with the other `gdi.berlin.de` sources.
+
+### Licence
+
+- **Datenlizenz Deutschland – Zero – 2.0 (dl-de-zero-2.0)** — public-domain-equivalent, free reuse,
+  no attribution legally required. Consistent with the other Senate price layers in this ADR. For
+  G3 trust we still credit *"Senatsverwaltung für Stadtentwicklung, Bauen und Wohnen Berlin /
+  Gutachterausschuss für Grundstückswerte in Berlin"*.
+
+### Geographic grain
+
+- Transactions are anonymised to the **block (Block / Blocknummer)** the property sits in — **not**
+  raw addresses and **not** PLR. The portal's "Geographische Granularität: Berlin" field is the
+  coverage extent, not the feature geometry.
+- Consequently, use in the city-agnostic index requires **areal interpolation from block to PLR**
+  (`subarea_l3` / `dim_area`) before it can join the rest of the warehouse.
+
+### Theory role (D1b)
+
+- Kauffälle is a **predictor / dynamism lead indicator** in the index — rent-gap realisation
+  (Smith) and ownership turnover preceding social succession (Dangschat). It complements
+  Bodenrichtwerte (P-A; structural, slow land value) with **market churn**.
+- It is explicitly **NOT a displacement outcome.** A transaction is not a displacement; ownership
+  change ≠ tenant turnover. This framing must be preserved at the methodology gate so the index
+  does not read transaction volume as realised displacement.
+
+### Open conditions (block ingestion)
+
+Both must be cleared before the ingestion adapter / dbt models for this source are built:
+
+1. **Price-attribute verification.** Confirm whether the **public** WFS carries per-block features
+   with usable €-**price** attributes, or only symbolised / count features without €-values (the
+   detailed fee-based *Kaufpreissammlung* sits behind the Gutachterausschuss). This determines
+   whether D1b yields a **price** signal or only a **transaction-count / dynamism** signal. If only
+   counts are available, fall back to the already-accepted **Bodenrichtwerte (P-A)** as the
+   structural price proxy and use Kauffälle purely as a transaction-count dynamism layer.
+2. **Geo-DS sign-off on block→PLR interpolation.** The block-level → PLR areal-interpolation method
+   is methodology-bearing and requires `geo-data-scientist` sign-off (and, as a methodology-bearing
+   index input, the dual gate per `CLAUDE.md` §Methodology gate) before adoption.
+
+### References (P-D amendment)
+
+- D1b discovery note: `docs/data/kaufFaelle-discovery.md`
+- Portal listing (tag *Immobilienpreise*): <https://daten.berlin.de/datensaetze?tags=Immobilienpreise>
+- Kauffälle 2024 WFS dataset page: <https://daten.berlin.de/datensaetze/kauffalle-2024-bebaute-unbebaute-grundstucke-wohnungs-und-teileigentum-wfs-901314d5>
+- Kauffälle 2025 WFS dataset page: <https://daten.berlin.de/datensaetze/kauffalle-2025-bebaute-unbebaute-grundstucke-wohnungs-und-teileigentum-wfs-55c18c0e>
+- Kauffälle 2024 WFS GetCapabilities: <https://gdi.berlin.de/services/wfs/kauffaelle_2024?request=GetCapabilities&service=WFS>
+- AKS-online (Blockkarte context): <https://www.berlin.de/gutachterausschuss/marktinformationen/aks-online/>
