@@ -14,18 +14,19 @@
 -- Crosswalk strategy:
 -- 1. Rows with area_vintage='lor_2021': passed through as-is (weight=1.0).
 -- 2. Rows with area_vintage='lor_pre2021': joined to seed_lor_crosswalk_2006_to_2021.
---    total_poi_count is an extensive/count indicator: count_2021_plr = SUM(count * weight).
---    When multiple pre-2021 PLRs map to the same 2021 PLR, counts are summed.
+-- total_poi_count is an extensive/count indicator: count_2021_plr = SUM(count *
+-- weight).
+-- When multiple pre-2021 PLRs map to the same 2021 PLR, counts are summed.
 --
 -- Derived columns:
 -- - berlin_total_poi_count: city-wide total POI count per year; does not change when
---   we remap PLRs (same city, same year, same POIs), so we recompute via SUM() window.
+-- we remap PLRs (same city, same year, same POIs), so we recompute via SUM() window.
 -- - plr_poi_share: recomputed from aggregated total_poi_count / berlin_total_poi_count
---   rather than weighted from the pre-aggregation share (ratio recomputation is exact).
+-- rather than weighted from the pre-aggregation share (ratio recomputation is exact).
 --
 -- Output columns match int_poi_share_base:
---   city_code, area_code (always plr_id_2021), area_vintage (always 'lor_2021'),
---   snapshot_year, total_poi_count, berlin_total_poi_count, plr_poi_share
+-- city_code, area_code (always plr_id_2021), area_vintage (always 'lor_2021'),
+-- snapshot_year, total_poi_count, berlin_total_poi_count, plr_poi_share
 --
 -- This model is consumed exclusively by int_poi_status_dynamism.
 -- Do not use directly for analysis; use int_poi_status_dynamism instead.
@@ -46,11 +47,7 @@ with
 
     -- lor_2021 rows pass through directly.
     lor2021_passthrough as (
-        select
-            city_code,
-            area_code as plr_id_2021,
-            snapshot_year,
-            total_poi_count
+        select city_code, area_code as plr_id_2021, snapshot_year, total_poi_count
         from base
         where area_vintage = 'lor_2021'
     ),
@@ -64,7 +61,8 @@ with
             cw.plr_id_2021,
             base.snapshot_year,
             case
-                when base.total_poi_count is null then null
+                when base.total_poi_count is null
+                then null
                 else base.total_poi_count * cw.weight
             end as total_poi_count
         from base
@@ -81,7 +79,8 @@ with
     ),
 
     -- Aggregate to output grain: (city_code, snapshot_year, plr_id_2021).
-    -- For lor_2021 passthrough rows: one row per group (weight=1.0, no aggregation effect).
+    -- For lor_2021 passthrough rows: one row per group (weight=1.0, no aggregation
+    -- effect).
     -- For lor_pre2021 mapped rows: SUM accumulates contributions from all pre-2021 PLRs
     -- that map to this 2021 PLR.
     aggregated as (

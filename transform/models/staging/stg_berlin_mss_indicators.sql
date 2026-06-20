@@ -7,7 +7,8 @@
 -- ingestion/berlin/mss/ingest_mss_indicators.py. Each parquet file holds one
 -- biennial MSS edition in long format: one row per (edition, PLR, indicator).
 --
--- Storage path: data/raw/berlin/mss/mss_<YEAR>_indicators.parquet (gitignored, ADR-0001/A8)
+-- Storage path: data/raw/berlin/mss/mss_<YEAR>_indicators.parquet (gitignored,
+-- ADR-0001/A8)
 -- Licence: dl-de-zero-2.0 (https://www.govdata.de/dl-de/zero-2-0)
 --
 -- Graceful-degradation: returns zero rows with the target schema when no parquet
@@ -20,11 +21,11 @@
 -- area_name      -- Human-readable Planungsraum name (German proper noun from WFS)
 -- area_vintage   -- LOR boundary vintage: 'lor_pre2021' (<=2019) or 'lor_2021' (>=2021)
 -- indicator      -- Canonical snake_case indicator name (e.g. arbeitslose_anteil)
---                   Status indicators: arbeitslose_anteil, transferbezug_anteil,
---                                      kinderarmut_anteil, alleinerziehende_anteil
---                   Dynamik indicators: arbeitslose_dynamik, transferbezug_dynamik,
---                                       kinderarmut_dynamik, alleinerziehende_dynamik
---                   transferbezug_* has null values in editions <=2021 (WFS column s2_x)
+-- Status indicators: arbeitslose_anteil, transferbezug_anteil,
+-- kinderarmut_anteil, alleinerziehende_anteil
+-- Dynamik indicators: arbeitslose_dynamik, transferbezug_dynamik,
+-- kinderarmut_dynamik, alleinerziehende_dynamik
+-- transferbezug_* has null values in editions <=2021 (WFS column s2_x)
 -- value          -- Float indicator value (null for uninhabited PLRs or suspended cols)
 -- source_attribution -- dl-de-zero-2.0 attribution string
 -- raw_attr is intentionally excluded from this view; it is written to the raw
@@ -64,7 +65,8 @@
 {% else %}
 
     -- Zero-row typed stub: no MSS indicators parquet files found.
-    -- Run ingestion/berlin/mss/ingest_mss_indicators.py to populate data/raw/berlin/mss/
+    -- Run ingestion/berlin/mss/ingest_mss_indicators.py to populate
+    -- data/raw/berlin/mss/
     select
         cast(null as varchar) as city_code,
         cast(null as integer) as edition,

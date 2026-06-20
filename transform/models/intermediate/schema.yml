@@ -822,3 +822,333 @@ models:
           This 2021 PLR's fraction of total Berlin POIs for this year:
           total_poi_count / berlin_total_poi_count. Recomputed after aggregation.
           Ranges 0-1; city-wide sum per year = 1.0.
+
+  - name: int_gentrification_ts
+    description: >
+      R-A1 re-grounded time-series panel (#64): combines D3 predictors (POI), D1/D2 MSS
+      social outcomes, and D4 EWR baseline covariate. One row per PLR per MSS edition year
+      where POI data also exists (same-year join: snapshot_year = MSS edition year).
+
+      ADR-0008 architectural fix: the pre-R-A1 model averaged predictors and outcomes into
+      a single gentrification_score (no theoretical grounding). R-A1 separates the dimensions:
+        D1 = status_index (1=hoch … 4=sehr_niedrig) — social STATUS outcome
+        D2 = dynamik_index (1=positiv, 2=stabil, 3=negativ) — social DIRECTION outcome
+        D3 = status_score / dynamism_score (C5-corrected POI z-scores) — commercial PREDICTOR
+        D4 = ewr_composite (5-indicator z-score mean) — demographic BASELINE COVARIATE
+
+      D1 POLARITY: 1=hoch (low deprivation) … 4=sehr_niedrig (most deprived). INVERSE numeric
+      vs 2018 thesis status_summe but SAME deprivation gradient. See SQL model for full note.
+
+      D4 BASELINE DISCIPLINE: D4 enters ONLY as a cross-sectional LEVEL. D4 changes are
+      near-tautological outcome proxies (Döring & Ulbricht 2016) and are EXCLUDED.
+
+      Uninhabited PLRs (gesamtindex IS NULL): retained with is_uninhabited=true but MUST be
+      excluded from all regression, lead-lag, and metric computation (§7.1; R-A3 C3).
+
+      legacy_gentrification_score: the pre-R-A1 formula kept for 2018 baseline comparison only.
+      NOT for new analysis.
+
+      Grain: (city_code, area_code, area_vintage, snapshot_year) per MSS edition.
+    meta:
+      dbt_meta_owner: data-engineer
+    tests:
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns:
+              - city_code
+              - area_code
+              - area_vintage
+              - snapshot_year
+          config:
+            where: "area_code is not null"
+    columns:
+      - name: city_code
+        description: City identifier (ADR-0005). Always 'BER'.
+        tests:
+          - not_null:
+              config:
+                where: "area_code is not null"
+      - name: snapshot_year
+        description: >
+          MSS edition year (biennial: 2013, 2015, 2017, 2019, 2021, 2023, 2025).
+        tests:
+          - not_null:
+              config:
+                where: "area_code is not null"
+      - name: area_code
+        description: PLR area code (8-digit, zero-padded).
+        tests:
+          - not_null:
+              config:
+                where: "snapshot_year is not null"
+      - name: area_vintage
+        description: >
+          LOR boundary vintage from stg_berlin_mss: 'lor_pre2021' (edition ≤2019)
+          or 'lor_2021' (edition ≥2021). Follows the native MSS vintage.
+        tests:
+          - not_null:
+              config:
+                where: "area_code is not null"
+          - accepted_values:
+              arguments:
+                values: ["lor_pre2021", "lor_2021"]
+              config:
+                where: "area_code is not null"
+      - name: total_poi_count
+        description: Total POI count for this PLR in this year (D3 density; C5 source).
+      - name: share_yoy_change
+        description: >
+          C5 normalized: year-over-year change in PLR POI share (D3 dynamism face; §2.4).
+          NULL for the first year per PLR/vintage.
+      - name: status_score
+        description: >
+          D3 predictor: z-score of total_poi_count relative to all PLRs for that year.
+          POI density face; PREDICTOR not outcome (R-A1; ADR-0008).
+      - name: dynamism_score
+        description: >
+          D3 predictor: C5-corrected z-score of share_yoy_change. Commercial succession signal.
+          PREDICTOR not outcome. C5 geo-DS sign-off: PASS (docs/epic-c/C5-geo-signoff.md).
+      - name: status_index
+        description: >
+          D1 outcome: MSS Social Status ordinal class. 1=hoch (high status, low deprivation) …
+          4=sehr_niedrig (lowest status, most deprived). NULL = uninhabited PLR.
+          POLARITY: INVERSE numeric vs 2018 thesis status_summe; same deprivation gradient.
+          Treat as ORDINAL — never metric-average (R-A3 C2; index-definition.md §3).
+        tests:
+          - accepted_values:
+              arguments:
+                values: [1, 2, 3, 4]
+              config:
+                where: "status_index is not null"
+      - name: dynamik_index
+        description: >
+          D2 outcome: MSS Dynamik (social change direction) ordinal class.
+          1=positiv (improving), 2=stabil, 3=negativ (worsening). NULL = uninhabited PLR.
+          Already vulnerability-positive in numeric order (3=worsening=most vulnerable).
+          Mapped from WFS di_n {1,3,5} → {1,2,3} in stg_berlin_mss.
+        tests:
+          - accepted_values:
+              arguments:
+                values: [1, 2, 3]
+              config:
+                where: "dynamik_index is not null"
+      - name: gesamtindex
+        description: >
+          MSS 12-group composite code (tens digit=status, units digit=Dynamik WFS code {1,3,5}).
+          Valid codes: {11,13,15,21,23,25,31,33,35,41,43,45}. NULL = uninhabited PLR.
+          Do NOT treat as a 12-level metric ordinal (index-definition.md §1.7).
+      - name: mss_edition
+        description: >
+          MSS publication year (biennial: 2013, 2015, 2017, 2019, 2021, 2023, 2025).
+          Identical to snapshot_year in this model; retained for explicit temporal alignment.
+        tests:
+          - not_null:
+              config:
+                where: "area_code is not null"
+      - name: is_uninhabited
+        description: >
+          True if this PLR is uninhabited (gesamtindex IS NULL in MSS; WFS sentinel −9999 → null).
+          Uninhabited PLRs MUST be excluded from all regression, lead-lag, and metric computation
+          (index-definition.md §7.1; R-A3 C3). Retained here for completeness (row count reporting).
+        tests:
+          - not_null:
+              config:
+                where: "area_code is not null"
+      - name: typology_stage
+        description: >
+          Typology stage derived from the D1×D2 MSS Status × Dynamik matrix (ADR-0008;
+          index-definition.md §1.5). One of: 'stable-established', 'pre-gentrification',
+          'pioneer-signal', 'active-gentrification', 'consolidation-pressure',
+          'improving-vulnerable'. NULL for uninhabited PLRs.
+          PLR-level aggregate — not an individual/building-level statement (G-2 guardrail).
+          D-2 sign guard: upgrading stages require non-negativ Dynamik (dynamik_index IN (1,2))
+          as a necessary condition; dynamik_index=3 can NEVER yield an upgrading stage.
+        tests:
+          - accepted_values:
+              arguments:
+                values:
+                  - stable-established
+                  - pre-gentrification
+                  - pioneer-signal
+                  - active-gentrification
+                  - consolidation-pressure
+                  - improving-vulnerable
+              config:
+                where: "typology_stage is not null"
+      - name: ewr_composite
+        description: >
+          D4 baseline covariate: mean of 5 EWR indicator z-scores. Higher = more
+          socio-economically vulnerable population. All inputs are vulnerability-positive.
+          Enters the model ONLY as a cross-sectional LEVEL (§4.3, binding).
+          NULL when any key indicator is suppressed or absent.
+      - name: foreigners_share
+        description: D4 component (foreigners share; vulnerability-positive baseline level).
+      - name: age_under18_share
+        description: D4 component (share of residents under 18; vulnerability-positive baseline).
+      - name: migration_background_share
+        description: >
+          D4 component: share with migration background (vulnerability-positive; ≥2017 only
+          due to Mikrozensus definition break — do not compare pre/post-2017; §4.4).
+      - name: mean_age_years
+        description: D4 component (mean age in years; vulnerability-positive; negation removed PR #89).
+      - name: residence_duration_5y_share
+        description: >
+          D4 component: share resident ≤5 years (vulnerability-positive; high tenure = settled
+          pre-gentrification population per Döring & Ulbricht 2016).
+      - name: residents_total
+        description: Total residents in this PLR for this year (from EWR; for population weighting).
+      - name: legacy_gentrification_score
+        description: >
+          Pre-R-A1 formula kept for 2018 baseline comparison ONLY.
+          = (status_score + dynamism_score - ewr_composite) / 3.0
+          This formula averaged predictors and outcomes with no theoretical grounding.
+          DO NOT use for new analysis. Refer to D1/D2 columns for outcome analysis
+          and D3 columns for predictor analysis (R-A1; ADR-0008).
+
+  - name: int_mss_lead_lag
+    description: >
+      R-A1 lead-lag validation model (#64): primary analysis table for the thesis's temporal
+      order finding. Tests whether POI commercial activity at t predicts MSS social status
+      change at t+k (H3a, rejected in thesis) or vice versa (H3b, confirmed in thesis).
+
+      Theory: Dangschat (1988) double invasion-succession cycle — social cycle LEADS commercial
+      cycle. H3b confirmed / H3a rejected in thesis (p. 91, p. 55–56).
+
+      Grain: one row per (city_code, area_code, area_vintage, edition_t, lag_k).
+      lag_k ∈ {1, 2, 3} — MSS edition steps (each = 2 years; MSS is biennial).
+
+      Exclusions applied:
+        - is_uninhabited = true PLRs excluded from both base and lagged row (§7.1).
+        - Cross-vintage deltas blocked: area_vintage must match between base and lagged row.
+        - Only rows where the lagged outcome (status_index_tk) exists are retained.
+
+      D4 discipline: ewr_composite_t is the ONLY D4 column (level at time t as baseline
+      covariate). No D4 delta columns — D4 changes are near-tautological outcome proxies.
+
+      C5 correction: dynamism_score (C5-corrected) is used throughout, never raw count deltas.
+    meta:
+      dbt_meta_owner: data-engineer
+    tests:
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns:
+              - city_code
+              - area_code
+              - area_vintage
+              - edition_t
+              - lag_k
+          config:
+            where: "area_code is not null"
+      - dbt_utils.expression_is_true:
+          arguments:
+            expression: "delta_status_ordinal between -3 and 3"
+          config:
+            where: "delta_status_ordinal is not null"
+    columns:
+      - name: city_code
+        description: City identifier (ADR-0005). Always 'BER'.
+        tests:
+          - not_null
+      - name: area_code
+        description: PLR area code (8-digit, zero-padded).
+        tests:
+          - not_null
+      - name: area_vintage
+        description: >
+          LOR boundary vintage. 'lor_pre2021' (editions ≤2019) or 'lor_2021' (editions ≥2021).
+          Both base and lagged row must share the same vintage (vintage guard, binding).
+        tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ["lor_pre2021", "lor_2021"]
+      - name: edition_t
+        description: Base MSS edition year (time t; the predictor side).
+        tests:
+          - not_null
+      - name: lag_k
+        description: >
+          MSS edition offset (1, 2, or 3 steps; each step = 2 years).
+          edition_tk = edition_t + lag_k * 2.
+        tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: [1, 2, 3]
+      - name: edition_tk
+        description: Outcome MSS edition year (time t+k; edition_t + lag_k * 2).
+        tests:
+          - not_null
+      - name: status_index_t
+        description: >
+          D1 MSS social status at time t (ordinal 1–4; 1=hoch best, 4=sehr_niedrig worst).
+          Predictor side for H3a; baseline for H3b.
+        tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: [1, 2, 3, 4]
+      - name: dynamik_index_t
+        description: >
+          D2 MSS Dynamik at time t (ordinal 1–3; 1=positiv, 2=stabil, 3=negativ).
+          Encodes the 2-year status change direction as a ready-made Δstatus proxy (thesis p. 97).
+        tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: [1, 2, 3]
+      - name: typology_stage_t
+        description: Typology stage at time t (from D1×D2 matrix; index-definition.md §1.5).
+      - name: status_index_tk
+        description: >
+          D1 MSS social status at time t+k (outcome for H3a; ordinal 1–4).
+          Only present rows where this exists (inner join on lag).
+        tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: [1, 2, 3, 4]
+      - name: dynamik_index_tk
+        description: D2 MSS Dynamik at time t+k (outcome direction; ordinal 1–3).
+        tests:
+          - accepted_values:
+              arguments:
+                values: [1, 2, 3]
+              config:
+                where: "dynamik_index_tk is not null"
+      - name: delta_status_ordinal
+        description: >
+          status_index_tk - status_index_t. ORDINAL transition; do NOT treat as metric.
+          Positive = status worsened (more deprived). Negative = status improved (less deprived).
+          Range: -3 to +3 (bounded by the 4-class ordinal scale).
+          D1 POLARITY: lower numeric = higher status = LESS deprived (INVERSE of thesis status_summe).
+      - name: status_transition
+        description: >
+          Ordinal transition direction: 'improved' (status_index fell), 'stable' (unchanged),
+          'worsened' (status_index rose). For use in ordered-logit / ordinal regression (§3.2).
+        tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ["improved", "stable", "worsened"]
+      - name: dynamism_score_t
+        description: >
+          D3 C5-corrected dynamism score at time t (z-score of share_yoy_change).
+          Commercial succession signal; PREDICTOR for H3a (amenity at t → status at t+k).
+      - name: delta_dynamism_t
+        description: >
+          Change in D3 dynamism_score at t vs t-1 (within-vintage LAG).
+          Predictor for H3b: Δamenity_{t} vs Δstatus_{t+k} (§2.2; both sides must be deltas).
+          C5-corrected; NULL for first MSS edition in vintage.
+      - name: dynamism_score_tk
+        description: >
+          D3 C5-corrected dynamism score at time t+k.
+          Outcome for H3b: Δstatus_{t} → Δamenity_{t+k} (Dangschat social-leads-commercial).
+      - name: ewr_composite_t
+        description: >
+          D4 baseline vulnerability covariate at time t (cross-sectional LEVEL only; §4.3).
+          Higher = more socio-economically vulnerable. NO D4 delta columns in this model.
+      - name: is_pre2021_vintage
+        description: >
+          True if area_vintage = 'lor_pre2021' (the 447-PLR series; thesis universe; longest
+          MSS time series). Epic B headline analysis uses this series (index-definition.md §6.2).
