@@ -14,6 +14,10 @@
 #   Watch live:   tmux attach -t devmode        (detach: Ctrl-b then d)
 #   Stop:         tmux kill-session -t devmode   (do NOT /exit — that just restarts)
 #
+# Config is PINNED below (not inherited from ~/.claude/settings.json). Override via env:
+#   GENTRIDUCK_DEVMODE_MODEL   (default: sonnet)        GENTRIDUCK_DEVMODE_EFFORT  (default: medium)
+#   GENTRIDUCK_DEVMODE_RC_NAME (default: gentriduck-dev) GENTRIDUCK_DEVMODE_LOG     (default: ~/.claude/…)
+#
 # The while-loop makes it truly non-stop: if claude exits (usage limit reached or
 # a crash) it restarts after a short sleep, resuming once the limit resets.
 
@@ -23,7 +27,32 @@ set -uo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 LOG="${GENTRIDUCK_DEVMODE_LOG:-$HOME/.claude/gentriduck-devmode.log}"
+
+# --- Pinned config (override via env; do NOT silently inherit ~/.claude/settings.json) ---
+# The PM loop is mostly orchestration, so it runs Sonnet at medium effort by default; heavy
+# reasoning is delegated to Opus subagents at the methodology gate. Raise these deliberately
+# only if you accept the cost of a non-stop loop (e.g. MODEL=opus, EFFORT=high).
+MODEL="${GENTRIDUCK_DEVMODE_MODEL:-sonnet}"        # alias (sonnet|opus|fable) or a full model id
+EFFORT="${GENTRIDUCK_DEVMODE_EFFORT:-medium}"      # one of: low | medium | high | xhigh | max
+SESSION_NAME="${GENTRIDUCK_DEVMODE_RC_NAME:-gentriduck-dev}"
+
 cd "$DIR"
+
+# --- Preflight: fail fast with a clear message instead of a cryptic mid-run error ---
+for bin in claude git gh; do
+    command -v "$bin" >/dev/null 2>&1 || { echo "devmode: required command not found: $bin" >&2; exit 1; }
+done
+[ -f "$DIR/.claude/agents/project-manager.md" ] || {
+    echo "devmode: '$DIR' does not look like the gentriduck repo (no .claude/agents/project-manager.md)" >&2
+    exit 1
+}
+
+# --- Single-instance guard: never let two PMs race the same board ---
+if pgrep -f "claude --remote-control $SESSION_NAME" >/dev/null 2>&1; then
+    echo "devmode: a session '$SESSION_NAME' is already running — refusing to start a second PM." >&2
+    echo "         attach: tmux attach -t devmode    |    stop: tmux kill-session -t devmode" >&2
+    exit 1
+fi
 
 # Keep the host awake while running, using whatever's available; no-op on a
 # headless server that never sleeps.
@@ -41,9 +70,17 @@ fi
 PROMPT='/loop You are the Gentriduck project manager in continuous dev mode; follow your agent definition, especially the "Continuous (devmode) operation" and "Blocked-on-maintainer handling" sections. Each cycle: run the board reconciliation pass; RE-SCAN ALL open issues and re-prioritize against docs/PROJECT_PLAN.md and dependencies (filing new tickets judiciously for genuinely discovered work, after a duplicate check); then advance the top UNBLOCKED ticket through implement -> review -> methodology sign-off -> merge, moving its card in lockstep (start -> In Progress, merge/close -> Done). When a task needs MY decision -- a PR ready to merge (merges happen in the GitHub UI), an ADR or new tool/library/data-source approval, a genuinely ambiguous call, or a ~3-iteration escalation -- comment the question on the issue, send me a PushNotification, label it `blocked` and move its card back to Todo, then immediately pull the NEXT unblocked ticket; never idle waiting on me. When I reply, clear `blocked` and resume that ticket. Post me a short chat status update on every ticket you finish, create, or newly block -- max 3 bullets per ticket (also PushNotification the blocked ones). Treat any message from me as TOP PRIORITY: answer status requests immediately with a board snapshot, and turn scope requests into properly-filed, prioritized tickets, before resuming. Keep exactly one card In Progress. Never stop the loop on your own.'
 
 mkdir -p "$(dirname "$LOG")"
+{
+    echo "=== gentriduck devmode ==="
+    echo "repo:    $DIR"
+    echo "model:   $MODEL    effort: $EFFORT"
+    echo "session: $SESSION_NAME (Remote Control)"
+    echo "started: $(date)"
+} | tee -a "$LOG"
+
 while true; do
     echo "--- devmode start $(date) ---" >> "$LOG"
-    "${KEEPAWAKE[@]}" claude --remote-control gentriduck-dev "$PROMPT"
+    "${KEEPAWAKE[@]}" claude --model "$MODEL" --effort "$EFFORT" --remote-control "$SESSION_NAME" "$PROMPT"
     echo "--- devmode exited $(date); restarting in 60s (usage limit or crash) ---" >> "$LOG"
     sleep 60
 done
