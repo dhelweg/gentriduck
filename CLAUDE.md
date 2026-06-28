@@ -53,7 +53,8 @@ See `docs/adr/0009-agent-skill-tooling-superpowers.md` for the full decision rec
 
 ## Layout
 `transform/` dbt · `ingestion/` Python · `web/` site (later) · `docs/` plan+ADRs ·
-`reference/` original thesis (read-only) · `data/` gitignored artefacts · `.claude/` agents+skills.
+`reference/` original thesis (read-only) · `data/` gitignored artefacts · `.claude/` agents+skills ·
+`ops/` autonomous-run scripts.
 
 ## Quality gate (local, no cloud)
 pre-commit: commit stage auto-formats (sqlfmt, ruff) + lints (sqlfluff, ruff); push stage runs
@@ -91,32 +92,37 @@ the thesis section, EWR codebook page, or peer-reviewed source it operationalize
 belongs in the SQL comment of the relevant model (e.g., `-- Thesis §3.2: dynamism_index = ...`).
 The reviewer checks this; an uncited methodology change is a `high`-severity finding.
 
-## Overnight / autonomous local run
-Claude **must run as the main session** (not a background subagent) so that git push and gh
-commands work. All required permissions are pre-approved in `.claude/settings.local.json`.
+## Autonomous local run
+Claude **must run as the main session** (not a background subagent) so that `git push` and `gh`
+work. All required permissions are pre-approved in `.claude/settings.local.json`. These run on
+the **Linux automation host** (the runner also works on macOS, and on Windows via WSL2).
 
-**Start now and detach (one command):**
+### Continuous dev mode (default) — `ops/gentriduck-devmode.sh`
+One long-lived **interactive** PM session with Claude Code **Remote Control** enabled, so you
+supervise and unblock it from your **phone** (Claude mobile app). It works the board task-by-task,
+restarts itself when a usage limit resets, and **pings you at human gates** — a PR ready to merge
+(merges via the GitHub UI), a methodology-gate escalation/`concerns`, an ADR or new-tool approval,
+or a genuinely ambiguous call — instead of guessing. Full guide: [`ops/README.md`](ops/README.md).
+```bash
+tmux new-session -d -s devmode "$(pwd)/ops/gentriduck-devmode.sh"   # run from the repo root
+# then connect to the "gentriduck-dev" session in the Claude mobile app
+tmux attach -t devmode            # watch live (detach: Ctrl-b then d)
+tmux kill-session -t devmode      # stop — do NOT /exit (the loop just restarts)
+```
+
+### Headless overnight runner (fallback) — `~/.claude/gentriduck-overnight.sh`
+The older one-shot mode: up to 3 `claude --print` runs then stop, parsing the session-limit reset
+time and retrying. No phone loop-in (headless can't ask mid-run). Use for a bounded, fire-and-forget
+batch rather than always-on.
 ```bash
 tmux new-session -d -s overnight "~/.claude/gentriduck-overnight.sh"
-```
-The script (`~/.claude/gentriduck-overnight.sh`) runs up to 3 `claude --print` sessions
-sequentially. If a run hits the Claude session limit it parses the reset time from the
-output, sleeps until then (+10 min buffer), and retries automatically.
-
-Check progress tomorrow:
-```bash
-tmux attach -t overnight                       # live session (if still running)
-tail ~/.claude/gentriduck-overnight.log        # if session already ended
-```
-
-**Recurring nightly cron (00:00 Berlin = 22:00 UTC):**
-```bash
+tail ~/.claude/gentriduck-overnight.log
+# recurring nightly (00:00 Berlin = 22:00 UTC):
 (crontab -l 2>/dev/null; echo '0 22 * * * ~/.claude/gentriduck-overnight.sh') | crontab -
 ```
-Remove with: `crontab -e`
 
-> **Why not ask Claude to "run the PM" in an open session?** That spawns the PM as a subagent,
-> which runs in a restricted sandbox and cannot push to GitHub. Use `claude --print` above.
+> **Why main session, not a subagent?** A PM spawned as a subagent runs in a restricted sandbox
+> and cannot push to GitHub. Both runners launch Claude as the main session.
 
 ## Epic B framing
 B is a **directional revival** — does the 2018 paper's findings still hold? Exact number-for-number

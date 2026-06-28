@@ -1,0 +1,111 @@
+# `ops/` — running Gentriduck autonomously
+
+Operational tooling for running the Gentriduck agent team unattended. The data/dbt
+toolchain lives in [`transform/`](../transform/) and [`ingestion/`](../ingestion/); this
+directory is only about **how the autonomous dev loop is driven**.
+
+## Continuous dev mode (`gentriduck-devmode.sh`)
+
+The project's default way to make progress between hands-on sessions. It runs **one
+long-lived interactive `project-manager` session** with Claude Code's **Remote Control**
+enabled, so you can supervise and unblock it from your phone.
+
+It supersedes the older one-shot "overnight" runner (N headless `claude --print` runs,
+then stop). Continuous mode instead:
+
+- **never stops on its own** — it works the GitHub Project board task-by-task, restarting
+  automatically when a usage limit resets;
+- **re-plans every cycle** — it re-scans *all* open issues, re-prioritizes against
+  `docs/PROJECT_PLAN.md` + dependencies, and files new tickets for genuinely discovered work
+  (after a duplicate check) rather than grinding a frozen queue;
+- **loops you in at human gates** — instead of guessing, it sends a push notification and
+  waits for your reply whenever it hits a decision that's yours: a PR ready to merge
+  (merges go through the GitHub UI), a methodology-gate escalation or `concerns`/pending
+  verdict, an ADR / new-tool approval, or a genuinely ambiguous call;
+- **never idles waiting on you** — a ticket blocked on your reply gets the **`blocked`** label
+  and its card returns to **Todo** (freeing the single In Progress slot), and the PM advances
+  the next unblocked ticket meanwhile. When you reply, it clears `blocked` and resumes.
+
+> One devmode session is a single PM working **sequentially** — "meanwhile" means *the next
+> unblocked ticket*, not parallel work. True concurrency would need multiple sessions/worktrees.
+
+### The chat interface (two-way, from your phone)
+
+The Remote Control session is a live chat in the Claude mobile app — both directions:
+
+- **It reports to you** — a short status update (**≤ 3 bullets per ticket**) on every ticket
+  **finished** (✅), **created** (🆕), or **newly blocked** (⛔). Blocked items also fire an OS
+  **push** since they need a decision; finished/created land as chat messages (flip these to push
+  too, or to a periodic digest, by editing the prompt / agent definition if you want the buzz).
+- **You drive it** — at any time you can ask for a status snapshot ("status?", "where are we?") or
+  **add scope** ("also add X", "we should Y"); the PM turns scope requests into properly-filed,
+  prioritized tickets on the board and confirms. Maintainer messages are handled before the loop
+  resumes. (See *Status reporting & maintainer chat* in
+  [`../.claude/agents/project-manager.md`](../.claude/agents/project-manager.md).)
+
+### Why interactive + Remote Control (not headless)
+
+A headless `claude --print` run can't ask you anything mid-run — it just completes or
+stops. An **interactive** session with `--remote-control` is mirrored to the Claude mobile
+app, so the same session that's coding can pause, ask, and resume from your reply. That two-
+way link is the whole point of "loop me in via phone". No third-party messenger (Telegram /
+WhatsApp / Signal) or extra service is needed — it's a built-in Claude Code feature, which
+keeps us inside the **free + open, no-new-tool** rule (no ADR required).
+
+### Host
+
+Runs on the **Linux automation host**, and also on **macOS** and **Windows (via WSL2)**. The
+script must run as the **main session**, never a background subagent, so `git push` / `gh` work
+(see the autonomous-run note in [`../CLAUDE.md`](../CLAUDE.md)). It keeps the host awake via
+`systemd-inhibit` on Linux / `caffeinate` on macOS (a no-op on a headless server that never sleeps).
+
+**Windows:** run under **WSL2** (e.g. Ubuntu) — it provides the `bash` + `tmux` the runner needs;
+native PowerShell has no tmux for session persistence. Clone the repo and `uv sync` *inside* WSL,
+then launch exactly as below. Caveat: `systemd-inhibit` inside WSL only inhibits the Linux layer,
+so to stop a Windows laptop from sleeping, also keep it awake via Windows power settings (or run on
+an always-on machine). Remote Control + the Claude mobile app work identically.
+
+### Prerequisites
+
+- Claude Code (`claude`) signed in, and the **Claude mobile app** signed into the same
+  account (for Remote Control).
+- `tmux` and `git` / `gh`, plus the repo cloned and `uv sync` run once (see the top-level
+  [`README.md`](../README.md)).
+- The pre-approved permissions in [`.claude/settings.local.json`](../.claude/settings.local.json).
+
+### Run
+
+```bash
+# from anywhere — the script finds the repo root from its own location
+tmux new-session -d -s devmode "$(git -C /path/to/gentriduck rev-parse --show-toplevel)/ops/gentriduck-devmode.sh"
+
+# …or from inside the repo:
+tmux new-session -d -s devmode "$(pwd)/ops/gentriduck-devmode.sh"
+```
+
+Then open the **Claude mobile app** → connect to the Remote Control session named
+**`gentriduck-dev`**. You'll get a push when it needs you, and can reply from the phone.
+
+| Action | Command |
+|---|---|
+| Watch live on the host | `tmux attach -t devmode` (detach: `Ctrl-b` then `d`) |
+| Tail the log | `tail -f ~/.claude/gentriduck-devmode.log` |
+| **Stop** | `tmux kill-session -t devmode` — do **not** `/exit` inside (the loop just restarts) |
+
+### Verify on first launch
+
+1. The session picked up the `/loop` standing instruction (attach and check). If the CLI
+   didn't treat the initial prompt as a slash command, type `/loop <same instruction>` once
+   in the session — or from your phone — and it sticks.
+2. `gentriduck-dev` appears in the mobile app's Remote Control list.
+
+### Tuning
+
+- `GENTRIDUCK_DEVMODE_LOG` overrides the log path (default `~/.claude/gentriduck-devmode.log`).
+- Edit the `PROMPT` in the script to change what "next-best task" and the human-gate rules
+  mean. Keep it aligned with the methodology gate and board discipline in
+  [`../CLAUDE.md`](../CLAUDE.md).
+
+> **Cost note:** continuous mode burns usage continuously and will hit session limits; the
+> restart-on-reset loop handles that but it is not cheap. For a lower-burn cadence, run the
+> script under a `cron`/`systemd timer` window instead of leaving it always-on.
