@@ -1,57 +1,48 @@
 {
   "_schema": "gentriduck-session-state/v1",
-  "session": "2026-06-19-overnight-session3",
-  "updated_at": "2026-06-19T22:00:00Z",
+  "session": "2026-06-28-maintainer-reconcile",
+  "updated_at": "2026-06-28T00:00:00Z",
   "build_status": {
     "result": "PASS",
-    "pass": 311,
+    "pass": 344,
     "warn": 1,
     "error": 0,
     "warn_detail": "test_c5_poi_share_spike (expected by design)",
     "branch": "main",
-    "note": "All four overnight PRs merged to main."
+    "note": "PR #93 (R-A1 keystone) merged to main; build independently re-verified on maintainer machine (43s)."
   },
   "open_prs": [],
-  "completed_this_session": [85, 66, 67, 77],
-  "merged_prs_this_session": [
-    {"number": 89, "issues": [85], "title": "fix(#85): remove mean_age_years negation — vulnerability-positive sign"},
-    {"number": 90, "issues": [66], "title": "feat(#66): ingest MSS WFS + stg_berlin_mss (R-A3)"},
-    {"number": 91, "issues": [67], "title": "feat(#67): ingest MSS indexind SES indicators + stg_berlin_mss_indicators (R-A4)"},
-    {"number": 92, "issues": [77], "title": "docs(#77): ADR-0008 — multi-dimensional gentrification model [Accepted]"}
+  "completed_since_last_state": [64, 53, 28, 69],
+  "merged_prs": [
+    {"number": 93, "issues": [64], "secondary": [53, 28, 69], "title": "feat(#64): R-A1 index re-grounding — MSS social outcome, POI predictor, lead-lag", "merged_at": "2026-06-28"}
   ],
-  "blocked": [
-    {"issue": 64, "blocked_by": ["index-definition.md geo-DS+domain-expert sign-off"], "note": "ONLY remaining gate for R-A1"},
-    {"issue": 65, "blocked_by": [64]},
-    {"issue": 71, "blocked_by": [64]},
-    {"issue": 78, "blocked_by": [64]},
-    {"issue": 69, "blocked_by": ["ADR-gated (PySAL/H3); architect needed"]},
-    {"issue": 70, "blocked_by": ["Epic D start"]}
+  "reconciliation_note": [
+    "The 2026-06-19 session-3 handoff was mislabeled 'overnight run complete' — a 4th run (2026-06-20) then implemented R-A1 and opened PR #93, which sat OPEN/unmerged until this session.",
+    "state.json (session 3) was stale: it claimed no open PRs and #64 blocked on index-definition.md sign-off. In reality the sign-off was authored in PR #93 (both gates PASS WITH CONDITIONS) and #64 was fully implemented.",
+    "PR #93 verified this session (build PASS=344, focused code review of typology matrix + lead-lag vs index-definition.md) and merged by the maintainer via GitHub UI."
+  ],
+  "unblocked_now": [
+    {"issue": 65, "title": "[A2] Fix & re-run E1/E2 thesis validation against real hypotheses (lead-lag, POI→MSS)", "note": "int_mss_lead_lag now provides the correct panel; rewrite analysis/e1_regressions.py + e2_classification.py"},
+    {"issue": 71, "title": "[B2] Ground-truth back-test harness: validate typology vs MSS classes & known hotspots"},
+    {"issue": 78, "title": "[A8] Longitudinal gentrification trajectory & stage model (2008–2024)"}
+  ],
+  "awaiting_maintainer_decision": [
+    {"item": "ADR-0010 (spatial distance-weighting; PySAL + H3)", "issue": 69, "status": "Proposed", "note": "New libraries (PySAL/H3) — Golden Rule #2 maintainer OK required before R-A9 (#79) spatial inference. Not on the immediate path."}
+  ],
+  "still_blocked": [
+    {"issue": 79, "blocked_by": ["ADR-0010 acceptance (#69)"], "title": "[A9] Spatial-dynamic gentrification + spatial-econometric inference"},
+    {"issue": 70, "blocked_by": ["Epic D start"], "title": "[B1] Displacement & affordability dimension (Milieuschutz, rent-burden, turnover)"}
+  ],
+  "open_follow_ups_from_pr93": [
+    "#53 Kauffälle: discovery + ADR-0003 amendment done; ingestion still TODO — verify price attributes present in public WFS, then DE pair builds ingestion (geo-DS signs off block→PLR interpolation).",
+    "#28 D2 price/rent: PLR-level coverage is currently zero — blocked on D1c spatial join (#56) + Bodenrichtwerte ingestion.",
+    "L-1: test_dynamik_ordering_guard now supersedes test_mss_gesamtindex_consistency — consider retiring the older test.",
+    "L-2: INNER JOIN to POI in int_gentrification_ts silently drops MSS PLRs with no POI snapshot — add a warn-severity row-count test.",
+    "L-3: gentrification_index live_data includes uninhabited PLRs as NULL rows; downstream consumers filter on status_index IS NULL."
   ],
   "next_recommended": [
-    "Spawn geo-data-scientist + gentrification-domain-expert in parallel to co-author docs/methodology/index-definition.md",
-    "Both agents sign off the document (Verdict: PASS) — then DE pair can implement R-A1 (#64)",
-    "Secondary: #28 D2 price/rent completeness check, #53 D1b Kauffälle WFS discovery"
-  ],
-  "methodology_sign_offs_this_session": [
-    {"scope": "R-A5 post-fix re-signoff", "agent": "geo-data-scientist", "verdict": "PASS", "file": "docs/methodology/R-A5-geo-signoff.md"},
-    {"scope": "R-A5 post-fix re-signoff", "agent": "gentrification-domain-expert", "verdict": "PASS", "file": "docs/methodology/R-A5-domain-signoff.md"},
-    {"scope": "R-A3 MSS ingestion", "agent": "geo-data-scientist", "verdict": "PASS_WITH_CONDITIONS", "file": "docs/methodology/R-A3-geo-signoff.md"},
-    {"scope": "R-A3 MSS ingestion", "agent": "gentrification-domain-expert", "verdict": "PASS_WITH_CONDITIONS", "file": "docs/methodology/R-A3-domain-signoff.md"},
-    {"scope": "R-A4 SES indicators", "agent": "geo-data-scientist", "verdict": "PASS_WITH_CONDITIONS", "file": "docs/methodology/R-A4-geo-signoff.md"},
-    {"scope": "R-A4 SES indicators", "agent": "gentrification-domain-expert", "verdict": "PASS_WITH_CONDITIONS", "file": "docs/methodology/R-A4-domain-signoff.md"},
-    {"scope": "R-A7 multi-dim model ADR-0008", "agent": "geo-data-scientist", "verdict": "PASS_WITH_CONDITIONS", "file": "docs/methodology/R-A7-geo-signoff.md"},
-    {"scope": "R-A7 multi-dim model ADR-0008", "agent": "gentrification-domain-expert", "verdict": "PASS_WITH_CONDITIONS", "file": "docs/methodology/R-A7-domain-signoff.md"}
-  ],
-  "key_r_a1_notes": [
-    "D1 (MSS Status): 1=hoch (high status), 4=sehr_niedrig (lowest) — INVERSE numeric direction from 2018 thesis status_summe",
-    "D2 (MSS Dynamik): 1=positiv, 2=stabil, 3=negativ (mapped from WFS {1,3,5}; 1=positiv = improving = less at-risk)",
-    "indexind *_dynamik indicators: positive value = worsening — INVERSE polarity to MSS Dynamik class",
-    "transferbezug null in 2019/2021 specifically (suspended); non-null in 2015/2017 and 2023+",
-    "alleinerziehende present all editions 2015+ (not 2023+ only as ADR-0006 assumed)",
-    "C5 OSM completeness correction MUST be applied to D3 before the lead-lag test (geo-DS condition)",
-    "D4 must enter as cross-sectional baseline covariate not contemporaneous predictor (endogeneity risk)",
-    "Ordinal-appropriate methods for D1 MSS Status-Index (never metric-average class codes)",
-    "LOR vintage break: restrict lead-lag within-vintage or use seed_lor_crosswalk_2006_to_2021.csv",
-    "Uninhabited PLRs (gesamtindex IS NULL) excluded from all regression/calibration"
+    "Maintainer to pick next task (parked as 'decide after #93'). Strongest candidate: #65 R-A2 — re-run E1/E2 to answer whether the 2018 findings still hold (core Epic B/E question).",
+    "Secondary in parallel: #71 B2 back-test vs known hotspots (Reuterkiez, Prenzlauer Berg).",
+    "Decision needed: accept/reject ADR-0010 (#69) before any R-A9 spatial-inference work."
   ]
 }
