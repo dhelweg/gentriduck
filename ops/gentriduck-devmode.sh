@@ -17,6 +17,7 @@
 # Config is PINNED below (not inherited from ~/.claude/settings.json). Override via env:
 #   GENTRIDUCK_DEVMODE_MODEL   (default: sonnet)        GENTRIDUCK_DEVMODE_EFFORT  (default: medium)
 #   GENTRIDUCK_DEVMODE_RC_NAME (default: gentriduck-dev) GENTRIDUCK_DEVMODE_LOG     (default: ~/.claude/…)
+#   GENTRIDUCK_DEVMODE_PERMISSION_MODE (default: bypassPermissions — unsupervised; `default` = prompts)
 #
 # The while-loop makes it truly non-stop: if claude exits (usage limit reached or
 # a crash) it restarts after a short sleep, resuming once the limit resets.
@@ -36,6 +37,12 @@ MODEL="${GENTRIDUCK_DEVMODE_MODEL:-sonnet}"        # alias (sonnet|opus|fable) o
 EFFORT="${GENTRIDUCK_DEVMODE_EFFORT:-medium}"      # one of: low | medium | high | xhigh | max
 SESSION_NAME="${GENTRIDUCK_DEVMODE_RC_NAME:-gentriduck-dev}"
 
+# Unsupervised mode: skip tool-permission prompts so the PM just works the board and only loops
+# you in for real DECISIONS (PR merge, ADR / new tool-source, ambiguous calls) per its standing
+# prompt — not for routine "may I run X?". The settings.local.json DENY list still blocks the
+# dangerous stuff (gh pr merge, force-push, rm, curl, …). Set `default` to restore prompts.
+PERMISSION_MODE="${GENTRIDUCK_DEVMODE_PERMISSION_MODE:-bypassPermissions}"  # default|acceptEdits|bypassPermissions|dontAsk|auto|plan
+
 cd "$DIR"
 
 # --- Preflight: fail fast with a clear message instead of a cryptic mid-run error ---
@@ -48,7 +55,7 @@ done
 }
 
 # --- Single-instance guard: never let two PMs race the same board ---
-if pgrep -f "claude --remote-control $SESSION_NAME" >/dev/null 2>&1; then
+if pgrep -f -- "--remote-control $SESSION_NAME" >/dev/null 2>&1; then
     echo "devmode: a session '$SESSION_NAME' is already running — refusing to start a second PM." >&2
     echo "         attach: tmux attach -t devmode    |    stop: tmux kill-session -t devmode" >&2
     exit 1
@@ -73,14 +80,14 @@ mkdir -p "$(dirname "$LOG")"
 {
     echo "=== gentriduck devmode ==="
     echo "repo:    $DIR"
-    echo "model:   $MODEL    effort: $EFFORT"
+    echo "model:   $MODEL    effort: $EFFORT    permissions: $PERMISSION_MODE"
     echo "session: $SESSION_NAME (Remote Control)"
     echo "started: $(date)"
 } | tee -a "$LOG"
 
 while true; do
     echo "--- devmode start $(date) ---" >> "$LOG"
-    "${KEEPAWAKE[@]}" claude --model "$MODEL" --effort "$EFFORT" --remote-control "$SESSION_NAME" "$PROMPT"
+    "${KEEPAWAKE[@]}" claude --model "$MODEL" --effort "$EFFORT" --permission-mode "$PERMISSION_MODE" --remote-control "$SESSION_NAME" "$PROMPT"
     echo "--- devmode exited $(date); restarting in 60s (usage limit or crash) ---" >> "$LOG"
     sleep 60
 done
