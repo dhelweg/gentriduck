@@ -19,6 +19,7 @@ website of **gentrification & social-development statistics** for Berlin (and, l
 | `reference/` | original thesis SQL + golden output CSVs (read-only reference) |
 | `data/` | local data artefacts — **gitignored**, rebuilt from open sources |
 | `.claude/` | agent + skill definitions for the agent team |
+| `ops/` | autonomous-run scripts (continuous dev mode + Remote Control) — see [`ops/README.md`](ops/README.md) |
 
 ## Roadmap
 
