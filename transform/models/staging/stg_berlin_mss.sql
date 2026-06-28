@@ -21,8 +21,8 @@
 -- status_index -- 1=hoch, 2=mittel, 3=niedrig, 4=sehr niedrig (null=uninhabited PLR)
 -- dynamik_index-- 1=positiv, 2=stabil, 3=negativ (normalised from WFS di_n {1,3,5})
 -- gesamtindex  -- MSS 2-digit group code (11–45; null=uninhabited PLR)
---               tens=status (1–4), units=dynamik WFS code (1,3,5)
---               e.g. 23 = Status mittel + Dynamik stabil (12 distinct valid codes)
+-- tens=status (1–4), units=dynamik WFS code (1,3,5)
+-- e.g. 23 = Status mittel + Dynamik stabil (12 distinct valid codes)
 --
 -- dbt_meta_owner: data-engineer
 {{

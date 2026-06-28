@@ -254,9 +254,7 @@ def fetch_indexind_geojson(edition: int, type_name: str, timeout: int = 180) -> 
     try:
         data = json.loads(raw)
     except json.JSONDecodeError as exc:
-        raise RuntimeError(
-            f"[{edition}] Invalid JSON response. Excerpt: {raw[:200]!r}"
-        ) from exc
+        raise RuntimeError(f"[{edition}] Invalid JSON response. Excerpt: {raw[:200]!r}") from exc
 
     if data.get("type") != "FeatureCollection":
         raise RuntimeError(
