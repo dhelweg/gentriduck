@@ -99,13 +99,38 @@ Then open the **Claude mobile app** → connect to the Remote Control session na
    in the session — or from your phone — and it sticks.
 2. `gentriduck-dev` appears in the mobile app's Remote Control list.
 
+### Model / effort (pinned, not inherited)
+
+The runner **pins** the model and effort so the non-stop loop never silently tracks whatever your
+interactive `~/.claude/settings.json` happens to be. The PM loop is mostly orchestration, so the
+defaults are deliberately light — heavy reasoning is delegated to **Opus** subagents at the
+methodology gate. Override per-launch via env:
+
+| Env var | Default | Notes |
+|---|---|---|
+| `GENTRIDUCK_DEVMODE_MODEL` | `sonnet` | alias (`sonnet`/`opus`/`fable`) or a full model id |
+| `GENTRIDUCK_DEVMODE_EFFORT` | `medium` | `low` · `medium` · `high` · `xhigh` · `max` |
+| `GENTRIDUCK_DEVMODE_RC_NAME` | `gentriduck-dev` | Remote Control session name |
+| `GENTRIDUCK_DEVMODE_LOG` | `~/.claude/gentriduck-devmode.log` | log path |
+
+```bash
+# e.g. crank the PM up for a hard planning night:
+GENTRIDUCK_DEVMODE_MODEL=opus GENTRIDUCK_DEVMODE_EFFORT=high \
+  tmux new-session -d -s devmode "$(pwd)/ops/gentriduck-devmode.sh"
+```
+
+The script also **preflights** (needs `claude`/`git`/`gh` + a real gentriduck checkout) and **refuses
+to start a second instance** of the same Remote Control session, so two PMs can't race the board. It
+runs at the **default permission mode** (not `--dangerously-skip-permissions`): non-allowlisted
+actions prompt, and those prompts surface on your phone — that *is* the loop-in.
+
 ### Tuning
 
-- `GENTRIDUCK_DEVMODE_LOG` overrides the log path (default `~/.claude/gentriduck-devmode.log`).
 - Edit the `PROMPT` in the script to change what "next-best task" and the human-gate rules
   mean. Keep it aligned with the methodology gate and board discipline in
   [`../CLAUDE.md`](../CLAUDE.md).
 
 > **Cost note:** continuous mode burns usage continuously and will hit session limits; the
-> restart-on-reset loop handles that but it is not cheap. For a lower-burn cadence, run the
-> script under a `cron`/`systemd timer` window instead of leaving it always-on.
+> restart-on-reset loop handles that but it is not cheap. The light `sonnet`/`medium` defaults keep
+> it affordable; for an even lower-burn cadence, run the script under a `cron`/`systemd timer` window
+> instead of leaving it always-on.
