@@ -1,7 +1,14 @@
 # ADR-0010: Spatial distance-weighting & spatial-statistics tooling
 
-- **Status:** Proposed
+- **Status:** Accepted
 - **Date:** 2026-06-20
+- **Amended:** 2026-06-28 (post-review; see "## Amendments" — body revised inline)
+- **Accepted:** 2026-06-28 by the maintainer, after system-architect review (ACCEPT WITH
+  AMENDMENTS — all four required amendments applied) and geo-data-scientist sign-off
+  (`docs/methodology/ADR-0010-geo-signoff.md`, Verdict: PASS WITH CONDITIONS — 8 non-blocking
+  conditions carried to `spatial-methods.md`). Domain-expert sign-off not required: this ADR
+  fixes tooling + defaults only; all spatial methodology is deferred to `spatial-methods.md`
+  under the full R-C1 (geo-DS + domain) gate.
 
 ## Context
 
@@ -91,8 +98,9 @@ dbt DAG.
 
 Moran's I, LISA, Getis-Ord Gi* and spatial-lag/error models are **not** something to re-implement in
 SQL. PySAL is the mature, **BSD-3-licensed**, pure-Python reference implementation, pip/`uv`-installable
-and cross-platform, and is exactly the stack both tickets already name. It integrates with `geopandas` /
-`shapely` (`shapely` is already a dependency) and reads geometries we can export from DuckDB.
+and cross-platform, and is exactly the stack both tickets already name. It builds weights directly from
+`shapely` geometries (`shapely` is already a dependency), so **no `geopandas` is required** — see
+Amendment 1 and the geometry-handoff contract in Amendment 3.
 
 - `libpysal.weights` / `libpysal.graph` — build queen-contiguity and distance/kernel weights from the
   PLR `dim_area` geometries (EPSG:25833). This is the spatial-weights object R-A9 consumes.
@@ -102,11 +110,14 @@ and cross-platform, and is exactly the stack both tickets already name. It integ
 - `spreg` — spatial-lag / spatial-error regression (and spatially-robust SEs) to redo the R-A2 (#65)
   relationships under spatial dependence, closing the "spatial autocorrelation ignored" finding.
 
-These run **only in `analysis/*.py`** (deterministic, `random_state=42`, under the R-C3 leakage guard;
-`uv run poe analysis`). They do **not** enter the dbt build path, so DuckDB→MotherDuck portability is
-untouched. `tobler` (areal interpolation) is **not** adopted now — it is mentioned in the tickets for
-the LOR crosswalk (#51) and an optional H3 MAUP layer; defer its adoption to a focused amendment if and
-when #51/MAUP actually needs it, to avoid dependency creep.
+These run **only in `analysis/*.py`** (deterministic, under the R-C3 leakage guard; `uv run poe
+analysis`). Permutation inference must pass an **explicit `seed=`** on every esda/spreg call, not rely
+on a global `random_state` (Amendment 4). They do **not** enter the dbt build path, so the
+DuckDB→MotherDuck swap is untouched — but the analysis layer itself must read via a **configurable**
+DuckDB connection so it is not quietly local-only (Amendment 7). `tobler` (areal interpolation) is
+**not** adopted now — it is mentioned in the tickets for the LOR crosswalk (#51) and an optional H3
+MAUP layer; defer its adoption to a focused amendment if and when #51/MAUP actually needs it, to avoid
+dependency creep.
 
 ### 3. H3 — Python `h3`, optional, analysis-only; not the DuckDB community extension
 
@@ -119,10 +130,11 @@ MAUP robustness check (report the index at PLR, BZR, and an H3 hex grid).
   guaranteed signed/available on every platform or on MotherDuck, and would make `uv run poe build`
   non-reproducible across the three target OSes. That violates the cross-platform + local-first→hosted
   constraints. Keeping H3 in Python (or omitting it) keeps the gate green everywhere.
-- **Resolution.** For a Berlin-scale MAUP check, **H3 res 8** (~0.7 km² / ~0.46 km edge) is the
-  starting point — finer than the ~1.4 km edge of res 7, comparable to PLR granularity. The exact
-  resolution(s) are a methodology decision for `spatial-methods.md`; H3 here is a **sensitivity lens**,
-  not a new primary grain (PLR remains the unit; ADR-0003/0006).
+- **Resolution.** H3 is a **sensitivity lens**, not a new primary grain (PLR remains the unit;
+  ADR-0003/0006). A *specific* resolution is a methodology parameter, **not a tooling default**, and is
+  fixed in `spatial-methods.md` under the gate. As an illustrative starting point only, **H3 res ~8**
+  (~0.7 km² / ~0.46 km edge) is roughly PLR-comparable for a Berlin-scale check — but this ADR does
+  **not** bake a resolution in (Amendment 8).
 
 ### 4. Default decay functional form — mass-conserving Gaussian within a fixed bandwidth
 
@@ -196,10 +208,10 @@ models.
 ## Consequences
 
 - **R-A6 (#69) and R-A9 (#79) are unblocked once the maintainer accepts this ADR; until then DE
-  implementation is blocked** (R-A6 gates on the ADR). New dependencies to add under `uv` when accepted:
-  `libpysal`, `esda`, `spreg` (PySAL family; likely also `geopandas` as their I/O bridge) and `h3`
-  (Python), all in the main dependency group since `analysis/` is first-class. `uv.lock` is re-pinned;
-  no DuckDB community extension is added.
+  implementation is blocked** (R-A6 gates on the ADR). New dependencies to add under `uv` when accepted
+  (see the Amendments manifest for floors and the explicit `geopandas` exclusion): `libpysal`, `esda`,
+  `spreg` (PySAL family) and `h3` (Python), all in the main dependency group since `analysis/` is
+  first-class. `uv.lock` is re-pinned; no DuckDB community extension is added.
 - **The live pipeline stays pure-SQL and MotherDuck-portable.** The `distance_weighted` variant is a new
   in-DAG dbt model alongside `standard`; the spatial-statistics live in `analysis/` and never touch the
   build path, so DuckDB→MotherDuck remains a target swap, not a migration (ADR-0001).
@@ -216,6 +228,70 @@ models.
 - **Small, bounded dependency growth**, accepted because spatial structure is a first-class property of
   the model (R-A9) and the edge-effect/MAUP flaw is a documented defect in the current hard
   point-in-polygon index.
+
+## Amendments (post-review, 2026-06-28)
+
+The independent architectural critique (second-opinion review requested by the maintainer) accepted the
+two-tier seam, the h3 community-extension rejection, and the mass-conserving default, but required the
+dependency manifest and integration mechanics to be tightened. The decisions above are unchanged in
+substance; the manifest and analysis-layer contract are now made precise. Final
+bandwidth/kernel/contiguity/H3-resolution remain deferred to `spatial-methods.md` under the R-C1 gate.
+
+**Required (1–4):**
+
+1. **No `geopandas` in the mandated manifest.** PySAL weights are built **directly from `shapely`
+   geometries** — `libpysal.weights.Queen.from_iterable(...)` / `KNN.from_array(...)` and
+   `esda`/`spreg` accept shapely/`numpy` inputs without a `GeoDataFrame`. We read WKB from DuckDB, not
+   shapefiles, so `geopandas` (and its `pyogrio`/GDAL I/O chain) would be dead weight. `geopandas`
+   becomes an *optional, justified-when-needed* add via a focused amendment, never a baseline dep.
+
+2. **Pin `pandas>=2.2,<3.0`.** The PySAL family resolves cleanly but floats `pandas` up to 3.0 against
+   the current open-ended `pandas>=2.2` pin. pandas 3.0 (Copy-on-Write default, PyArrow-backed strings)
+   is a behavioural-change risk to the `dbt-duckdb` adapter and to `analysis/e1_regressions.py` /
+   `e2_classification.py`. **Default action:** cap at `<3.0` until a deliberate migration. The cap may
+   only be lifted by a future amendment that records `uv run poe build` **and** `uv run poe analysis`
+   passing green on pandas 3.0 as the acceptance condition.
+
+3. **DuckDB→PySAL geometry handoff (explicit contract).** Export PLR geometries from DuckDB as **WKB
+   already in the city metric CRS** (Berlin EPSG:25833) via `ST_AsWKB(geom)` (reproject in SQL with
+   `ST_Transform` *before* export if needed), then parse in Python with `shapely.from_wkb(...)`. **No
+   pyproj / no Python-side reprojection** and **no CRS round-trip** — the metric CRS is established in
+   SQL and never re-derived in Python. This both removes the `pyproj` dependency and keeps the CRS
+   single-sourced. The exported table carries `area_code` (stable key) alongside the WKB so weights rows
+   align deterministically with the index table.
+
+4. **Explicit seeds for permutation inference (R-C3).** Moran's I / LISA / Gi* significance comes from
+   conditional permutation (`esda.Moran(..., permutations=999, seed=42)`); `spreg` likewise. Pass an
+   explicit `seed=` (or a fixed `numpy.random.default_rng(42)`) on **every** esda/spreg call — do **not**
+   rely on a process-global `random_state`/`np.random.seed`, which is fragile across numpy versions.
+   This is an enforced R-C3 leakage-guard expectation; the reviewer treats a missing per-call seed as a
+   reproducibility defect.
+
+**Recommended (5–9):**
+
+5. **scikit-learn is already a project dependency** (`pyproject.toml` pins `scikit-learn>=1.5`).
+   `esda`/`spreg` pulling it transitively is therefore harmless — no new heavyweight surface is
+   introduced by this ADR.
+
+6. **Concrete dependency floors** (final exact versions set by the `uv.lock` resolve; floors prevent
+   drift to incompatible splits, esp. the modern `libpysal.graph` API needed by #69):
+   `libpysal>=4.10`, `esda>=2.5`, `spreg>=1.4`, `h3>=4.0`, plus the existing `shapely>=2.0`,
+   `pandas>=2.2,<3.0`, `scikit-learn>=1.5`. **Excluded:** `geopandas`, `pyogrio`, `pyproj`, `fiona`,
+   `tobler`.
+
+7. **MotherDuck parity for the analysis layer.** Layer 3 must read via a **configurable** DuckDB
+   connection target (local file now, `md:` connection string later) — not a hard-coded path.
+   `analysis/e1_regressions.py:48` currently hard-codes `data/gentriduck.duckdb`; this should be
+   refactored to a configurable connection (env var / CLI arg) **when R-A6 lands**, so the spatial
+   analysis layer is not quietly local-only forever.
+
+8. **H3 resolution is not a baked-in default.** §3's "res 8" is an *illustrative starting point* only; a
+   specific resolution is a pure methodology parameter and is decided in `spatial-methods.md` under the
+   gate, not here.
+
+9. **#69 and #79 stay bundled** in this one ADR. The tooling is a single coherent family (PySAL); the
+   methodology for each stays separately gated. Splitting the ADR would duplicate one dependency
+   decision for no benefit.
 
 ## Open questions (resolved in `spatial-methods.md`, not here)
 
@@ -242,9 +318,7 @@ models.
 - Thesis (Helweg 2018) p. 91 (best H1 AUC 0.87 on distance-weighted data), Abb. 5-14.
 - PySAL — `libpysal` (weights/graph), `esda` (Moran's I / LISA / Getis-Ord Gi*), `spreg` (spatial
   regression); BSD-3. <https://pysal.org/>
-- DuckDB `spatial` core extension (`ST_DWithin` / `ST_Distance` / `ST_Transform`); DuckDB `h3`
-  **community** extension (rejected for the build path). <https://duckdb.org/community_extensions/extensions/h3>
+- DuckDB `spatial` core extension (`ST_DWithin` / `ST_Distance` / `ST_Transform` / `ST_AsWKB`); DuckDB
+  `h3` **community** extension (rejected for the build path). <https://duckdb.org/community_extensions/extensions/h3>
 - Uber H3 — `h3` Python package, Apache-2.0. <https://h3geo.org/>
 - Döring & Ulbricht (2016) — Gentrification-Hotspots in Berlin (Gi* motivation).
-</content>
-</invoke>
