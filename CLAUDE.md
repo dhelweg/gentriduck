@@ -94,8 +94,11 @@ The reviewer checks this; an uncited methodology change is a `high`-severity fin
 
 ## Autonomous local run
 Claude **must run as the main session** (not a background subagent) so that `git push` and `gh`
-work. All required permissions are pre-approved in `.claude/settings.local.json`. These run on
-the **Linux automation host** (the runner also works on macOS, and on Windows via WSL2).
+work. The pre-approved permissions + deny-list ship in the committed `.claude/settings.json`
+(machine-specific tweaks go in the gitignored `.claude/settings.local.json`). On a fresh machine,
+do the one-time `tmux` install + interactive `claude` onboarding (theme + trust dialog) first — see
+*First run on a new machine* in [`ops/README.md`](ops/README.md). These run on the **Linux automation
+host** (the runner also works on macOS, and on Windows via WSL2).
 
 ### Continuous dev mode (default) — `ops/gentriduck-devmode.sh`
 One long-lived **interactive** PM session with Claude Code **Remote Control** enabled, so you
@@ -105,8 +108,9 @@ escalation/`concerns`, an ADR or new-tool approval, or a genuinely ambiguous cal
 guessing. **Self-healing:** the loop restarts `claude` on exit *and* a watchdog restarts it on a hang
 (idle transcript), so a mid-response API error can't silently wedge it. Runs **unsupervised** with a
 **host-aware** permission mode — Mac & Windows/WSL2 use gated `bypassPermissions`, the native Linux
-host uses hands-free `dangerously-skip` — but the `settings.local.json` **deny-list still blocks**
-dangerous commands and `gh pr merge`, so PRs queue for you. Full guide: [`ops/README.md`](ops/README.md).
+host uses hands-free `dangerously-skip` — but the committed `settings.json` **deny-list still blocks**
+the irreversible commands (`gh pr merge`, force-push, `git reset --hard`, `sudo`), so PRs queue for
+you. Full guide: [`ops/README.md`](ops/README.md).
 ```bash
 tmux new-session -d -s devmode "$(pwd)/ops/gentriduck-devmode.sh"   # run from the repo root
 # then connect to the "gentriduck-dev" session in the Claude mobile app

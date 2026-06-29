@@ -71,7 +71,24 @@ an always-on machine). Remote Control + the Claude mobile app work identically.
   account (for Remote Control).
 - `tmux` and `git` / `gh`, plus the repo cloned and `uv sync` run once (see the top-level
   [`README.md`](../README.md)).
-- The pre-approved permissions in [`.claude/settings.local.json`](../.claude/settings.local.json).
+- The pre-approved permissions + deny-list ship in the committed
+  [`.claude/settings.json`](../.claude/settings.json) (no per-machine setup needed; machine-specific
+  tweaks go in the gitignored `.claude/settings.local.json`).
+
+#### First run on a new machine (one-time)
+
+The unattended loop can't click through interactive prompts, so clear them **once** by hand first —
+otherwise the spawned `claude` wedges on the onboarding wizard instead of starting the PM loop:
+
+1. **Install `tmux`** (needs root, e.g. `sudo apt-get install -y tmux`) — the runner itself doesn't
+   call tmux, but it's how the session survives a closed terminal and stays attachable.
+2. **Complete `claude` onboarding interactively**: run `claude` once in the repo, pick a **theme**,
+   and **accept the trust-folder dialog**, then `/exit`. This persists `theme`,
+   `hasCompletedOnboarding`, and the per-project `hasTrustDialogAccepted` in `~/.claude.json`; without
+   them the autonomous session stalls on the theme picker. (The trust dialog is a security gate —
+   accept it yourself; don't script it.)
+3. **Confirm you're signed in** (`oauthAccount` present) and the **mobile app** is on the same
+   account, so Remote Control can pair once the loop is live.
 
 ### Run
 
@@ -141,9 +158,12 @@ Override either way with `GENTRIDUCK_DEVMODE_PERMISSION_MODE` (e.g. `=default` t
 everything; `=bypassPermissions` to keep the gate on Linux too).
 
 What still protects you:
-- The **`deny` list** in [`../.claude/settings.local.json`](../.claude/settings.local.json) still
-  blocks the dangerous/irreversible commands (`gh pr merge`, `git push --force`, `git reset --hard`,
-  `rm`, `curl`, `sudo`, …).
+- The **`deny` list** in the committed [`../.claude/settings.json`](../.claude/settings.json) still
+  blocks the irreversible / privilege-escalating commands (`gh pr merge`, `git push --force`,
+  `git reset --hard`, `sudo`). `deny` wins over `allow`, so these hold even under
+  `--dangerously-skip-permissions`. (`rm`, `curl`/`wget` are deliberately **allowed** — the ingestion
+  pipeline rebuilds gitignored data artefacts and fetches open-data sources; the protection is that
+  the truly irreversible/remote-history actions above are blocked, not raw file/network ops.)
 - **Merges remain yours.** `gh pr merge` is denied, so the PM opens PRs and **queues them for you to
   merge in the GitHub UI** — it can't push to `main` itself. Unsupervised means it keeps *building*;
   it does not mean it self-merges to `main`.

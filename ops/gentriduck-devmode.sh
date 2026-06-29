@@ -41,8 +41,9 @@ SESSION_NAME="${GENTRIDUCK_DEVMODE_RC_NAME:-gentriduck-dev}"
 
 # Unsupervised mode: skip tool-permission prompts so the PM just works the board and only loops you
 # in for real DECISIONS (PR merge, ADR / new tool-source, ambiguous calls) — not routine "may I run
-# X?". The settings.local.json DENY list still blocks the dangerous stuff (gh pr merge, force-push,
-# rm, curl, …). HOST-AWARE default: a supervised personal machine (Mac, or Windows via WSL2) uses
+# X?". The committed .claude/settings.json DENY list still blocks the irreversible stuff (gh pr merge,
+# force-push, git reset --hard, sudo); rm/curl stay allowed for the ingestion pipeline. HOST-AWARE
+# default: a supervised personal machine (Mac, or Windows via WSL2) uses
 # gated `bypassPermissions` (one accept); only a NATIVE Linux box — assumed to be the dedicated,
 # unattended automation host — uses `dangerously-skip` (no accept gate, so the watchdog/loop restart
 # hands-free). WSL2 reports "Linux" but is usually a laptop, so it's treated as supervised. Override
@@ -116,8 +117,11 @@ watchdog() {
         pgrep -f -- "--remote-control $SESSION_NAME" >/dev/null 2>&1 || return     # claude already gone
         newest="$(ls -t "$PROJDIR"/*.jsonl 2>/dev/null | head -1)"
         [ -n "$newest" ] || continue                                              # no transcript yet
-        mtime="$(stat -f %m "$newest" 2>/dev/null || stat -c %Y "$newest" 2>/dev/null)"
-        [ -n "$mtime" ] || continue
+        # GNU stat (-c %Y) first — the Linux host. On macOS BSD-stat rejects -c (stderr only,
+        # no stdout) so it falls through to -f %m. Doing BSD-first on Linux is WRONG: `stat -f`
+        # is --file-system there, prints fs-info to stdout AND exits non-zero, polluting mtime.
+        mtime="$(stat -c %Y "$newest" 2>/dev/null || stat -f %m "$newest" 2>/dev/null)"
+        case "$mtime" in '' | *[!0-9]*) continue ;; esac                          # guard: epoch must be all digits
         age=$(( $(date +%s) - mtime ))
         if [ "$age" -gt "$STALL_SECS" ]; then
             echo "--- watchdog: session idle ${age}s (> ${STALL_SECS}s) — killing to force restart $(date) ---" >> "$LOG"
