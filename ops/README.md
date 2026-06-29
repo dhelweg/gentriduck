@@ -110,7 +110,8 @@ methodology gate. Override per-launch via env:
 |---|---|---|
 | `GENTRIDUCK_DEVMODE_MODEL` | `sonnet` | alias (`sonnet`/`opus`/`fable`) or a full model id |
 | `GENTRIDUCK_DEVMODE_EFFORT` | `medium` | `low` · `medium` · `high` · `xhigh` · `max` |
-| `GENTRIDUCK_DEVMODE_PERMISSION_MODE` | `bypassPermissions` | `default` · `acceptEdits` · `bypassPermissions` · `dontAsk` · `auto` · `plan` |
+| `GENTRIDUCK_DEVMODE_PERMISSION_MODE` | *host-aware* | macOS & Windows/WSL2 → `bypassPermissions`, native Linux → `dangerously-skip`; or `default` · `acceptEdits` · `dontAsk` · `auto` · `plan` |
+| `GENTRIDUCK_DEVMODE_STALL_SECS` | `900` | hang-watchdog idle threshold (restart if the session transcript is idle this long) |
 | `GENTRIDUCK_DEVMODE_RC_NAME` | `gentriduck-dev` | Remote Control session name |
 | `GENTRIDUCK_DEVMODE_LOG` | `~/.claude/gentriduck-devmode.log` | log path |
 
@@ -124,20 +125,43 @@ GENTRIDUCK_DEVMODE_PERMISSION_MODE=default \
   tmux new-session -d -s devmode "$(pwd)/ops/gentriduck-devmode.sh"
 ```
 
-### Unsupervised by default (permission mode)
+### Unsupervised by default (host-aware permission mode)
 
-The runner launches in **`bypassPermissions`** so the PM **doesn't stop for routine "may I run X?"
-tool prompts** — it just works the board and only loops you in for real **decisions** (a PR ready to
-merge, an ADR / new tool-source, an ambiguous call) via chat + push, per its standing prompt. Set
-`GENTRIDUCK_DEVMODE_PERMISSION_MODE=default` to go back to prompting for everything.
+The runner **skips routine "may I run X?" prompts** so the PM just works the board and only loops you
+in for real **decisions** (a PR ready to merge, an ADR / new tool-source, an ambiguous call) via
+chat + push. The mode is **chosen by host** so you never have to remember a flag:
 
-What still protects you in unsupervised mode:
+- **macOS** + **Windows/WSL2** (supervised personal machines) → `bypassPermissions` — one interactive
+  "I accept" gate. WSL2 reports `uname` = `Linux` but is treated as a supervised laptop.
+- **native Linux** (the unattended automation host) → `--dangerously-skip-permissions` — **no accept
+  gate**, so the watchdog/loop restart hands-free. Refuses to run as **root**; use a normal user.
+  (Running the unattended loop on a Windows/WSL2 *server*? Set `GENTRIDUCK_DEVMODE_PERMISSION_MODE=dangerously-skip`.)
+
+Override either way with `GENTRIDUCK_DEVMODE_PERMISSION_MODE` (e.g. `=default` to prompt for
+everything; `=bypassPermissions` to keep the gate on Linux too).
+
+What still protects you:
 - The **`deny` list** in [`../.claude/settings.local.json`](../.claude/settings.local.json) still
   blocks the dangerous/irreversible commands (`gh pr merge`, `git push --force`, `git reset --hard`,
   `rm`, `curl`, `sudo`, …).
 - **Merges remain yours.** `gh pr merge` is denied, so the PM opens PRs and **queues them for you to
   merge in the GitHub UI** — it can't push to `main` itself. Unsupervised means it keeps *building*;
   it does not mean it self-merges to `main`.
+
+### Self-healing (hang watchdog)
+
+A non-stop loop that only restarts on process *exit* can't recover a session that **hangs but stays
+alive** — e.g. after an `API Error: Connection closed mid-response`, the TUI wedges and produces
+nothing (this stalled an overnight run for ~1h45m). So a background **watchdog** checks the session
+transcript's mtime every 60s; if `claude` is alive but idle past `GENTRIDUCK_DEVMODE_STALL_SECS`
+(default 900s), it kills the session so the loop restarts a fresh one. Restarts also use an
+**escalating backoff** (60s → 5m → 15m on repeated quick exits), and the log records *why* each
+restart happened (clean exit code vs watchdog kill). State lives in the board, not the session, so a
+fresh restart just re-reconciles and resumes — losing a wedged session costs nothing.
+
+> The watchdog assumes devmode is the **primary Claude session for this repo on the host** (true on a
+> dedicated box). If you run another Claude session in the same repo on the same machine, its activity
+> can mask a devmode hang.
 
 The script also **preflights** (needs `claude`/`git`/`gh` + a real gentriduck checkout) and **refuses
 to start a second instance** of the same Remote Control session, so two PMs can't race the board.
