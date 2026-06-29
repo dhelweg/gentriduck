@@ -76,11 +76,11 @@ def _import_deps() -> tuple:
         log.error("pandas not installed. Run: uv sync")
         sys.exit(1)
     try:
-        from scipy.stats import pearsonr
+        from scipy.stats import pearsonr, rankdata
     except ImportError:
         log.error("scipy not installed. Run: uv sync")
         sys.exit(1)
-    return duckdb, np, pd, pearsonr
+    return duckdb, np, pd, pearsonr, rankdata
 
 
 def plr_to_bzr_code(area_code: str) -> str:
@@ -92,7 +92,7 @@ def plr_to_bzr_code(area_code: str) -> str:
     return area_code[:6] if area_code and len(area_code) >= 6 else area_code
 
 
-def run_scale_sensitivity(con, pd, np, pearsonr) -> list[dict]:
+def run_scale_sensitivity(con, pd, np, pearsonr, rankdata) -> list[dict]:
     """PLR vs BZR rank correlation (spatial-methods.md §7).
 
     Aggregates PLR dynamism_score to BZR by averaging (equal-weight, no population
@@ -148,7 +148,16 @@ def run_scale_sensitivity(con, pd, np, pearsonr) -> list[dict]:
             log.warning("Year=%d: insufficient valid pairs after BZR mapping.", year)
             continue
 
-        r, pval = pearsonr(valid["dynamism_score"].values, valid["bzr_dynamism_score"].values)
+        # spatial-methods.md §7: Pearson correlation of the *rankings* (= Spearman's rho).
+        # The r > 0.7 gate is calibrated against rank correlation; use rankdata() to rank
+        # both series before passing to pearsonr() — this is Spearman's rho by construction.
+        # Bandwidth-sweep comparisons (weighted counts vs standard) remain as raw Pearson
+        # (comparing magnitudes of the same quantity across bandwidth variants, not
+        # cross-scale orderings — spec §7 applies only to PLR-vs-BZR scale comparison).
+        r, pval = pearsonr(
+            rankdata(valid["dynamism_score"].values),
+            rankdata(valid["bzr_dynamism_score"].values),
+        )
 
         warning = ""
         if r < MAUP_THRESHOLD:
@@ -350,7 +359,7 @@ def run_bandwidth_sweep(con, pd, np, pearsonr) -> list[dict]:
 
 
 def main() -> None:
-    duckdb, np, pd, pearsonr = _import_deps()
+    duckdb, np, pd, pearsonr, rankdata = _import_deps()
 
     if not Path(DUCKDB_PATH).exists():
         log.error("DuckDB not found at %s. Run uv run poe build first.", DUCKDB_PATH)
@@ -364,7 +373,7 @@ def main() -> None:
 
     log.info("Running MAUP sensitivity analysis...")
 
-    scale_results = run_scale_sensitivity(con, pd, np, pearsonr)
+    scale_results = run_scale_sensitivity(con, pd, np, pearsonr, rankdata)
     bandwidth_results = run_bandwidth_sweep(con, pd, np, pearsonr)
 
     con.close()

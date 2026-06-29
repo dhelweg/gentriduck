@@ -24,8 +24,10 @@ Weights:
   — the area_code = NULL zones; spatial-methods.md §6; ADR-0010 §5).
 
 Inference:
-  esda.G_Local(y, w, permutations=999, seed=42) — explicit per-call seed (R-C3;
-  ADR-0010 Required 4). Row-standardized weights. α=0.05 for hot/cold/ns label.
+  esda.G_Local(y, w, permutations=999, seed=42, star=True) — explicit per-call seed
+  (R-C3; ADR-0010 Required 4). star=True: focal unit included (Gi* not Gi; Ord &
+  Getis 1995; spatial-methods.md §6). Row-standardized weights. α=0.05 for
+  hot/cold/ns label.
 
 Output: data/analysis/a6_hotspots_{year}.csv per year.
   Columns: area_code, snapshot_year, dynamism_score, gi_zscore, gi_pvalue, cluster_label.
@@ -248,7 +250,10 @@ def run_gi_star(
 
     try:
         # spatial-methods.md §6: permutations=999, seed=42 (R-C3).
-        gi = G_Local(y_filled, w, permutations=999, seed=42)
+        # star=True: Gi* (focal unit included in its own neighbourhood sum).
+        # star=False (esda default) computes Gi (focal excluded) — wrong per spec.
+        # Getis & Ord (1992); Ord & Getis (1995); spatial-methods.md §6.
+        gi = G_Local(y_filled, w, permutations=999, seed=42, star=True)
     except Exception as e:
         log.error("G_Local failed for year=%d: %s", year, e)
         return None
