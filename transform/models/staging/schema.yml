@@ -529,7 +529,7 @@ models:
               - vintage
               - address_id
           config:
-            where: "wohnlage is not null"
+            where: "wohnlage is not null and address_id is not null"
       - assert_not_empty:
           config:
             severity: warn

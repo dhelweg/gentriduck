@@ -406,20 +406,24 @@ def write_parquet(rows: list[dict], out_path: Path, is_complete: bool) -> None:
     out_path.parent.mkdir(parents=True, exist_ok=True)
     try:
         pq.write_table(table, tmp_path, compression="snappy")
-        if is_complete:
-            tmp_path.rename(out_path)
-            log.info("Wrote %d rows to %s", len(rows), out_path)
-        else:
-            log.warning(
-                "PARTIAL DATA: only %d features downloaded. "
-                "Kept as %s — will NOT be picked up by dbt. "
-                "Re-run without --max-pages (or within the 15-min budget) to get full data.",
-                len(rows),
-                tmp_path,
-            )
     except Exception:
         tmp_path.unlink(missing_ok=True)
         raise
+    if is_complete:
+        try:
+            tmp_path.rename(out_path)
+        except Exception:
+            tmp_path.unlink(missing_ok=True)
+            raise
+        log.info("Wrote %d rows to %s", len(rows), out_path)
+    else:
+        log.warning(
+            "PARTIAL DATA: only %d features downloaded. "
+            "Kept as %s — will NOT be picked up by dbt. "
+            "Re-run without --max-pages (or within the 15-min budget) to get full data.",
+            len(rows),
+            tmp_path,
+        )
 
 
 # ---------------------------------------------------------------------------
@@ -483,12 +487,22 @@ def ingest_year(year: int, out_dir: Path, max_pages: Optional[int] = None) -> in
         log.error("Failed to write parquet for year=%d: %s", year, exc)
         return 0
 
+    if not is_complete:
+        # .tmp.parquet was kept for manual inspection but out_path was not written.
+        # Return 0 so main() does not count this year as a successful output.
+        log.warning(
+            "Year %d partial — no canonical parquet written to %s. "
+            "Re-run without --max-pages for full data.",
+            year,
+            out_path,
+        )
+        return 0
+
     log.info(
-        "=== Wohnlagen %d complete: %d rows -> %s (complete=%s) ===",
+        "=== Wohnlagen %d complete: %d rows -> %s ===",
         year,
         len(rows),
         out_path,
-        is_complete,
     )
     return len(rows)
 
