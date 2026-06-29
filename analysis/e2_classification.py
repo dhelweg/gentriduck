@@ -65,14 +65,16 @@ except ImportError:
 # ---------------------------------------------------------------------------
 
 _env_db = os.environ.get("GENTRIDUCK_DB")
-DUCKDB_PATH = Path(_env_db) if _env_db else Path(__file__).parent.parent / "data" / "gentriduck.duckdb"
+DUCKDB_PATH = (
+    Path(_env_db) if _env_db else Path(__file__).parent.parent / "data" / "gentriduck.duckdb"
+)
 OUTPUT_MD = Path(__file__).parent.parent / "docs" / "epic-e" / "E2-classification-findings.md"
 
 # Thesis per-hypothesis AUC references — reconstructed from thesis p.91 narrative.
 # No exact table in the thesis; values attributed as "reconstructed from thesis p.91 narrative".
 THESIS_AUC: dict[str, float] = {
-    "H1":  0.87,  # Reconstructed from thesis p.91 narrative: POI stock → status class; confirmed
-    "H2":  0.77,  # Reconstructed from thesis p.91 narrative: POI stock → future status change
+    "H1": 0.87,  # Reconstructed from thesis p.91 narrative: POI stock → status class; confirmed
+    "H2": 0.77,  # Reconstructed from thesis p.91 narrative: POI stock → future status change
     "H3a": 0.72,  # Reconstructed from thesis p.91 narrative: ΔPOI leads Δstatus; rejected
     "H3b": 0.81,  # Reconstructed from thesis p.91 narrative: Δstatus leads ΔPOI; confirmed
     "H3c": 0.71,  # Reconstructed from thesis p.91 narrative: simultaneous co-movement; unclear
@@ -99,6 +101,7 @@ H1_FEATURE_COLS = [
 # ---------------------------------------------------------------------------
 # Data loading
 # ---------------------------------------------------------------------------
+
 
 def load_h1_data(con: duckdb.DuckDBPyConnection) -> object:
     """Load H1 classification data: POI category counts → MSS status class.
@@ -184,6 +187,7 @@ def load_lead_lag_data(con: duckdb.DuckDBPyConnection) -> object:
 # Classification helpers
 # ---------------------------------------------------------------------------
 
+
 def make_classifier() -> Pipeline:
     """Build a regularised LogisticRegression pipeline (StandardScaler + L2 LR).
 
@@ -192,18 +196,25 @@ def make_classifier() -> Pipeline:
     of ~400-500 rows.  RidgeClassifier is used as a fallback for binary targets
     with very imbalanced classes.
     """
-    return Pipeline([
-        ("scaler", StandardScaler()),
-        ("clf", LogisticRegression(
-            C=1.0,
-            max_iter=2000,
-            random_state=42,
-            solver="lbfgs",
-        )),
-    ])
+    return Pipeline(
+        [
+            ("scaler", StandardScaler()),
+            (
+                "clf",
+                LogisticRegression(
+                    C=1.0,
+                    max_iter=2000,
+                    random_state=42,
+                    solver="lbfgs",
+                ),
+            ),
+        ]
+    )
 
 
-def leakage_guard_crosssection(area_codes: np.ndarray, train_idx: np.ndarray, test_idx: np.ndarray) -> None:
+def leakage_guard_crosssection(
+    area_codes: np.ndarray, train_idx: np.ndarray, test_idx: np.ndarray
+) -> None:
     """R-C3 leakage guard for cross-section data: assert no area_code in both folds.
 
     Applicable to H1 (cross-section, one row per PLR) where each area_code is unique.
@@ -344,6 +355,7 @@ def run_cv_panel(
 # Hypothesis tasks
 # ---------------------------------------------------------------------------
 
+
 def task_h1(df) -> dict | None:
     """H1: Classify MSS status_class_bi using POI category features.
 
@@ -361,7 +373,7 @@ def task_h1(df) -> dict | None:
     mask = ~np.any(np.isnan(x), axis=1)
     x, y, area_codes = x[mask], y[mask], area_codes[mask]
 
-    print(f"  H1: n={len(x)}, high-status={y.sum()} ({100*y.mean():.1f}%)")
+    print(f"  H1: n={len(x)}, high-status={y.sum()} ({100 * y.mean():.1f}%)")
     # H1 is cross-section (one row per PLR) — use StratifiedKFold + leakage guard
     result = run_cv_crosssection(x, y, area_codes, "H1")
     if result:
@@ -393,13 +405,21 @@ def task_h2(df_ll) -> list[dict]:
     """
     results = []
     # k=3 skipped: only 3 MSS editions currently (2021, 2023, 2025); testable once 2027 edition ingested
-    print("  NOTE: k=3 skipped — only 3 MSS editions available (2021, 2023, 2025); k=3 requires 2027 edition")
+    print(
+        "  NOTE: k=3 skipped — only 3 MSS editions available (2021, 2023, 2025); k=3 requires 2027 edition"
+    )
     for k in [1, 2]:
         sub = df_ll[df_ll["lag_k"] == k].copy()
         if len(sub) < 20:
             continue
 
-        feature_cols = ["poi_count_t", "poi_cafe_t", "poi_bar_t", "poi_restaurant_t", "poi_fast_food_t"]
+        feature_cols = [
+            "poi_count_t",
+            "poi_cafe_t",
+            "poi_bar_t",
+            "poi_restaurant_t",
+            "poi_fast_food_t",
+        ]
         x = sub[feature_cols].values.astype(float)
         # Use status_transition ordinal column (index-definition.md §3.3; not metric differencing)
         y = (sub["status_transition"] == "worsened").astype(int).values
@@ -408,7 +428,7 @@ def task_h2(df_ll) -> list[dict]:
         mask = ~np.any(np.isnan(x), axis=1)
         x, y, area_codes = x[mask], y[mask], area_codes[mask]
 
-        print(f"  H2 k={k}: n={len(x)}, status_worsened={y.sum()} ({100*y.mean():.1f}%)")
+        print(f"  H2 k={k}: n={len(x)}, status_worsened={y.sum()} ({100 * y.mean():.1f}%)")
         # Panel data (area_codes repeat across editions) — use GroupKFold
         r = run_cv_panel(x, y, area_codes, f"H2 k={k}")
         if r:
@@ -439,7 +459,9 @@ def task_h3a(df_ll) -> list[dict]:
     """
     results = []
     # k=3 skipped: only 3 MSS editions currently (2021, 2023, 2025); testable once 2027 edition ingested
-    print("  NOTE: k=3 skipped — only 3 MSS editions available (2021, 2023, 2025); k=3 requires 2027 edition")
+    print(
+        "  NOTE: k=3 skipped — only 3 MSS editions available (2021, 2023, 2025); k=3 requires 2027 edition"
+    )
     for k in [1, 2]:
         sub = df_ll[df_ll["lag_k"] == k].copy()
         if len(sub) < 20:
@@ -454,7 +476,7 @@ def task_h3a(df_ll) -> list[dict]:
         mask = ~np.any(np.isnan(x), axis=1)
         x, y, area_codes = x[mask], y[mask], area_codes[mask]
 
-        print(f"  H3a k={k}: n={len(x)}, status_worsened={y.sum()} ({100*y.mean():.1f}%)")
+        print(f"  H3a k={k}: n={len(x)}, status_worsened={y.sum()} ({100 * y.mean():.1f}%)")
         # Panel data — use GroupKFold to prevent PLR temporal leakage
         r = run_cv_panel(x, y, area_codes, f"H3a k={k}")
         if r:
@@ -462,7 +484,9 @@ def task_h3a(df_ll) -> list[dict]:
             r["target"] = "status_transition == 'worsened' [index-definition.md §3.3]"
             r["features"] = "delta_dynamism_t (C5-corrected), dynamism_score_t"
             r["thesis_auc"] = THESIS_AUC["H3a"]
-            r["leakage_note"] = "None — C5-corrected dynamism at t precedes status transition from t to t+k"
+            r["leakage_note"] = (
+                "None — C5-corrected dynamism at t precedes status transition from t to t+k"
+            )
             results.append(r)
     return results
 
@@ -488,7 +512,9 @@ def task_h3b(df_ll) -> list[dict]:
     """
     results = []
     # k=3 skipped: only 3 MSS editions currently (2021, 2023, 2025); testable once 2027 edition ingested
-    print("  NOTE: k=3 skipped — only 3 MSS editions available (2021, 2023, 2025); k=3 requires 2027 edition")
+    print(
+        "  NOTE: k=3 skipped — only 3 MSS editions available (2021, 2023, 2025); k=3 requires 2027 edition"
+    )
     for k in [1, 2]:
         sub = df_ll[df_ll["lag_k"] == k].copy()
         if len(sub) < 20:
@@ -504,17 +530,19 @@ def task_h3b(df_ll) -> list[dict]:
         x, y, area_codes = x[mask], y[mask], area_codes[mask]
 
         pos_rate = float(y.mean()) if len(y) > 0 else 0.0
-        print(f"  H3b k={k}: n={len(x)}, dynamism_growing={y.sum()} ({100*pos_rate:.1f}%)")
+        print(f"  H3b k={k}: n={len(x)}, dynamism_growing={y.sum()} ({100 * pos_rate:.1f}%)")
         if pos_rate > 0.95:
             print(
-                f"  WARNING H3b k={k}: target `delta_dynamism_t > 0` still has {100*pos_rate:.1f}% "
+                f"  WARNING H3b k={k}: target `delta_dynamism_t > 0` still has {100 * pos_rate:.1f}% "
                 "positive-class rate. F1w is uninformative; AUC is the only valid metric."
             )
         # Panel data — use GroupKFold to prevent PLR temporal leakage
         r = run_cv_panel(x, y, area_codes, f"H3b k={k}")
         if r:
             r["task"] = f"H3b (k={k})"
-            r["target"] = "delta_dynamism_t > 0 (C5-corrected dynamism grows; index-definition.md §2.4)"
+            r["target"] = (
+                "delta_dynamism_t > 0 (C5-corrected dynamism grows; index-definition.md §2.4)"
+            )
             r["features"] = "delta_status_ordinal (ordinal proxy), status_index_t"
             r["thesis_auc"] = THESIS_AUC["H3b"]
             r["leakage_note"] = "None — status change at t precedes C5-corrected dynamism change"
@@ -538,7 +566,9 @@ def task_h3c(df_ll) -> list[dict]:
     """
     results = []
     # k=3 skipped: only 3 MSS editions currently (2021, 2023, 2025); testable once 2027 edition ingested
-    print("  NOTE: k=3 skipped — only 3 MSS editions available (2021, 2023, 2025); k=3 requires 2027 edition")
+    print(
+        "  NOTE: k=3 skipped — only 3 MSS editions available (2021, 2023, 2025); k=3 requires 2027 edition"
+    )
     for k in [1, 2]:
         sub = df_ll[df_ll["lag_k"] == k].copy()
         if len(sub) < 20:
@@ -552,7 +582,7 @@ def task_h3c(df_ll) -> list[dict]:
         mask = ~np.any(np.isnan(x), axis=1)
         x, y, area_codes = x[mask], y[mask], area_codes[mask]
 
-        print(f"  H3c k={k}: n={len(x)}, status_worsened={y.sum()} ({100*y.mean():.1f}%)")
+        print(f"  H3c k={k}: n={len(x)}, status_worsened={y.sum()} ({100 * y.mean():.1f}%)")
         # Panel data — use GroupKFold to prevent PLR temporal leakage
         r = run_cv_panel(x, y, area_codes, f"H3c k={k}")
         if r:
@@ -568,6 +598,7 @@ def task_h3c(df_ll) -> list[dict]:
 # ---------------------------------------------------------------------------
 # Output helpers
 # ---------------------------------------------------------------------------
+
 
 def _auc_verdict(auc: float, thesis_auc: float) -> str:
     diff = auc - thesis_auc
@@ -604,7 +635,9 @@ def write_findings(all_results: list[dict]) -> None:
         f.write("- **Task:** scikit-learn classification with POI features, per-hypothesis AUCs\n")
         f.write("- **Issue:** #65\n")
         f.write("- **Date:** 2026-06-29\n")
-        f.write("- **Method:** 5-fold stratified cross-validation (LogisticRegression L2), leakage guard\n\n")
+        f.write(
+            "- **Method:** 5-fold stratified cross-validation (LogisticRegression L2), leakage guard\n\n"
+        )
 
         f.write("## Methodology\n\n")
         f.write("Each thesis hypothesis (H1-H3c from pp. 55-56, p. 91) is implemented as a ")
@@ -624,7 +657,9 @@ def write_findings(all_results: list[dict]) -> None:
         f.write("\n")
 
         f.write("## Results\n\n")
-        f.write("| Task | N | Thesis AUC | Revival AUC | AUC std | F1w | F1w std | Leakage | Features |\n")
+        f.write(
+            "| Task | N | Thesis AUC | Revival AUC | AUC std | F1w | F1w std | Leakage | Features |\n"
+        )
         f.write("|---|---|---|---|---|---|---|---|---|\n")
         for r in all_results:
             f.write(
@@ -652,11 +687,17 @@ def write_findings(all_results: list[dict]) -> None:
             if hyp_key == "H1":
                 best = max(hyp_results, key=lambda x: x["auc_mean"])
                 if best["auc_mean"] >= 0.75:
-                    f.write("Directional agreement: PASS — AUC >= 0.75 confirms POI stock classifies MSS status.\n\n")
+                    f.write(
+                        "Directional agreement: PASS — AUC >= 0.75 confirms POI stock classifies MSS status.\n\n"
+                    )
                 elif best["auc_mean"] > 0.5:
-                    f.write("Partial agreement: AUC > 0.5 confirms above-chance classification; below thesis 0.87 likely reflects narrower feature set.\n\n")
+                    f.write(
+                        "Partial agreement: AUC > 0.5 confirms above-chance classification; below thesis 0.87 likely reflects narrower feature set.\n\n"
+                    )
                 else:
-                    f.write("Directional divergence: AUC <= 0.5, below chance. Possible cause: limited POI category overlap with 2018 thesis features.\n\n")
+                    f.write(
+                        "Directional divergence: AUC <= 0.5, below chance. Possible cause: limited POI category overlap with 2018 thesis features.\n\n"
+                    )
             elif hyp_key == "H3b":
                 # Report each k separately — do NOT suppress sub-chance results
                 any_sub_chance = any(r["auc_mean"] < 0.5 for r in hyp_results)
@@ -665,12 +706,24 @@ def write_findings(all_results: list[dict]) -> None:
                     f.write("**WARNING: one or more k values yield AUC < 0.5 (sub-chance).** ")
                     f.write("Results must be reported per k, not as a single best:\n\n")
                     for r in hyp_results:
-                        verdict = "Consistent with thesis confirmation" if r["auc_mean"] > 0.5 else "Diverges from thesis (sub-chance AUC)"
-                        f.write(f"- k={r['task'].split('=')[1].rstrip(')')}: AUC = {r['auc_mean']:.4f} — {verdict}.\n")
-                    f.write("\nDiverges from thesis (H3b was confirmed in thesis). Possible cause: ")
-                    f.write("MSS panel covers only 2021-2025 (3 editions); thesis used 2010-2018 (longer panel).\n\n")
+                        verdict = (
+                            "Consistent with thesis confirmation"
+                            if r["auc_mean"] > 0.5
+                            else "Diverges from thesis (sub-chance AUC)"
+                        )
+                        f.write(
+                            f"- k={r['task'].split('=')[1].rstrip(')')}: AUC = {r['auc_mean']:.4f} — {verdict}.\n"
+                        )
+                    f.write(
+                        "\nDiverges from thesis (H3b was confirmed in thesis). Possible cause: "
+                    )
+                    f.write(
+                        "MSS panel covers only 2021-2025 (3 editions); thesis used 2010-2018 (longer panel).\n\n"
+                    )
                 elif all_above_chance:
-                    f.write("Consistent with thesis confirmation (H3b confirmed in thesis): status predictor of future POI growth direction.\n\n")
+                    f.write(
+                        "Consistent with thesis confirmation (H3b confirmed in thesis): status predictor of future POI growth direction.\n\n"
+                    )
                 else:
                     f.write("Mixed results across k — see per-k AUC values above.\n\n")
                 # Class imbalance note for H3b (delta_dynamism_t > 0 target may still be imbalanced)
@@ -679,7 +732,7 @@ def write_findings(all_results: list[dict]) -> None:
                     if pos_rate > 0.95:
                         f.write(
                             f"**CLASS IMBALANCE WARNING ({r['task']}):** The target `delta_dynamism_t > 0` has "
-                            f"{r['n_pos']}/{r['n']} positive-class rows ({100*pos_rate:.1f}% positive rate). "
+                            f"{r['n_pos']}/{r['n']} positive-class rows ({100 * pos_rate:.1f}% positive rate). "
                             f"An all-positive predictor achieves F1w ≈ {pos_rate:.2f}. "
                             "F1w is therefore uninformative for this target; AUC is the only valid metric. "
                             "Note: the switch from raw `delta_poi` to C5-corrected `delta_dynamism_t` "
@@ -688,23 +741,37 @@ def write_findings(all_results: list[dict]) -> None:
             elif hyp_key == "H3a":
                 best = max(hyp_results, key=lambda x: x["auc_mean"])
                 if best["auc_mean"] <= 0.6:
-                    f.write("Consistent with thesis rejection (H3a rejected in thesis): POI dynamism is a weak predictor of future status change.\n\n")
+                    f.write(
+                        "Consistent with thesis rejection (H3a rejected in thesis): POI dynamism is a weak predictor of future status change.\n\n"
+                    )
                 else:
-                    f.write("Diverges from thesis rejection: higher-than-expected AUC. Check for data leakage or panel period effects.\n\n")
+                    f.write(
+                        "Diverges from thesis rejection: higher-than-expected AUC. Check for data leakage or panel period effects.\n\n"
+                    )
 
         f.write("## Divergences from 2018 Thesis\n\n")
         f.write("- **D1 polarity correction**: `status_index` is inverse-numeric — lower value = ")
-        f.write("higher social status (index-definition.md §5 polarity table; int_mss_lead_lag.sql ")
+        f.write(
+            "higher social status (index-definition.md §5 polarity table; int_mss_lead_lag.sql "
+        )
         f.write("lines 19-23). H2/H3a/H3c targets corrected to `status_transition == 'worsened'` ")
         f.write("(ordinal transition column) instead of `delta_status_ordinal > 0`. ")
         f.write("Prior implementation labelled `delta_status_ordinal > 0` as 'status improves' — ")
         f.write("this was inverted (positive delta = status worsened, not improved).\n")
         f.write("- **H3 C5-corrected predictor**: H3a features and H3b target now use ")
-        f.write("`delta_dynamism_t` (C5-corrected within-vintage dynamism change) not raw `delta_poi`. ")
-        f.write("Raw `delta_poi > 0` had a ~99% positive-class rate reflecting OSM coverage growth ")
-        f.write("artefact, not commercial succession (index-definition.md §2.4; C5 geo-DS sign-off).\n")
+        f.write(
+            "`delta_dynamism_t` (C5-corrected within-vintage dynamism change) not raw `delta_poi`. "
+        )
+        f.write(
+            "Raw `delta_poi > 0` had a ~99% positive-class rate reflecting OSM coverage growth "
+        )
+        f.write(
+            "artefact, not commercial succession (index-definition.md §2.4; C5 geo-DS sign-off).\n"
+        )
         f.write("- **Ordinal treatment**: H2/H3a/H3c use `status_transition` ordinal column; ")
-        f.write("metric differencing on non-uniform MSS ordinal codes is prohibited (index-definition.md §3.3).\n")
+        f.write(
+            "metric differencing on non-uniform MSS ordinal codes is prohibited (index-definition.md §3.3).\n"
+        )
         f.write("- **Thesis AUC attribution**: per-hypothesis AUC values attributed as ")
         f.write("'reconstructed from thesis p.91 narrative' (no exact table verifiable).\n")
         f.write("- Thesis used Weka J48/Random Forest; this revival uses LogisticRegression (L2) ")
@@ -731,6 +798,7 @@ def write_findings(all_results: list[dict]) -> None:
 # ---------------------------------------------------------------------------
 # Main
 # ---------------------------------------------------------------------------
+
 
 def main() -> None:
     if not DUCKDB_PATH.exists():
@@ -762,7 +830,9 @@ def main() -> None:
 
     print("Loading H2/H3 lead-lag data...")
     df_ll = load_lead_lag_data(con)
-    print(f"  Loaded {len(df_ll)} lead-lag rows (k=1: {(df_ll['lag_k']==1).sum()}, k=2: {(df_ll['lag_k']==2).sum()})")
+    print(
+        f"  Loaded {len(df_ll)} lead-lag rows (k=1: {(df_ll['lag_k'] == 1).sum()}, k=2: {(df_ll['lag_k'] == 2).sum()})"
+    )
     con.close()
 
     if len(df_h1) < 20:

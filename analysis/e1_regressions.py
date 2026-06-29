@@ -57,7 +57,9 @@ except ImportError:
 # ---------------------------------------------------------------------------
 
 _env_db = os.environ.get("GENTRIDUCK_DB")
-DUCKDB_PATH = Path(_env_db) if _env_db else Path(__file__).parent.parent / "data" / "gentriduck.duckdb"
+DUCKDB_PATH = (
+    Path(_env_db) if _env_db else Path(__file__).parent.parent / "data" / "gentriduck.duckdb"
+)
 OUTPUT_MD = Path(__file__).parent.parent / "docs" / "epic-e" / "E1-regression-findings.md"
 
 # Thesis hypotheses and expected directions — derived from pp. 55-56, p. 91 of the
@@ -132,6 +134,7 @@ THESIS_HYPOTHESES: dict[str, dict] = {
 # ---------------------------------------------------------------------------
 # Data loading
 # ---------------------------------------------------------------------------
+
 
 def load_h1_h2_data(con: duckdb.DuckDBPyConnection) -> object:
     """Load PLR-level 2018 golden data joined with POI category counts for H1/H2.
@@ -212,6 +215,7 @@ def load_lead_lag_data(con: duckdb.DuckDBPyConnection) -> object:
 # Statistical helpers
 # ---------------------------------------------------------------------------
 
+
 def run_spearman(x: np.ndarray, y: np.ndarray, label: str) -> dict:
     """Run Spearman rank correlation; return dict with rho, p, n."""
     mask = ~(np.isnan(x) | np.isnan(y))
@@ -220,7 +224,14 @@ def run_spearman(x: np.ndarray, y: np.ndarray, label: str) -> dict:
     if n < 10:
         return {"label": label, "n": n, "rho": None, "p": None, "sig": None, "stat_type": "rho"}
     rho, p = stats.spearmanr(xc, yc)
-    return {"label": label, "n": n, "rho": float(rho), "p": float(p), "sig": p < 0.05, "stat_type": "rho"}
+    return {
+        "label": label,
+        "n": n,
+        "rho": float(rho),
+        "p": float(p),
+        "sig": p < 0.05,
+        "stat_type": "rho",
+    }
 
 
 def run_ols(x: np.ndarray, y: np.ndarray, label: str) -> dict:
@@ -229,7 +240,15 @@ def run_ols(x: np.ndarray, y: np.ndarray, label: str) -> dict:
     xc, yc = x[mask], y[mask]
     n = int(mask.sum())
     if n < 10:
-        return {"label": label, "n": n, "coef": None, "p": None, "r2": None, "sig": None, "stat_type": "beta"}
+        return {
+            "label": label,
+            "n": n,
+            "coef": None,
+            "p": None,
+            "r2": None,
+            "sig": None,
+            "stat_type": "beta",
+        }
     res = stats.linregress(xc, yc)
     return {
         "label": label,
@@ -237,7 +256,7 @@ def run_ols(x: np.ndarray, y: np.ndarray, label: str) -> dict:
         "coef": float(res.slope),
         "intercept": float(res.intercept),
         "p": float(res.pvalue),
-        "r2": float(res.rvalue ** 2),
+        "r2": float(res.rvalue**2),
         "sig": res.pvalue < 0.05,
         "stat_type": "beta",
     }
@@ -260,6 +279,7 @@ def _dir_match(val: float | None, expected: str) -> bool:
 # Hypothesis tests
 # ---------------------------------------------------------------------------
 
+
 def test_h1(df) -> list[dict]:
     """H1: POI stock ~ MSS social status.
 
@@ -273,57 +293,63 @@ def test_h1(df) -> list[dict]:
     y = df["status_index"].values.astype(float)
 
     r_sp = run_spearman(x, y, "Spearman(total_poi_count, status_index)")
-    results.append({
-        "hyp": "H1",
-        "test": "Spearman",
-        "desc": THESIS_HYPOTHESES["H1"]["desc"],
-        "citation": THESIS_HYPOTHESES["H1"]["citation"],
-        "stat_val": r_sp["rho"],
-        "stat_type": "rho",
-        "n": r_sp["n"],
-        "p": r_sp["p"],
-        "sig": r_sp["sig"],
-        "r2": None,
-        "expected_dir": THESIS_HYPOTHESES["H1"]["expected_dir"],
-        "actual_dir": _dir(r_sp["rho"]),
-        "dir_match": _dir_match(r_sp["rho"], THESIS_HYPOTHESES["H1"]["expected_dir"]),
-    })
+    results.append(
+        {
+            "hyp": "H1",
+            "test": "Spearman",
+            "desc": THESIS_HYPOTHESES["H1"]["desc"],
+            "citation": THESIS_HYPOTHESES["H1"]["citation"],
+            "stat_val": r_sp["rho"],
+            "stat_type": "rho",
+            "n": r_sp["n"],
+            "p": r_sp["p"],
+            "sig": r_sp["sig"],
+            "r2": None,
+            "expected_dir": THESIS_HYPOTHESES["H1"]["expected_dir"],
+            "actual_dir": _dir(r_sp["rho"]),
+            "dir_match": _dir_match(r_sp["rho"], THESIS_HYPOTHESES["H1"]["expected_dir"]),
+        }
+    )
 
     r_ols = run_ols(x, y, "OLS(status_index ~ total_poi_count)")
-    results.append({
-        "hyp": "H1",
-        "test": "OLS",
-        "desc": THESIS_HYPOTHESES["H1"]["desc"],
-        "citation": THESIS_HYPOTHESES["H1"]["citation"],
-        "stat_val": r_ols["coef"],
-        "stat_type": "beta",
-        "n": r_ols["n"],
-        "p": r_ols["p"],
-        "sig": r_ols["sig"],
-        "r2": r_ols["r2"],
-        "expected_dir": THESIS_HYPOTHESES["H1"]["expected_dir"],
-        "actual_dir": _dir(r_ols["coef"]),
-        "dir_match": _dir_match(r_ols["coef"], THESIS_HYPOTHESES["H1"]["expected_dir"]),
-    })
+    results.append(
+        {
+            "hyp": "H1",
+            "test": "OLS",
+            "desc": THESIS_HYPOTHESES["H1"]["desc"],
+            "citation": THESIS_HYPOTHESES["H1"]["citation"],
+            "stat_val": r_ols["coef"],
+            "stat_type": "beta",
+            "n": r_ols["n"],
+            "p": r_ols["p"],
+            "sig": r_ols["sig"],
+            "r2": r_ols["r2"],
+            "expected_dir": THESIS_HYPOTHESES["H1"]["expected_dir"],
+            "actual_dir": _dir(r_ols["coef"]),
+            "dir_match": _dir_match(r_ols["coef"], THESIS_HYPOTHESES["H1"]["expected_dir"]),
+        }
+    )
 
     # H1b: fast-food ~ status (thesis p.55: fast-food is negative indicator)
     xf = df["poi_fast_food"].values.astype(float)
     r_ff = run_spearman(xf, y, "Spearman(poi_fast_food, status_index)")
-    results.append({
-        "hyp": "H1b",
-        "test": "Spearman",
-        "desc": THESIS_HYPOTHESES["H1b"]["desc"],
-        "citation": THESIS_HYPOTHESES["H1b"]["citation"],
-        "stat_val": r_ff["rho"],
-        "stat_type": "rho",
-        "n": r_ff["n"],
-        "p": r_ff["p"],
-        "sig": r_ff["sig"],
-        "r2": None,
-        "expected_dir": THESIS_HYPOTHESES["H1b"]["expected_dir"],
-        "actual_dir": _dir(r_ff["rho"]),
-        "dir_match": _dir_match(r_ff["rho"], THESIS_HYPOTHESES["H1b"]["expected_dir"]),
-    })
+    results.append(
+        {
+            "hyp": "H1b",
+            "test": "Spearman",
+            "desc": THESIS_HYPOTHESES["H1b"]["desc"],
+            "citation": THESIS_HYPOTHESES["H1b"]["citation"],
+            "stat_val": r_ff["rho"],
+            "stat_type": "rho",
+            "n": r_ff["n"],
+            "p": r_ff["p"],
+            "sig": r_ff["sig"],
+            "r2": None,
+            "expected_dir": THESIS_HYPOTHESES["H1b"]["expected_dir"],
+            "actual_dir": _dir(r_ff["rho"]),
+            "dir_match": _dir_match(r_ff["rho"], THESIS_HYPOTHESES["H1b"]["expected_dir"]),
+        }
+    )
 
     return results
 
@@ -351,7 +377,9 @@ def test_h2(df_ll: object) -> list[dict]:
     # Thesis p.55 H2: test at k=1 and k=2 using live MSS panel
     # poi_count_t at edition_t predicts delta_status_ordinal
     # k=3 skipped: only 3 MSS editions currently (2021, 2023, 2025); testable once 2027 edition ingested
-    print("  NOTE: k=3 skipped — only 3 MSS editions available (2021, 2023, 2025); k=3 requires 2027 edition")
+    print(
+        "  NOTE: k=3 skipped — only 3 MSS editions available (2021, 2023, 2025); k=3 requires 2027 edition"
+    )
     for k in [1, 2]:
         sub = df_ll[df_ll["lag_k"] == k].copy()
         if len(sub) < 10:
@@ -361,21 +389,23 @@ def test_h2(df_ll: object) -> list[dict]:
         # not metric differencing — index-definition.md §3.3 and §3.2 ordinal-transition treatment)
         y = sub["delta_status_ordinal"].values.astype(float)
         r = run_spearman(x, y, f"Spearman(poi_count_t, delta_status, k={k})")
-        results.append({
-            "hyp": "H2",
-            "test": f"Spearman k={k}",
-            "desc": f"Current-edition POI stock ~ future status change [k={k} MSS editions, 2021+ panel]",
-            "citation": THESIS_HYPOTHESES["H2"]["citation"],
-            "stat_val": r["rho"],
-            "stat_type": "rho",
-            "n": r["n"],
-            "p": r["p"],
-            "sig": r["sig"],
-            "r2": None,
-            "expected_dir": THESIS_HYPOTHESES["H2"]["expected_dir"],
-            "actual_dir": _dir(r["rho"]),
-            "dir_match": _dir_match(r["rho"], THESIS_HYPOTHESES["H2"]["expected_dir"]),
-        })
+        results.append(
+            {
+                "hyp": "H2",
+                "test": f"Spearman k={k}",
+                "desc": f"Current-edition POI stock ~ future status change [k={k} MSS editions, 2021+ panel]",
+                "citation": THESIS_HYPOTHESES["H2"]["citation"],
+                "stat_val": r["rho"],
+                "stat_type": "rho",
+                "n": r["n"],
+                "p": r["p"],
+                "sig": r["sig"],
+                "r2": None,
+                "expected_dir": THESIS_HYPOTHESES["H2"]["expected_dir"],
+                "actual_dir": _dir(r["rho"]),
+                "dir_match": _dir_match(r["rho"], THESIS_HYPOTHESES["H2"]["expected_dir"]),
+            }
+        )
 
     return results
 
@@ -419,7 +449,9 @@ def test_h3(df_ll: object) -> list[dict]:
     results = []
 
     # k=3 skipped: only 3 MSS editions currently (2021, 2023, 2025); testable once 2027 edition ingested
-    print("  NOTE: k=3 skipped — only 3 MSS editions available (2021, 2023, 2025); k=3 requires 2027 edition")
+    print(
+        "  NOTE: k=3 skipped — only 3 MSS editions available (2021, 2023, 2025); k=3 requires 2027 edition"
+    )
     for k in [1, 2]:
         sub = df_ll[df_ll["lag_k"] == k].copy()
         if len(sub) < 10:
@@ -437,21 +469,23 @@ def test_h3(df_ll: object) -> list[dict]:
         # Test: delta_dynamism_t (C5-corrected change) predicts delta_status_ordinal (k editions later)
         # Uses C5-corrected delta_dynamism_t, not raw delta_poi (index-definition.md §2.4)
         r3a = run_spearman(delta_dyn_t, delta_status, f"Spearman(delta_dyn_t, delta_status, k={k})")
-        results.append({
-            "hyp": "H3a",
-            "test": f"Spearman k={k}",
-            "desc": f"{THESIS_HYPOTHESES['H3a']['desc']} [k={k}]",
-            "citation": THESIS_HYPOTHESES["H3a"]["citation"],
-            "stat_val": r3a["rho"],
-            "stat_type": "rho",
-            "n": r3a["n"],
-            "p": r3a["p"],
-            "sig": r3a["sig"],
-            "r2": None,
-            "expected_dir": THESIS_HYPOTHESES["H3a"]["expected_dir"],
-            "actual_dir": _dir(r3a["rho"]),
-            "dir_match": _dir_match(r3a["rho"], THESIS_HYPOTHESES["H3a"]["expected_dir"]),
-        })
+        results.append(
+            {
+                "hyp": "H3a",
+                "test": f"Spearman k={k}",
+                "desc": f"{THESIS_HYPOTHESES['H3a']['desc']} [k={k}]",
+                "citation": THESIS_HYPOTHESES["H3a"]["citation"],
+                "stat_val": r3a["rho"],
+                "stat_type": "rho",
+                "n": r3a["n"],
+                "p": r3a["p"],
+                "sig": r3a["sig"],
+                "r2": None,
+                "expected_dir": THESIS_HYPOTHESES["H3a"]["expected_dir"],
+                "actual_dir": _dir(r3a["rho"]),
+                "dir_match": _dir_match(r3a["rho"], THESIS_HYPOTHESES["H3a"]["expected_dir"]),
+            }
+        )
 
         # H3b: Thesis p.91 — Status CHANGE leads POI CHANGE (CONFIRMED)
         # Thesis p.91 H3b: Δstatus at t leads ΔPOI at t+k — both are changes, not levels.
@@ -460,42 +494,46 @@ def test_h3(df_ll: object) -> list[dict]:
         # D1 POLARITY: improved status (delta_status_ordinal < 0) should lead to more amenity
         # growth (delta_dynamism_t > 0) → expected Spearman(delta_status, delta_dyn) is negative.
         r3b = run_spearman(delta_status, delta_dyn_t, f"Spearman(delta_status, delta_dyn_t, k={k})")
-        results.append({
-            "hyp": "H3b",
-            "test": f"Spearman k={k}",
-            "desc": f"{THESIS_HYPOTHESES['H3b']['desc']} [k={k}]",
-            "citation": THESIS_HYPOTHESES["H3b"]["citation"],
-            "stat_val": r3b["rho"],
-            "stat_type": "rho",
-            "n": r3b["n"],
-            "p": r3b["p"],
-            "sig": r3b["sig"],
-            "r2": None,
-            "expected_dir": THESIS_HYPOTHESES["H3b"]["expected_dir"],
-            "actual_dir": _dir(r3b["rho"]),
-            "dir_match": _dir_match(r3b["rho"], THESIS_HYPOTHESES["H3b"]["expected_dir"]),
-        })
+        results.append(
+            {
+                "hyp": "H3b",
+                "test": f"Spearman k={k}",
+                "desc": f"{THESIS_HYPOTHESES['H3b']['desc']} [k={k}]",
+                "citation": THESIS_HYPOTHESES["H3b"]["citation"],
+                "stat_val": r3b["rho"],
+                "stat_type": "rho",
+                "n": r3b["n"],
+                "p": r3b["p"],
+                "sig": r3b["sig"],
+                "r2": None,
+                "expected_dir": THESIS_HYPOTHESES["H3b"]["expected_dir"],
+                "actual_dir": _dir(r3b["rho"]),
+                "dir_match": _dir_match(r3b["rho"], THESIS_HYPOTHESES["H3b"]["expected_dir"]),
+            }
+        )
 
         # H3c: Thesis p.91 — Simultaneous co-movement (UNCLEAR)
         # Test: dynamism_score_t ~ status_index_t (contemporaneous correlation)
         # D1 POLARITY: higher dynamism → more gentrified → lower status_index (inverse-numeric).
         # Expected Spearman(dyn_score_t, status_index_t) is negative.
         r3c = run_spearman(dyn_t, stat_t, f"Spearman(dyn_score_t, status_t, k={k})")
-        results.append({
-            "hyp": "H3c",
-            "test": f"Spearman k={k}",
-            "desc": f"{THESIS_HYPOTHESES['H3c']['desc']} [k={k}]",
-            "citation": THESIS_HYPOTHESES["H3c"]["citation"],
-            "stat_val": r3c["rho"],
-            "stat_type": "rho",
-            "n": r3c["n"],
-            "p": r3c["p"],
-            "sig": r3c["sig"],
-            "r2": None,
-            "expected_dir": THESIS_HYPOTHESES["H3c"]["expected_dir"],
-            "actual_dir": _dir(r3c["rho"]),
-            "dir_match": _dir_match(r3c["rho"], THESIS_HYPOTHESES["H3c"]["expected_dir"]),
-        })
+        results.append(
+            {
+                "hyp": "H3c",
+                "test": f"Spearman k={k}",
+                "desc": f"{THESIS_HYPOTHESES['H3c']['desc']} [k={k}]",
+                "citation": THESIS_HYPOTHESES["H3c"]["citation"],
+                "stat_val": r3c["rho"],
+                "stat_type": "rho",
+                "n": r3c["n"],
+                "p": r3c["p"],
+                "sig": r3c["sig"],
+                "r2": None,
+                "expected_dir": THESIS_HYPOTHESES["H3c"]["expected_dir"],
+                "actual_dir": _dir(r3c["rho"]),
+                "dir_match": _dir_match(r3c["rho"], THESIS_HYPOTHESES["H3c"]["expected_dir"]),
+            }
+        )
 
     return results
 
@@ -503,6 +541,7 @@ def test_h3(df_ll: object) -> list[dict]:
 # ---------------------------------------------------------------------------
 # Output helpers
 # ---------------------------------------------------------------------------
+
 
 def print_results(results: list[dict]) -> None:
     print("\n" + "=" * 100)
@@ -518,7 +557,7 @@ def print_results(results: list[dict]) -> None:
         match_str = "PASS" if r["dir_match"] else "FAIL"
         r2_note = f" R2={r['r2']:.4f}" if r.get("r2") is not None else ""
         print(
-            f"{r['hyp']:<5} {r['test']:<14} {r['n']:<5} {r['stat_type']:<5} {val_str+r2_note:<9} "
+            f"{r['hyp']:<5} {r['test']:<14} {r['n']:<5} {r['stat_type']:<5} {val_str + r2_note:<9} "
             f"{p_str:<10} {sig_str:<5} {r['expected_dir']:<9} {r['actual_dir']:<9} {match_str:<6} {r['desc']}"
         )
 
@@ -534,7 +573,9 @@ def write_findings(df_h1, results: list[dict]) -> None:
         f.write("- **Task:** H1-H3c regression and lead-lag analysis, real thesis hypotheses\n")
         f.write("- **Issue:** #65\n")
         f.write("- **Date:** 2026-06-29\n")
-        f.write(f"- **Data (H1/H1b):** stg_thesis_2018_result_plr + int_poi_features_pivot (2018), n={len(df_h1)}\n")
+        f.write(
+            f"- **Data (H1/H1b):** stg_thesis_2018_result_plr + int_poi_features_pivot (2018), n={len(df_h1)}\n"
+        )
         f.write("- **Data (H2/H3):** int_mss_lead_lag + int_poi_features_pivot (2021-2025)\n")
         f.write("- **Method:** Spearman rank correlation + OLS (scipy.stats)\n\n")
 
@@ -543,7 +584,9 @@ def write_findings(df_h1, results: list[dict]) -> None:
         f.write("Berlin gentrification thesis (pp. 55-56, p. 91). POI category counts from ")
         f.write("`int_poi_features_pivot` are used as the primary predictor variables, joined ")
         f.write("to MSS social status indices (`status_index`). This corrects the prior ")
-        f.write("implementation which regressed MSS indices against each other (no POI features).\n\n")
+        f.write(
+            "implementation which regressed MSS indices against each other (no POI features).\n\n"
+        )
         f.write("The lead-lag hypotheses (H3a/H3b/H3c) are tested using `int_mss_lead_lag` at ")
         f.write("k=1 (2-year MSS edition gap) and k=2 (4-year gap), with POI counts from ")
         f.write("`int_poi_features_pivot` joined at the relevant snapshot years.\n\n")
@@ -556,7 +599,9 @@ def write_findings(df_h1, results: list[dict]) -> None:
         f.write("\n")
 
         f.write("## Results\n\n")
-        f.write("| Hyp | Test | N | Type | Value | p-value | Sig | Expected Dir | Actual Dir | Match | Description |\n")
+        f.write(
+            "| Hyp | Test | N | Type | Value | p-value | Sig | Expected Dir | Actual Dir | Match | Description |\n"
+        )
         f.write("|---|---|---|---|---|---|---|---|---|---|---|\n")
         for r in results:
             val_str = f"{r['stat_val']:.4f}" if r["stat_val"] is not None else "N/A"
@@ -570,40 +615,68 @@ def write_findings(df_h1, results: list[dict]) -> None:
                 f"{p_str} | {sig_str} | {r['expected_dir']} | {r['actual_dir']} | {match_str} | {r['desc']} |\n"
             )
 
-        f.write(f"\n**Directional agreement: {n_pass}/{n_total} tests match the expected direction.**\n\n")
-        f.write(f"**Statistical significance: {n_sig}/{n_total} results significant at p<0.05.**\n\n")
+        f.write(
+            f"\n**Directional agreement: {n_pass}/{n_total} tests match the expected direction.**\n\n"
+        )
+        f.write(
+            f"**Statistical significance: {n_sig}/{n_total} results significant at p<0.05.**\n\n"
+        )
 
         f.write("## Interpretation by Hypothesis\n\n")
         f.write("### H1 — POI stock vs MSS social status (thesis p.55, confirmed AUC 0.87)\n\n")
         h1_rows = [r for r in results if r["hyp"] == "H1"]
         for r in h1_rows:
             if r["stat_val"] is not None:
-                f.write(f"**{r['test']}**: rho/beta = {r['stat_val']:.4f}, p = {r['p']:.4f}, n={r['n']}. ")
+                f.write(
+                    f"**{r['test']}**: rho/beta = {r['stat_val']:.4f}, p = {r['p']:.4f}, n={r['n']}. "
+                )
                 verdict = "matches" if r["dir_match"] else "diverges from"
-                f.write(f"Direction ({r['actual_dir']}) {verdict} thesis expectation ({r['expected_dir']}). ")
+                f.write(
+                    f"Direction ({r['actual_dir']}) {verdict} thesis expectation ({r['expected_dir']}). "
+                )
                 f.write("Significant.\n\n" if r.get("sig") else "Not significant at p<0.05.\n\n")
 
-        f.write("### H1b — Fast-food as contested proxy for low-status / displacement (thesis p.55)\n\n")
+        f.write(
+            "### H1b — Fast-food as contested proxy for low-status / displacement (thesis p.55)\n\n"
+        )
         f.write("Note: fast-food as a 'displacement indicator' is a contested proxy in the ")
         f.write("gentrification literature; the thesis (p.55) treats it as a low-status marker. ")
-        f.write("D1 polarity correction: expected Spearman(poi_fast_food, status_index) = positive ")
-        f.write("(more fast-food → lower status → higher status_index; index-definition.md §5).\n\n")
+        f.write(
+            "D1 polarity correction: expected Spearman(poi_fast_food, status_index) = positive "
+        )
+        f.write(
+            "(more fast-food → lower status → higher status_index; index-definition.md §5).\n\n"
+        )
         h1b_rows = [r for r in results if r["hyp"] == "H1b"]
         for r in h1b_rows:
             if r["stat_val"] is not None:
-                f.write(f"**{r['test']}**: rho = {r['stat_val']:.4f}, p = {r['p']:.4f}, n={r['n']}. ")
-                verdict = "confirmed — fast-food positively correlates with status_index (low-status proxy)" if r["dir_match"] else "diverges from thesis expectation"
+                f.write(
+                    f"**{r['test']}**: rho = {r['stat_val']:.4f}, p = {r['p']:.4f}, n={r['n']}. "
+                )
+                verdict = (
+                    "confirmed — fast-food positively correlates with status_index (low-status proxy)"
+                    if r["dir_match"]
+                    else "diverges from thesis expectation"
+                )
                 f.write(f"{verdict}.\n\n")
 
-        f.write("### H2 — Current-edition POI stock predicts future status change (thesis p.55)\n\n")
+        f.write(
+            "### H2 — Current-edition POI stock predicts future status change (thesis p.55)\n\n"
+        )
         f.write("Note: H2 is tested on the 2021+ live MSS panel (lor_2021 vintage), not the 2018 ")
-        f.write("cross-section. This operationalizes the general 'current POI stock predicts future ")
-        f.write("status change' hypothesis. n=1071 (panel rows), not n=436 (2018 cross-section).\n\n")
+        f.write(
+            "cross-section. This operationalizes the general 'current POI stock predicts future "
+        )
+        f.write(
+            "status change' hypothesis. n=1071 (panel rows), not n=436 (2018 cross-section).\n\n"
+        )
         h2_rows = [r for r in results if r["hyp"] == "H2"]
         if h2_rows:
             for r in h2_rows:
                 if r["stat_val"] is not None:
-                    verdict = "directional agreement" if r["dir_match"] else "directional divergence"
+                    verdict = (
+                        "directional agreement" if r["dir_match"] else "directional divergence"
+                    )
                     f.write(
                         f"**k={r['test'].split('=')[1]}**: rho = {r['stat_val']:.4f}, p = {r['p']:.4f}, "
                         f"n={r['n']} — {verdict}.\n\n"
@@ -633,7 +706,11 @@ def write_findings(df_h1, results: list[dict]) -> None:
                 f.write(
                     f"k={r['test'].split('=')[1]}: rho = {r['stat_val']:.4f}, p = {r['p']:.4f}, n={r['n']}. "
                 )
-                verdict = "consistent with thesis confirmation" if r["dir_match"] else "diverges from thesis"
+                verdict = (
+                    "consistent with thesis confirmation"
+                    if r["dir_match"]
+                    else "diverges from thesis"
+                )
                 sig_note = "Significant." if r.get("sig") else "Not significant at p<0.05."
                 f.write(f"{sig_note} {verdict.capitalize()}.\n")
         f.write("\n")
@@ -650,12 +727,18 @@ def write_findings(df_h1, results: list[dict]) -> None:
 
         f.write("## Divergences from 2018 Thesis\n\n")
         f.write("- **D1 polarity correction**: `status_index` is inverse-numeric — lower value = ")
-        f.write("higher social status (index-definition.md §5 polarity table; int_mss_lead_lag.sql ")
+        f.write(
+            "higher social status (index-definition.md §5 polarity table; int_mss_lead_lag.sql "
+        )
         f.write("lines 19-23). All expected_dir values have been corrected accordingly: ")
         f.write("H1 expected Spearman(poi, status_index) = negative; H1b expected = positive; ")
-        f.write("H2/H3a/H3b/H3c expected direction = negative. Prior implementation had these inverted.\n")
+        f.write(
+            "H2/H3a/H3b/H3c expected direction = negative. Prior implementation had these inverted.\n"
+        )
         f.write("- **H3 predictor**: H3a and H3b use C5-corrected `delta_dynamism_t` from ")
-        f.write("`int_mss_lead_lag` (not raw `delta_poi`). Raw POI count deltas embed OSM coverage ")
+        f.write(
+            "`int_mss_lead_lag` (not raw `delta_poi`). Raw POI count deltas embed OSM coverage "
+        )
         f.write("growth artefact and would bias H3b toward false confirmation ")
         f.write("(index-definition.md §2.4; int_mss_lead_lag.sql D3 C5 note).\n")
         f.write("- **Ordinal treatment**: `delta_status_ordinal` is used for Spearman rank ")
@@ -670,7 +753,9 @@ def write_findings(df_h1, results: list[dict]) -> None:
         f.write("'current-edition POI stock predicts future status change' (general form).\n")
         f.write("- The H3 lead-lag tests use the live MSS panel (2021-2025 editions); the thesis ")
         f.write("used 2012-2018. Both predictor and outcome share the [t, t+k] window — this is ")
-        f.write("a co-movement test across the lag window, not a strict temporal-precedence test.\n")
+        f.write(
+            "a co-movement test across the lag window, not a strict temporal-precedence test.\n"
+        )
         f.write("- No multiple-comparison correction was applied across the five hypotheses. ")
         f.write("Results are PLR-only (Berlin, lor_2021 vintage) and may have MAUP sensitivity.\n")
         f.write("- Epic B framing: directional revival — exact number reproduction not required. ")
@@ -685,6 +770,7 @@ def write_findings(df_h1, results: list[dict]) -> None:
 # ---------------------------------------------------------------------------
 # Main
 # ---------------------------------------------------------------------------
+
 
 def main() -> None:
     if not DUCKDB_PATH.exists():
@@ -717,7 +803,9 @@ def main() -> None:
 
     print("Loading H2/H3 lead-lag data (int_mss_lead_lag + int_poi_features_pivot)...")
     df_ll = load_lead_lag_data(con)
-    print(f"  Loaded {len(df_ll)} lead-lag rows (k=1: {(df_ll['lag_k']==1).sum()}, k=2: {(df_ll['lag_k']==2).sum()})")
+    print(
+        f"  Loaded {len(df_ll)} lead-lag rows (k=1: {(df_ll['lag_k'] == 1).sum()}, k=2: {(df_ll['lag_k'] == 2).sum()})"
+    )
     con.close()
 
     if len(df_h1) < 10:
