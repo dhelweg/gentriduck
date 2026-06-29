@@ -1175,9 +1175,9 @@ models:
       Bandwidth b = 500 m default (dbt var 'poi_kernel_bandwidth_m'); per-city parameter,
       never hard-coded (ADR-0005). MAUP sweep uses 250 m / 750 m variants via analysis/a6_maup.py.
 
-      Output: one row per (city_code, snapshot_year, area_code, area_vintage, poi_category_h)
-      with weighted_count (fractional; sum = standard count city-wide) and weight_variant
-      discriminator (e.g. 'gaussian_500m'). Feeds the same share pipeline as int_poi_features_pivot
+      Output: one row per (city_code, snapshot_year, area_code, area_vintage, poi_category_h,
+      poi_type_h, weight_variant) with weighted_count (fractional; sum = standard count
+      city-wide); weight_variant discriminator (e.g. 'gaussian_500m'). Feeds the same share pipeline as int_poi_features_pivot
       for the distance-weighted dynamism_score used by Gi* hotspot analysis (spatial-methods.md §6).
 
       CRS: EPSG:25833 throughout (ADR-0010 Amendment 3; spatial-methods.md §3).

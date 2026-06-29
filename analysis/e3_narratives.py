@@ -285,7 +285,7 @@ def main() -> None:
         "\n--- EXPLORATORY: Δdynamism_t → D1 status IMPROVEMENT at t+k (H3a direction; thesis rejected) ---"
     )
     print(lead_lag.to_string(index=False))
-    print(f"\nExploratory H3a check (lag_k=1, predictor: delta_dynamism_t):")
+    print("\nExploratory H3a check (lag_k=1, predictor: delta_dynamism_t):")
     print(f"  Q1 (lowest Δdynamism at t) improved rate: {alignment['q1_improved_rate']:.1%}")
     print(f"  Q4 (highest Δdynamism at t) improved rate: {alignment['q4_improved_rate']:.1%}")
     if alignment["direction"] == "aligned":

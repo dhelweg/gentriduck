@@ -253,7 +253,9 @@ def run_gi_star(
         # star=True: Gi* (focal unit included in its own neighbourhood sum).
         # star=False (esda default) computes Gi (focal excluded) — wrong per spec.
         # Getis & Ord (1992); Ord & Getis (1995); spatial-methods.md §6.
-        gi = G_Local(y_filled, w, permutations=999, seed=42, star=True)
+        # alternative='two-sided': bilateral hot/cold classification requires two-sided
+        # inference; default 'directed' emits a DeprecationWarning and gives one-tailed p.
+        gi = G_Local(y_filled, w, permutations=999, seed=42, star=True, alternative="two-sided")
     except Exception as e:
         log.error("G_Local failed for year=%d: %s", year, e)
         return None
@@ -265,7 +267,7 @@ def run_gi_star(
             "snapshot_year": year,
             "dynamism_score": y_values,
             "gi_zscore": gi.Zs,
-            # gi.p_sim = permutation p-value (two-tailed; spatial-methods.md §6).
+            # gi.p_sim = permutation p-value (alternative='two-sided'; spatial-methods.md §6).
             "gi_pvalue": gi.p_sim,
         }
     )

@@ -20,7 +20,7 @@ Two dimensions of sensitivity (spatial-methods.md §7; ADR-0008 §4 mandatory se
    spatial-methods.md §4: sweep brackets 250 m (intra-Kiez) to 750 m (adjacent Kieze).
 
 Output: data/analysis/a6_maup_sensitivity.csv
-  Columns: analysis_type, description, pearson_r, n_plrs, warning.
+  Columns: analysis_type, description, snapshot_year, bandwidth_m, pearson_r, n_units, warning.
 
 DB: $GENTRIDUCK_DB env var or data/gentriduck.duckdb (ADR-0010 Amendment 7).
 
