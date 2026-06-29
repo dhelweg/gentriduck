@@ -8,7 +8,7 @@ license = "MIT"
 dependencies = [
     "dbt-duckdb>=1.9",
     "duckdb>=1.1",
-    "pandas>=2.2",
+    "pandas>=2.2,<3.0",
     "pyarrow>=14",
     "scikit-learn>=1.5",
     "scipy>=1.13",
@@ -16,6 +16,16 @@ dependencies = [
     "osmium>=4.0",
     "shapely>=2.0",
     "certifi>=2024.0",
+    # ADR-0010: PySAL spatial-statistics family (BSD-3).
+    # libpysal: spatial weights from shapely geometries (no geopandas).
+    # esda: Getis-Ord Gi*, Moran's I, LISA (R-A6, R-A9).
+    # spreg: spatial-lag/error regression (R-A9).
+    # h3: optional MAUP sensitivity layer, analysis-only (Apache-2.0).
+    # Excluded: geopandas, pyogrio, pyproj, fiona, tobler (ADR-0010 Amendment 1).
+    "libpysal>=4.10",
+    "esda>=2.5",
+    "spreg>=1.4",
+    "h3>=4.0",
 ]
 
 # Dev tooling lives in an isolated group; installed via `uv sync`.
@@ -49,7 +59,12 @@ fmt      = { sequence = ["ruff format .", "sqlfmt transform"], default_item_type
 lint     = { sequence = ["ruff check .", "sqlfluff lint transform"], default_item_type = "cmd" }
 # R-C3: analysis scripts are deterministic (random_state=42) and require ingested data.
 # Run after `poe build` when dev.duckdb is populated.
-analysis = { sequence = ["python analysis/e1_regressions.py", "python analysis/e2_classification.py"], default_item_type = "cmd" }
+analysis = { sequence = [
+    "python analysis/e1_regressions.py",
+    "python analysis/e2_classification.py",
+    "python analysis/a6_hotspots.py",
+    "python analysis/a6_maup.py",
+], default_item_type = "cmd" }
 # B2: back-test harness — validates live index against MSS classes and known hotspot/coldspot PLRs.
 # Run after `poe build`. Results written to docs/methodology/backtest.md.
 backtest = "python analysis/backtest_index.py"
