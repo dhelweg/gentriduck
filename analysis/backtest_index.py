@@ -73,9 +73,9 @@ DUCKDB_PATH = (
 OUTPUT_MD = Path(__file__).parent.parent / "docs" / "methodology" / "backtest.md"
 
 # Pass thresholds (B2 specification)
-THRESHOLD_MSS_RHO = 0.3    # Test A: Spearman rho > 0.3
-THRESHOLD_MSS_P = 0.05     # Test A: p-value < 0.05
-THRESHOLD_RECALL = 0.5     # Tests B & C: recall@decile >= 0.5
+THRESHOLD_MSS_RHO = 0.3  # Test A: Spearman rho > 0.3
+THRESHOLD_MSS_P = 0.05  # Test A: p-value < 0.05
+THRESHOLD_RECALL = 0.5  # Tests B & C: recall@decile >= 0.5
 
 
 # ---------------------------------------------------------------------------
@@ -191,16 +191,22 @@ def test_mss_agreement(index_df, mss_df) -> dict:
     n_total = len(index_df)
     status_vals = index_df["status_index"].dropna().values.astype(float)
     n_valid = len(status_vals)
-    status_range = (float(status_vals.min()), float(status_vals.max())) if n_valid > 0 else (None, None)
+    status_range = (
+        (float(status_vals.min()), float(status_vals.max())) if n_valid > 0 else (None, None)
+    )
     n_classes = len(np.unique(status_vals))
 
     # Join gentrification_index.status_index with int_gentrification_ts.mss_status_index
     # on area_code to get paired observations (both DataFrames from duckdb .df())
-    merged = index_df[["area_code", "status_index"]].merge(
-        mss_df[["area_code", "mss_status_index"]],
-        on="area_code",
-        how="inner",
-    ).dropna()
+    merged = (
+        index_df[["area_code", "status_index"]]
+        .merge(
+            mss_df[["area_code", "mss_status_index"]],
+            on="area_code",
+            how="inner",
+        )
+        .dropna()
+    )
 
     n_paired = len(merged)
     if n_paired < 10:
@@ -287,9 +293,7 @@ def test_hotspot_recall(index_df, gt_df) -> dict:
     threshold_90 = float(np.percentile(index_df["status_index"].dropna().values, 90))
 
     # PLRs in top decile
-    top_decile_ids = set(
-        index_df[index_df["status_index"] >= threshold_90]["area_code"].tolist()
-    )
+    top_decile_ids = set(index_df[index_df["status_index"] >= threshold_90]["area_code"].tolist())
     n_in_decile = len(top_decile_ids)
 
     # Hotspot PLRs present in the index
@@ -322,14 +326,16 @@ def test_hotspot_recall(index_df, gt_df) -> dict:
         idx_row = index_df[index_df["area_code"] == plr_id]
         si = float(idx_row["status_index"].iloc[0]) if len(idx_row) > 0 else None
         sc = str(idx_row["status_class"].iloc[0]) if len(idx_row) > 0 else None
-        details.append({
-            "plr_id": plr_id,
-            "plr_name": row["plr_name"],
-            "status_index": si,
-            "status_class": sc,
-            "in_top_decile": in_top,
-            "source": row["source"],
-        })
+        details.append(
+            {
+                "plr_id": plr_id,
+                "plr_name": row["plr_name"],
+                "status_index": si,
+                "status_class": sc,
+                "in_top_decile": in_top,
+                "source": row["source"],
+            }
+        )
 
     return {
         "n_hotspots": n_hotspots,
@@ -417,14 +423,16 @@ def test_coldspot_recall(index_df, gt_df) -> dict:
         idx_row = index_df[index_df["area_code"] == plr_id]
         si = float(idx_row["status_index"].iloc[0]) if len(idx_row) > 0 else None
         sc = str(idx_row["status_class"].iloc[0]) if len(idx_row) > 0 else None
-        details.append({
-            "plr_id": plr_id,
-            "plr_name": row["plr_name"],
-            "status_index": si,
-            "status_class": sc,
-            "in_bottom_decile": in_bottom,
-            "source": row["source"],
-        })
+        details.append(
+            {
+                "plr_id": plr_id,
+                "plr_name": row["plr_name"],
+                "status_index": si,
+                "status_class": sc,
+                "in_bottom_decile": in_bottom,
+                "source": row["source"],
+            }
+        )
 
     return {
         "n_coldspots": n_coldspots,
@@ -484,7 +492,9 @@ def print_results(res_a: dict, res_b: dict, res_c: dict) -> None:
     if "details" in res_b:
         for d in res_b["details"]:
             flag = "IN TOP DECILE" if d["in_top_decile"] else "NOT in top decile"
-            print(f"    {d['plr_id']} {d['plr_name']:<30} si={d['status_index']} {d['status_class']:<25} [{flag}]")
+            print(
+                f"    {d['plr_id']} {d['plr_name']:<30} si={d['status_index']} {d['status_class']:<25} [{flag}]"
+            )
 
     print("\n--- Test C: Coldspot recall @ bottom 10% ---")
     print(f"  n coldspots in seed: {res_c['n_coldspots']}")
@@ -498,7 +508,9 @@ def print_results(res_a: dict, res_b: dict, res_c: dict) -> None:
     if "details" in res_c:
         for d in res_c["details"]:
             flag = "IN BOTTOM DECILE" if d["in_bottom_decile"] else "NOT in bottom decile"
-            print(f"    {d['plr_id']} {d['plr_name']:<30} si={d['status_index']} {d['status_class']:<25} [{flag}]")
+            print(
+                f"    {d['plr_id']} {d['plr_name']:<30} si={d['status_index']} {d['status_class']:<25} [{flag}]"
+            )
 
     overall = all([res_a["pass"], res_b["pass"], res_c["pass"]])
     print("\n" + "=" * 80)
@@ -606,7 +618,9 @@ def write_backtest_md(res_a: dict, res_b: dict, res_c: dict) -> None:
         f.write("## Latest Results\n\n")
         f.write(f"**Run date:** {run_date}\n")
         f.write("**Index period:** latest available `live_data` PLR period\n")
-        f.write(f"**PLRs in index:** {res_a['n_total']} (status_index not null: {res_a['n_valid']})\n\n")
+        f.write(
+            f"**PLRs in index:** {res_a['n_total']} (status_index not null: {res_a['n_valid']})\n\n"
+        )
 
         f.write("### Test A — MSS agreement\n\n")
         f.write(
@@ -636,7 +650,9 @@ def write_backtest_md(res_a: dict, res_b: dict, res_c: dict) -> None:
         f.write(f"- Top-decile threshold (status_index): {res_b.get('decile_threshold')}\n")
         f.write(f"- n in top decile: {res_b.get('n_in_decile_matched')}\n")
         if res_b.get("recall") is not None:
-            f.write(f"- Recall = **{res_b['recall']:.2f}** ({res_b['n_in_decile_matched']}/{res_b['n_matched']})\n")
+            f.write(
+                f"- Recall = **{res_b['recall']:.2f}** ({res_b['n_in_decile_matched']}/{res_b['n_matched']})\n"
+            )
         f.write(f"- Threshold: recall >= {THRESHOLD_RECALL}\n")
         f.write(f"- **Result: {_pass_str(res_b['pass'])}**\n\n")
 
@@ -662,7 +678,9 @@ def write_backtest_md(res_a: dict, res_b: dict, res_c: dict) -> None:
         f.write(f"- Bottom-decile threshold (status_index): {res_c.get('decile_threshold')}\n")
         f.write(f"- n in bottom decile: {res_c.get('n_in_decile_matched')}\n")
         if res_c.get("recall") is not None:
-            f.write(f"- Recall = **{res_c['recall']:.2f}** ({res_c['n_in_decile_matched']}/{res_c['n_matched']})\n")
+            f.write(
+                f"- Recall = **{res_c['recall']:.2f}** ({res_c['n_in_decile_matched']}/{res_c['n_matched']})\n"
+            )
         f.write(f"- Threshold: recall >= {THRESHOLD_RECALL}\n")
         f.write(f"- **Result: {_pass_str(res_c['pass'])}**\n\n")
 
@@ -706,9 +724,7 @@ def write_backtest_md(res_a: dict, res_b: dict, res_c: dict) -> None:
             )
 
         if res_b.get("recall") is not None and res_b["n_matched"] > 0:
-            n_completed = sum(
-                1 for d in res_b.get("details", []) if not d["in_top_decile"]
-            )
+            n_completed = sum(1 for d in res_b.get("details", []) if not d["in_top_decile"])
             if n_completed > 0:
                 f.write(
                     f"**Completed-gentrification note**: {n_completed} hotspot PLR(s) are "
@@ -795,7 +811,9 @@ def main() -> None:
 
     latest_period = index_df["period_yyyymm"].iloc[0] if len(index_df) > 0 else "N/A"
     print(f"  index_df: {len(index_df)} PLRs (period: {latest_period})")
-    print(f"  mss_df: {len(mss_df)} PLRs (edition: {mss_df['mss_edition'].iloc[0] if len(mss_df) > 0 else 'N/A'})")
+    print(
+        f"  mss_df: {len(mss_df)} PLRs (edition: {mss_df['mss_edition'].iloc[0] if len(mss_df) > 0 else 'N/A'})"
+    )
     print(f"  ground_truth: {len(gt_df)} PLRs ({gt_df['label'].value_counts().to_dict()})")
 
     # Run tests
