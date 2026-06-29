@@ -50,6 +50,9 @@ lint     = { sequence = ["ruff check .", "sqlfluff lint transform"], default_ite
 # R-C3: analysis scripts are deterministic (random_state=42) and require ingested data.
 # Run after `poe build` when dev.duckdb is populated.
 analysis = { sequence = ["python analysis/e1_regressions.py", "python analysis/e2_classification.py"], default_item_type = "cmd" }
+# B2: back-test harness — validates live index against MSS classes and known hotspot/coldspot PLRs.
+# Run after `poe build`. Results written to docs/methodology/backtest.md.
+backtest = "python analysis/backtest_index.py"
 # Ingestion scripts — rebuild raw data from open sources (gitignored artefacts).
 # Run once before `poe build` on a fresh checkout.
 ingest = { sequence = [

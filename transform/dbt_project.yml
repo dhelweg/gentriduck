@@ -34,6 +34,10 @@ seeds:
         plr_id_2021: varchar
         # Weights are fractional floats; CSV may use scientific notation (e.g. 9.286e-05).
         weight: double
+    seed_gentrification_ground_truth:
+      +column_types:
+        # PLR codes are zero-padded 8-digit strings; must not be read as INTEGER.
+        plr_id: varchar
 
 # Test severity overrides for standalone SQL test files.
 # C5 anomaly tests use warn severity: data quality alerts, not hard blockers.
