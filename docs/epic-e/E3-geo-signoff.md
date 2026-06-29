@@ -92,5 +92,8 @@ a temporal-precedence result. Everything else passes.
   (`delta_dynamism_t`) and relabel to the correct H3a/H3b direction, or re-cut §5 as an
   explicitly contemporaneous cross-sectional association and remove "precedes"/"lead-lag"/"H3c"
   language. Update the §4.3 citation to match whichever computation is kept (finding #6).
+  **→ DISCHARGED** in commit 4c7ff8c: NTILE now uses `delta_dynamism_t`; outcome changed to
+  `improved` (gentrification direction); §5 rewritten as exploratory H3a cross-tab with no
+  H3c/lead-lag claim; §4.3 citation removed from the function docstring.
 - **C2 (non-blocking, before G2):** Add a one-line C5 coverage-correction note wherever D3
-  dynamism is shown in maps/narratives (finding #7).
+  dynamism is shown in maps/narratives (finding #7). Carried to G2 methodology page.

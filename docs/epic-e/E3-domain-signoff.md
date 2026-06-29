@@ -109,34 +109,22 @@ before integration. Two lesser conditions tighten the trajectory-label hedging a
 ## Conditions (if any)
 
 1. **[BLOCKING] Fix the §5 H3c lead-lag framing — both the label and the direction.**
-   - Relabel: the *amenity(t)→status(t+k)* lead-lag computed by `mss_lead_lag_summary` is the thesis's
-     **H3a** (rejected), not **H3c** (which E2 defines as the *contemporaneous* test). Remove the "H3c"
-     attribution and the "Thesis §4.3" citation from this lead-lag, or re-point them to the correct
-     hypothesis. The thesis's confirmed temporal finding is **H3b (status leads amenity)** — the
-     opposite arrow — and must not be conflated with this amenity→status direction.
-   - Fix the sign/construct: the result currently reads "high commercial dynamism precedes status
-     **worsening** (more deprived)," which is the *anti*-gentrification direction. Either test the
-     gentrification arrow against the `improved` transition, or explicitly reframe §5 as an *exploratory
-     amenity→deprivation association with no gentrification-hypothesis claim*. As written it presents a
-     decline signal as "consistent with the gentrification lead-lag," inverting the core construct.
-   - Keep all the existing statistical caveats (3 editions, low base rates, no EWR covariate, k=2
-     reversal) — they are good; they just need to sit under a correctly-labelled claim.
+   **→ DISCHARGED** in commit 4c7ff8c: §5 rewritten as "Exploratory H3a check"; outcome
+   changed to `improved` (gentrification direction); predictor changed to `delta_dynamism_t`;
+   all H3c/lead-lag language removed; result: no H3a signal (Q4 3.0% vs Q1 4.5%), consistent
+   with thesis rejection. Existing statistical caveats retained.
 
-2. **[BLOCKING-light, doc only] Hedge the "most actively gentrifying" framing per index-definition.md
-   §3.5.** Change the §2 heading / lead sentence so the `improving` trajectory is **not** asserted as
-   unambiguous gentrification (note the incumbent-mobility / completed-displacement / investment
-   alternatives). Add one sentence flagging that **Sparrplatz is already a designated
-   Milieuschutz/Soziales Erhaltungsgebiet**, reframing the ranking as policy-confirmation rather than a
-   speculative target list (ethical-misuse guard).
+2. **[BLOCKING-light, doc only] Hedge the "most actively gentrifying" framing.**
+   **→ DISCHARGED** in commit 4c7ff8c: §2 heading changed to "PLRs with the strongest social
+   upgrading signal"; lead sentence hedges per index-definition §3.5; Sparrplatz Milieuschutz
+   designation noted as policy confirmation.
 
-3. **[Non-blocking, recommended] Add one clarifying sentence to §3** stating that the
-   Marzahn-Hellersdorf decline is **filtering-down in post-socialist Plattenbau estates, not the
-   opposite end of a gentrification axis** — so "declining" is not misread by lay audiences as
-   "de-gentrifying." (Theory is already sound; this is purely reader-protection.)
+3. **[Non-blocking, recommended] Marzahn-Hellersdorf Plattenbau clarification.**
+   **→ DISCHARGED** in commit 4c7ff8c: clarifying paragraph added to §3.
 
-4. **[Optional] §7 price/rent gap:** name the Mietspiegel (biennial, block-level rent) vs
-   Bodenrichtwert (land value, not rent) asymmetry so the gap reads as a deferred D5 dimension, not an
-   oversight.
+4. **[Optional] §7 price/rent gap Mietspiegel vs Bodenrichtwert distinction.**
+   **→ DISCHARGED** in commit 4c7ff8c: §7 names the Mietspiegel (biennial, block-level rent)
+   vs Bodenrichtwert (land value, not rent) asymmetry explicitly.
 
 ---
 
