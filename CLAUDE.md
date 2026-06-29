@@ -13,9 +13,9 @@ Decisions: `docs/adr/`. Live backlog: the **Gentriduck** GitHub Project board.
    ask `system-architect`). No "first tool that works".
 3. **Coder ↔ reviewer + dual methodology gate.** `data-engineer` implements; `data-engineer-reviewer`
    verifies. For **methodology-bearing** work (see §Methodology gate below), `geo-data-scientist` AND
-   `gentrification-domain-expert` must each record a `pass` before the PM merges. The gate is
-   **enforced, not advisory** — work may not merge with a verdict pending or `concerns`. Cap the
-   coder↔reviewer loop at ~3 iterations, then escalate to the maintainer.
+   `gentrification-domain-expert` must each record a `pass` before the PM integrates into `develop`
+   (ADR-0011). The gate is **enforced, not advisory** — work may not be integrated with a verdict
+   pending or `concerns`. Cap the coder↔reviewer loop at ~3 iterations, then escalate to the maintainer.
 4. **City-agnostic core** (ADR-0005): use `dim_city`/`dim_area`; never hard-code Berlin in shared models.
 5. **Local-first** DuckDB; MotherDuck (free tier) only for hosting later — same dbt models.
 
@@ -78,7 +78,7 @@ GitHub UI**. The PM never uses `gh pr merge` and never pushes to `main` (both bl
 
 ## Methodology gate (R-C1)
 
-**Methodology-bearing** work is any PR that touches:
+**Methodology-bearing** work is any change/commit (PR or feature branch) that touches:
 - `docs/methodology/**` or `docs/adr/**`
 - `transform/models/intermediate/int_gentrification_ts.sql`
 - `transform/models/intermediate/int_poi_status_dynamism.sql`

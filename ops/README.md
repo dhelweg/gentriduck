@@ -19,8 +19,8 @@ then stop). Continuous mode instead:
   `docs/PROJECT_PLAN.md` + dependencies, and files new tickets for genuinely discovered work
   (after a duplicate check) rather than grinding a frozen queue;
 - **loops you in at human gates** — instead of guessing, it sends a push notification and
-  waits for your reply whenever it hits a decision that's yours: a PR ready to merge
-  (merges go through the GitHub UI), a methodology-gate escalation or `concerns`/pending
+  waits for your reply whenever it hits a decision that's yours: the **weekly `develop → main` PR**
+  (which you merge in the GitHub UI; ADR-0011), a methodology-gate escalation or `concerns`/pending
   verdict, an ADR / new-tool approval, or a genuinely ambiguous call;
 - **never idles waiting on you** — a ticket blocked on your reply gets the **`blocked`** label
   and its card returns to **Todo** (freeing the single In Progress slot), and the PM advances
@@ -145,8 +145,8 @@ GENTRIDUCK_DEVMODE_PERMISSION_MODE=default \
 ### Unsupervised by default (host-aware permission mode)
 
 The runner **skips routine "may I run X?" prompts** so the PM just works the board and only loops you
-in for real **decisions** (a PR ready to merge, an ADR / new tool-source, an ambiguous call) via
-chat + push. The mode is **chosen by host** so you never have to remember a flag:
+in for real **decisions** (the weekly `develop → main` PR, an ADR / new tool-source, an ambiguous call)
+via chat + push. The mode is **chosen by host** so you never have to remember a flag:
 
 - **macOS** + **Windows/WSL2** (supervised personal machines) → `bypassPermissions` — one interactive
   "I accept" gate. WSL2 reports `uname` = `Linux` but is treated as a supervised laptop.
