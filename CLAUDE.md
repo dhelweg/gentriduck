@@ -100,12 +100,13 @@ the **Linux automation host** (the runner also works on macOS, and on Windows vi
 ### Continuous dev mode (default) — `ops/gentriduck-devmode.sh`
 One long-lived **interactive** PM session with Claude Code **Remote Control** enabled, so you
 supervise and unblock it from your **phone** (Claude mobile app). It works the board task-by-task,
-restarts itself when a usage limit resets, and **pings you at human gates** — a PR ready to merge
-(merges via the GitHub UI), a methodology-gate escalation/`concerns`, an ADR or new-tool approval,
-or a genuinely ambiguous call — instead of guessing. Runs **unsupervised by default**
-(`--permission-mode bypassPermissions`): no routine tool-permission prompts, but the
-`settings.local.json` **deny-list still blocks** dangerous commands and `gh pr merge`, so PRs queue
-for you. Full guide: [`ops/README.md`](ops/README.md).
+and **pings you at human gates** — a PR ready to merge (merges via the GitHub UI), a methodology-gate
+escalation/`concerns`, an ADR or new-tool approval, or a genuinely ambiguous call — instead of
+guessing. **Self-healing:** the loop restarts `claude` on exit *and* a watchdog restarts it on a hang
+(idle transcript), so a mid-response API error can't silently wedge it. Runs **unsupervised** with a
+**host-aware** permission mode — Mac & Windows/WSL2 use gated `bypassPermissions`, the native Linux
+host uses hands-free `dangerously-skip` — but the `settings.local.json` **deny-list still blocks**
+dangerous commands and `gh pr merge`, so PRs queue for you. Full guide: [`ops/README.md`](ops/README.md).
 ```bash
 tmux new-session -d -s devmode "$(pwd)/ops/gentriduck-devmode.sh"   # run from the repo root
 # then connect to the "gentriduck-dev" session in the Claude mobile app

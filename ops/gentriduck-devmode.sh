@@ -17,10 +17,12 @@
 # Config is PINNED below (not inherited from ~/.claude/settings.json). Override via env:
 #   GENTRIDUCK_DEVMODE_MODEL   (default: sonnet)        GENTRIDUCK_DEVMODE_EFFORT  (default: medium)
 #   GENTRIDUCK_DEVMODE_RC_NAME (default: gentriduck-dev) GENTRIDUCK_DEVMODE_LOG     (default: ~/.claude/…)
-#   GENTRIDUCK_DEVMODE_PERMISSION_MODE (default: bypassPermissions — unsupervised; `default` = prompts)
+#   GENTRIDUCK_DEVMODE_PERMISSION_MODE (default: host-aware — Mac & Windows/WSL2=bypassPermissions, native Linux=dangerously-skip)
+#   GENTRIDUCK_DEVMODE_STALL_SECS      (default: 900)   — hang-watchdog idle threshold
 #
-# The while-loop makes it truly non-stop: if claude exits (usage limit reached or
-# a crash) it restarts after a short sleep, resuming once the limit resets.
+# NON-STOP + SELF-HEALING: the while-loop restarts claude when it EXITS (usage limit / crash), and a
+# background watchdog restarts it when it HANGS — process alive but its session transcript has gone
+# idle past the stall threshold (the mid-response API-error wedge that stalled it overnight).
 
 set -uo pipefail
 
@@ -37,11 +39,28 @@ MODEL="${GENTRIDUCK_DEVMODE_MODEL:-sonnet}"        # alias (sonnet|opus|fable) o
 EFFORT="${GENTRIDUCK_DEVMODE_EFFORT:-medium}"      # one of: low | medium | high | xhigh | max
 SESSION_NAME="${GENTRIDUCK_DEVMODE_RC_NAME:-gentriduck-dev}"
 
-# Unsupervised mode: skip tool-permission prompts so the PM just works the board and only loops
-# you in for real DECISIONS (PR merge, ADR / new tool-source, ambiguous calls) per its standing
-# prompt — not for routine "may I run X?". The settings.local.json DENY list still blocks the
-# dangerous stuff (gh pr merge, force-push, rm, curl, …). Set `default` to restore prompts.
-PERMISSION_MODE="${GENTRIDUCK_DEVMODE_PERMISSION_MODE:-bypassPermissions}"  # default|acceptEdits|bypassPermissions|dontAsk|auto|plan
+# Unsupervised mode: skip tool-permission prompts so the PM just works the board and only loops you
+# in for real DECISIONS (PR merge, ADR / new tool-source, ambiguous calls) — not routine "may I run
+# X?". The settings.local.json DENY list still blocks the dangerous stuff (gh pr merge, force-push,
+# rm, curl, …). HOST-AWARE default: a supervised personal machine (Mac, or Windows via WSL2) uses
+# gated `bypassPermissions` (one accept); only a NATIVE Linux box — assumed to be the dedicated,
+# unattended automation host — uses `dangerously-skip` (no accept gate, so the watchdog/loop restart
+# hands-free). WSL2 reports "Linux" but is usually a laptop, so it's treated as supervised. Override
+# with GENTRIDUCK_DEVMODE_PERMISSION_MODE (e.g. on a real WSL/Linux server you want unattended).
+case "$(uname -s)" in
+    Darwin)
+        DEFAULT_PERMISSION="bypassPermissions" ;;          # supervised personal Mac
+    Linux)
+        if [ -n "${WSL_DISTRO_NAME:-}" ] || grep -qiE 'microsoft|wsl' /proc/version 2>/dev/null; then
+            DEFAULT_PERMISSION="bypassPermissions"         # Windows / WSL2 — treat as a supervised laptop
+        else
+            DEFAULT_PERMISSION="dangerously-skip"          # native Linux — the unattended automation host
+        fi ;;
+    *)
+        DEFAULT_PERMISSION="bypassPermissions" ;;
+esac
+PERMISSION_MODE="${GENTRIDUCK_DEVMODE_PERMISSION_MODE:-$DEFAULT_PERMISSION}"
+STALL_SECS="${GENTRIDUCK_DEVMODE_STALL_SECS:-900}"         # watchdog: restart if the transcript is idle this long
 
 cd "$DIR"
 
@@ -61,6 +80,23 @@ if pgrep -f -- "--remote-control $SESSION_NAME" >/dev/null 2>&1; then
     exit 1
 fi
 
+# --- Resolve the permission flag (host-aware); guard the dangerous one against root ---
+if [ "$PERMISSION_MODE" = "dangerously-skip" ] || [ "$PERMISSION_MODE" = "dangerously-skip-permissions" ]; then
+    if [ "$(id -u)" -eq 0 ]; then
+        echo "devmode: refusing --dangerously-skip-permissions as root — run as a normal user." >&2
+        exit 1
+    fi
+    PERM_ARGS=(--dangerously-skip-permissions)
+    PERM_LABEL="dangerously-skip-permissions"
+else
+    PERM_ARGS=(--permission-mode "$PERMISSION_MODE")
+    PERM_LABEL="$PERMISSION_MODE"
+fi
+
+# Where Claude writes this repo's session transcripts; their mtime is the watchdog's liveness signal.
+# (Claude encodes the cwd by replacing / . _ with - .)
+PROJDIR="$HOME/.claude/projects/$(printf '%s' "$DIR" | sed 's#[/._]#-#g')"
+
 # Keep the host awake while running, using whatever's available; no-op on a
 # headless server that never sleeps.
 if command -v caffeinate >/dev/null 2>&1; then            # macOS
@@ -71,6 +107,26 @@ else
     KEEPAWAKE=(env)                                        # no-op prefix (keeps the array non-empty under `set -u`)
 fi
 
+# --- Hang watchdog: claude can stay alive but wedged after a mid-response API error, which the
+# exit-triggered loop below never catches. This restarts a session whose transcript has gone idle
+# past STALL_SECS. Runs in the background per attempt; scoped to OUR Remote Control session.
+# (Assumes devmode is the primary Claude session for this repo on the host — true on a dedicated box.)
+watchdog() {
+    while sleep 60; do
+        pgrep -f -- "--remote-control $SESSION_NAME" >/dev/null 2>&1 || return     # claude already gone
+        newest="$(ls -t "$PROJDIR"/*.jsonl 2>/dev/null | head -1)"
+        [ -n "$newest" ] || continue                                              # no transcript yet
+        mtime="$(stat -f %m "$newest" 2>/dev/null || stat -c %Y "$newest" 2>/dev/null)"
+        [ -n "$mtime" ] || continue
+        age=$(( $(date +%s) - mtime ))
+        if [ "$age" -gt "$STALL_SECS" ]; then
+            echo "--- watchdog: session idle ${age}s (> ${STALL_SECS}s) — killing to force restart $(date) ---" >> "$LOG"
+            pkill -f -- "--remote-control $SESSION_NAME"
+            return
+        fi
+    done
+}
+
 # Standing instruction. Wrapped in /loop so the session re-paces itself and never
 # silently stalls after an idle turn. At every human gate it pings the phone via
 # PushNotification and parks for the reply, instead of guessing.
@@ -80,14 +136,24 @@ mkdir -p "$(dirname "$LOG")"
 {
     echo "=== gentriduck devmode ==="
     echo "repo:    $DIR"
-    echo "model:   $MODEL    effort: $EFFORT    permissions: $PERMISSION_MODE"
-    echo "session: $SESSION_NAME (Remote Control)"
+    echo "model:   $MODEL    effort: $EFFORT    permissions: $PERM_LABEL"
+    echo "session: $SESSION_NAME (Remote Control)    stall-watchdog: ${STALL_SECS}s"
     echo "started: $(date)"
 } | tee -a "$LOG"
 
+fails=0
 while true; do
-    echo "--- devmode start $(date) ---" >> "$LOG"
-    "${KEEPAWAKE[@]}" claude --model "$MODEL" --effort "$EFFORT" --permission-mode "$PERMISSION_MODE" --remote-control "$SESSION_NAME" "$PROMPT"
-    echo "--- devmode exited $(date); restarting in 60s (usage limit or crash) ---" >> "$LOG"
-    sleep 60
+    start=$(date +%s)
+    echo "--- devmode start $(date) (perm: $PERM_LABEL) ---" >> "$LOG"
+
+    watchdog & wd=$!                                        # self-healing: restart on hang, not just exit
+    "${KEEPAWAKE[@]}" claude --model "$MODEL" --effort "$EFFORT" "${PERM_ARGS[@]}" --remote-control "$SESSION_NAME" "$PROMPT"
+    code=$?
+    kill "$wd" 2>/dev/null; wait "$wd" 2>/dev/null         # stop this attempt's watchdog
+
+    ran=$(( $(date +%s) - start ))
+    if [ "$ran" -lt 120 ]; then fails=$((fails + 1)); else fails=0; fi   # quick exit → escalate backoff
+    case "$fails" in 0 | 1) backoff=60 ;; 2) backoff=300 ;; *) backoff=900 ;; esac
+    echo "--- devmode exited (code $code) after ${ran}s; restart #$fails in ${backoff}s $(date) ---" >> "$LOG"
+    sleep "$backoff"
 done
