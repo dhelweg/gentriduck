@@ -510,19 +510,37 @@ models:
 
   - name: stg_berlin_wohnlage
     description: >
-      D1 staging view over Wohnlagen nach Adressen (Mietspiegel 2023) for Berlin.
-      Source: WFS GDI Berlin wohnlagenadr2023, feature type
-      wohnlagenadr2023:wohnlagenadr2023, CRS EPSG:25833. Licence: dl-de-zero-2.0.
-      ~397,542 address-level point features. Populated by
-      ingestion/berlin/price_rent/ingest_wohnlage.py (5-15 min download).
-      Returns zero rows (typed stub) until data/raw/berlin/price_rent/wohnlage_2023.parquet
-      exists. Each row is one address with its Wohnlage classification
-      (einfach/mittel/gut) from the 2023 Mietspiegel.
+      D1 staging view over Wohnlagen nach Adressen (Mietspiegel) back-series for Berlin.
+      Covers vintages 2017, 2019, 2021, 2023, 2026 — one parquet per edition year.
+      Source: WFS GDI Berlin wohnlagenadr{year}, feature type
+      wohnlagenadr{year}:wohnlagenadr{year}, CRS EPSG:25833. Licence: dl-de-zero-2.0.
+      ~397k address-level point features per vintage. All five vintages confirmed live
+      on GDI Berlin 2026-06-18. Populated by
+      ingestion/berlin/price_rent/ingest_wohnlage.py (5-15 min per vintage).
+      Returns zero rows (typed stub) until at least one wohnlage_{year}.parquet
+      exists under data/raw/berlin/price_rent/. Each row is one address with its
+      Wohnlage classification (einfach/mittel/gut) for the given Mietspiegel edition.
     meta:
       dbt_meta_owner: data-engineer
+    tests:
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns:
+              - vintage
+              - address_id
+          config:
+            where: "wohnlage is not null and address_id is not null"
+      - assert_not_empty:
+          config:
+            severity: warn
+      - assert_min_rows:
+          arguments:
+            min_rows: 100000
+          config:
+            severity: warn
     columns:
       - name: vintage
-        description: Mietspiegel edition year; always 2023 for this model.
+        description: WFS edition year (2017/2019/2021/2023/2026); NOT the Stichtag year.
         tests:
           - not_null:
               config:
