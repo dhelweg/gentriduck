@@ -19,8 +19,8 @@ then stop). Continuous mode instead:
   `docs/PROJECT_PLAN.md` + dependencies, and files new tickets for genuinely discovered work
   (after a duplicate check) rather than grinding a frozen queue;
 - **loops you in at human gates** — instead of guessing, it sends a push notification and
-  waits for your reply whenever it hits a decision that's yours: a PR ready to merge
-  (merges go through the GitHub UI), a methodology-gate escalation or `concerns`/pending
+  waits for your reply whenever it hits a decision that's yours: the **weekly `develop → main` PR**
+  (which you merge in the GitHub UI; ADR-0011), a methodology-gate escalation or `concerns`/pending
   verdict, an ADR / new-tool approval, or a genuinely ambiguous call;
 - **never idles waiting on you** — a ticket blocked on your reply gets the **`blocked`** label
   and its card returns to **Todo** (freeing the single In Progress slot), and the PM advances
@@ -145,8 +145,8 @@ GENTRIDUCK_DEVMODE_PERMISSION_MODE=default \
 ### Unsupervised by default (host-aware permission mode)
 
 The runner **skips routine "may I run X?" prompts** so the PM just works the board and only loops you
-in for real **decisions** (a PR ready to merge, an ADR / new tool-source, an ambiguous call) via
-chat + push. The mode is **chosen by host** so you never have to remember a flag:
+in for real **decisions** (the weekly `develop → main` PR, an ADR / new tool-source, an ambiguous call)
+via chat + push. The mode is **chosen by host** so you never have to remember a flag:
 
 - **macOS** + **Windows/WSL2** (supervised personal machines) → `bypassPermissions` — one interactive
   "I accept" gate. WSL2 reports `uname` = `Linux` but is treated as a supervised laptop.
@@ -160,13 +160,17 @@ everything; `=bypassPermissions` to keep the gate on Linux too).
 What still protects you:
 - The **`deny` list** in the committed [`../.claude/settings.json`](../.claude/settings.json) still
   blocks the irreversible / privilege-escalating commands (`gh pr merge`, `git push --force`,
-  `git reset --hard`, `sudo`). `deny` wins over `allow`, so these hold even under
+  `git reset --hard`, `sudo`, direct push to `main`). `deny` wins over `allow`, so these hold even under
   `--dangerously-skip-permissions`. (`rm`, `curl`/`wget` are deliberately **allowed** — the ingestion
   pipeline rebuilds gitignored data artefacts and fetches open-data sources; the protection is that
   the truly irreversible/remote-history actions above are blocked, not raw file/network ops.)
-- **Merges remain yours.** `gh pr merge` is denied, so the PM opens PRs and **queues them for you to
-  merge in the GitHub UI** — it can't push to `main` itself. Unsupervised means it keeps *building*;
-  it does not mean it self-merges to `main`.
+- **`main` stays yours; `develop` is autonomous** (ADR-0011). The PM self-integrates finished, reviewed
+  work into the **`develop`** branch via plain git — that's its hands-off merge. It **cannot** reach
+  `main`: `gh pr merge` is denied and so is a direct push to `main`. `main` changes only via a **weekly
+  `develop → main` PR that you merge in the GitHub UI**. So unsupervised means it keeps *integrating to
+  `develop`*; the published branch always passes through your click. (Note: with a single shared `gh`
+  credential this separation is **behavioral** — deny-list + PM instruction — not server-enforced; see
+  ADR-0011's risk section.)
 
 ### Self-healing (hang watchdog)
 

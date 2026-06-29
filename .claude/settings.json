@@ -1,5 +1,5 @@
 {
-  "$comment": "Shared, committed Claude Code config so every checkout gets the same safety posture and pre-approved permissions. Machine-specific overrides go in the gitignored .claude/settings.local.json. deny takes precedence over allow, so these blocks hold even under --dangerously-skip-permissions (used by ops/gentriduck-devmode.sh on the native Linux automation host).",
+  "$comment": "Shared, committed Claude Code config so every checkout gets the same safety posture and pre-approved permissions. Machine-specific overrides go in the gitignored .claude/settings.local.json. deny takes precedence over allow, so these blocks hold even under --dangerously-skip-permissions (used by ops/gentriduck-devmode.sh on the native Linux automation host). The 'git push ... main' deny rules are DEFENCE-IN-DEPTH only (ADR-0011): they match 'main' as a ref token (not the substring, so 'domain'/'maintenance' branch names are safe), but exotic forms like 'git push origin HEAD' on a checked-out main, or '--mirror', are NOT caught. main's real protection is the denied gh pr merge + the PM being instructed to only ever touch develop; full enforcement needs a separate PM identity (ADR-0011 Alternative D).",
   "permissions": {
     "deny": [
       "Bash(gh pr merge*)",
@@ -8,6 +8,12 @@
       "Bash(git push -f)",
       "Bash(git push *--force*)",
       "Bash(git reset --hard*)",
+      "Bash(git push * main)",
+      "Bash(git push * main *)",
+      "Bash(git push *:main)",
+      "Bash(git push *:main *)",
+      "Bash(git push *heads/main*)",
+      "Bash(git push *+main*)",
       "Bash(sudo *)",
       "Bash(sudo)"
     ],
