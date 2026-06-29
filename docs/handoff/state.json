@@ -1,46 +1,40 @@
 {
   "_schema": "gentriduck-session-state/v1",
-  "session": "2026-06-28-maintainer-reconcile",
-  "updated_at": "2026-06-28T13:00:00Z",
+  "session": "2026-06-29-devmode",
+  "updated_at": "2026-06-29T12:55:00Z",
   "build_status": {
     "result": "PASS",
     "pass": 356,
     "warn": 1,
     "error": 0,
     "warn_detail": "test_c5_poi_share_spike (expected by design)",
-    "branch": "main",
-    "note": "Green WITH MSS data present on this machine. Data-presence guards (#94) make a data-less build RED."
+    "branch": "develop",
+    "note": "Green WITH MSS data present. develop == main + #65 merge."
   },
   "open_prs": [],
-  "completed_this_session": [64, 94],
-  "decisions_this_session": [
-    {"item": "ADR-0010 (spatial tooling: DuckDB SQL weighting + PySAL/h3 analysis-only)", "outcome": "ACCEPTED", "pr": 96, "process": "system-architect ACCEPT WITH AMENDMENTS (4 required applied) + geo-DS PASS WITH CONDITIONS; domain sign-off waived (tooling-only). Unblocks #69 and #79."},
-    {"item": "MSS 2013 historical edition", "outcome": "DROPPED", "note": "WFS 404; thesis anchored on MSS 2017 (ref 31.12.2016) so 2013 not needed for fidelity. Open XLSX tables exist (bericht-2013) if ever revisited for longitudinal depth — new Excel adapter + ADR amendment + gate."}
-  ],
-  "merged_prs_this_session": [
-    {"number": 93, "issues": [64], "secondary": [53, 28, 69], "title": "feat(#64): R-A1 index re-grounding — MSS social outcome, POI predictor, lead-lag"},
-    {"number": 95, "issues": [94], "title": "feat(#94): data-presence guards — fail on no data, warn on mocked data"},
-    {"number": 96, "issues": [69], "title": "docs(#69): ADR-0010 spatial tooling — amended + geo-DS signed off → Accepted"}
+  "completed_this_session": [65],
+  "integrated_into_develop": [
+    {"commit": "1868875", "issue": 65, "title": "feat(#65): E1/E2 thesis validation rewrite — real hypotheses, POI predictors, lead-lag, dual sign-off"}
   ],
   "this_machine_data_state": {
     "mss_status_editions": [2015, 2017, 2019, 2021, 2023, 2025],
     "mss_indicator_editions": [2015, 2017, 2019, 2021, 2023, 2025],
-    "note": "MSS ingested on this laptop this session (status + SES indicators). POI/EWR/LOR already present. Keystone models populated; build green.",
+    "note": "MSS ingested. POI/EWR/LOR present. Keystone models populated; build green.",
     "keystone_populated": true
   },
   "unblocked_ready": [
-    {"issue": 65, "title": "[A2] Fix & re-run E1/E2 thesis validation (lead-lag, POI→MSS)", "note": "RECOMMENDED next. Needs no new tooling; int_mss_lead_lag provides the correct panel. Core 'do the 2018 findings still hold' question."},
-    {"issue": 69, "title": "[A6] Distance-weighting + Gi* hotspots + MAUP", "note": "Unblocked by ADR-0010. SQL distance-weighting half needs NO new deps; PySAL only for Gi*/Moran. Methodology (bandwidth/kernel/contiguity) needs spatial-methods.md under geo-DS+domain gate first."},
-    {"issue": 79, "title": "[A9] Spatial-dynamic gentrification + spatial-econometric inference", "note": "Unblocked by ADR-0010; depends on #69 weights."},
-    {"issue": 71, "title": "[B2] Ground-truth back-test vs MSS classes & known hotspots"},
-    {"issue": 78, "title": "[A8] Longitudinal gentrification trajectory & stage model (2008–2024)"}
+    {"issue": 71, "title": "[B2] Ground-truth back-test vs MSS classes & known hotspots", "note": "RECOMMENDED next. Depends on R-A1 ✓, int_mss_lead_lag ✓, #65 ✓. data-analyst + geo-DS pair. No new tooling."},
+    {"issue": 78, "title": "[A8] Longitudinal gentrification trajectory & stage model (2008–2024)", "note": "DE pair, dbt work. Builds fct_gentrification_trajectory per-year stage classification."},
+    {"issue": 69, "title": "[A6] Distance-weighting + Gi* hotspots + MAUP", "note": "ADR-0010 ✓. SQL distance-weighting needs spatial-methods.md under geo-DS+domain gate FIRST (ADR-0010 C1-C8). PySAL Gi*/Moran after that."},
+    {"issue": 79, "title": "[A9] Spatial-dynamic gentrification + spatial-econometric inference", "note": "Depends on #69 weights."}
   ],
   "still_blocked": [
     {"issue": 70, "blocked_by": ["Epic D start"], "title": "[B1] Displacement & affordability dimension (Milieuschutz, rent-burden, turnover)"}
   ],
   "open_conditions_carried_forward": [
-    "ADR-0010 geo-DS conditions C1–C8 (docs/methodology/ADR-0010-geo-signoff.md) → discharge in docs/methodology/spatial-methods.md under R-C1 before any R-A6/R-A9 model merges. Key: distance-weighting must COMPOSE WITH (not replace) the OSM completeness-bias correction (ADR-0008 §5).",
-    "Clean-architecture tidy: make analysis/ layer read via a CONFIGURABLE DuckDB connection (drop hard-coded data/gentriduck.duckdb at analysis/e1_regressions.py:48) so Layer 3 isn't local-only. Noted in ADR-0010 amendment 7; do when R-A6 lands."
+    "ADR-0010 geo-DS conditions C1-C8 → discharge in docs/methodology/spatial-methods.md under R-C1 before any R-A6/R-A9 model merges. Distance-weighting must COMPOSE WITH OSM completeness-bias correction (ADR-0008 §5).",
+    "Clean-architecture tidy: make analysis/ layer use CONFIGURABLE DuckDB connection (env var GENTRIDUCK_DB already added in #65; verify no remaining hardcoded paths). Do when R-A6 lands.",
+    "#65 E1/E2 non-blocking conditions: H3b divergence from thesis honestly reported (live 2021-2025 panel, 3 editions vs 2010-2018 thesis panel); H3c opposite direction (contested, thesis itself 'unclear'); both deferred to G2 methodology page framing."
   ],
-  "next_session_decision": "Maintainer to pick the next BUILD task (deferred to next session). Standing recommendation: #65 (E1/E2 re-run). Alternatives: #69 R-A6 SQL distance-weighting (zero new deps), #71, #78."
+  "next_session_decision": "Pick #71 (B2 back-test) or #78 (A8 trajectory). Both unblocked. #71 is data-analyst work; #78 is DE dbt work. Recommend #71 first as it directly validates the #65 findings against known hotspots."
 }
