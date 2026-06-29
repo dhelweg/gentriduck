@@ -9,7 +9,7 @@
 
 Each thesis hypothesis (H1-H3c from pp. 55-56, p. 91) is implemented as a binary classification task using **POI category counts** as features and **MSS social status / status change** as targets.  This corrects the prior implementation which used MSS indices as both features and targets.
 
-All tasks use 5-fold stratified cross-validation (`StratifiedKFold(n_splits=5, shuffle=True, random_state=42)`) with a `LogisticRegression(C=1.0, L2)` classifier inside a `StandardScaler` pipeline.  A leakage guard (R-C3) asserts that no PLR `area_code` appears in both train and test folds of any single cross-validation split.
+H1 (cross-sectional, one row per PLR) uses `StratifiedKFold(n_splits=5, shuffle=True, random_state=42)`.  H2/H3 panel tasks (multiple editions per PLR) use `GroupKFold(n_splits=5, groups=area_code)` to prevent PLR temporal leakage across MSS editions.  All tasks use a `LogisticRegression(C=1.0, L2)` classifier inside a `StandardScaler` pipeline.  A leakage guard (R-C3) asserts that no PLR `area_code` appears in both train and test folds of any single cross-validation split.
 
 The per-hypothesis thesis AUC reference values come from thesis p.91:
 
@@ -23,7 +23,7 @@ The per-hypothesis thesis AUC reference values come from thesis p.91:
 
 | Task | N | Thesis AUC | Revival AUC | AUC std | F1w | F1w std | Leakage | Features |
 |---|---|---|---|---|---|---|---|---|
-| H1 | 436 | 0.87 | 0.7148 | 0.0716 | 0.6354 | 0.0596 | None — POI counts are independent of status_class_bi | total_poi_count, poi_cafe, poi_bar, poi_restaurant, poi_fast_food, poi_nightlife |
+| H1 | 436 | 0.87 | 0.7119 | 0.0456 | 0.6275 | 0.0378 | None — POI counts are independent of status_class_bi | total_poi_count, poi_cafe, poi_bar, poi_restaurant, poi_fast_food, poi_nightlife |
 | H2 (k=1) | 1071 | 0.77 | 0.7519 | 0.0510 | 0.9113 | 0.0146 | None — POI at t predicts status change from t to t+k | poi_count_t, poi_cafe_t, poi_bar_t, poi_restaurant_t, poi_fast_food_t |
 | H2 (k=2) | 535 | 0.77 | 0.7312 | 0.0894 | 0.8785 | 0.0278 | None — POI at t predicts status change from t to t+k | poi_count_t, poi_cafe_t, poi_bar_t, poi_restaurant_t, poi_fast_food_t |
 | H3a (k=1) | 1071 | 0.72 | 0.5706 | 0.0560 | 0.9113 | 0.0146 | None — dynamism at t precedes status change from t to t+k | dynamism_score_t, delta_poi |
@@ -37,7 +37,7 @@ The per-hypothesis thesis AUC reference values come from thesis p.91:
 
 ### H1
 
-**H1**: AUC = 0.7148 ± 0.0716 (thesis: 0.87) — below thesis by -0.1552. F1w = 0.6354. n=436.
+**H1**: AUC = 0.7119 ± 0.0456 (thesis: 0.87) — below thesis by -0.1581. F1w = 0.6275. n=436.
 
 Partial agreement: AUC > 0.5 confirms above-chance classification; below thesis 0.87 likely reflects narrower feature set.
 
