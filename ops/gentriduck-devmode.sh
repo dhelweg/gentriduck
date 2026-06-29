@@ -116,8 +116,11 @@ watchdog() {
         pgrep -f -- "--remote-control $SESSION_NAME" >/dev/null 2>&1 || return     # claude already gone
         newest="$(ls -t "$PROJDIR"/*.jsonl 2>/dev/null | head -1)"
         [ -n "$newest" ] || continue                                              # no transcript yet
-        mtime="$(stat -f %m "$newest" 2>/dev/null || stat -c %Y "$newest" 2>/dev/null)"
-        [ -n "$mtime" ] || continue
+        # GNU stat (-c %Y) first — the Linux host. On macOS BSD-stat rejects -c (stderr only,
+        # no stdout) so it falls through to -f %m. Doing BSD-first on Linux is WRONG: `stat -f`
+        # is --file-system there, prints fs-info to stdout AND exits non-zero, polluting mtime.
+        mtime="$(stat -c %Y "$newest" 2>/dev/null || stat -f %m "$newest" 2>/dev/null)"
+        case "$mtime" in '' | *[!0-9]*) continue ;; esac                          # guard: epoch must be all digits
         age=$(( $(date +%s) - mtime ))
         if [ "$age" -gt "$STALL_SECS" ]; then
             echo "--- watchdog: session idle ${age}s (> ${STALL_SECS}s) — killing to force restart $(date) ---" >> "$LOG"
