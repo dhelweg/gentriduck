@@ -1,7 +1,7 @@
 {
   "_schema": "gentriduck-session-state/v1",
   "session": "2026-06-29-devmode",
-  "updated_at": "2026-06-29T16:00:00Z",
+  "updated_at": "2026-06-29T16:30:00Z",
   "build_status": {
     "result": "PASS",
     "pass": 378,
@@ -9,7 +9,7 @@
     "error": 0,
     "warn_detail": "test_c5_poi_share_spike (expected by design)",
     "branch": "develop",
-    "note": "Green. develop = main + #65 + #71 + #78 + #32 E3 narratives."
+    "note": "Green. develop = main + #65+#71+#78+#32+spatial-methods.md. #69 DE in progress."
   },
   "open_prs": [
     {
@@ -20,52 +20,99 @@
       "note": "Awaiting maintainer merge in GitHub UI. Batches #65 + #71 + #78 + #109."
     }
   ],
-  "completed_this_session": [65, 71, 78, 32],
+  "completed_this_session": [
+    65,
+    71,
+    78,
+    32,
+    "spatial-methods-doc"
+  ],
   "integrated_into_develop": [
-    {"commit": "1868875", "issue": 65, "title": "feat(#65): E1/E2 thesis validation rewrite"},
-    {"commit": "063ec15", "issue": 71, "title": "feat(#71): integrate B2 back-test harness into develop"},
-    {"commit": "6113bc3", "issue": 78, "title": "feat(#78): integrate R-A8 longitudinal trajectory model into develop"},
-    {"commit": "merge-E3", "issue": 32, "title": "feat(#32): integrate E3 analytical narratives + maps into develop"}
+    {
+      "commit": "1868875",
+      "issue": 65,
+      "title": "feat(#65): E1/E2 thesis validation rewrite"
+    },
+    {
+      "commit": "063ec15",
+      "issue": 71,
+      "title": "feat(#71): integrate B2 back-test harness into develop"
+    },
+    {
+      "commit": "6113bc3",
+      "issue": 78,
+      "title": "feat(#78): integrate R-A8 longitudinal trajectory model into develop"
+    },
+    {
+      "commit": "merge-E3",
+      "issue": 32,
+      "title": "feat(#32): integrate E3 analytical narratives + maps into develop"
+    }
   ],
   "this_machine_data_state": {
-    "mss_status_editions": [2015, 2017, 2019, 2021, 2023, 2025],
-    "mss_indicator_editions": [2015, 2017, 2019, 2021, 2023, 2025],
+    "mss_status_editions": [
+      2015,
+      2017,
+      2019,
+      2021,
+      2023,
+      2025
+    ],
+    "mss_indicator_editions": [
+      2015,
+      2017,
+      2019,
+      2021,
+      2023,
+      2025
+    ],
     "note": "MSS ingested. POI/EWR/LOR present. Keystone models populated; build green. E3 analysis scripts produce output to data/analysis/.",
     "keystone_populated": true
   },
   "weekly_pr": {
     "number": 111,
     "opened": "2026-06-29",
-    "batches": ["#65 E1/E2 rewrite", "#71 B2 back-test", "#78 A8 trajectory", "#109 ADR-0011"],
+    "batches": [
+      "#65 E1/E2 rewrite",
+      "#71 B2 back-test",
+      "#78 A8 trajectory",
+      "#109 ADR-0011"
+    ],
     "note": "#32 E3 NOT yet in PR#111 (opened before E3 integrated). E3 goes into next weekly PR."
   },
   "unblocked_ready": [
     {
       "issue": 69,
       "title": "[A6] Distance-weighting + Gi* hotspots + MAUP",
-      "note": "ADR-0010 approved PySAL+H3. BLOCKED on spatial-methods.md (geo-DS + domain must draft and sign off docs/methodology/spatial-methods.md covering ADR-0010 C1-C8 BEFORE any R-A6/R-A9 model merges). Implementation can start in parallel but cannot merge without the document.",
-      "pre_task": "Draft docs/methodology/spatial-methods.md (geo-DS lead)"
+      "note": "IN PROGRESS \u2014 DE agent running. spatial-methods.md merged into develop."
     },
     {
       "issue": 79,
-      "title": "[A9] Spatial-dynamic gentrification + spatial-econometric inference",
+      "title": "[A9] Spatial-dynamic + spatial-econometric inference",
       "note": "Depends on #69 spatial weights"
     },
     {
       "issue": 28,
       "title": "[D2] Source-completeness/coverage check on price/rent data",
-      "note": "Epic D entry point. Independent of spatial-methods.md."
+      "note": "Independent track"
     }
   ],
   "still_blocked": [
-    {"issue": 70, "blocked_by": ["Epic D start"], "title": "[B1] Displacement & affordability dimension"}
+    {
+      "issue": 70,
+      "blocked_by": [
+        "Epic D start"
+      ],
+      "title": "[B1] Displacement & affordability dimension"
+    }
   ],
   "open_conditions_carried_forward": [
-    "ADR-0010 geo-DS conditions C1-C8 → discharge in docs/methodology/spatial-methods.md under R-C1 before any R-A6/R-A9 model merges. Distance-weighting must COMPOSE WITH OSM completeness-bias correction (ADR-0008 §5).",
+    "ADR-0010 geo-DS conditions C1-C8 \u2192 discharge in docs/methodology/spatial-methods.md under R-C1 before any R-A6/R-A9 model merges. Distance-weighting must COMPOSE WITH OSM completeness-bias correction (ADR-0008 \u00a75).",
     "#65 E1/E2 non-blocking conditions: H3b divergence honestly reported; H3c opposite direction (contested); both deferred to G2 methodology page.",
     "R-A8 PASS WITH CONDITIONS: geo-DS conditions carried to spatial-methods.md and G2.",
     "E3 geo-DS C2 (non-blocking): add C5 coverage-correction note wherever D3 dynamism shown in maps/narratives (before G2).",
-    "Clean-architecture: analysis/ layer uses CONFIGURABLE DuckDB connection (GENTRIDUCK_DB env var) — verified in E3 scripts."
+    "Clean-architecture: analysis/ layer uses CONFIGURABLE DuckDB connection (GENTRIDUCK_DB env var) \u2014 verified in E3 scripts.",
+    "spatial-methods.md domain C1: Gi* public label = amenity-change hotspot (not bare gentrification hotspot) in G2/maps. Binds at public render, not at implementation."
   ],
-  "next_session_decision": "Draft docs/methodology/spatial-methods.md (geo-DS lead, ADR-0010 C1-C8) to unblock #69 [A6]. OR start #28 [D2] price/rent source completeness check (simpler, independent). Recommend spatial-methods.md first as it unblocks a larger track."
+  "next_session_decision": "#69 [A6] DE implementation in progress (distance-weighting + Gi* + MAUP). Await DE agent result then reviewer + sign-off + integrate."
 }
