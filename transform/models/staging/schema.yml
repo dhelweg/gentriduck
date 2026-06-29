@@ -439,18 +439,39 @@ models:
 
   - name: stg_berlin_bodenrichtwert
     description: >
-      D1 staging view over Bodenrichtwerte (land reference values) 2024 for Berlin.
-      Source: WFS GDI Berlin brw2024, feature type brw2024:brw_2024_vector,
-      CRS EPSG:25833. Licence: dl-de-zero-2.0.
+      D1a staging view over Bodenrichtwerte (land reference values) back-series 2017–2024
+      for Berlin. Source: WFS GDI Berlin brw{year}, feature type brw{year}:brw_{year}_vector,
+      CRS EPSG:25833. Licence: dl-de-zero-2.0. All years 2017–2024 confirmed live via
+      HTTP 200 probe on 2026-06-29.
       Populated by ingestion/berlin/price_rent/ingest_bodenrichtwerte.py.
-      Returns zero rows (typed stub) until data/raw/berlin/price_rent/bodenrichtwert_2024.parquet
-      exists. Each row is one BRW land value zone polygon with the EUR/m2 value
-      and land use code.
+      Returns zero rows (typed stub) until at least one bodenrichtwert_{year}.parquet
+      exists under data/raw/berlin/price_rent/. Each row is one BRW land value zone
+      polygon with the EUR/m2 value and land use code for the given reference year.
     meta:
       dbt_meta_owner: data-engineer
+    tests:
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns:
+              - reference_date
+              - brw_id
+          config:
+            where: "brw_id is not null"
+      - assert_not_empty:
+          config:
+            severity: warn
+      - assert_min_rows:
+          arguments:
+            min_rows: 1000
+          config:
+            severity: warn
     columns:
       - name: reference_date
-        description: Reference date for the BRW; always 2024-01-01.
+        description: Reference date for the BRW; YYYY-01-01 for the given data year (2017–2024).
+        tests:
+          - not_null:
+              config:
+                where: "brw_id is not null"
       - name: city_code
         description: City identifier; always 'berlin' (ADR-0005).
         tests:
