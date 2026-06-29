@@ -541,17 +541,19 @@ models:
 
   - name: stg_berlin_verkaufte_grundstuecke
     description: >
-      D1 STUB — Verkaufte Grundstücke (Kauffälle) 2024 per ADR-0003 item 10.
-      The WFS endpoint https://gdi.berlin.de/services/wfs/kauffaelle2024 returned
-      HTTP 404 during D1 implementation (2026-06-18). URL needs manual discovery
-      from daten.berlin.de. See issue D1b for resolution.
-      Always returns zero rows until the endpoint is found and ingestion is
-      implemented. Licence: dl-de-zero-2.0 (expected).
+      D1b — Verkaufte Grundstücke (Kauffälle) Berlin 2024 + 2025, GDI Berlin WFS,
+      dl-de-zero-2.0. Publisher: Gutachterausschuss für Grundstückswerte in Berlin.
+      WFS endpoint confirmed 2026-06-29: https://gdi.berlin.de/services/wfs/kauffaelle_{year}.
+      9 sub-market layers per year (a_teileigen … i_mehrfamhaus). IMPORTANT: only
+      2024 and 2025 are available via WFS; no endpoint exists for earlier years —
+      this historical coverage gap must be disclosed in D2 and on the G2 methodology page.
+      Graceful-degradation: returns zero rows when parquet files are not yet ingested.
+      Run ingestion/berlin/price_rent/ingest_kauffaelle.py to populate.
     meta:
       dbt_meta_owner: data-engineer
     columns:
       - name: reference_date
-        description: Reference date; expected 2024-01-01.
+        description: Reference date; YYYY-01-01 for the given data year.
       - name: city_code
         description: City identifier; always 'berlin' (ADR-0005).
         tests:
@@ -563,22 +565,41 @@ models:
                 values: ["berlin"]
               config:
                 where: "transaction_id is not null"
+      - name: teilmarkt
+        description: >
+          Sub-market layer code (e.g. 'c_eigentwhg' = Eigentumswohnungen,
+          'i_mehrfamhaus' = Mehrfamilienwohnhäuser). Primary layers for gentrification
+          analysis are c_eigentwhg and i_mehrfamhaus.
+        tests:
+          - not_null:
+              config:
+                where: "transaction_id is not null"
       - name: geometry_wkb
-        description: Geometry WKB, EPSG:25833.
+        description: Point/geometry WKB, EPSG:25833 (native CRS, not reprojected).
       - name: transaction_id
-        description: Feature identifier.
+        description: WFS feature ID (namespace:layer.featureid format).
         tests:
           - not_null:
               config:
                 where: "city_code is not null"
-      - name: price_eur
-        description: Transaction price in EUR.
-      - name: area_m2
-        description: Plot area in m2.
-      - name: nutzung
-        description: Land use / property type.
+          - unique:
+              config:
+                where: "transaction_id is not null"
+      - name: kaufpreis_eur
+        description: >
+          Purchase price in EUR. Null if not exposed by WFS DescribeFeatureType
+          (actual feature properties inspected at ingestion time).
+      - name: flaeche_m2
+        description: Plot or floor area in m2. Null if not exposed by WFS.
+      - name: kauftyp
+        description: Sub-market type string from WFS (kauftyp attribute).
+      - name: raw_properties_json
+        description: >
+          Full JSON of all WFS feature properties, stored for audit and schema
+          discovery. Allows downstream models to extract additional attributes
+          once confirmed from live data.
       - name: source_attribution
-        description: dl-de-zero-2.0 attribution string.
+        description: DL-Zero-2.0 attribution string.
         tests:
           - not_null:
               config:
