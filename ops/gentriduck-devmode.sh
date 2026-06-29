@@ -41,8 +41,9 @@ SESSION_NAME="${GENTRIDUCK_DEVMODE_RC_NAME:-gentriduck-dev}"
 
 # Unsupervised mode: skip tool-permission prompts so the PM just works the board and only loops you
 # in for real DECISIONS (PR merge, ADR / new tool-source, ambiguous calls) — not routine "may I run
-# X?". The settings.local.json DENY list still blocks the dangerous stuff (gh pr merge, force-push,
-# rm, curl, …). HOST-AWARE default: a supervised personal machine (Mac, or Windows via WSL2) uses
+# X?". The committed .claude/settings.json DENY list still blocks the irreversible stuff (gh pr merge,
+# force-push, git reset --hard, sudo); rm/curl stay allowed for the ingestion pipeline. HOST-AWARE
+# default: a supervised personal machine (Mac, or Windows via WSL2) uses
 # gated `bypassPermissions` (one accept); only a NATIVE Linux box — assumed to be the dedicated,
 # unattended automation host — uses `dangerously-skip` (no accept gate, so the watchdog/loop restart
 # hands-free). WSL2 reports "Linux" but is usually a laptop, so it's treated as supervised. Override
