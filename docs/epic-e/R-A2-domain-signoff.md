@@ -111,3 +111,55 @@ for the public methodology page.
 
 These are mechanical, well within the ~3-iteration cap. Coordinate the polarity and C5 fixes with
 the geo-data-scientist, as they bear on statistical soundness too.
+
+## Re-review verdict (2026-06-29, post-iteration-3 fixes)
+
+Commit reviewed: `1b1887e` ("fix(#65): correct status_index polarity, use C5-corrected H3
+predictor, fix ordinal outcome"). Verified against `index-definition.md` §2.4 / §3.3 / §5 and
+`int_mss_lead_lag.sql`.
+
+**Verdict: PASS WITH CONDITIONS**
+
+D1 polarity: RESOLVED — `THESIS_HYPOTHESES` now signs every test against the inverse-numeric
+`status_index` (§5 polarity table, line 418: lower numeric = higher status, "FLIP required"):
+H1 = negative, H1b = positive, H2/H3a/H3b/H3c = negative, each with an inline §5 /
+`int_mss_lead_lag.sql` citation. H1 now correctly scores PASS (rho −0.0463 = expected negative
+direction) rather than the prior spurious FAIL.
+
+D2 C5-corrected predictor: RESOLVED — H3a features and the H3b outcome now use the C5-corrected
+`delta_dynamism_t` (within-vintage dynamism change, §2.4), not raw `delta_poi`. The OSM-coverage
+artefact is removed: the H3b positive-class rate dropped from ~99% to a balanced split (the
+`pos_rate > 0.95` imbalance warning no longer fires in the regenerated E2 findings), so the H3b
+AUC of 0.432 is now a real (sub-chance) signal rather than a degenerate near-constant target.
+
+D3 ordinal outcome: RESOLVED — H2/H3a/H3c classification targets are now
+`status_transition == 'worsened'` (the ordinal transition column, = the §3.3 `high-status-loss`
+binary); the forbidden metric `delta_status_ordinal > 0` target is gone. E1 uses
+`delta_status_ordinal` only for Spearman rank correlation, never as a metric OLS response
+(permitted per §3.2). H3b's `delta_dynamism_t > 0` target is on the continuous POI side, not the
+ordinal MSS side — permissible.
+
+Invasion-succession / lead-lag interpretation: CORRECT post-polarity-fix. H3b (status change leads
+POI change, confirmed in the thesis per Dangschat 1988's social-cycle-leads-commercial-cycle
+model) is operationalized as expected `Spearman(delta_status_ordinal, delta_dynamism) < 0` —
+improving status (negative `delta_status_ordinal`) preceding later amenity growth (positive
+`delta_dynamism_t`). The negative `expected_dir` is the theory-faithful sign.
+
+Non-blocking items from the prior review: D4 (H1b fast-food) softened to "contested proxy for
+low-status / displacement pressure (see gentrification literature)" — addressed. D5 (H3c relabel)
+— H3c is now described as a co-movement / contemporaneous test and the E1 H3 note states it is
+"not a strict temporal-precedence test" — addressed.
+
+Remaining conditions (non-blocking; do not gate integration):
+1. H3b is effectively k=1-only in E1 — the k=2 `delta_dynamism_t` join yields n=0, and at k=1 H3b
+   diverges from the thesis (rho +0.059 ns; E2 AUC 0.432, sub-chance). This is a genuine empirical
+   divergence on the short 2021–2025 panel, honestly reported in both docs, not a methodology
+   defect. Revisit once the 2027 MSS edition enables k=3 and a longer panel. Flag this divergence
+   prominently (not buried) on the public methodology page (#38) so readers do not over-read a
+   "confirmed" H3b.
+2. H3c is significant at k=1 (p=0.0386) but in the direction *opposite* to the thesis expectation
+   (positive vs expected negative), i.e. higher contemporaneous dynamism associating with *worse*
+   status. Given the thesis itself marked H3c "unclear" this is tolerable for Epic B, but the #38
+   write-up should present it as an open/contested result, not a clean replication.
+
+PASS WITH CONDITIONS — no blocking conditions remain. The PM may integrate into `develop`.
