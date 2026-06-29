@@ -68,19 +68,20 @@ _env_db = os.environ.get("GENTRIDUCK_DB")
 DUCKDB_PATH = Path(_env_db) if _env_db else Path(__file__).parent.parent / "data" / "gentriduck.duckdb"
 OUTPUT_MD = Path(__file__).parent.parent / "docs" / "epic-e" / "E2-classification-findings.md"
 
-# Thesis per-hypothesis AUC references — from thesis p.91.
-# These are the ground-truth values for directional AUC comparison.
+# Thesis per-hypothesis AUC references — reconstructed from thesis p.91 narrative.
+# No exact table in the thesis; values attributed as "reconstructed from thesis p.91 narrative".
 THESIS_AUC: dict[str, float] = {
-    "H1":  0.87,  # Thesis p.91: POI stock → status class; confirmed
-    "H2":  0.77,  # Thesis p.91: POI stock → future status change; directional
-    "H3a": 0.72,  # Thesis p.91: ΔPOI leads Δstatus; rejected (below threshold)
-    "H3b": 0.81,  # Thesis p.91: Δstatus leads ΔPOI; confirmed
-    "H3c": 0.71,  # Thesis p.91: simultaneous co-movement; unclear
+    "H1":  0.87,  # Reconstructed from thesis p.91 narrative: POI stock → status class; confirmed
+    "H2":  0.77,  # Reconstructed from thesis p.91 narrative: POI stock → future status change
+    "H3a": 0.72,  # Reconstructed from thesis p.91 narrative: ΔPOI leads Δstatus; rejected
+    "H3b": 0.81,  # Reconstructed from thesis p.91 narrative: Δstatus leads ΔPOI; confirmed
+    "H3c": 0.71,  # Reconstructed from thesis p.91 narrative: simultaneous co-movement; unclear
 }
 
 # POI feature columns used as predictors (H1/H2).
 # Thesis p.55: upscaling proxies (cafe, bar, restaurant, nightlife, clothing, beauty)
-# plus fast-food as displacement indicator.  total_poi_count as aggregate.
+# plus fast-food as contested proxy for low-status / displacement pressure (see gentrification
+# literature; thesis p.55).  total_poi_count as aggregate.
 # These correspond to the key category features discussed in the thesis.
 H1_FEATURE_COLS = [
     "total_poi_count",
@@ -135,6 +136,12 @@ def load_lead_lag_data(con: duckdb.DuckDBPyConnection) -> object:
     """Load H2/H3 lead-lag data: POI features + status change + POI change.
 
     Thesis p.91 H3a/H3b/H3c: lead-lag classification at k=1,2.
+
+    Fetches delta_dynamism_t (C5-corrected within-vintage dynamism change) and
+    status_transition ('improved'/'stable'/'worsened') from int_mss_lead_lag.
+    These are used in H3b (C5-corrected target) and H2/H3 (ordinal outcome).
+    D1 POLARITY: delta_status_ordinal > 0 means status WORSENED (index-definition.md §5;
+    int_mss_lead_lag.sql lines 19-23). Binary "status worsened" = (delta_status_ordinal > 0).
     """
     df = con.execute("""
         SELECT
@@ -145,6 +152,9 @@ def load_lead_lag_data(con: duckdb.DuckDBPyConnection) -> object:
             ll.status_index_t,
             ll.status_index_tk,
             ll.delta_status_ordinal,
+            ll.status_transition,
+            -- C5-corrected within-vintage dynamism change (index-definition.md §2.4)
+            ll.delta_dynamism_t,
             ll.dynamism_score_t,
             ll.dynamism_score_tk,
             -- POI feature columns at t and t+k
@@ -364,11 +374,21 @@ def task_h1(df) -> dict | None:
 
 
 def task_h2(df_ll) -> list[dict]:
-    """H2: Classify future status improvement using current POI stock.
+    """H2: Classify future status worsening using current POI stock.
 
     Thesis p.91 H2: POI stock predicts future status change (AUC 0.77).
     Features: poi_count_t, poi_cafe_t, poi_bar_t, poi_restaurant_t, poi_fast_food_t.
-    Target: delta_status_ordinal > 0 (status improves over lag window k).
+
+    Target: status_transition == 'worsened' (status class worsened over lag window k).
+    This uses the ordinal transition column from int_mss_lead_lag (index-definition.md §3.3):
+    metric differencing on ordinal MSS codes is prohibited; use status_transition instead.
+    Binary: 1 = status worsened (status_index increased = more deprived), 0 = stable/improved.
+    See index-definition.md §3.3: "high-status-loss = 1 if the PLR's Status class worsened".
+
+    D1 POLARITY (index-definition.md §5 polarity table; int_mss_lead_lag.sql lines 19-23):
+    delta_status_ordinal > 0 → status_index increased → STATUS WORSENED.
+    The `status_transition == 'worsened'` target is equivalent to delta_status_ordinal > 0.
+
     k=3 skipped: only 3 MSS editions currently (2021, 2023, 2025); testable once 2027 edition ingested.
     """
     results = []
@@ -381,31 +401,40 @@ def task_h2(df_ll) -> list[dict]:
 
         feature_cols = ["poi_count_t", "poi_cafe_t", "poi_bar_t", "poi_restaurant_t", "poi_fast_food_t"]
         x = sub[feature_cols].values.astype(float)
-        y = (sub["delta_status_ordinal"] > 0).astype(int).values
+        # Use status_transition ordinal column (index-definition.md §3.3; not metric differencing)
+        y = (sub["status_transition"] == "worsened").astype(int).values
         area_codes = sub["area_code"].values
 
         mask = ~np.any(np.isnan(x), axis=1)
         x, y, area_codes = x[mask], y[mask], area_codes[mask]
 
-        print(f"  H2 k={k}: n={len(x)}, improving={y.sum()} ({100*y.mean():.1f}%)")
+        print(f"  H2 k={k}: n={len(x)}, status_worsened={y.sum()} ({100*y.mean():.1f}%)")
         # Panel data (area_codes repeat across editions) — use GroupKFold
         r = run_cv_panel(x, y, area_codes, f"H2 k={k}")
         if r:
             r["task"] = f"H2 (k={k})"
-            r["target"] = f"delta_status_ordinal > 0 [k={k} lag]"
+            r["target"] = f"status_transition == 'worsened' [k={k} lag; index-definition.md §3.3]"
             r["features"] = ", ".join(feature_cols)
             r["thesis_auc"] = THESIS_AUC["H2"]
-            r["leakage_note"] = "None — POI at t predicts status change from t to t+k"
+            r["leakage_note"] = "None — POI at t predicts status transition from t to t+k"
             results.append(r)
     return results
 
 
 def task_h3a(df_ll) -> list[dict]:
-    """H3a: Classify status change using POI dynamism at t (POI leads status).
+    """H3a: Classify status worsening using C5-corrected POI dynamism change at t.
 
     Thesis p.91 H3a: ΔPOI leads Δstatus — REJECTED (AUC 0.72, below threshold).
-    Features: dynamism_score_t, delta_poi (POI change from t to t+k).
-    Target: delta_status_ordinal > 0 (status improves).
+    Features: delta_dynamism_t (C5-corrected), dynamism_score_t.
+    Target: status_transition == 'worsened' (ordinal transition; index-definition.md §3.3).
+
+    C5-corrected predictor (index-definition.md §2.4; int_mss_lead_lag.sql D3 C5 note):
+    Uses delta_dynamism_t (C5-corrected within-vintage dynamism change), not raw delta_poi.
+    Raw delta_poi embeds OSM coverage growth artefact and would bias the test.
+
+    D1 POLARITY (index-definition.md §5 polarity table): status_transition == 'worsened'
+    means status_index increased (more deprived) — the "high-status-loss" binary per §3.3.
+
     k=3 skipped: only 3 MSS editions currently (2021, 2023, 2025); testable once 2027 edition ingested.
     """
     results = []
@@ -416,34 +445,45 @@ def task_h3a(df_ll) -> list[dict]:
         if len(sub) < 20:
             continue
 
-        x = sub[["dynamism_score_t", "delta_poi"]].values.astype(float)
-        y = (sub["delta_status_ordinal"] > 0).astype(int).values
+        # C5-corrected delta_dynamism_t as primary predictor (index-definition.md §2.4)
+        x = sub[["delta_dynamism_t", "dynamism_score_t"]].values.astype(float)
+        # status_transition ordinal column (index-definition.md §3.3; not metric differencing)
+        y = (sub["status_transition"] == "worsened").astype(int).values
         area_codes = sub["area_code"].values
 
         mask = ~np.any(np.isnan(x), axis=1)
         x, y, area_codes = x[mask], y[mask], area_codes[mask]
 
-        print(f"  H3a k={k}: n={len(x)}, status_improving={y.sum()} ({100*y.mean():.1f}%)")
+        print(f"  H3a k={k}: n={len(x)}, status_worsened={y.sum()} ({100*y.mean():.1f}%)")
         # Panel data — use GroupKFold to prevent PLR temporal leakage
         r = run_cv_panel(x, y, area_codes, f"H3a k={k}")
         if r:
             r["task"] = f"H3a (k={k})"
-            r["target"] = "delta_status_ordinal > 0 (status improves)"
-            r["features"] = "dynamism_score_t, delta_poi"
+            r["target"] = "status_transition == 'worsened' [index-definition.md §3.3]"
+            r["features"] = "delta_dynamism_t (C5-corrected), dynamism_score_t"
             r["thesis_auc"] = THESIS_AUC["H3a"]
-            r["leakage_note"] = "None — dynamism at t precedes status change from t to t+k"
+            r["leakage_note"] = "None — C5-corrected dynamism at t precedes status transition from t to t+k"
             results.append(r)
     return results
 
 
 def task_h3b(df_ll) -> list[dict]:
-    """H3b: Classify POI growth using status change (status leads POI).
+    """H3b: Classify C5-corrected POI dynamism growth using status change (status leads POI).
 
     Thesis p.91 H3b: Δstatus leads ΔPOI — CONFIRMED (AUC 0.81).
-    Features: delta_status_ordinal, status_index_t (status context at t).
-    Target: delta_poi > 0 (POI stock grows from t to t+k).
-    WARNING: delta_poi > 0 has a near-degenerate positive-class rate (98-99%).
-    F1w is uninformative for this target; AUC is the only valid metric.
+    Features: delta_status_ordinal (ordinal direction proxy), status_index_t.
+    Target: delta_dynamism_t > 0 (C5-corrected POI dynamism increases from t-1 to t).
+
+    C5-corrected predictor (index-definition.md §2.4; int_mss_lead_lag.sql D3 C5 note):
+    Uses delta_dynamism_t > 0 (C5-corrected within-vintage dynamism change) as binary outcome,
+    NOT raw delta_poi > 0. Raw delta_poi reflects OSM coverage growth artefact (~99% positive-
+    class rate) that biases H3b toward false confirmation and is not a commercial-succession
+    signal. C5-corrected delta_dynamism_t removes coverage growth from the dynamism score.
+
+    D1 polarity note (index-definition.md §5): delta_status_ordinal is used as an ordinal
+    direction proxy in the feature set — higher = status worsened (inverse-numeric). The
+    classifier uses the rank ordering, not metric differences (§3.2 ordinal treatment).
+
     k=3 skipped: only 3 MSS editions currently (2021, 2023, 2025); testable once 2027 edition ingested.
     """
     results = []
@@ -454,28 +494,30 @@ def task_h3b(df_ll) -> list[dict]:
         if len(sub) < 20:
             continue
 
+        # delta_status_ordinal: ordinal direction proxy (higher = status worsened; index-definition.md §5)
         x = sub[["delta_status_ordinal", "status_index_t"]].values.astype(float)
-        y = (sub["delta_poi"] > 0).astype(int).values
+        # C5-corrected target: delta_dynamism_t > 0 (not raw delta_poi; index-definition.md §2.4)
+        y = (sub["delta_dynamism_t"] > 0).astype(int).values
         area_codes = sub["area_code"].values
 
-        mask = ~np.any(np.isnan(x), axis=1)
+        mask = ~np.any(np.isnan(x), axis=1) & ~np.isnan(sub["delta_dynamism_t"].values)
         x, y, area_codes = x[mask], y[mask], area_codes[mask]
 
         pos_rate = float(y.mean()) if len(y) > 0 else 0.0
-        print(f"  H3b k={k}: n={len(x)}, poi_growing={y.sum()} ({100*pos_rate:.1f}%)")
+        print(f"  H3b k={k}: n={len(x)}, dynamism_growing={y.sum()} ({100*pos_rate:.1f}%)")
         if pos_rate > 0.95:
             print(
-                f"  WARNING H3b k={k}: target `delta_poi > 0` has {100*pos_rate:.1f}% positive-class rate "
-                "(near-degenerate imbalance). F1w is uninformative; AUC is the only valid metric."
+                f"  WARNING H3b k={k}: target `delta_dynamism_t > 0` still has {100*pos_rate:.1f}% "
+                "positive-class rate. F1w is uninformative; AUC is the only valid metric."
             )
         # Panel data — use GroupKFold to prevent PLR temporal leakage
         r = run_cv_panel(x, y, area_codes, f"H3b k={k}")
         if r:
             r["task"] = f"H3b (k={k})"
-            r["target"] = "delta_poi > 0 (POI stock grows)"
-            r["features"] = "delta_status_ordinal, status_index_t"
+            r["target"] = "delta_dynamism_t > 0 (C5-corrected dynamism grows; index-definition.md §2.4)"
+            r["features"] = "delta_status_ordinal (ordinal proxy), status_index_t"
             r["thesis_auc"] = THESIS_AUC["H3b"]
-            r["leakage_note"] = "None — status change at t precedes POI change from t to t+k"
+            r["leakage_note"] = "None — status change at t precedes C5-corrected dynamism change"
             results.append(r)
     return results
 
@@ -485,7 +527,13 @@ def task_h3c(df_ll) -> list[dict]:
 
     Thesis p.91 H3c: simultaneous co-movement — UNCLEAR (AUC 0.71).
     Features: dynamism_score_t, poi_count_t.
-    Target: delta_status_ordinal > 0 (contemporaneous status change direction).
+    Target: status_transition == 'worsened' (ordinal transition; index-definition.md §3.3).
+
+    D1 POLARITY (index-definition.md §5; int_mss_lead_lag.sql lines 19-23):
+    Uses status_transition ordinal column not delta_status_ordinal arithmetic.
+    'worsened' = status_index increased = more deprived = the "high-status-loss" binary (§3.3).
+    Metric differencing on non-uniform ordinal cut-points is prohibited (§3.3).
+
     k=3 skipped: only 3 MSS editions currently (2021, 2023, 2025); testable once 2027 edition ingested.
     """
     results = []
@@ -497,18 +545,19 @@ def task_h3c(df_ll) -> list[dict]:
             continue
 
         x = sub[["dynamism_score_t", "poi_count_t"]].values.astype(float)
-        y = (sub["delta_status_ordinal"] > 0).astype(int).values
+        # status_transition ordinal column (index-definition.md §3.3; not metric differencing)
+        y = (sub["status_transition"] == "worsened").astype(int).values
         area_codes = sub["area_code"].values
 
         mask = ~np.any(np.isnan(x), axis=1)
         x, y, area_codes = x[mask], y[mask], area_codes[mask]
 
-        print(f"  H3c k={k}: n={len(x)}, status_improving={y.sum()} ({100*y.mean():.1f}%)")
+        print(f"  H3c k={k}: n={len(x)}, status_worsened={y.sum()} ({100*y.mean():.1f}%)")
         # Panel data — use GroupKFold to prevent PLR temporal leakage
         r = run_cv_panel(x, y, area_codes, f"H3c k={k}")
         if r:
             r["task"] = f"H3c (k={k})"
-            r["target"] = "delta_status_ordinal > 0"
+            r["target"] = "status_transition == 'worsened' [index-definition.md §3.3]"
             r["features"] = "dynamism_score_t, poi_count_t"
             r["thesis_auc"] = THESIS_AUC["H3c"]
             r["leakage_note"] = "None — contemporaneous dynamism vs status trajectory"
@@ -567,9 +616,11 @@ def write_findings(all_results: list[dict]) -> None:
         f.write("`LogisticRegression(C=1.0, L2)` classifier inside a `StandardScaler` pipeline.  ")
         f.write("A leakage guard (R-C3) asserts that no PLR `area_code` appears in both train ")
         f.write("and test folds of any single cross-validation split.\n\n")
-        f.write("The per-hypothesis thesis AUC reference values come from thesis p.91:\n\n")
+        f.write("The per-hypothesis thesis AUC reference values are reconstructed from thesis ")
+        f.write("p.91 narrative (no exact table in the thesis; attributed as ")
+        f.write("'reconstructed from thesis p.91 narrative'):\n\n")
         for hyp, auc in THESIS_AUC.items():
-            f.write(f"- **{hyp}**: thesis AUC = {auc:.2f}\n")
+            f.write(f"- **{hyp}**: thesis AUC = {auc:.2f} (reconstructed from p.91 narrative)\n")
         f.write("\n")
 
         f.write("## Results\n\n")
@@ -622,17 +673,17 @@ def write_findings(all_results: list[dict]) -> None:
                     f.write("Consistent with thesis confirmation (H3b confirmed in thesis): status predictor of future POI growth direction.\n\n")
                 else:
                     f.write("Mixed results across k — see per-k AUC values above.\n\n")
-                # Class imbalance note for H3b (delta_poi > 0 target is near-degenerate)
+                # Class imbalance note for H3b (delta_dynamism_t > 0 target may still be imbalanced)
                 for r in hyp_results:
                     pos_rate = r["n_pos"] / r["n"] if r["n"] > 0 else 0
                     if pos_rate > 0.95:
                         f.write(
-                            f"**CLASS IMBALANCE WARNING ({r['task']}):** The target `delta_poi > 0` has "
+                            f"**CLASS IMBALANCE WARNING ({r['task']}):** The target `delta_dynamism_t > 0` has "
                             f"{r['n_pos']}/{r['n']} positive-class rows ({100*pos_rate:.1f}% positive rate). "
                             f"An all-positive predictor achieves F1w ≈ {pos_rate:.2f}. "
                             "F1w is therefore uninformative for this target; AUC is the only valid metric. "
-                            "These results should be interpreted with caution — the near-degenerate class "
-                            "distribution makes classification almost trivially positive.\n\n"
+                            "Note: the switch from raw `delta_poi` to C5-corrected `delta_dynamism_t` "
+                            "was expected to reduce class imbalance (index-definition.md §2.4).\n\n"
                         )
             elif hyp_key == "H3a":
                 best = max(hyp_results, key=lambda x: x["auc_mean"])
@@ -642,13 +693,28 @@ def write_findings(all_results: list[dict]) -> None:
                     f.write("Diverges from thesis rejection: higher-than-expected AUC. Check for data leakage or panel period effects.\n\n")
 
         f.write("## Divergences from 2018 Thesis\n\n")
-        f.write("- Thesis used Weka J48/Random Forest with raw POI category counts; this revival ")
-        f.write("uses LogisticRegression (L2 regularised) for interpretability and to reduce ")
-        f.write("overfitting on the ~400-500 PLR dataset.\n")
+        f.write("- **D1 polarity correction**: `status_index` is inverse-numeric — lower value = ")
+        f.write("higher social status (index-definition.md §5 polarity table; int_mss_lead_lag.sql ")
+        f.write("lines 19-23). H2/H3a/H3c targets corrected to `status_transition == 'worsened'` ")
+        f.write("(ordinal transition column) instead of `delta_status_ordinal > 0`. ")
+        f.write("Prior implementation labelled `delta_status_ordinal > 0` as 'status improves' — ")
+        f.write("this was inverted (positive delta = status worsened, not improved).\n")
+        f.write("- **H3 C5-corrected predictor**: H3a features and H3b target now use ")
+        f.write("`delta_dynamism_t` (C5-corrected within-vintage dynamism change) not raw `delta_poi`. ")
+        f.write("Raw `delta_poi > 0` had a ~99% positive-class rate reflecting OSM coverage growth ")
+        f.write("artefact, not commercial succession (index-definition.md §2.4; C5 geo-DS sign-off).\n")
+        f.write("- **Ordinal treatment**: H2/H3a/H3c use `status_transition` ordinal column; ")
+        f.write("metric differencing on non-uniform MSS ordinal codes is prohibited (index-definition.md §3.3).\n")
+        f.write("- **Thesis AUC attribution**: per-hypothesis AUC values attributed as ")
+        f.write("'reconstructed from thesis p.91 narrative' (no exact table verifiable).\n")
+        f.write("- Thesis used Weka J48/Random Forest; this revival uses LogisticRegression (L2) ")
+        f.write("for interpretability and to reduce overfitting on the ~400-500 PLR dataset.\n")
         f.write("- H3 tests use the live MSS 2021-2025 panel (3 editions, k=1,2); the thesis ")
         f.write("used a 2010-2018 panel with more edition pairs — temporal coverage affects AUC.\n")
         f.write("- H1/H1b use 2018 POI snapshot (lor_pre2021 vintage); H3 uses the lor_2021 ")
         f.write("vintage panel — cross-vintage consistency not tested.\n")
+        f.write("- No multiple-comparison correction was applied across the five hypotheses. ")
+        f.write("Results are PLR-only (Berlin, lor_2021 vintage) and may have MAUP sensitivity.\n")
         f.write("- Epic B framing: directional revival — AUC > 0.5 is the minimum bar; ")
         f.write("thesis AUC match within ±0.05 is the aspirational target.\n\n")
 
@@ -656,10 +722,10 @@ def write_findings(all_results: list[dict]) -> None:
         f.write("- **k=3 lead-lag not tested**: Only 3 MSS editions are currently available ")
         f.write("(2021, 2023, 2025). A k=3 test (6-year lag) would require a 2027 edition. ")
         f.write("k=3 results will be added once the 2027 MSS edition is ingested.\n")
-        f.write("- **H3b class imbalance**: The `delta_poi > 0` target has a 98-99% positive-class ")
-        f.write("rate. F1w is uninformative for such near-degenerate targets (an all-positive ")
-        f.write("predictor achieves F1w ≈ 0.97). AUC is the only valid metric for H3b results. ")
-        f.write("The H3b F1w values in the results table should be disregarded.\n")
+        f.write("- **H3b class imbalance**: If `delta_dynamism_t > 0` still has a high positive-")
+        f.write("class rate, F1w remains uninformative; AUC is the only valid metric for H3b. ")
+        f.write("The switch from raw `delta_poi` to C5-corrected `delta_dynamism_t` is expected ")
+        f.write("to reduce the extreme ~99% positive-class rate.\n")
 
 
 # ---------------------------------------------------------------------------

@@ -70,39 +70,60 @@ OUTPUT_MD = Path(__file__).parent.parent / "docs" / "epic-e" / "E1-regression-fi
 # Thesis p.91 H3c: simultaneous co-movement — UNCLEAR
 THESIS_HYPOTHESES: dict[str, dict] = {
     "H1": {
+        # D1 POLARITY: status_index is inverse-numeric — higher value = lower social status
+        # (index-definition.md §5 polarity table; int_mss_lead_lag.sql lines 19-23).
+        # Thesis found POI supply positively correlates with social STATUS, which means
+        # negatively correlates with status_index (more POIs → better status → lower index).
+        # expected_dir = "negative" for raw Spearman(poi_count, status_index).
         "desc": "POI stock (total_poi_count) ~ MSS social status (status_index)",
-        "citation": "Thesis p.55: POI supply positively correlates with current MSS status; AUC 0.87 confirmed",
-        "expected_dir": "positive",
-        "expected_sig": True,
-    },
-    "H1b": {
-        "desc": "Fast-food POI count ~ MSS social status (status_index)",
-        "citation": "Thesis p.55 H1b: fast-food is a displacement/low-status indicator — negative predictor",
+        "citation": "Thesis p.55: POI supply positively correlates with social status; because status_index is inverse-numeric (higher=worse, index-definition.md §5 polarity table), expected Spearman(poi, status_index) is negative",
         "expected_dir": "negative",
         "expected_sig": True,
     },
-    "H2": {
-        "desc": "Current-edition POI stock (2021+ editions) ~ future status change (delta_status)",
-        "citation": "Thesis p.55 H2: current POI supply predicts future social-status change — directional positive (tested here on 2021+ panel, not the 2018 cross-section)",
-        "expected_dir": "positive",
-        "expected_sig": False,  # directional only; thesis did not confirm significance for H2 in isolation
-    },
-    "H3a": {
-        "desc": "ΔPOI at t leads Δstatus at t+k (POI change leads status change)",
-        "citation": "Thesis p.91 H3a: POI change leads status change — REJECTED in thesis (not confirmed)",
-        "expected_dir": "positive",
-        "expected_sig": False,  # thesis rejected this
-    },
-    "H3b": {
-        "desc": "Δstatus at t leads ΔPOI at t+k (status change leads POI change)",
-        "citation": "Thesis p.91 H3b: status change leads POI change — CONFIRMED in thesis",
+    "H1b": {
+        # D1 POLARITY: fast-food is a contested proxy for low-status / displacement pressure
+        # (thesis p.55; see also gentrification literature caveat).
+        # More fast-food → lower social status → higher status_index → positive correlation.
+        # expected_dir = "positive" for Spearman(poi_fast_food, status_index).
+        "desc": "Fast-food POI count ~ MSS social status (status_index)",
+        "citation": "Thesis p.55 H1b: fast-food as contested proxy for low-status / displacement pressure (see gentrification literature); more fast-food → lower status → higher status_index (inverse-numeric, index-definition.md §5), expected direction positive",
         "expected_dir": "positive",
         "expected_sig": True,
     },
+    "H2": {
+        # D1 POLARITY: delta_status_ordinal = status_index_tk - status_index_t.
+        # Positive delta → status worsened (index increased). Negative delta → improved.
+        # More POI at t → gentrification pressure → status IMPROVES → delta_status_ordinal < 0.
+        # expected_dir = "negative" for Spearman(poi_count_t, delta_status_ordinal).
+        "desc": "Current-edition POI stock (2021+ editions) ~ future status change (delta_status_ordinal)",
+        "citation": "Thesis p.55 H2: current POI supply predicts future social-status improvement; delta_status_ordinal = tk - t (positive = worsened, index-definition.md §5 polarity), so expected direction is negative",
+        "expected_dir": "negative",
+        "expected_sig": False,  # directional only; thesis did not confirm significance for H2 in isolation
+    },
+    "H3a": {
+        # D1 POLARITY + C5: delta_dynamism_t (C5-corrected) leads delta_status_ordinal.
+        # More amenity growth (positive delta_dynamism) → gentrification → status improves
+        # → delta_status_ordinal decreases (inverse-numeric). Expected direction: negative.
+        "desc": "C5-corrected Δdynamism at t leads Δstatus at t+k (POI change leads status change)",
+        "citation": "Thesis p.91 H3a: POI change leads status change — REJECTED in thesis (not confirmed); uses C5-corrected delta_dynamism_t (index-definition.md §2.4; int_mss_lead_lag.sql D3 C5 note); delta_status_ordinal inverse-numeric so expected direction is negative",
+        "expected_dir": "negative",
+        "expected_sig": False,  # thesis rejected this
+    },
+    "H3b": {
+        # D1 POLARITY: Δstatus leads ΔPOI. Status IMPROVES (delta_status_ordinal < 0) →
+        # commercial succession follows → delta_poi > 0. So Spearman(delta_status_ordinal, delta_poi)
+        # should be negative (lower delta_status_ordinal = improved = leads to more POIs).
+        "desc": "Δstatus at t leads Δdynamism at t+k (status change leads POI change)",
+        "citation": "Thesis p.91 H3b: status change leads POI change — CONFIRMED in thesis; delta_status_ordinal inverse-numeric (index-definition.md §5 polarity), improved status = negative delta, expected Spearman(delta_status_ordinal, delta_dynamism) is negative",
+        "expected_dir": "negative",
+        "expected_sig": True,
+    },
     "H3c": {
-        "desc": "Simultaneous ΔPOI ~ Δstatus co-movement (same edition)",
-        "citation": "Thesis p.91 H3c: simultaneous co-movement — thesis result unclear",
-        "expected_dir": "positive",
+        # D1 POLARITY: dynamism_score_t ~ status_index_t. Higher dynamism → more gentrified
+        # → better status → lower status_index (inverse-numeric). Expected direction: negative.
+        "desc": "Simultaneous dynamism ~ status_index co-movement (same edition)",
+        "citation": "Thesis p.91 H3c: simultaneous co-movement — thesis result unclear; status_index inverse-numeric (index-definition.md §5), expected direction negative",
+        "expected_dir": "negative",
         "expected_sig": False,  # unclear per thesis
     },
 }
@@ -314,8 +335,16 @@ def test_h2(df_ll: object) -> list[dict]:
     Tested here on the 2021+ live panel (not the 2018 cross-section — the thesis
     PLRs use the pre-2021 LOR vintage while the lead-lag panel uses lor_2021).
     poi_count_t at edition_t predicts delta_status_ordinal k editions later.
-    This operationalizes the general "current POI stock predicts future status change"
-    hypothesis rather than the specific 2018 baseline cross-section.
+
+    D1 POLARITY (index-definition.md §5 polarity table; int_mss_lead_lag.sql lines 19-23):
+    delta_status_ordinal = status_index_tk - status_index_t.
+    Positive delta → status worsened (status_index increased = more deprived).
+    More POI at t → gentrification pressure → status IMPROVES → delta_status_ordinal < 0.
+    Expected direction: negative (Spearman rho < 0).
+
+    Metric differencing is not permitted on ordinal MSS codes (index-definition.md §3.3).
+    delta_status_ordinal is used here for direction-coded rank correlation only (Spearman),
+    not as a metric response — permissible per §3.2 "ordinal transition" treatment.
     """
     results = []
 
@@ -328,6 +357,8 @@ def test_h2(df_ll: object) -> list[dict]:
         if len(sub) < 10:
             continue
         x = sub["poi_count_t"].values.astype(float)
+        # delta_status_ordinal used as ordinal direction proxy (Spearman rank correlation only;
+        # not metric differencing — index-definition.md §3.3 and §3.2 ordinal-transition treatment)
         y = sub["delta_status_ordinal"].values.astype(float)
         r = run_spearman(x, y, f"Spearman(poi_count_t, delta_status, k={k})")
         results.append({
@@ -357,14 +388,32 @@ def test_h3(df_ll: object) -> list[dict]:
       H3b: Δstatus_t → ΔPOI_t+k  (status leads POI) — CONFIRMED
       H3c: simultaneous ΔPOI ~ Δstatus                — UNCLEAR
 
-    delta_poi = poi_count_tk - poi_count_t (POI stock change over lag window)
-    delta_status = delta_status_ordinal (MSS ordinal change over lag window)
-    delta_dynamism = delta_dynamism_t (MSS dynamism score change at t)
+    C5-corrected predictor (index-definition.md §2.4; int_mss_lead_lag.sql D3 C5 note;
+    geo-DS sign-off PASS docs/epic-c/C5-geo-signoff.md 2026-06-19):
+    Uses delta_dynamism_t (C5-corrected within-vintage dynamism change) for H3a/H3b,
+    NOT raw delta_poi. Raw delta_poi reflects OSM coverage growth artefact — feeding it
+    into H3b biases the test toward false confirmation.
 
-    For H3a: at edition_t, test delta_dynamism_t (early POI dynamism signal) vs
+    D1 POLARITY (index-definition.md §5 polarity table; int_mss_lead_lag.sql lines 19-23):
+    delta_status_ordinal = status_index_tk - status_index_t.
+    Positive delta → status_index increased → STATUS WORSENED (more deprived).
+    Negative delta → status_index decreased → STATUS IMPROVED (less deprived).
+    Expected directions are therefore negative for H3a, H3b, H3c (see THESIS_HYPOTHESES).
+
+    Metric differencing on ordinal MSS codes is prohibited (index-definition.md §3.3).
+    delta_status_ordinal is used here for rank-order correlation only (Spearman);
+    this is permitted per §3.2 ordinal-transition treatment.
+
+    NOTE: The int_mss_lead_lag model structures both predictors and outcomes as
+    within-vintage changes at editions t and t+k; the lag structure is part of the model
+    (not a pure lead test — both predictor and outcome share the same [t, t+k] window).
+    This is a co-movement test across the lag window, not a strict temporal-precedence test.
+    Results are labelled accordingly in the findings doc.
+
+    For H3a: delta_dynamism_t (C5-corrected POI dynamism change at t) vs
              delta_status_ordinal (status change from t to t+k).
-    For H3b: delta_status_ordinal (status change from t to t+k) vs delta_poi
-             (POI change from t to t+k, with t as the lagged reference).
+    For H3b: delta_status_ordinal (status change from t to t+k) vs delta_dynamism_t
+             (C5-corrected POI dynamism change — outcome side of status-leads-POI test).
     For H3c: dynamism_score_t (contemporaneous dynamism at t) vs status_index_t.
     """
     results = []
@@ -376,14 +425,18 @@ def test_h3(df_ll: object) -> list[dict]:
         if len(sub) < 10:
             continue
 
+        # delta_status_ordinal: ordinal direction proxy for rank correlation only
+        # (not metric differencing; index-definition.md §3.3 + §3.2)
         delta_status = sub["delta_status_ordinal"].values.astype(float)
         dyn_t = sub["dynamism_score_t"].values.astype(float)
-        delta_poi = sub["delta_poi"].values.astype(float)
+        # C5-corrected dynamism change (index-definition.md §2.4; int_mss_lead_lag.sql D3 C5 note)
+        delta_dyn_t = sub["delta_dynamism_t"].values.astype(float)
         stat_t = sub["status_index_t"].values.astype(float)
 
         # H3a: Thesis p.91 — POI change leads status change (REJECTED)
-        # Test: delta_dynamism_t predicts delta_status_ordinal (k editions later)
-        r3a = run_spearman(dyn_t, delta_status, f"Spearman(dyn_score_t, delta_status, k={k})")
+        # Test: delta_dynamism_t (C5-corrected change) predicts delta_status_ordinal (k editions later)
+        # Uses C5-corrected delta_dynamism_t, not raw delta_poi (index-definition.md §2.4)
+        r3a = run_spearman(delta_dyn_t, delta_status, f"Spearman(delta_dyn_t, delta_status, k={k})")
         results.append({
             "hyp": "H3a",
             "test": f"Spearman k={k}",
@@ -402,8 +455,11 @@ def test_h3(df_ll: object) -> list[dict]:
 
         # H3b: Thesis p.91 — Status CHANGE leads POI CHANGE (CONFIRMED)
         # Thesis p.91 H3b: Δstatus at t leads ΔPOI at t+k — both are changes, not levels.
-        # delta_status_ordinal = status change from t to t+k; delta_poi = POI stock change t to t+k.
-        r3b = run_spearman(delta_status, delta_poi, f"Spearman(delta_status, delta_poi, k={k})")
+        # delta_status_ordinal = status change from t to t+k (ordinal direction proxy).
+        # delta_dynamism_t = C5-corrected POI dynamism change (not raw delta_poi).
+        # D1 POLARITY: improved status (delta_status_ordinal < 0) should lead to more amenity
+        # growth (delta_dynamism_t > 0) → expected Spearman(delta_status, delta_dyn) is negative.
+        r3b = run_spearman(delta_status, delta_dyn_t, f"Spearman(delta_status, delta_dyn_t, k={k})")
         results.append({
             "hyp": "H3b",
             "test": f"Spearman k={k}",
@@ -422,6 +478,8 @@ def test_h3(df_ll: object) -> list[dict]:
 
         # H3c: Thesis p.91 — Simultaneous co-movement (UNCLEAR)
         # Test: dynamism_score_t ~ status_index_t (contemporaneous correlation)
+        # D1 POLARITY: higher dynamism → more gentrified → lower status_index (inverse-numeric).
+        # Expected Spearman(dyn_score_t, status_index_t) is negative.
         r3c = run_spearman(dyn_t, stat_t, f"Spearman(dyn_score_t, status_t, k={k})")
         results.append({
             "hyp": "H3c",
@@ -525,12 +583,16 @@ def write_findings(df_h1, results: list[dict]) -> None:
                 f.write(f"Direction ({r['actual_dir']}) {verdict} thesis expectation ({r['expected_dir']}). ")
                 f.write("Significant.\n\n" if r.get("sig") else "Not significant at p<0.05.\n\n")
 
-        f.write("### H1b — Fast-food as negative status predictor (thesis p.55)\n\n")
+        f.write("### H1b — Fast-food as contested proxy for low-status / displacement (thesis p.55)\n\n")
+        f.write("Note: fast-food as a 'displacement indicator' is a contested proxy in the ")
+        f.write("gentrification literature; the thesis (p.55) treats it as a low-status marker. ")
+        f.write("D1 polarity correction: expected Spearman(poi_fast_food, status_index) = positive ")
+        f.write("(more fast-food → lower status → higher status_index; index-definition.md §5).\n\n")
         h1b_rows = [r for r in results if r["hyp"] == "H1b"]
         for r in h1b_rows:
             if r["stat_val"] is not None:
                 f.write(f"**{r['test']}**: rho = {r['stat_val']:.4f}, p = {r['p']:.4f}, n={r['n']}. ")
-                verdict = "confirmed — fast-food negatively correlates with status" if r["dir_match"] else "diverges — fast-food not negatively correlated as expected"
+                verdict = "confirmed — fast-food positively correlates with status_index (low-status proxy)" if r["dir_match"] else "diverges from thesis expectation"
                 f.write(f"{verdict}.\n\n")
 
         f.write("### H2 — Current-edition POI stock predicts future status change (thesis p.55)\n\n")
@@ -587,20 +649,30 @@ def write_findings(df_h1, results: list[dict]) -> None:
         f.write("\n")
 
         f.write("## Divergences from 2018 Thesis\n\n")
+        f.write("- **D1 polarity correction**: `status_index` is inverse-numeric — lower value = ")
+        f.write("higher social status (index-definition.md §5 polarity table; int_mss_lead_lag.sql ")
+        f.write("lines 19-23). All expected_dir values have been corrected accordingly: ")
+        f.write("H1 expected Spearman(poi, status_index) = negative; H1b expected = positive; ")
+        f.write("H2/H3a/H3b/H3c expected direction = negative. Prior implementation had these inverted.\n")
+        f.write("- **H3 predictor**: H3a and H3b use C5-corrected `delta_dynamism_t` from ")
+        f.write("`int_mss_lead_lag` (not raw `delta_poi`). Raw POI count deltas embed OSM coverage ")
+        f.write("growth artefact and would bias H3b toward false confirmation ")
+        f.write("(index-definition.md §2.4; int_mss_lead_lag.sql D3 C5 note).\n")
+        f.write("- **Ordinal treatment**: `delta_status_ordinal` is used for Spearman rank ")
+        f.write("correlation only (ordinal direction proxy), never as a metric response. ")
+        f.write("This is permitted per index-definition.md §3.2 ordinal-transition treatment. ")
+        f.write("OLS regression against delta_status_ordinal is not applied (§3.3 prohibits ")
+        f.write("metric differencing on non-uniform ordinal cut-points).\n")
         f.write("- The H1/H1b tests use 2018 POI category counts from `int_poi_features_pivot` ")
-        f.write("joined to the 2018 golden thesis data — this is the correct POI-as-predictor ")
-        f.write("formulation (prior implementation regressed MSS indices against each other).\n")
+        f.write("joined to the 2018 golden thesis data — correct POI-as-predictor formulation.\n")
         f.write("- H2 is tested on the 2021+ live panel rather than the 2018 cross-section; ")
         f.write("n=1071 (panel rows) vs n=436 (2018 PLRs). The hypothesis is reframed as ")
         f.write("'current-edition POI stock predicts future status change' (general form).\n")
-        f.write("- The H3 lead-lag tests use the live MSS panel (2021-2025 editions) rather than ")
-        f.write("the 2012-2018 panel from the thesis — temporal coverage differs; directional ")
-        f.write("agreement is the applicable criterion.\n")
-        f.write("- H3b operationalization corrected: uses Spearman(delta_status_ordinal, delta_poi) ")
-        f.write("— both CHANGE variables — consistent with thesis p.91 'Δstatus leads ΔPOI'.\n")
-        f.write("- The 2018 thesis used R `lm()`/`cor.test()` with PLR boundaries from the ")
-        f.write("pre-2021 LOR scheme; H3 tests here use the 2021 LOR scheme (live panel). ")
-        f.write("Exact coefficient comparisons are not meaningful.\n")
+        f.write("- The H3 lead-lag tests use the live MSS panel (2021-2025 editions); the thesis ")
+        f.write("used 2012-2018. Both predictor and outcome share the [t, t+k] window — this is ")
+        f.write("a co-movement test across the lag window, not a strict temporal-precedence test.\n")
+        f.write("- No multiple-comparison correction was applied across the five hypotheses. ")
+        f.write("Results are PLR-only (Berlin, lor_2021 vintage) and may have MAUP sensitivity.\n")
         f.write("- Epic B framing: directional revival — exact number reproduction not required. ")
         f.write("See CLAUDE.md §Epic B framing.\n\n")
 

@@ -17,30 +17,30 @@ The primary validation criterion is directional agreement (same sign as thesis e
 
 ## Hypothesis Citations
 
-- **H1**: Thesis p.55: POI supply positively correlates with current MSS status; AUC 0.87 confirmed
-- **H1b**: Thesis p.55 H1b: fast-food is a displacement/low-status indicator — negative predictor
-- **H2**: Thesis p.55 H2: current POI supply predicts future social-status change — directional positive (tested here on 2021+ panel, not the 2018 cross-section)
-- **H3a**: Thesis p.91 H3a: POI change leads status change — REJECTED in thesis (not confirmed)
-- **H3b**: Thesis p.91 H3b: status change leads POI change — CONFIRMED in thesis
-- **H3c**: Thesis p.91 H3c: simultaneous co-movement — thesis result unclear
+- **H1**: Thesis p.55: POI supply positively correlates with social status; because status_index is inverse-numeric (higher=worse, index-definition.md §5 polarity table), expected Spearman(poi, status_index) is negative
+- **H1b**: Thesis p.55 H1b: fast-food as contested proxy for low-status / displacement pressure (see gentrification literature); more fast-food → lower status → higher status_index (inverse-numeric, index-definition.md §5), expected direction positive
+- **H2**: Thesis p.55 H2: current POI supply predicts future social-status improvement; delta_status_ordinal = tk - t (positive = worsened, index-definition.md §5 polarity), so expected direction is negative
+- **H3a**: Thesis p.91 H3a: POI change leads status change — REJECTED in thesis (not confirmed); uses C5-corrected delta_dynamism_t (index-definition.md §2.4; int_mss_lead_lag.sql D3 C5 note); delta_status_ordinal inverse-numeric so expected direction is negative
+- **H3b**: Thesis p.91 H3b: status change leads POI change — CONFIRMED in thesis; delta_status_ordinal inverse-numeric (index-definition.md §5 polarity), improved status = negative delta, expected Spearman(delta_status_ordinal, delta_dynamism) is negative
+- **H3c**: Thesis p.91 H3c: simultaneous co-movement — thesis result unclear; status_index inverse-numeric (index-definition.md §5), expected direction negative
 
 ## Results
 
 | Hyp | Test | N | Type | Value | p-value | Sig | Expected Dir | Actual Dir | Match | Description |
 |---|---|---|---|---|---|---|---|---|---|---|
-| H1 | Spearman | 436 | rho | -0.0463 | 0.3348 | No | positive | negative | FAIL | POI stock (total_poi_count) ~ MSS social status (status_index) |
-| H1 | OLS | 436 | beta | -0.0004 R2=0.0044 | 0.1670 | No | positive | negative | FAIL | POI stock (total_poi_count) ~ MSS social status (status_index) |
-| H1b | Spearman | 436 | rho | 0.1364 | 0.0043 | Yes | negative | positive | FAIL | Fast-food POI count ~ MSS social status (status_index) |
-| H2 | Spearman k=1 | 1071 | rho | -0.1155 | 0.0002 | Yes | positive | negative | FAIL | Current-edition POI stock ~ future status change [k=1 MSS editions, 2021+ panel] |
-| H2 | Spearman k=2 | 535 | rho | -0.1924 | 0.0000 | Yes | positive | negative | FAIL | Current-edition POI stock ~ future status change [k=2 MSS editions, 2021+ panel] |
-| H3a | Spearman k=1 | 1071 | rho | 0.0261 | 0.3937 | No | positive | positive | PASS | ΔPOI at t leads Δstatus at t+k (POI change leads status change) [k=1] |
-| H3b | Spearman k=1 | 1071 | rho | -0.0404 | 0.1860 | No | positive | negative | FAIL | Δstatus at t leads ΔPOI at t+k (status change leads POI change) [k=1] |
-| H3c | Spearman k=1 | 1071 | rho | 0.0632 | 0.0386 | Yes | positive | positive | PASS | Simultaneous ΔPOI ~ Δstatus co-movement (same edition) [k=1] |
-| H3a | Spearman k=2 | 535 | rho | -0.0051 | 0.9064 | No | positive | negative | FAIL | ΔPOI at t leads Δstatus at t+k (POI change leads status change) [k=2] |
-| H3b | Spearman k=2 | 535 | rho | 0.0002 | 0.9971 | No | positive | positive | PASS | Δstatus at t leads ΔPOI at t+k (status change leads POI change) [k=2] |
-| H3c | Spearman k=2 | 535 | rho | 0.0790 | 0.0680 | No | positive | positive | PASS | Simultaneous ΔPOI ~ Δstatus co-movement (same edition) [k=2] |
+| H1 | Spearman | 436 | rho | -0.0463 | 0.3348 | No | negative | negative | PASS | POI stock (total_poi_count) ~ MSS social status (status_index) |
+| H1 | OLS | 436 | beta | -0.0004 R2=0.0044 | 0.1670 | No | negative | negative | PASS | POI stock (total_poi_count) ~ MSS social status (status_index) |
+| H1b | Spearman | 436 | rho | 0.1364 | 0.0043 | Yes | positive | positive | PASS | Fast-food POI count ~ MSS social status (status_index) |
+| H2 | Spearman k=1 | 1071 | rho | -0.1155 | 0.0002 | Yes | negative | negative | PASS | Current-edition POI stock ~ future status change [k=1 MSS editions, 2021+ panel] |
+| H2 | Spearman k=2 | 535 | rho | -0.1924 | 0.0000 | Yes | negative | negative | PASS | Current-edition POI stock ~ future status change [k=2 MSS editions, 2021+ panel] |
+| H3a | Spearman k=1 | 535 | rho | 0.0593 | 0.1706 | No | negative | positive | FAIL | C5-corrected Δdynamism at t leads Δstatus at t+k (POI change leads status change) [k=1] |
+| H3b | Spearman k=1 | 535 | rho | 0.0593 | 0.1706 | No | negative | positive | FAIL | Δstatus at t leads Δdynamism at t+k (status change leads POI change) [k=1] |
+| H3c | Spearman k=1 | 1071 | rho | 0.0632 | 0.0386 | Yes | negative | positive | FAIL | Simultaneous dynamism ~ status_index co-movement (same edition) [k=1] |
+| H3a | Spearman k=2 | 0 | rho | N/A | N/A | No | negative | N/A | FAIL | C5-corrected Δdynamism at t leads Δstatus at t+k (POI change leads status change) [k=2] |
+| H3b | Spearman k=2 | 0 | rho | N/A | N/A | No | negative | N/A | FAIL | Δstatus at t leads Δdynamism at t+k (status change leads POI change) [k=2] |
+| H3c | Spearman k=2 | 535 | rho | 0.0790 | 0.0680 | No | negative | positive | FAIL | Simultaneous dynamism ~ status_index co-movement (same edition) [k=2] |
 
-**Directional agreement: 4/11 tests match the expected direction.**
+**Directional agreement: 5/11 tests match the expected direction.**
 
 **Statistical significance: 4/11 results significant at p<0.05.**
 
@@ -48,31 +48,31 @@ The primary validation criterion is directional agreement (same sign as thesis e
 
 ### H1 — POI stock vs MSS social status (thesis p.55, confirmed AUC 0.87)
 
-**Spearman**: rho/beta = -0.0463, p = 0.3348, n=436. Direction (negative) diverges from thesis expectation (positive). Not significant at p<0.05.
+**Spearman**: rho/beta = -0.0463, p = 0.3348, n=436. Direction (negative) matches thesis expectation (negative). Not significant at p<0.05.
 
-**OLS**: rho/beta = -0.0004, p = 0.1670, n=436. Direction (negative) diverges from thesis expectation (positive). Not significant at p<0.05.
+**OLS**: rho/beta = -0.0004, p = 0.1670, n=436. Direction (negative) matches thesis expectation (negative). Not significant at p<0.05.
 
-### H1b — Fast-food as negative status predictor (thesis p.55)
+### H1b — Fast-food as contested proxy for low-status / displacement (thesis p.55)
 
-**Spearman**: rho = 0.1364, p = 0.0043, n=436. diverges — fast-food not negatively correlated as expected.
+Note: fast-food as a 'displacement indicator' is a contested proxy in the gentrification literature; the thesis (p.55) treats it as a low-status marker. D1 polarity correction: expected Spearman(poi_fast_food, status_index) = positive (more fast-food → lower status → higher status_index; index-definition.md §5).
+
+**Spearman**: rho = 0.1364, p = 0.0043, n=436. confirmed — fast-food positively correlates with status_index (low-status proxy).
 
 ### H2 — Current-edition POI stock predicts future status change (thesis p.55)
 
 Note: H2 is tested on the 2021+ live MSS panel (lor_2021 vintage), not the 2018 cross-section. This operationalizes the general 'current POI stock predicts future status change' hypothesis. n=1071 (panel rows), not n=436 (2018 cross-section).
 
-**k=1**: rho = -0.1155, p = 0.0002, n=1071 — directional divergence.
+**k=1**: rho = -0.1155, p = 0.0002, n=1071 — directional agreement.
 
-**k=2**: rho = -0.1924, p = 0.0000, n=535 — directional divergence.
+**k=2**: rho = -0.1924, p = 0.0000, n=535 — directional agreement.
 
 ### H3a — POI change leads status change (thesis p.91, REJECTED)
 
-Thesis rejected this hypothesis; we expect no significant positive rho. k=1: rho = 0.0261, p = 0.3937, n=1071. Not significant — consistent with thesis rejection.
-k=2: rho = -0.0051, p = 0.9064, n=535. Not significant — consistent with thesis rejection.
+Thesis rejected this hypothesis; we expect no significant positive rho. k=1: rho = 0.0593, p = 0.1706, n=535. Not significant — consistent with thesis rejection.
 
 ### H3b — Status change leads POI change (thesis p.91, CONFIRMED)
 
-Thesis confirmed this hypothesis; we expect positive significant rho. k=1: rho = -0.0404, p = 0.1860, n=1071. Not significant at p<0.05. Diverges from thesis.
-k=2: rho = 0.0002, p = 0.9971, n=535. Not significant at p<0.05. Consistent with thesis confirmation.
+Thesis confirmed this hypothesis; we expect positive significant rho. k=1: rho = 0.0593, p = 0.1706, n=535. Not significant at p<0.05. Diverges from thesis.
 
 ### H3c — Simultaneous co-movement (thesis p.91, UNCLEAR)
 
@@ -81,11 +81,13 @@ k=2: rho = 0.0790, p = 0.0680, n=535. Simultaneous dynamism-status correlation.
 
 ## Divergences from 2018 Thesis
 
-- The H1/H1b tests use 2018 POI category counts from `int_poi_features_pivot` joined to the 2018 golden thesis data — this is the correct POI-as-predictor formulation (prior implementation regressed MSS indices against each other).
+- **D1 polarity correction**: `status_index` is inverse-numeric — lower value = higher social status (index-definition.md §5 polarity table; int_mss_lead_lag.sql lines 19-23). All expected_dir values have been corrected accordingly: H1 expected Spearman(poi, status_index) = negative; H1b expected = positive; H2/H3a/H3b/H3c expected direction = negative. Prior implementation had these inverted.
+- **H3 predictor**: H3a and H3b use C5-corrected `delta_dynamism_t` from `int_mss_lead_lag` (not raw `delta_poi`). Raw POI count deltas embed OSM coverage growth artefact and would bias H3b toward false confirmation (index-definition.md §2.4; int_mss_lead_lag.sql D3 C5 note).
+- **Ordinal treatment**: `delta_status_ordinal` is used for Spearman rank correlation only (ordinal direction proxy), never as a metric response. This is permitted per index-definition.md §3.2 ordinal-transition treatment. OLS regression against delta_status_ordinal is not applied (§3.3 prohibits metric differencing on non-uniform ordinal cut-points).
+- The H1/H1b tests use 2018 POI category counts from `int_poi_features_pivot` joined to the 2018 golden thesis data — correct POI-as-predictor formulation.
 - H2 is tested on the 2021+ live panel rather than the 2018 cross-section; n=1071 (panel rows) vs n=436 (2018 PLRs). The hypothesis is reframed as 'current-edition POI stock predicts future status change' (general form).
-- The H3 lead-lag tests use the live MSS panel (2021-2025 editions) rather than the 2012-2018 panel from the thesis — temporal coverage differs; directional agreement is the applicable criterion.
-- H3b operationalization corrected: uses Spearman(delta_status_ordinal, delta_poi) — both CHANGE variables — consistent with thesis p.91 'Δstatus leads ΔPOI'.
-- The 2018 thesis used R `lm()`/`cor.test()` with PLR boundaries from the pre-2021 LOR scheme; H3 tests here use the 2021 LOR scheme (live panel). Exact coefficient comparisons are not meaningful.
+- The H3 lead-lag tests use the live MSS panel (2021-2025 editions); the thesis used 2012-2018. Both predictor and outcome share the [t, t+k] window — this is a co-movement test across the lag window, not a strict temporal-precedence test.
+- No multiple-comparison correction was applied across the five hypotheses. Results are PLR-only (Berlin, lor_2021 vintage) and may have MAUP sensitivity.
 - Epic B framing: directional revival — exact number reproduction not required. See CLAUDE.md §Epic B framing.
 
 ## Limitations
