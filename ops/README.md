@@ -160,13 +160,17 @@ everything; `=bypassPermissions` to keep the gate on Linux too).
 What still protects you:
 - The **`deny` list** in the committed [`../.claude/settings.json`](../.claude/settings.json) still
   blocks the irreversible / privilege-escalating commands (`gh pr merge`, `git push --force`,
-  `git reset --hard`, `sudo`). `deny` wins over `allow`, so these hold even under
+  `git reset --hard`, `sudo`, direct push to `main`). `deny` wins over `allow`, so these hold even under
   `--dangerously-skip-permissions`. (`rm`, `curl`/`wget` are deliberately **allowed** — the ingestion
   pipeline rebuilds gitignored data artefacts and fetches open-data sources; the protection is that
   the truly irreversible/remote-history actions above are blocked, not raw file/network ops.)
-- **Merges remain yours.** `gh pr merge` is denied, so the PM opens PRs and **queues them for you to
-  merge in the GitHub UI** — it can't push to `main` itself. Unsupervised means it keeps *building*;
-  it does not mean it self-merges to `main`.
+- **`main` stays yours; `develop` is autonomous** (ADR-0011). The PM self-integrates finished, reviewed
+  work into the **`develop`** branch via plain git — that's its hands-off merge. It **cannot** reach
+  `main`: `gh pr merge` is denied and so is a direct push to `main`. `main` changes only via a **weekly
+  `develop → main` PR that you merge in the GitHub UI**. So unsupervised means it keeps *integrating to
+  `develop`*; the published branch always passes through your click. (Note: with a single shared `gh`
+  credential this separation is **behavioral** — deny-list + PM instruction — not server-enforced; see
+  ADR-0011's risk section.)
 
 ### Self-healing (hang watchdog)
 

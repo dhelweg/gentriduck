@@ -8,6 +8,9 @@
       "Bash(git push -f)",
       "Bash(git push *--force*)",
       "Bash(git reset --hard*)",
+      "Bash(git push * main)",
+      "Bash(git push *:main)",
+      "Bash(git push *main*)",
       "Bash(sudo *)",
       "Bash(sudo)"
     ],

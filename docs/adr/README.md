@@ -14,6 +14,8 @@ ADR before adopting a new tool, library, or data source** (no "first tool that w
 | [0007](0007-berlin-ses-indicators.md) | Berlin per-PLR socio-economic status (SES) indicators | Accepted |
 | [0008](0008-multi-dimensional-gentrification-model.md) | Multi-dimensional gentrification model (conceptual architecture) | Accepted |
 | [0009](0009-agent-skill-tooling-superpowers.md) | Agent-skill tooling — selectively adopt Superpowers | Accepted |
+| [0010](0010-spatial-distance-weighting.md) | Spatial distance weighting | Accepted |
+| [0011](0011-autonomous-merge-develop-branch.md) | Autonomous merge via a `develop` integration branch | Accepted |
 | — | Serving & hosting stack | Deferred (task F1) |
 | — | Data refresh / orchestration | Deferred (task F3) |
 

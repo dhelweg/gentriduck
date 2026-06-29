@@ -61,6 +61,13 @@ pre-commit: commit stage auto-formats (sqlfmt, ruff) + lints (sqlfluff, ruff); p
 `dbt build`. Don't fight the formatter; keep diffs clean. Large/raw data is gitignored and rebuilt
 from open sources — only small golden/reference files are committed.
 
+## Branch model (ADR-0011)
+`develop` is the **integration branch** — the devmode PM branches features off it and self-integrates
+finished, reviewed work into it via plain git (its autonomous merge). `main` is the **published,
+human-gated** branch: it changes only via a **weekly `develop → main` PR the maintainer merges in the
+GitHub UI**. The PM never uses `gh pr merge` and never pushes to `main` (both blocked in
+`.claude/settings.json`). The methodology gate (R-C1) binds at the `develop`-integration point.
+
 ## Agents (`.claude/agents/`)
 `project-manager` (orchestrates, owns board + capacity) · `system-architect` (ADRs, tool gate) ·
 `data-engineer` + `data-engineer-reviewer` (build + verify; skills `de-implement`/`de-review`) ·
@@ -82,10 +89,14 @@ from open sources — only small golden/reference files are committed.
 - `analysis/*.py`
 - Any model that changes indicator weights, normalization, or spatial method
 
-**PM pre-merge check (enforced):** Before merging any methodology-bearing PR, verify that:
+**PM pre-integration check (enforced):** "Integrate" = merge a feature branch into `develop`
+(ADR-0011). Before integrating any methodology-bearing work into `develop`, verify that:
 1. A `*-geo-signoff.md` file in `docs/epic-*/` or `docs/methodology/` contains `Verdict: PASS`.
 2. A `*-domain-signoff.md` (or equivalent) contains `Verdict: PASS` once `gentrification-domain-expert` is active.
-If either sign-off is missing or has `Verdict: FAIL` / `concerns`, **block the merge** and escalate.
+If either sign-off is missing or has `Verdict: FAIL` / `concerns`, **do not integrate into `develop`** —
+block, label `blocked`, and escalate. The weekly maintainer-merged `develop → main` PR is an added
+**backstop** (the maintainer may re-verify the same sign-offs); it does **not** replace this
+pre-integration check — methodology-bearing work must be gated *before* it reaches `develop`.
 
 **Grounding rule (R-C2):** Every methodology choice in a dbt model or analysis script must cite
 the thesis section, EWR codebook page, or peer-reviewed source it operationalizes. This citation
@@ -102,15 +113,16 @@ host** (the runner also works on macOS, and on Windows via WSL2).
 
 ### Continuous dev mode (default) — `ops/gentriduck-devmode.sh`
 One long-lived **interactive** PM session with Claude Code **Remote Control** enabled, so you
-supervise and unblock it from your **phone** (Claude mobile app). It works the board task-by-task,
-and **pings you at human gates** — a PR ready to merge (merges via the GitHub UI), a methodology-gate
-escalation/`concerns`, an ADR or new-tool approval, or a genuinely ambiguous call — instead of
-guessing. **Self-healing:** the loop restarts `claude` on exit *and* a watchdog restarts it on a hang
-(idle transcript), so a mid-response API error can't silently wedge it. Runs **unsupervised** with a
-**host-aware** permission mode — Mac & Windows/WSL2 use gated `bypassPermissions`, the native Linux
-host uses hands-free `dangerously-skip` — but the committed `settings.json` **deny-list still blocks**
-the irreversible commands (`gh pr merge`, force-push, `git reset --hard`, `sudo`), so PRs queue for
-you. Full guide: [`ops/README.md`](ops/README.md).
+supervise and unblock it from your **phone** (Claude mobile app). It works the board task-by-task and
+**self-integrates finished, reviewed work into `develop`** (ADR-0011), pinging you only at real human
+gates — the **weekly `develop → main` PR** (which you merge in the GitHub UI), a methodology-gate
+escalation/`concerns`, an ADR or new-tool approval, or a genuinely ambiguous call. **Self-healing:**
+the loop restarts `claude` on exit *and* a watchdog restarts it on a hang (idle transcript), so a
+mid-response API error can't silently wedge it. Runs **unsupervised** with a **host-aware** permission
+mode — Mac & Windows/WSL2 use gated `bypassPermissions`, the native Linux host uses hands-free
+`dangerously-skip` — but the committed `settings.json` **deny-list still blocks** the irreversible
+commands (`gh pr merge`, force-push, `git reset --hard`, `sudo`, direct push to `main`), so `main`
+stays human-gated. Full guide: [`ops/README.md`](ops/README.md).
 ```bash
 tmux new-session -d -s devmode "$(pwd)/ops/gentriduck-devmode.sh"   # run from the repo root
 # then connect to the "gentriduck-dev" session in the Claude mobile app
