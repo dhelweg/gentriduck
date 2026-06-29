@@ -249,7 +249,10 @@ def parse_feature(
     idx: int,
 ) -> Optional[dict]:
     props = feat.get("properties") or {}
-    feature_id = str(feat.get("id") or idx)
+    # Year-prefix makes transaction_id globally unique across the UNION ALL of multiple
+    # year parquets — WFS 2.0.0 GeoJSON feature IDs restart per service (e.g. "layer.1").
+    raw_id = str(feat.get("id") or idx)
+    feature_id = f"{reference_date.year}_{raw_id}"
 
     geom_raw = feat.get("geometry")
     if geom_raw is None:
@@ -321,8 +324,12 @@ def write_parquet(rows: list[dict], out_path: Path) -> None:
     table = rows_to_table(rows)
     tmp_path = out_path.with_suffix(".tmp.parquet")
     out_path.parent.mkdir(parents=True, exist_ok=True)
-    pq.write_table(table, tmp_path, compression="snappy")
-    tmp_path.rename(out_path)
+    try:
+        pq.write_table(table, tmp_path, compression="snappy")
+        tmp_path.rename(out_path)
+    except Exception:
+        tmp_path.unlink(missing_ok=True)
+        raise
     log.info("Wrote %d rows to %s", len(rows), out_path)
 
 

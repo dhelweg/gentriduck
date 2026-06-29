@@ -34,6 +34,11 @@
 --   raw_properties_json  varchar  -- full JSON of WFS properties for audit/schema discovery
 --   source_attribution   varchar  -- DL-Zero-2.0 attribution
 --
+-- ADR-0003 Amendment P-D: Kauffälle as dynamism lead indicator — rent-gap realisation
+-- (Smith) and ownership turnover preceding social succession (Dangschat). Transactions
+-- are block-level; block→PLR interpolation is handled downstream with geo-DS sign-off
+-- (see docs/adr/0003-berlin-geographies-and-open-price-rent-sources.md §Amendment P-D).
+--
 -- dbt_meta_owner: data-engineer
 {{
     config(
@@ -46,8 +51,10 @@
 {% set parquet_2025 = var("project_root") ~ "/data/raw/berlin/price_rent/kauffaelle_2025.parquet" %}
 
 {% if execute %}
-    {%- set cnt_2024 = run_query("SELECT count(*) FROM glob('" ~ parquet_2024 ~ "')").columns[0][0] -%}
-    {%- set cnt_2025 = run_query("SELECT count(*) FROM glob('" ~ parquet_2025 ~ "')").columns[0][0] -%}
+    {%- set result_2024 = run_query("SELECT count(*) FROM glob('" ~ parquet_2024 ~ "')") -%}
+    {%- set cnt_2024 = result_2024.columns[0][0] -%}
+    {%- set result_2025 = run_query("SELECT count(*) FROM glob('" ~ parquet_2025 ~ "')") -%}
+    {%- set cnt_2025 = result_2025.columns[0][0] -%}
 {% else %}
     {%- set cnt_2024 = 0 -%}
     {%- set cnt_2025 = 0 -%}

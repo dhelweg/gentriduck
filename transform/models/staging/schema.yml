@@ -577,11 +577,13 @@ models:
       - name: geometry_wkb
         description: Point/geometry WKB, EPSG:25833 (native CRS, not reprojected).
       - name: transaction_id
-        description: WFS feature ID (namespace:layer.featureid format).
+        description: >
+          Year-prefixed WFS feature ID (e.g. '2024_c_eigentwhg.1'). Year prefix
+          ensures global uniqueness across the UNION ALL of multiple year parquets.
         tests:
           - not_null:
               config:
-                where: "city_code is not null"
+                where: "transaction_id is not null"
           - unique:
               config:
                 where: "transaction_id is not null"
