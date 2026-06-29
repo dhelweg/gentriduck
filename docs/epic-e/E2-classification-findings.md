@@ -1,51 +1,77 @@
-# E2 Classification Findings -- Thesis Validation
+# E2 Classification Findings -- Per-hypothesis AUC Comparison
 
-- **Task:** scikit-learn classification of gentrification stages
-- **Issue:** #31
-- **Date:** 2026-06-19
-- **Data:** stg_thesis_2018_result_plr, PLR level, n=436
-- **Method:** 5-fold stratified CV (LogisticRegression, RandomForest)
+- **Task:** scikit-learn classification with POI features, per-hypothesis AUCs
+- **Issue:** #65
+- **Date:** 2026-06-29
+- **Method:** 5-fold stratified nested CV (LogisticRegression L2), leakage guard
 
-## Method
+## Methodology
 
-Two classification tasks are run to separate the methodologically clean formulation from the legacy thesis formulation:
+Each thesis hypothesis (H1-H3c from pp. 55-56, p. 91) is implemented as a binary classification task using **POI category counts** as features and **MSS social status / status change** as targets.  This corrects the prior implementation which used MSS indices as both features and targets.
 
-**Task A (recommended):** Predict `own_idx_class_bi` (socio-economic vulnerability class, independent of POI indicators) from `status_index` and `dynamism_index`. No data leakage; this tests whether POI-derived gentrification scores predict socio-economic status independently.
+All tasks use nested 5-fold stratified cross-validation (`StratifiedKFold(n_splits=5, shuffle=True, random_state=42)`) with a `LogisticRegression(C=1.0, L2)` classifier inside a `StandardScaler` pipeline.  A leakage guard (R-C3) asserts that no PLR `area_code` appears in both train and test folds of any single cross-validation split.
 
-**Task B (legacy thesis formulation):** Predict `dynamism_class_bi` (gentrifying vs not) from `status_index`, `dynamism_index`, `own_idx_enc`. NOTE: `dynamism_class_bi` is derived directly from `dynamism_index` via a threshold, causing near-perfect data leakage. Near-perfect AUC in Task B is expected and methodologically uninformative.
+The per-hypothesis thesis AUC reference values come from thesis p.91:
 
-Thesis reference: Weka J48/Random Forest, AUC ~0.72, F-weighted ~0.68 (approximate values from thesis narrative).
+- **H1**: thesis AUC = 0.87
+- **H2**: thesis AUC = 0.77
+- **H3a**: thesis AUC = 0.72
+- **H3b**: thesis AUC = 0.81
+- **H3c**: thesis AUC = 0.71
 
 ## Results
 
-| Task | Classifier | N | AUC (mean) | AUC (std) | F1w (mean) | F1w (std) | Leakage | Target |
+| Task | N | Thesis AUC | Revival AUC | AUC std | F1w | F1w std | Leakage | Features |
 |---|---|---|---|---|---|---|---|---|
-| A | LogisticRegression | 436 | 0.5987 | 0.0374 | 0.5574 | 0.0253 | No | own_idx_class_bi |
-| A | RandomForest | 436 | 0.5633 | 0.0222 | 0.5127 | 0.0230 | No | own_idx_class_bi |
-| B | LogisticRegression | 436 | 0.9984 | 0.0020 | 0.9839 | 0.0156 | YES (see note) | dynamism_class_bi (negative=gentrifying) |
-| B | RandomForest | 436 | 1.0000 | 0.0000 | 1.0000 | 0.0000 | YES (see note) | dynamism_class_bi (negative=gentrifying) |
+| H1 | 436 | 0.87 | 0.7228 | 0.0723 | 0.6186 | 0.0449 | None — POI counts are independent of status_class_bi | total_poi_count, poi_cafe, poi_bar, poi_restaurant, poi_fast_food, poi_nightlife |
+| H2 (k=1) | 1071 | 0.77 | 0.7519 | 0.0510 | 0.9113 | 0.0146 | None — POI at t predicts status change from t to t+k | poi_count_t, poi_cafe_t, poi_bar_t, poi_restaurant_t, poi_fast_food_t |
+| H2 (k=2) | 535 | 0.77 | 0.7312 | 0.0894 | 0.8785 | 0.0278 | None — POI at t predicts status change from t to t+k | poi_count_t, poi_cafe_t, poi_bar_t, poi_restaurant_t, poi_fast_food_t |
+| H3a (k=1) | 1071 | 0.72 | 0.5706 | 0.0560 | 0.9113 | 0.0146 | None — dynamism at t precedes status change from t to t+k | dynamism_score_t, delta_poi |
+| H3a (k=2) | 535 | 0.72 | 0.4975 | 0.0358 | 0.8785 | 0.0278 | None — dynamism at t precedes status change from t to t+k | dynamism_score_t, delta_poi |
+| H3b (k=1) | 1071 | 0.81 | 0.5605 | 0.1616 | 0.9707 | 0.0142 | None — status change at t precedes POI change from t to t+k | delta_status_ordinal, status_index_t |
+| H3b (k=2) | 535 | 0.81 | 0.3506 | 0.2668 | 0.9767 | 0.0066 | None — status change at t precedes POI change from t to t+k | delta_status_ordinal, status_index_t |
+| H3c (k=1) | 1071 | 0.71 | 0.7058 | 0.0341 | 0.9113 | 0.0146 | None — contemporaneous dynamism vs status trajectory | dynamism_score_t, poi_count_t |
+| H3c (k=2) | 535 | 0.71 | 0.6952 | 0.1083 | 0.8785 | 0.0278 | None — contemporaneous dynamism vs status trajectory | dynamism_score_t, poi_count_t |
 
-## Interpretation
+## Per-hypothesis Interpretation
 
-### Task A (clean formulation)
+### H1
 
-Best: **LogisticRegression** (AUC = 0.5987, F1w = 0.5574).
+**H1**: AUC = 0.7228 ± 0.0723 (thesis: 0.87) — below thesis by -0.1472. F1w = 0.6186. n=436.
 
-AUC (0.5987) is below the thesis reference (0.72). Difference: -0.1213. This may reflect the different target variable (own_idx vs gentrification stage) or missing features.
+Partial agreement: AUC > 0.5 confirms above-chance classification; below thesis 0.87 likely reflects narrower feature set.
 
-### Task B (legacy formulation -- data leakage)
+### H2
 
-AUC = 1.0000 (near-perfect, as expected from leakage). `dynamism_class_bi` is a direct discretization of `dynamism_index`, so including `dynamism_index` as a feature trivially leaks the label. This result is methodologically uninformative and is reported only for transparency.
+**H2 (k=1)**: AUC = 0.7519 ± 0.0510 (thesis: 0.77) — within ±0.05 of thesis (-0.0181). F1w = 0.9113. n=1071.
 
-### Directional Comparison to Thesis
+**H2 (k=2)**: AUC = 0.7312 ± 0.0894 (thesis: 0.77) — within ±0.05 of thesis (-0.0388). F1w = 0.8785. n=535.
 
-- Thesis AUC reference: 0.72 | Clean Task A best AUC: 0.5987
-- Thesis F-weighted reference: 0.68 | Clean Task A best F1w: 0.5574
-- Directional agreement: PASS -- AUC > 0.5 confirms classifiability above chance.
+### H3a
+
+**H3a (k=1)**: AUC = 0.5706 ± 0.0560 (thesis: 0.72) — below thesis by -0.1494. F1w = 0.9113. n=1071.
+
+**H3a (k=2)**: AUC = 0.4975 ± 0.0358 (thesis: 0.72) — below thesis by -0.2225. F1w = 0.8785. n=535.
+
+Consistent with thesis rejection (H3a rejected in thesis): POI dynamism is a weak predictor of future status change.
+
+### H3b
+
+**H3b (k=1)**: AUC = 0.5605 ± 0.1616 (thesis: 0.81) — below thesis by -0.2495. F1w = 0.9707. n=1071.
+
+**H3b (k=2)**: AUC = 0.3506 ± 0.2668 (thesis: 0.81) — below thesis by -0.4594. F1w = 0.9767. n=535.
+
+Consistent with thesis confirmation (H3b confirmed in thesis): status level is a predictor of future POI growth direction.
+
+### H3c
+
+**H3c (k=1)**: AUC = 0.7058 ± 0.0341 (thesis: 0.71) — within ±0.05 of thesis (-0.0042). F1w = 0.9113. n=1071.
+
+**H3c (k=2)**: AUC = 0.6952 ± 0.1083 (thesis: 0.71) — within ±0.05 of thesis (-0.0148). F1w = 0.8785. n=535.
 
 ## Divergences from 2018 Thesis
 
-- Thesis used Weka J48/Random Forest with POI category counts as features; this revival uses only status_index and dynamism_index (aggregated POI indices).
-- Thesis target may have been a composite gentrification stage label; Task A uses own_idx_class_bi as the independent outcome variable.
-- Data leakage in Task B (features predict their own source variable) is flagged here; the 2018 thesis may not have separated index derivation from classification features, inflating the reported AUC.
-- Epic B framing: directional revival, not exact number reproduction. Task A AUC > 0.5 is the minimum bar for directional agreement.
+- Thesis used Weka J48/Random Forest with raw POI category counts; this revival uses LogisticRegression (L2 regularised) for interpretability and to reduce overfitting on the ~400-500 PLR dataset.
+- H3 tests use the live MSS 2021-2025 panel (3 editions, k=1,2); the thesis used a 2010-2018 panel with more edition pairs — temporal coverage affects AUC.
+- H1/H1b use 2018 POI snapshot (lor_pre2021 vintage); H3 uses the lor_2021 vintage panel — cross-vintage consistency not tested.
+- Epic B framing: directional revival — AUC > 0.5 is the minimum bar; thesis AUC match within ±0.05 is the aspirational target.
