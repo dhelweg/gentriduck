@@ -418,8 +418,13 @@ Both must be cleared before the ingestion adapter / dbt models for this source a
    point-in-polygon join in native EPSG:25833, per-(PLR, year, teilmarkt) count, left-join
    to zero out empty PLRs, deterministic boundary dedup. 8 conditions for the downstream
    aggregation model (D3) — see `docs/epic-d/d1b-kauffaelle-geo-signoff.md`.
-   **Pending: `gentrification-domain-expert` sign-off on predictor-vs-outcome framing
-   (R-C1 dual gate; requested 2026-06-29).**
+   **CLEARED (domain-expert, 2026-06-29, #53 D1b): PASS WITH CONDITIONS.** Theory
+   framing (Smith rent-gap + Dangschat invasion-succession; predictor-not-outcome
+   distinction) is faithful and correctly drawn. 7 conditions for downstream labelling,
+   segment legibility, temporal disclosure, and causal framing — see
+   `docs/epic-d/d1b-kauffaelle-domain-signoff.md`. PM may integrate D1b into `develop`;
+   conditions C1–C6 bind on D3/G2/O2; C7 returns at the `gentrification_index.sql` PR.
+   **R-C1 dual gate COMPLETE for D1b staging/ingestion.**
 
 ### References (P-D amendment)
 
