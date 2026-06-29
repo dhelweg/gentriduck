@@ -327,3 +327,154 @@ models:
       - dbt_utils.expression_is_true:
           arguments:
             expression: "poi_count > 0"
+
+
+  - name: fct_gentrification_trajectory
+    description: >
+      R-A8 (#78): Longitudinal trajectory & stage model (2013–2025).
+      Classifies each PLR's social-status trajectory across the full MSS time series
+      (editions: 2013, 2015, 2017, 2019, 2021, 2023, 2025) into one of five trajectory
+      types aligned with Dangschat's (1988) double invasion-succession cycle.
+
+      Output grain: (city_code, area_code, area_vintage) — one trajectory summary per
+      PLR per LOR vintage. Inhabited PLRs only (is_uninhabited=false).
+
+      LOR vintage handling: trajectories are computed within EACH VINTAGE SEPARATELY
+      to avoid cross-vintage boundary errors at the 2021 LOR reform.
+        - lor_pre2021: editions 2013, 2015, 2017, 2019 (up to 4 observations)
+        - lor_2021: editions 2021, 2023, 2025 (up to 3 observations)
+
+      Trajectory types (Dangschat 1988; Döring & Ulbricht 2016):
+        stable-established    — low deprivation throughout the panel
+        persistently-deprived — high deprivation throughout the panel
+        improving             — status_index decreased by ≥1 step (less deprived over time)
+        declining             — status_index increased by ≥1 step (more deprived over time)
+        mixed                 — no clear dominant trend or insufficient observations
+
+      Method citation: Dangschat (1988) double invasion-succession cycle;
+      thesis §3.2 (Gentrifizierung als Prozess); ADR-0008 (R-A7 #77) D1 outcome.
+    meta:
+      dbt_meta_owner: data-engineer
+    tests:
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns:
+              - city_code
+              - area_code
+              - area_vintage
+    columns:
+      - name: city_code
+        description: City identifier (ADR-0005). Always 'BER'.
+        data_type: varchar
+        tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ["BER"]
+      - name: area_code
+        description: PLR area code (LOR 2021 or pre-2021 vintage).
+        data_type: varchar
+        tests:
+          - not_null
+      - name: area_vintage
+        description: LOR vintage identifier ('lor_pre2021' or 'lor_2021').
+        data_type: varchar
+        tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ["lor_pre2021", "lor_2021"]
+      - name: n_editions
+        description: Number of MSS editions available for this PLR within this vintage.
+        data_type: bigint
+        tests:
+          - not_null
+      - name: first_edition
+        description: First MSS edition year in this PLR's trajectory (within vintage).
+        data_type: bigint
+      - name: last_edition
+        description: Last MSS edition year in this PLR's trajectory (within vintage).
+        data_type: bigint
+      - name: status_index_first
+        description: D1 status_index at the first edition within this vintage.
+        data_type: double
+      - name: status_index_last
+        description: D1 status_index at the last edition within this vintage.
+        data_type: double
+      - name: status_index_min
+        description: Minimum D1 status_index across editions (best status = 1).
+        data_type: double
+      - name: status_index_max
+        description: Maximum D1 status_index across editions (worst status = 4).
+        data_type: double
+      - name: status_index_mean
+        description: Mean D1 status_index across editions (vulnerability-positive; higher = more deprived).
+        data_type: double
+      - name: status_delta
+        description: >
+          Change in D1 status_index from first to last edition within this vintage.
+          Positive = worsened (more deprived); negative = improved (less deprived).
+          Zero = stable across the panel. Only meaningful if n_editions > 1.
+        data_type: double
+      - name: status_range
+        description: Within-panel range of status_index (max - min). Measures trajectory volatility.
+        data_type: double
+      - name: trajectory_type
+        description: >
+          Trajectory classification (R-A8; Dangschat 1988 framework).
+          'stable-established'    — low deprivation throughout
+          'persistently-deprived' — high deprivation throughout
+          'improving'             — materially less deprived over time
+          'declining'             — materially more deprived over time
+          'mixed'                 — no clear dominant trend or < 2 editions
+        data_type: varchar
+        tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values:
+                  - stable-established
+                  - persistently-deprived
+                  - improving
+                  - declining
+                  - mixed
+      - name: dominant_stage
+        description: Most frequent typology_stage (D1×D2 matrix) across editions within this vintage.
+        data_type: varchar
+      - name: n_editions_improving_stage
+        description: Count of editions where the typology_stage is an improving-type stage.
+        data_type: bigint
+      - name: n_editions_sehr_niedrig
+        description: Count of editions where status_index = 4 (sehr_niedrig = most deprived).
+        data_type: bigint
+      - name: n_editions_hoch
+        description: Count of editions where status_index = 1 (hoch = least deprived).
+        data_type: bigint
+      - name: trajectory_confidence
+        description: >
+          Confidence level for the trajectory classification.
+          'high'   — n_editions >= 3 and non-mixed trajectory
+          'medium' — n_editions == 2 and non-mixed trajectory
+          'low'    — mixed trajectory type or n_editions <= 1
+        data_type: varchar
+        tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ["high", "medium", "low"]
+      - name: is_persistently_vulnerable
+        description: >
+          True if the mean D1 status_index across editions >= 3.0 (predominantly
+          niedrig or sehr_niedrig deprivation levels throughout the panel).
+          Useful for cross-validation against R-B2 hotspot labels.
+        data_type: boolean
+        tests:
+          - not_null
+      - name: is_persistently_affluent
+        description: >
+          True if the mean D1 status_index across editions <= 1.5 (predominantly
+          hoch deprivation level throughout the panel).
+          Useful for cross-validation against R-B2 coldspot labels.
+        data_type: boolean
+        tests:
+          - not_null
