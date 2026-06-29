@@ -133,3 +133,53 @@ not silently ignored — acceptable.
    reconstructed targets. (F3)
 5. Add the descriptive-significance and PLR-only/MAUP caveats to the findings docs. (F5,
    prior conditions 2-3)
+
+## Re-review verdict (2026-06-29, post-iteration-3 fixes)
+
+**Verdict: PASS WITH CONDITIONS**
+
+Re-reviewed at commit `1b1887e` on `feat/65-e1e2-rerun`. Both gates pass:
+`uv run poe build` → PASS=356 WARN=1 ERROR=0 (the lone warning is the
+pre-existing `test_c5_poi_share_spike` informational warning, unrelated to #65);
+`uv run poe analysis` runs clean and regenerates both findings docs.
+
+F1 polarity: RESOLVED — `THESIS_HYPOTHESES` now encodes the inverse-numeric
+`status_index` (higher = more deprived): H1 expected negative, H1b expected
+positive, H2/H3a/H3b/H3c expected negative, each with an inline citation to
+`index-definition.md §5 polarity table` + `int_mss_lead_lag.sql` lines 19-23 (R-C2
+satisfied). The headline tallies are now coherent — H1 (rho -0.046, n.s.), H1b
+(rho +0.136, sig), H2 (rho -0.116/-0.192, sig) all read as thesis-consistent
+directions rather than the inverted FAILs of the prior draft.
+
+F2 H3 predictor: RESOLVED — E1 H3a/H3b and E2 H3a use the C5-corrected
+`delta_dynamism_t` from `int_mss_lead_lag` (not level `dynamism_score_t` or raw
+`delta_poi`). E2 H3b classification target is now `delta_dynamism_t > 0`, which the
+analysis run confirms is 48.0% positive (balanced), not the ~99% imbalanced raw
+`delta_poi > 0`. E2 H2/H3a/H3c targets use the ordinal `status_transition ==
+'worsened'` column (§3.3), avoiding metric differencing on ordinal codes.
+
+F3 AUC citations: RESOLVED — `THESIS_AUC` and both docs now mark all five values
+as "reconstructed from thesis p.91 narrative" rather than attributing them verbatim
+to p.91. No reconstructed target is presented as ground truth.
+
+F5 caveats: RESOLVED — both findings docs carry the no-multiple-comparison-
+correction, PLR-only/MAUP, and cross-vintage (lor_pre2021 vs lor_2021) caveats.
+
+Remaining conditions (non-blocking; do not prevent integration into `develop`):
+1. E1 H3a and E1 H3b are mathematically the same symmetric Spearman rho
+   (+0.0593 at k=1) and are correctly labelled co-movement, not strict
+   temporal-precedence, tests. The genuine lead/lag directionality contrast lives
+   only in the E2 classification framing (predictor-vs-outcome asymmetry). Keep this
+   distinction explicit on the G2 public methodology page so readers do not read the
+   two identical E1 rows as an independent lead vs lag result.
+2. E1 H3a/H3b/H3c FAIL on direction (observed positive vs expected negative) and
+   E2 H3b is sub-chance (AUC 0.43). This is honestly reported as a divergence from
+   the thesis, consistent with the Epic B directional-revival framing and the short
+   2021-2025 panel (3 editions, k=2 yields n=0). No action required for integration;
+   flag for the domain expert's parallel sign-off as the substantive
+   "does the 2018 lead-lag finding still hold?" question (current answer: not
+   reproduced on the live panel — acceptable to publish as a documented divergence).
+3. k=2 lead-lag (H3a/H3b) returns n=0 rows and is silently dropped from the E1
+   results as N/A. Confirm with the data-engineer this is the expected edition-pair
+   structure (only 2021->2023 and 2023->2025 exist at k=1; no valid k=2 status-change
+   pair yet), not a join defect, before the 2027 edition lands.
