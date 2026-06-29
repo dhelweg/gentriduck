@@ -82,8 +82,8 @@ THESIS_HYPOTHESES: dict[str, dict] = {
         "expected_sig": True,
     },
     "H2": {
-        "desc": "POI stock at t=2018 ~ future status change (delta_status)",
-        "citation": "Thesis p.55 H2: current POI supply predicts future social-status change — directional positive",
+        "desc": "Current-edition POI stock (2021+ editions) ~ future status change (delta_status)",
+        "citation": "Thesis p.55 H2: current POI supply predicts future social-status change — directional positive (tested here on 2021+ panel, not the 2018 cross-section)",
         "expected_dir": "positive",
         "expected_sig": False,  # directional only; thesis did not confirm significance for H2 in isolation
     },
@@ -307,18 +307,22 @@ def test_h1(df) -> list[dict]:
     return results
 
 
-def test_h2(df_h1: object, df_ll: object) -> list[dict]:
+def test_h2(df_ll: object) -> list[dict]:
     """H2: Current POI stock predicts future social-status change.
 
-    Thesis p.55 H2: POI stock at baseline → Δstatus over lag window.
-    Use lead-lag panel (lag_k=1): delta_status_ordinal as the future-change proxy.
-    Join 2018 POI counts to lead-lag panel via area_code (lor_2021 vintage only
-    — thesis PLRs are lor_pre2021, so we use the live panel for this test).
+    Thesis p.55 H2: POI stock → Δstatus over lag window.
+    Tested here on the 2021+ live panel (not the 2018 cross-section — the thesis
+    PLRs use the pre-2021 LOR vintage while the lead-lag panel uses lor_2021).
+    poi_count_t at edition_t predicts delta_status_ordinal k editions later.
+    This operationalizes the general "current POI stock predicts future status change"
+    hypothesis rather than the specific 2018 baseline cross-section.
     """
     results = []
 
-    # Thesis p.55 H2: test at k=1 lag using live MSS panel
+    # Thesis p.55 H2: test at k=1 and k=2 using live MSS panel
     # poi_count_t at edition_t predicts delta_status_ordinal
+    # k=3 skipped: only 3 MSS editions currently (2021, 2023, 2025); testable once 2027 edition ingested
+    print("  NOTE: k=3 skipped — only 3 MSS editions available (2021, 2023, 2025); k=3 requires 2027 edition")
     for k in [1, 2]:
         sub = df_ll[df_ll["lag_k"] == k].copy()
         if len(sub) < 10:
@@ -329,7 +333,7 @@ def test_h2(df_h1: object, df_ll: object) -> list[dict]:
         results.append({
             "hyp": "H2",
             "test": f"Spearman k={k}",
-            "desc": f"{THESIS_HYPOTHESES['H2']['desc']} [k={k} MSS editions]",
+            "desc": f"Current-edition POI stock ~ future status change [k={k} MSS editions, 2021+ panel]",
             "citation": THESIS_HYPOTHESES["H2"]["citation"],
             "stat_val": r["rho"],
             "stat_type": "rho",
@@ -365,6 +369,8 @@ def test_h3(df_ll: object) -> list[dict]:
     """
     results = []
 
+    # k=3 skipped: only 3 MSS editions currently (2021, 2023, 2025); testable once 2027 edition ingested
+    print("  NOTE: k=3 skipped — only 3 MSS editions available (2021, 2023, 2025); k=3 requires 2027 edition")
     for k in [1, 2]:
         sub = df_ll[df_ll["lag_k"] == k].copy()
         if len(sub) < 10:
@@ -372,7 +378,7 @@ def test_h3(df_ll: object) -> list[dict]:
 
         delta_status = sub["delta_status_ordinal"].values.astype(float)
         dyn_t = sub["dynamism_score_t"].values.astype(float)
-        dyn_tk = sub["dynamism_score_tk"].values.astype(float)
+        delta_poi = sub["delta_poi"].values.astype(float)
         stat_t = sub["status_index_t"].values.astype(float)
 
         # H3a: Thesis p.91 — POI change leads status change (REJECTED)
@@ -394,10 +400,10 @@ def test_h3(df_ll: object) -> list[dict]:
             "dir_match": _dir_match(r3a["rho"], THESIS_HYPOTHESES["H3a"]["expected_dir"]),
         })
 
-        # H3b: Thesis p.91 — Status change leads POI change (CONFIRMED)
-        # Test: delta_status_ordinal (from t to t+k) predicts delta_poi (same window)
-        # Operationalization: status at t predicts POI dynamism at t+k
-        r3b = run_spearman(stat_t, dyn_tk, f"Spearman(status_t, dyn_score_tk, k={k})")
+        # H3b: Thesis p.91 — Status CHANGE leads POI CHANGE (CONFIRMED)
+        # Thesis p.91 H3b: Δstatus at t leads ΔPOI at t+k — both are changes, not levels.
+        # delta_status_ordinal = status change from t to t+k; delta_poi = POI stock change t to t+k.
+        r3b = run_spearman(delta_status, delta_poi, f"Spearman(delta_status, delta_poi, k={k})")
         results.append({
             "hyp": "H3b",
             "test": f"Spearman k={k}",
@@ -527,7 +533,10 @@ def write_findings(df_h1, results: list[dict]) -> None:
                 verdict = "confirmed — fast-food negatively correlates with status" if r["dir_match"] else "diverges — fast-food not negatively correlated as expected"
                 f.write(f"{verdict}.\n\n")
 
-        f.write("### H2 — POI stock predicts future status change (thesis p.55)\n\n")
+        f.write("### H2 — Current-edition POI stock predicts future status change (thesis p.55)\n\n")
+        f.write("Note: H2 is tested on the 2021+ live MSS panel (lor_2021 vintage), not the 2018 ")
+        f.write("cross-section. This operationalizes the general 'current POI stock predicts future ")
+        f.write("status change' hypothesis. n=1071 (panel rows), not n=436 (2018 cross-section).\n\n")
         h2_rows = [r for r in results if r["hyp"] == "H2"]
         if h2_rows:
             for r in h2_rows:
@@ -581,14 +590,24 @@ def write_findings(df_h1, results: list[dict]) -> None:
         f.write("- The H1/H1b tests use 2018 POI category counts from `int_poi_features_pivot` ")
         f.write("joined to the 2018 golden thesis data — this is the correct POI-as-predictor ")
         f.write("formulation (prior implementation regressed MSS indices against each other).\n")
+        f.write("- H2 is tested on the 2021+ live panel rather than the 2018 cross-section; ")
+        f.write("n=1071 (panel rows) vs n=436 (2018 PLRs). The hypothesis is reframed as ")
+        f.write("'current-edition POI stock predicts future status change' (general form).\n")
         f.write("- The H3 lead-lag tests use the live MSS panel (2021-2025 editions) rather than ")
         f.write("the 2012-2018 panel from the thesis — temporal coverage differs; directional ")
         f.write("agreement is the applicable criterion.\n")
+        f.write("- H3b operationalization corrected: uses Spearman(delta_status_ordinal, delta_poi) ")
+        f.write("— both CHANGE variables — consistent with thesis p.91 'Δstatus leads ΔPOI'.\n")
         f.write("- The 2018 thesis used R `lm()`/`cor.test()` with PLR boundaries from the ")
         f.write("pre-2021 LOR scheme; H3 tests here use the 2021 LOR scheme (live panel). ")
         f.write("Exact coefficient comparisons are not meaningful.\n")
         f.write("- Epic B framing: directional revival — exact number reproduction not required. ")
-        f.write("See CLAUDE.md §Epic B framing.\n")
+        f.write("See CLAUDE.md §Epic B framing.\n\n")
+
+        f.write("## Limitations\n\n")
+        f.write("- **k=3 lead-lag not tested**: Only 3 MSS editions are currently available ")
+        f.write("(2021, 2023, 2025). A k=3 test (6-year lag) would require a 2027 edition. ")
+        f.write("k=3 results will be added once the 2027 MSS edition is ingested.\n")
 
 
 # ---------------------------------------------------------------------------
@@ -638,7 +657,7 @@ def main() -> None:
     results = test_h1(df_h1)
 
     print("Running H2 tests (POI stock → future status change)...")
-    results += test_h2(df_h1, df_ll)
+    results += test_h2(df_ll)
 
     print("Running H3a/H3b/H3c lead-lag tests (k=1,2)...")
     results += test_h3(df_ll)

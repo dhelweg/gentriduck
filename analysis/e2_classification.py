@@ -369,8 +369,11 @@ def task_h2(df_ll) -> list[dict]:
     Thesis p.91 H2: POI stock predicts future status change (AUC 0.77).
     Features: poi_count_t, poi_cafe_t, poi_bar_t, poi_restaurant_t, poi_fast_food_t.
     Target: delta_status_ordinal > 0 (status improves over lag window k).
+    k=3 skipped: only 3 MSS editions currently (2021, 2023, 2025); testable once 2027 edition ingested.
     """
     results = []
+    # k=3 skipped: only 3 MSS editions currently (2021, 2023, 2025); testable once 2027 edition ingested
+    print("  NOTE: k=3 skipped — only 3 MSS editions available (2021, 2023, 2025); k=3 requires 2027 edition")
     for k in [1, 2]:
         sub = df_ll[df_ll["lag_k"] == k].copy()
         if len(sub) < 20:
@@ -403,8 +406,11 @@ def task_h3a(df_ll) -> list[dict]:
     Thesis p.91 H3a: ΔPOI leads Δstatus — REJECTED (AUC 0.72, below threshold).
     Features: dynamism_score_t, delta_poi (POI change from t to t+k).
     Target: delta_status_ordinal > 0 (status improves).
+    k=3 skipped: only 3 MSS editions currently (2021, 2023, 2025); testable once 2027 edition ingested.
     """
     results = []
+    # k=3 skipped: only 3 MSS editions currently (2021, 2023, 2025); testable once 2027 edition ingested
+    print("  NOTE: k=3 skipped — only 3 MSS editions available (2021, 2023, 2025); k=3 requires 2027 edition")
     for k in [1, 2]:
         sub = df_ll[df_ll["lag_k"] == k].copy()
         if len(sub) < 20:
@@ -436,8 +442,13 @@ def task_h3b(df_ll) -> list[dict]:
     Thesis p.91 H3b: Δstatus leads ΔPOI — CONFIRMED (AUC 0.81).
     Features: delta_status_ordinal, status_index_t (status context at t).
     Target: delta_poi > 0 (POI stock grows from t to t+k).
+    WARNING: delta_poi > 0 has a near-degenerate positive-class rate (98-99%).
+    F1w is uninformative for this target; AUC is the only valid metric.
+    k=3 skipped: only 3 MSS editions currently (2021, 2023, 2025); testable once 2027 edition ingested.
     """
     results = []
+    # k=3 skipped: only 3 MSS editions currently (2021, 2023, 2025); testable once 2027 edition ingested
+    print("  NOTE: k=3 skipped — only 3 MSS editions available (2021, 2023, 2025); k=3 requires 2027 edition")
     for k in [1, 2]:
         sub = df_ll[df_ll["lag_k"] == k].copy()
         if len(sub) < 20:
@@ -450,7 +461,13 @@ def task_h3b(df_ll) -> list[dict]:
         mask = ~np.any(np.isnan(x), axis=1)
         x, y, area_codes = x[mask], y[mask], area_codes[mask]
 
-        print(f"  H3b k={k}: n={len(x)}, poi_growing={y.sum()} ({100*y.mean():.1f}%)")
+        pos_rate = float(y.mean()) if len(y) > 0 else 0.0
+        print(f"  H3b k={k}: n={len(x)}, poi_growing={y.sum()} ({100*pos_rate:.1f}%)")
+        if pos_rate > 0.95:
+            print(
+                f"  WARNING H3b k={k}: target `delta_poi > 0` has {100*pos_rate:.1f}% positive-class rate "
+                "(near-degenerate imbalance). F1w is uninformative; AUC is the only valid metric."
+            )
         # Panel data — use GroupKFold to prevent PLR temporal leakage
         r = run_cv_panel(x, y, area_codes, f"H3b k={k}")
         if r:
@@ -469,8 +486,11 @@ def task_h3c(df_ll) -> list[dict]:
     Thesis p.91 H3c: simultaneous co-movement — UNCLEAR (AUC 0.71).
     Features: dynamism_score_t, poi_count_t.
     Target: delta_status_ordinal > 0 (contemporaneous status change direction).
+    k=3 skipped: only 3 MSS editions currently (2021, 2023, 2025); testable once 2027 edition ingested.
     """
     results = []
+    # k=3 skipped: only 3 MSS editions currently (2021, 2023, 2025); testable once 2027 edition ingested
+    print("  NOTE: k=3 skipped — only 3 MSS editions available (2021, 2023, 2025); k=3 requires 2027 edition")
     for k in [1, 2]:
         sub = df_ll[df_ll["lag_k"] == k].copy()
         if len(sub) < 20:
@@ -535,14 +555,14 @@ def write_findings(all_results: list[dict]) -> None:
         f.write("- **Task:** scikit-learn classification with POI features, per-hypothesis AUCs\n")
         f.write("- **Issue:** #65\n")
         f.write("- **Date:** 2026-06-29\n")
-        f.write("- **Method:** 5-fold stratified nested CV (LogisticRegression L2), leakage guard\n\n")
+        f.write("- **Method:** 5-fold stratified cross-validation (LogisticRegression L2), leakage guard\n\n")
 
         f.write("## Methodology\n\n")
         f.write("Each thesis hypothesis (H1-H3c from pp. 55-56, p. 91) is implemented as a ")
         f.write("binary classification task using **POI category counts** as features and ")
         f.write("**MSS social status / status change** as targets.  This corrects the prior ")
         f.write("implementation which used MSS indices as both features and targets.\n\n")
-        f.write("All tasks use nested 5-fold stratified cross-validation ")
+        f.write("All tasks use 5-fold stratified cross-validation ")
         f.write("(`StratifiedKFold(n_splits=5, shuffle=True, random_state=42)`) with a ")
         f.write("`LogisticRegression(C=1.0, L2)` classifier inside a `StandardScaler` pipeline.  ")
         f.write("A leakage guard (R-C3) asserts that no PLR `area_code` appears in both train ")
@@ -587,11 +607,33 @@ def write_findings(all_results: list[dict]) -> None:
                 else:
                     f.write("Directional divergence: AUC <= 0.5, below chance. Possible cause: limited POI category overlap with 2018 thesis features.\n\n")
             elif hyp_key == "H3b":
-                best = max(hyp_results, key=lambda x: x["auc_mean"])
-                if best["auc_mean"] > 0.5:
-                    f.write("Consistent with thesis confirmation (H3b confirmed in thesis): status level is a predictor of future POI growth direction.\n\n")
+                # Report each k separately — do NOT suppress sub-chance results
+                any_sub_chance = any(r["auc_mean"] < 0.5 for r in hyp_results)
+                all_above_chance = all(r["auc_mean"] > 0.5 for r in hyp_results)
+                if any_sub_chance:
+                    f.write("**WARNING: one or more k values yield AUC < 0.5 (sub-chance).** ")
+                    f.write("Results must be reported per k, not as a single best:\n\n")
+                    for r in hyp_results:
+                        verdict = "Consistent with thesis confirmation" if r["auc_mean"] > 0.5 else "Diverges from thesis (sub-chance AUC)"
+                        f.write(f"- k={r['task'].split('=')[1].rstrip(')')}: AUC = {r['auc_mean']:.4f} — {verdict}.\n")
+                    f.write("\nDiverges from thesis (H3b was confirmed in thesis). Possible cause: ")
+                    f.write("MSS panel covers only 2021-2025 (3 editions); thesis used 2010-2018 (longer panel).\n\n")
+                elif all_above_chance:
+                    f.write("Consistent with thesis confirmation (H3b confirmed in thesis): status predictor of future POI growth direction.\n\n")
                 else:
-                    f.write("Diverges from thesis: H3b was confirmed in thesis but AUC <= 0.5 here. Possible cause: MSS panel covers only 2021-2025 (3 editions); thesis used 2010-2018 (longer panel).\n\n")
+                    f.write("Mixed results across k — see per-k AUC values above.\n\n")
+                # Class imbalance note for H3b (delta_poi > 0 target is near-degenerate)
+                for r in hyp_results:
+                    pos_rate = r["n_pos"] / r["n"] if r["n"] > 0 else 0
+                    if pos_rate > 0.95:
+                        f.write(
+                            f"**CLASS IMBALANCE WARNING ({r['task']}):** The target `delta_poi > 0` has "
+                            f"{r['n_pos']}/{r['n']} positive-class rows ({100*pos_rate:.1f}% positive rate). "
+                            f"An all-positive predictor achieves F1w ≈ {pos_rate:.2f}. "
+                            "F1w is therefore uninformative for this target; AUC is the only valid metric. "
+                            "These results should be interpreted with caution — the near-degenerate class "
+                            "distribution makes classification almost trivially positive.\n\n"
+                        )
             elif hyp_key == "H3a":
                 best = max(hyp_results, key=lambda x: x["auc_mean"])
                 if best["auc_mean"] <= 0.6:
@@ -608,7 +650,16 @@ def write_findings(all_results: list[dict]) -> None:
         f.write("- H1/H1b use 2018 POI snapshot (lor_pre2021 vintage); H3 uses the lor_2021 ")
         f.write("vintage panel — cross-vintage consistency not tested.\n")
         f.write("- Epic B framing: directional revival — AUC > 0.5 is the minimum bar; ")
-        f.write("thesis AUC match within ±0.05 is the aspirational target.\n")
+        f.write("thesis AUC match within ±0.05 is the aspirational target.\n\n")
+
+        f.write("## Limitations\n\n")
+        f.write("- **k=3 lead-lag not tested**: Only 3 MSS editions are currently available ")
+        f.write("(2021, 2023, 2025). A k=3 test (6-year lag) would require a 2027 edition. ")
+        f.write("k=3 results will be added once the 2027 MSS edition is ingested.\n")
+        f.write("- **H3b class imbalance**: The `delta_poi > 0` target has a 98-99% positive-class ")
+        f.write("rate. F1w is uninformative for such near-degenerate targets (an all-positive ")
+        f.write("predictor achieves F1w ≈ 0.97). AUC is the only valid metric for H3b results. ")
+        f.write("The H3b F1w values in the results table should be disregarded.\n")
 
 
 # ---------------------------------------------------------------------------

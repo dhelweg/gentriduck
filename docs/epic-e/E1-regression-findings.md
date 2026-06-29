@@ -19,7 +19,7 @@ The primary validation criterion is directional agreement (same sign as thesis e
 
 - **H1**: Thesis p.55: POI supply positively correlates with current MSS status; AUC 0.87 confirmed
 - **H1b**: Thesis p.55 H1b: fast-food is a displacement/low-status indicator — negative predictor
-- **H2**: Thesis p.55 H2: current POI supply predicts future social-status change — directional positive
+- **H2**: Thesis p.55 H2: current POI supply predicts future social-status change — directional positive (tested here on 2021+ panel, not the 2018 cross-section)
 - **H3a**: Thesis p.91 H3a: POI change leads status change — REJECTED in thesis (not confirmed)
 - **H3b**: Thesis p.91 H3b: status change leads POI change — CONFIRMED in thesis
 - **H3c**: Thesis p.91 H3c: simultaneous co-movement — thesis result unclear
@@ -31,13 +31,13 @@ The primary validation criterion is directional agreement (same sign as thesis e
 | H1 | Spearman | 436 | rho | -0.0463 | 0.3348 | No | positive | negative | FAIL | POI stock (total_poi_count) ~ MSS social status (status_index) |
 | H1 | OLS | 436 | beta | -0.0004 R2=0.0044 | 0.1670 | No | positive | negative | FAIL | POI stock (total_poi_count) ~ MSS social status (status_index) |
 | H1b | Spearman | 436 | rho | 0.1364 | 0.0043 | Yes | negative | positive | FAIL | Fast-food POI count ~ MSS social status (status_index) |
-| H2 | Spearman k=1 | 1071 | rho | -0.1155 | 0.0002 | Yes | positive | negative | FAIL | POI stock at t=2018 ~ future status change (delta_status) [k=1 MSS editions] |
-| H2 | Spearman k=2 | 535 | rho | -0.1924 | 0.0000 | Yes | positive | negative | FAIL | POI stock at t=2018 ~ future status change (delta_status) [k=2 MSS editions] |
+| H2 | Spearman k=1 | 1071 | rho | -0.1155 | 0.0002 | Yes | positive | negative | FAIL | Current-edition POI stock ~ future status change [k=1 MSS editions, 2021+ panel] |
+| H2 | Spearman k=2 | 535 | rho | -0.1924 | 0.0000 | Yes | positive | negative | FAIL | Current-edition POI stock ~ future status change [k=2 MSS editions, 2021+ panel] |
 | H3a | Spearman k=1 | 1071 | rho | 0.0261 | 0.3937 | No | positive | positive | PASS | ΔPOI at t leads Δstatus at t+k (POI change leads status change) [k=1] |
-| H3b | Spearman k=1 | 1071 | rho | -0.0186 | 0.5431 | No | positive | negative | FAIL | Δstatus at t leads ΔPOI at t+k (status change leads POI change) [k=1] |
+| H3b | Spearman k=1 | 1071 | rho | -0.0404 | 0.1860 | No | positive | negative | FAIL | Δstatus at t leads ΔPOI at t+k (status change leads POI change) [k=1] |
 | H3c | Spearman k=1 | 1071 | rho | 0.0632 | 0.0386 | Yes | positive | positive | PASS | Simultaneous ΔPOI ~ Δstatus co-movement (same edition) [k=1] |
 | H3a | Spearman k=2 | 535 | rho | -0.0051 | 0.9064 | No | positive | negative | FAIL | ΔPOI at t leads Δstatus at t+k (POI change leads status change) [k=2] |
-| H3b | Spearman k=2 | 535 | rho | 0.0235 | 0.5882 | No | positive | positive | PASS | Δstatus at t leads ΔPOI at t+k (status change leads POI change) [k=2] |
+| H3b | Spearman k=2 | 535 | rho | 0.0002 | 0.9971 | No | positive | positive | PASS | Δstatus at t leads ΔPOI at t+k (status change leads POI change) [k=2] |
 | H3c | Spearman k=2 | 535 | rho | 0.0790 | 0.0680 | No | positive | positive | PASS | Simultaneous ΔPOI ~ Δstatus co-movement (same edition) [k=2] |
 
 **Directional agreement: 4/11 tests match the expected direction.**
@@ -56,7 +56,9 @@ The primary validation criterion is directional agreement (same sign as thesis e
 
 **Spearman**: rho = 0.1364, p = 0.0043, n=436. diverges — fast-food not negatively correlated as expected.
 
-### H2 — POI stock predicts future status change (thesis p.55)
+### H2 — Current-edition POI stock predicts future status change (thesis p.55)
+
+Note: H2 is tested on the 2021+ live MSS panel (lor_2021 vintage), not the 2018 cross-section. This operationalizes the general 'current POI stock predicts future status change' hypothesis. n=1071 (panel rows), not n=436 (2018 cross-section).
 
 **k=1**: rho = -0.1155, p = 0.0002, n=1071 — directional divergence.
 
@@ -69,8 +71,8 @@ k=2: rho = -0.0051, p = 0.9064, n=535. Not significant — consistent with thesi
 
 ### H3b — Status change leads POI change (thesis p.91, CONFIRMED)
 
-Thesis confirmed this hypothesis; we expect positive significant rho. k=1: rho = -0.0186, p = 0.5431, n=1071. Not significant at p<0.05. Diverges from thesis.
-k=2: rho = 0.0235, p = 0.5882, n=535. Not significant at p<0.05. Consistent with thesis confirmation.
+Thesis confirmed this hypothesis; we expect positive significant rho. k=1: rho = -0.0404, p = 0.1860, n=1071. Not significant at p<0.05. Diverges from thesis.
+k=2: rho = 0.0002, p = 0.9971, n=535. Not significant at p<0.05. Consistent with thesis confirmation.
 
 ### H3c — Simultaneous co-movement (thesis p.91, UNCLEAR)
 
@@ -80,6 +82,12 @@ k=2: rho = 0.0790, p = 0.0680, n=535. Simultaneous dynamism-status correlation.
 ## Divergences from 2018 Thesis
 
 - The H1/H1b tests use 2018 POI category counts from `int_poi_features_pivot` joined to the 2018 golden thesis data — this is the correct POI-as-predictor formulation (prior implementation regressed MSS indices against each other).
+- H2 is tested on the 2021+ live panel rather than the 2018 cross-section; n=1071 (panel rows) vs n=436 (2018 PLRs). The hypothesis is reframed as 'current-edition POI stock predicts future status change' (general form).
 - The H3 lead-lag tests use the live MSS panel (2021-2025 editions) rather than the 2012-2018 panel from the thesis — temporal coverage differs; directional agreement is the applicable criterion.
+- H3b operationalization corrected: uses Spearman(delta_status_ordinal, delta_poi) — both CHANGE variables — consistent with thesis p.91 'Δstatus leads ΔPOI'.
 - The 2018 thesis used R `lm()`/`cor.test()` with PLR boundaries from the pre-2021 LOR scheme; H3 tests here use the 2021 LOR scheme (live panel). Exact coefficient comparisons are not meaningful.
 - Epic B framing: directional revival — exact number reproduction not required. See CLAUDE.md §Epic B framing.
+
+## Limitations
+
+- **k=3 lead-lag not tested**: Only 3 MSS editions are currently available (2021, 2023, 2025). A k=3 test (6-year lag) would require a 2027 edition. k=3 results will be added once the 2027 MSS edition is ingested.
