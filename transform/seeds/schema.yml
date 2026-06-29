@@ -315,6 +315,62 @@ seeds:
               arguments:
                 values: ["lor_pre2021", "lor_2021"]
 
+  - name: seed_gentrification_ground_truth
+    description: >
+      B2 back-test harness ground-truth seed. Curated list of ~20 Berlin PLRs
+      (LOR 2021 vintage) with literature-based gentrification labels used to
+      validate the live gentrification index against known hotspots and coldspots.
+
+      Labels:
+        'hotspot' — areas under active gentrification pressure or with known
+          high vulnerability; expected to appear in the top decile (highest
+          status_index = most deprived) of the live index.
+        'coldspot' — stable, affluent outer-city areas; expected to appear in
+          the bottom decile (lowest status_index = least deprived).
+        'mixed' — areas that have completed gentrification or are in
+          transition; not expected to appear cleanly in either decile.
+
+      Sources: Döring & Ulbricht (2016), Holm & Schulz (2016), Helweg 2018
+      thesis, and MSS 2023/2025 direct class assignments.
+      Approved PLR IDs verified against stg_berlin_lor lor_2021 vintage.
+    meta:
+      dbt_meta_owner: data-engineer
+    columns:
+      - name: plr_id
+        description: >
+          8-character PLR area code (LOR 2021 vintage). Natural key.
+          Verified against stg_berlin_lor (area_vintage='lor_2021').
+        tests:
+          - not_null
+          - unique
+      - name: plr_name
+        description: Human-readable PLR name (German proper noun; Berlin place names).
+        tests:
+          - not_null
+      - name: bezirk
+        description: Berlin district (Bezirk) name (e.g. 'Neukölln', 'Pankow').
+        tests:
+          - not_null
+      - name: label
+        description: >
+          Ground-truth gentrification label: 'hotspot' (under pressure / vulnerable),
+          'coldspot' (stable / low deprivation), or 'mixed' (transitional / completed).
+        tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: [hotspot, coldspot, mixed]
+      - name: source
+        description: >
+          Short citation for the label assignment (e.g. 'Döring & Ulbricht 2016',
+          'MSS 2023 Status=4', 'Helweg 2018 thesis §4.2').
+        tests:
+          - not_null
+      - name: notes
+        description: >
+          Optional context: current MSS status/class, literature reference,
+          or caveats about the mapping accuracy.
+
   - name: berlin_mietspiegel
     description: >
       D1 — Berliner Mietspiegel multi-vintage rent table seed (2017-present).
