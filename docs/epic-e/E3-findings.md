@@ -43,10 +43,14 @@ of the trajectory direction, not on sample size or effect size.
 
 ---
 
-## 2. Most actively gentrifying PLRs (top-5)
+## 2. PLRs with the strongest social upgrading signal (top-5)
 
-Ranked by magnitude of D1 status_index improvement (negative delta = social upgrading;
-D1 polarity: 1=hoch/best, 4=sehr_niedrig/worst):
+PLRs ranked by D1 status_index improvement 2021→2025 (negative delta = D1 ordinal fell =
+social upgrading; D1 polarity: 1=hoch/best, 4=sehr_niedrig/worst). The `improving`
+trajectory label means measured social composition has moved toward higher-status categories;
+it does **not** unambiguously confirm gentrification — the change may also reflect incumbent
+income mobility, completed displacement, or infrastructure investment
+(index-definition.md §3.5; G-2 guardrail):
 
 | PLR | Area name | Status 2021 | Status 2025 | Delta | Dominant stage |
 |---|---|---|---|---|---|
@@ -56,15 +60,20 @@ D1 polarity: 1=hoch/best, 4=sehr_niedrig/worst):
 | 01401047 | Sparrplatz | 3 | 2 | -1 | active-gentrification |
 | 08100103 | Schillerpromenade Sud | 3 | 2 | -1 | active-gentrification |
 
-The top two PLRs (Huttenkiez and Lubecker Strasse) are in Wedding/Mitte (Bezirk 01),
+The top two PLRs (Huttenkiez and Lübecker Straße) are in Wedding/Mitte (Bezirk 01),
 a district flagged in the 2018 thesis as an area of emerging gentrification pressure.
 Leopoldplatz is in the same district. Sparrplatz (Sprengelkiez) and Schillerpromenade
-Sud (Neukolln/Britz border) complete the top five -- all in the inner-city ring.
+Süd (Neukölln/Britz border) complete the top five — all in the inner-city ring.
 
-A two-step improvement in D1 status (4 to 2, i.e. "sehr niedrig" to "mittel") within
-four years is a strong signal, though the ordinal scale means the gap between each step
-is not necessarily uniform. Cross-validation against rent price data would be needed to
-confirm residential displacement.
+**Policy note:** Sparrplatz/Sprengelkiez is a **designated Soziales Erhaltungsgebiet
+(Milieuschutz, ~51 ha)** under Berlin Senate protection — the Senate has formally
+identified upgrading pressure there, which independently corroborates the model's
+ranking. This reframes the top-5 as *policy confirmation*, not speculative targeting
+(index-definition.md §1.8; ethical-misuse guard).
+
+A two-step improvement in D1 status (4 to 2) within four years is a strong signal, though
+the ordinal scale means the gap between steps is not necessarily uniform. Cross-validation
+against rent price data would be needed to confirm residential displacement.
 
 **Caveat (ecological inference):** D1 is a PLR-level aggregate. An improving status
 score may reflect new higher-income residents displacing existing ones, or simply
@@ -85,10 +94,18 @@ Areas with the most severe status worsening (positive delta = social decline):
 | 05300840 | Nonnendammallee | 2 | 4 | +2 | no |
 | 10100103 | Wittenberger Strasse | 2 | 3 | +1 | no |
 
-Three of the five are in Marzahn-Hellersdorf (Bezirk 10/11) -- a district not identified
+Three of the five are in Marzahn-Hellersdorf (Bezirk 10/11) — a district not identified
 as a gentrification hotspot but showing clear social deterioration over the period.
 Nonnendammallee is in Spandau. These findings point to a divergence dynamic: while inner
 districts improve, some outer eastern districts are declining.
+
+**Note on the Marzahn-Hellersdorf decline:** The worsening D1 scores here reflect
+**filtering-down in post-socialist Plattenbau estates**, not the reverse of gentrification
+on a shared axis. These are large-panel housing areas (Großsiedlungen) where social
+sorting produces a distinct dynamic — suburban decline — rather than de-gentrification.
+The R-A8 model and index-definition.md §1.5 (tension cells) treat `declining` in these
+areas as the counter-pole to the invasion-succession cycle, not as a point on the same
+trajectory.
 
 ---
 
@@ -118,35 +135,42 @@ than "wave" gentrification in Berlin (Thesis §3.5).
 
 ---
 
-## 5. MSS lead-lag alignment (H3c commercial dynamism precedes status change)
+## 5. Exploratory: does Δcommercial dynamism at t associate with social upgrading at t+k?
 
-The int_mss_lead_lag intermediate model tests whether high commercial dynamism
-(D3 dynamism_score) at edition t precedes worsened social status (D1 status_index)
-at edition t+k.
+This section presents an **exploratory descriptive cross-tab only** — it makes no
+hypothesis claim. The `int_mss_lead_lag` model allows a directional check in the
+amenity→status direction (H3a in the thesis framework). The **thesis rejected H3a**
+(Thesis p. 91: "H3a: no significant lead of amenity on status"); the thesis's confirmed
+temporal finding is **H3b (status leads amenity)**, the opposite direction. This
+cross-tab asks whether a *rising* Δcommercial dynamism at t (predictor: `delta_dynamism_t`)
+associates with social *upgrading* (D1 `improved`, i.e. status_index falling) at t+k —
+the gentrification-relevant outcome direction (index-definition.md §2.1–§2.2).
 
-At lag_k=1 (one MSS edition, approximately 2 years forward):
+At lag_k=1, PLRs ranked by Δdynamism quartile, `improved` transition rate:
 
-| Dynamism quartile | Worsened rate |
-|---|---|
-| Q1 (lowest dynamism) | 4.5% (12/268) |
-| Q4 (highest dynamism) | 9.0% (24/267) |
+| Δdynamism quartile | Improved rate (social upgrading at t+1) | n |
+|---|---|---|
+| Q1 (lowest Δdynamism) | 4.5% (6/134) | 134 |
+| Q2 | 5.2% (7/134) | 134 |
+| Q3 | 6.6% (9/134) | 134 |
+| Q4 (highest Δdynamism) | 3.0% (4/133) | 133 |
 
-Q4 worsened rate (9.0%) is double Q1 (4.5%), which is directionally consistent with
-the H3c lead-lag hypothesis from Thesis §4.3: areas with high commercial POI dynamism
-show higher subsequent social status deterioration. However:
+**Q4 improved rate (3.0%) is lower than Q1 (4.5%) — no H3a signal in this window.**
+This is consistent with the thesis's rejection of H3a.
 
-- The absolute rates are low; 90%+ of PLRs show stable status regardless of dynamism.
-- Only 3 MSS editions are available for the lor_2021 vintage (2021/2023/2025),
-  providing only one lag-1 pair and one lag-2 pair. Statistical power is minimal.
-- The effect reverses at lag_k=2 (Q4 worsened rate 5.1% vs Q1 7.9%), which may be
-  noise at this sample size rather than a meaningful reversal.
-- `ewr_composite_t` (the D4 socioeconomic baseline covariate) is NULL for all
-  lor_2021 vintage rows in int_mss_lead_lag, so the lead-lag analysis cannot control
-  for baseline vulnerability. This is a known data gap pending EWR 2021 ingestion.
+Important caveats (all binding — do not interpret this cross-tab inferentially):
 
-**Conclusion:** The directional signal aligns with H3c but the evidence base (3 editions,
-no EWR covariate) is too thin to assert causal or predictive validity. This is a
-provisional finding to be revisited when EWR 2023/2025 data becomes available.
+- `delta_dynamism_t` is NULL for the first MSS edition (no prior edition), leaving only
+  2 usable lag pairs for lor_2021. Statistical power is minimal.
+- The D4 EWR socioeconomic covariate (`ewr_composite_t`) is NULL for all lor_2021 rows —
+  the cross-tab cannot control for baseline vulnerability.
+- All improved rates are low (90%+ of PLRs are stable per edition regardless of dynamism).
+- This is an orientation check for a **thesis-rejected hypothesis** (H3a). Do not
+  present it as validation of any gentrification lead-lag.
+
+**Conclusion:** No H3a signal detected in the lor_2021 2021–2025 window — consistent
+with the thesis finding. The H3b direction (status leads amenity) would require a
+differently structured analysis (swap predictor/outcome) and is deferred to Epic D/G2.
 
 ---
 
@@ -175,16 +199,21 @@ Source attributions are embedded in each SVG:
 LOR boundary. The 2018 thesis used pre-2021 LOR boundaries across 2013-2019 (4 editions).
 The R-A8 trajectory model cannot yet capture decade-scale gentrification arcs.
 
-**H3b/H3c divergence (inherited from E1/E2).** The E1 regression analysis found that
-the H3b (green-space POI correlation) and H3c (bar/cafe POI correlation) thesis
-hypotheses were only weakly supported in the 2018 golden data. The E3 lead-lag analysis
-confirms H3c directionally but without statistical significance given the current sample.
+**H3a (rejected) lead-lag note.** The exploratory §5 cross-tab tests the amenity→status
+direction (H3a), which the 2018 thesis rejected. No H3a signal is detected in the
+lor_2021 2021–2025 window, consistent with that rejection. The thesis's confirmed
+temporal finding (H3b: status leads amenity) is not directly testable in the current
+`int_mss_lead_lag` structure; it is deferred to Epic D/G2 analysis.
 
-**Price and rent data gap.** The index currently contains no housing price or rent
-variables (Mietspiegel/Bodenrichtwert data is staged but not yet wired into the index
-mart). This is the most significant missing dimension: gentrification almost by definition
-involves rent increases, and without that dimension the index measures social composition
-change (D1) and commercial succession (D3) but not the housing-market mechanism.
+**Price and rent data gap.** The index contains no housing price or rent variables —
+the Mietspiegel and Bodenrichtwert data are staged but not yet wired into the index mart.
+This is the most significant missing dimension: gentrification almost by definition
+involves rent increases, and without it the index measures social composition (D1) and
+commercial succession (D3) but not the housing-market mechanism (Smith's rent-gap, absent
+until D5 per ADR-0008 §0.4). Note the gap has two distinct layers: the Mietspiegel is
+biennial and available at the address-block level (contract rents), while the
+Bodenrichtwert measures land value rather than rent — both are deferred D5 inputs with
+different spatial and temporal resolutions.
 
 **Ecological inference.** All findings are at the PLR level (mean population ~2,000-5,000).
 The index cannot identify which residents are being displaced or who the incoming

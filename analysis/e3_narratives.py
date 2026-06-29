@@ -117,12 +117,11 @@ def per_year_stats(con: duckdb.DuckDBPyConnection) -> pd.DataFrame:
 
 def mss_lead_lag_summary(con: duckdb.DuckDBPyConnection) -> pd.DataFrame:
     """
-    Tests H3c lead-lag hypothesis: does high commercial dynamism (dynamism_score_tk)
-    precede social status worsening?
+    Exploratory H3a check (amenity→status direction; thesis rejected H3a): does a rise
+    in Δdynamism at t associate with social upgrading (status `improved`) at t+k?
 
-    Checks whether the top quartile of dynamism_score_tk disproportionately maps to
-    'worsened' status transitions at lag k=1 (one MSS edition, ~2 years ahead).
-    -- Thesis §4.3: commercial succession may anticipate residential displacement.
+    Quartiles on delta_dynamism_t (predictor-side change at t, not the outcome-edition
+    level). index-definition.md §2.1–§2.2 (geo condition 1).
     """
     return con.execute("""
         WITH ranked AS (
@@ -130,11 +129,12 @@ def mss_lead_lag_summary(con: duckdb.DuckDBPyConnection) -> pd.DataFrame:
                 lag_k,
                 status_transition,
                 NTILE(4) OVER (
-                    PARTITION BY lag_k ORDER BY dynamism_score_tk
+                    PARTITION BY lag_k ORDER BY delta_dynamism_t
                 ) AS dyn_quartile
             FROM int_mss_lead_lag
             WHERE NOT is_pre2021_vintage
               AND status_transition IS NOT NULL
+              AND delta_dynamism_t IS NOT NULL
         )
         SELECT
             lag_k,
@@ -149,23 +149,25 @@ def mss_lead_lag_summary(con: duckdb.DuckDBPyConnection) -> pd.DataFrame:
 
 def lead_lag_alignment_check(lead_lag: pd.DataFrame) -> dict:
     """
-    Returns a plain summary: for lag_k=1, does Q4 (highest dynamism) show
-    higher rate of 'worsened' transitions than Q1 (lowest)?
+    For lag_k=1: does Q4 (highest Δdynamism at t) show a higher rate of `improved`
+    transitions than Q1? `improved` = D1 status_index fell = social upgrading =
+    gentrification-relevant direction (D1 polarity: 1=hoch/best; falling number = upgrading).
+    -- H3a direction (amenity→status); thesis rejected H3a, so treat as exploratory only.
     """
     k1 = lead_lag[lead_lag["lag_k"] == 1]
 
-    def worsened_rate(q: int) -> float:
+    def improved_rate(q: int) -> float:
         grp = k1[k1["dyn_quartile"] == q]
         total = grp["n"].sum()
-        worsened = grp.loc[grp["status_transition"] == "worsened", "n"].sum()
-        return worsened / total if total > 0 else 0.0
+        improved = grp.loc[grp["status_transition"] == "improved", "n"].sum()
+        return improved / total if total > 0 else 0.0
 
-    q1_rate = worsened_rate(1)
-    q4_rate = worsened_rate(4)
+    q1_rate = improved_rate(1)
+    q4_rate = improved_rate(4)
     return {
         "lag_k": 1,
-        "q1_worsened_rate": round(q1_rate, 3),
-        "q4_worsened_rate": round(q4_rate, 3),
+        "q1_improved_rate": round(q1_rate, 3),
+        "q4_improved_rate": round(q4_rate, 3),
         "direction": "aligned" if q4_rate > q1_rate else "not_aligned",
     }
 
@@ -279,20 +281,24 @@ def main() -> None:
     lead_lag = mss_lead_lag_summary(con)
     alignment = lead_lag_alignment_check(lead_lag)
 
-    print("\n--- MSS LEAD-LAG ALIGNMENT (D3 commercial dynamism → D1 status transition) ---")
-    print(lead_lag.to_string(index=False))
-    print(f"\nLead-lag alignment check (lag_k=1):")
-    print(f"  Q1 (lowest dynamism) worsened rate: {alignment['q1_worsened_rate']:.1%}")
-    print(f"  Q4 (highest dynamism) worsened rate: {alignment['q4_worsened_rate']:.1%}")
-    if alignment["direction"] == "aligned":
-        print("  Result: Q4 worsened rate EXCEEDS Q1 — directionally consistent with H3c lead-lag.")
-    else:
-        print(
-            "  Result: Q4 worsened rate does NOT exceed Q1 — H3c lead-lag not supported in this window."
-        )
     print(
-        "  Caveat: only 3 MSS editions (2021/2023/2025) available for lor_2021 vintage; "
-        "statistical power is low (n~535 per lag)."
+        "\n--- EXPLORATORY: Δdynamism_t → D1 status IMPROVEMENT at t+k (H3a direction; thesis rejected) ---"
+    )
+    print(lead_lag.to_string(index=False))
+    print(f"\nExploratory H3a check (lag_k=1, predictor: delta_dynamism_t):")
+    print(f"  Q1 (lowest Δdynamism at t) improved rate: {alignment['q1_improved_rate']:.1%}")
+    print(f"  Q4 (highest Δdynamism at t) improved rate: {alignment['q4_improved_rate']:.1%}")
+    if alignment["direction"] == "aligned":
+        print(
+            "  Result: Q4 improved rate EXCEEDS Q1 — rising amenity at t associates with "
+            "subsequent social upgrading at t+k (H3a direction; exploratory only)."
+        )
+    else:
+        print("  Result: Q4 improved rate does NOT exceed Q1 — no H3a signal in this window.")
+    print(
+        "  Caveat: delta_dynamism_t is NULL for first edition (no prior); "
+        "only 2 lag pairs for lor_2021 vintage; H3a was rejected in the 2018 thesis; "
+        "treat as exploratory, not a hypothesis test."
     )
 
     # --- Save summary CSV -----------------------------------------------
