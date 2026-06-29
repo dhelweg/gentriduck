@@ -326,6 +326,52 @@ class, compare to the report's published table. The cheap internal cross-check (
 reversed/permuted Dynamik code silently inverts the lead-lag sign** (R-A7 geo condition 3), so this
 gate is non-negotiable.
 
+
+### 3.5 Trajectory classification thresholds (R-A8; fct_gentrification_trajectory)
+
+[R-A8 #78; Dangschat 1988 double invasion-succession; index-definition.md §3.1]
+
+The `fct_gentrification_trajectory` mart classifies each PLR's D1 social-status trajectory
+across the available MSS panel (currently 3 editions: 2021, 2023, 2025). The classification
+uses rule-based thresholds on the ordinal `status_index`. The threshold rationale:
+
+**Trend direction threshold (±1 ordinal step):**
+The minimum meaningful change in a 4-level ordinal is a one-class step (e.g. sehr_niedrig → niedrig,
+or hoch → mittel). A zero delta (same class at first and last edition) is classified as the
+stable-end categories (stable-established or persistently-deprived) or mixed, never as improving or
+declining. A ±1 step change is a real reclassification of the PLR by the official MSS methodology —
+a meaningful social-status shift that required the Senate to move the area to a different class.
+
+- `status_delta >= +1` -> **declining** (worsened by >= 1 ordinal step over the panel)
+- `status_delta <= -1` -> **improving** (improved by >= 1 ordinal step over the panel)
+
+**Mean boundary (2.5) for stable/deprived endpoints:**
+The D1 scale midpoint is 2.5 (midpoint of the 1-4 range). A panel mean <= 2.0 (predominantly hoch
+or mittel) combined with limited volatility (status_range <= 1) classifies an area as
+**stable-established**. A panel mean >= 2.5 (predominantly mittel-to-niedrig or above) combined with
+limited volatility classifies an area as **persistently-deprived**.
+
+- `status_index_first <= 2 AND status_index_last <= 2 AND mean <= 2.5 AND range <= 1` -> **stable-established**
+- `status_index_first >= 3 AND status_index_last >= 3 AND mean >= 2.5 AND range <= 1` -> **persistently-deprived**
+
+**Range threshold (<=1) for stable endpoints:**
+A within-panel range of <= 1 ordinal step means the PLR never crossed more than one class boundary
+during the available editions. This prevents labelling as stable-established a PLR that was hoch in
+one edition and niedrig in another (range = 2).
+
+**Mixed:**
+All remaining patterns are classified as **mixed**. With 3 editions and an integer ordinal, the
+mixed category is structurally vacuous (all PLRs clear the thresholds), but it will capture
+V-shapes and N-shapes when the full 7-edition panel (2013-2025) becomes available.
+
+**Caveat — improving trajectory interpretation:**
+A trajectory classified as `improving` (D1 status numerically decreased = less deprived) does NOT
+unambiguously indicate positive social change. It may reflect completed gentrification with
+displacement (original low-income residents replaced by higher-income arrivals), genuine social
+mobility of incumbent residents, or early pioneer-stage succession. D5 displacement data
+(Milieuschutzgebiete, rent-burden, turnover from R-B1 #70) is required for mechanism disambiguation.
+The `improving` label should NOT be presented as unambiguously positive on the G2 methodology page.
+
 ---
 
 ## 4. D4 EWR baseline discipline
