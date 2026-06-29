@@ -1161,3 +1161,114 @@ models:
         description: >
           True if area_vintage = 'lor_pre2021' (the 447-PLR series; thesis universe; longest
           MSS time series). Epic B headline analysis uses this series (index-definition.md §6.2).
+
+  - name: int_osm_poi_plr_weighted
+    description: >
+      A6 (#69): Distance-weighted PLR POI counts — Gaussian kernel variant.
+      Applies a mass-conserving Gaussian decay kernel (spatial-methods.md §1-§2) to
+      spread each POI's count across all PLRs within bandwidth b (default 500 m).
+
+      Kernel: w_ij = exp(-d_ij² / (2·b²)) for d_ij ≤ b (else 0); d_ij = ST_Distance
+      from POI point to PLR ST_PointOnSurface in EPSG:25833 (spatial-methods.md §3).
+      Mass conservation: ŵ_ij = w_ij / Σ_i w_ij (spatial-methods.md §2).
+
+      Bandwidth b = 500 m default (dbt var 'poi_kernel_bandwidth_m'); per-city parameter,
+      never hard-coded (ADR-0005). MAUP sweep uses 250 m / 750 m variants via analysis/a6_maup.py.
+
+      Output: one row per (city_code, snapshot_year, area_code, area_vintage, poi_category_h,
+      poi_type_h, weight_variant) with weighted_count (fractional; sum = standard count
+      city-wide); weight_variant discriminator (e.g. 'gaussian_500m'). Feeds the same share pipeline as int_poi_features_pivot
+      for the distance-weighted dynamism_score used by Gi* hotspot analysis (spatial-methods.md §6).
+
+      CRS: EPSG:25833 throughout (ADR-0010 Amendment 3; spatial-methods.md §3).
+      Graceful degradation: zero-row typed stub when OSM/LOR data absent.
+    meta:
+      dbt_meta_owner: data-engineer
+    tests:
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns:
+              - city_code
+              - snapshot_year
+              - area_code
+              - area_vintage
+              - poi_category_h
+              - poi_type_h
+              - weight_variant
+          config:
+            where: "area_code is not null"
+      - dbt_utils.expression_is_true:
+          arguments:
+            expression: "weighted_count >= 0"
+          config:
+            where: "area_code is not null and weighted_count is not null"
+    columns:
+      - name: city_code
+        description: City identifier (ADR-0005).
+        tests:
+          - not_null:
+              config:
+                where: "area_code is not null"
+      - name: snapshot_year
+        description: Calendar year of the OSM snapshot (integer, 2008-2026).
+        tests:
+          - not_null:
+              config:
+                where: "area_code is not null"
+      - name: area_code
+        description: PLR area code (8-digit, zero-padded). Vintage-specific.
+        tests:
+          - not_null:
+              config:
+                where: "snapshot_year is not null"
+      - name: area_vintage
+        description: >
+          LOR scheme vintage: 'lor_pre2021' (snapshot_year <= 2020) or
+          'lor_2021' (snapshot_year >= 2021).
+        tests:
+          - accepted_values:
+              arguments:
+                values: ["lor_pre2021", "lor_2021"]
+              config:
+                where: "area_code is not null"
+      - name: poi_domain_h
+        description: Harmonized POI domain (from int_osm_poi_harmonized).
+        tests:
+          - not_null:
+              config:
+                where: "area_code is not null"
+      - name: poi_category_h
+        description: Harmonized POI category (from int_osm_poi_harmonized).
+        tests:
+          - not_null:
+              config:
+                where: "area_code is not null"
+      - name: poi_type_h
+        description: Harmonized POI type (from int_osm_poi_harmonized).
+        tests:
+          - not_null:
+              config:
+                where: "area_code is not null"
+      - name: weighted_count
+        description: >
+          Distance-weighted fractional POI count for this PLR, year, and category.
+          Sum of ŵ_ij (normalized Gaussian kernel weights) over all POIs j of this
+          category reaching PLR i within bandwidth b. City-wide sum equals total POI
+          count (mass-conserving; spatial-methods.md §2).
+        tests:
+          - not_null:
+              config:
+                where: "area_code is not null"
+      - name: contributing_poi_count
+        description: >
+          Integer count of POIs contributing to this PLR's weighted_count (i.e. POIs
+          within bandwidth b). Always >= 1 when weighted_count > 0.
+      - name: weight_variant
+        description: >
+          Kernel variant discriminator for MAUP sensitivity comparison (spatial-methods.md §7).
+          Default: 'gaussian_500m' (b=500 m). Sweep variants: 'gaussian_250m', 'gaussian_750m'.
+          Compare against 'standard' (hard point-in-polygon from int_osm_poi_plr).
+        tests:
+          - not_null:
+              config:
+                where: "area_code is not null"

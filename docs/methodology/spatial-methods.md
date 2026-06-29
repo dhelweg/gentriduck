@@ -106,8 +106,11 @@ Döring & Ulbricht's (2016) "Gentrification-Hotspots" reading (ADR-0010 §2):
   parameter-free first choice for areal tessellations. **k-NN (k≈6) is the documented fallback** for
   disconnected/island PLRs (water bodies, airport perimeters — the `area_code = NULL` zones,
   `int_osm_poi_plr.sql:47-52`) so the weights matrix has no empty rows (ADR-0010 §5).
-- **Inference:** `esda.G_Local(y, w, permutations=999, seed=42)` — **fixed `permutations=999` and
-  explicit `seed=42` on every call** (R-C3; ADR-0010 Required 4). Row-standardized weights.
+- **Inference:** `esda.G_Local(y, w, permutations=999, seed=42, star=True, alternative='two-sided')` —
+  **fixed `permutations=999` and explicit `seed=42` on every call** (R-C3; ADR-0010 Required 4).
+  Row-standardized weights; `alternative='two-sided'` for bilateral hot/cold classification.
+  With row-standardized Queen weights and no diagonal, esda sets the self-weight to the maximum
+  row weight (standard approximation; no separate `fill_diagonal` step required).
 - **Output:** per PLR per year, a Gi* **z-score** and **permutation p-value** (and a
   hot/cold/not-significant label at α=0.05). The input `y` is the C5-corrected, distance-weighted
   dimension sub-score (§5), so hotspots reflect amenity/social signal, not coverage growth.
