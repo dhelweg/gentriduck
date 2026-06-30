@@ -1,15 +1,18 @@
 {
   "_schema": "gentriduck-session-state/v1",
-  "session": "2026-06-29-devmode",
-  "updated_at": "2026-06-29T16:30:00Z",
+  "session": "2026-06-30-devmode",
+  "updated_at": "2026-06-30T03:00:00Z",
   "build_status": {
     "result": "PASS",
-    "pass": 378,
-    "warn": 1,
+    "pass": 426,
+    "warn": 2,
     "error": 0,
-    "warn_detail": "test_c5_poi_share_spike (expected by design)",
+    "warn_detail": [
+      "brw_residential_coverage_frac (expected by design - D3 back-series known gap)",
+      "test_c5_poi_share_spike (expected by design - OSM coverage growth signal)"
+    ],
     "branch": "develop",
-    "note": "Green. develop = main + #65+#71+#78+#32+spatial-methods.md. #69 DE in progress."
+    "note": "Green. develop includes #79 A9 spatial-dynamic. feat/79-a9-spatial-dynamic integrated at 5b68f42."
   },
   "open_prs": [
     {
@@ -17,102 +20,60 @@
       "title": "Weekly release: E1/E2 rewrite, B2 back-test, A8 trajectory, ADR-0011 develop model",
       "base": "main",
       "head": "develop",
-      "note": "Awaiting maintainer merge in GitHub UI. Batches #65 + #71 + #78 + #109."
+      "note": "Awaiting maintainer merge in GitHub UI. Opened 2026-06-29. Batches #65+#71+#78+#109. Does NOT yet include #79/#29/#113/#112/#28/#53/#69 -- next weekly PR should batch those."
     }
   ],
-  "completed_this_session": [
-    65,
-    71,
-    78,
-    32,
-    "spatial-methods-doc"
-  ],
+  "completed_this_session": [79],
   "integrated_into_develop": [
     {
-      "commit": "1868875",
-      "issue": 65,
-      "title": "feat(#65): E1/E2 thesis validation rewrite"
-    },
-    {
-      "commit": "063ec15",
-      "issue": 71,
-      "title": "feat(#71): integrate B2 back-test harness into develop"
-    },
-    {
-      "commit": "6113bc3",
-      "issue": 78,
-      "title": "feat(#78): integrate R-A8 longitudinal trajectory model into develop"
-    },
-    {
-      "commit": "merge-E3",
-      "issue": 32,
-      "title": "feat(#32): integrate E3 analytical narratives + maps into develop"
+      "commit": "5b68f42",
+      "issue": 79,
+      "title": "feat(#79): integrate A9 spatial-dynamic gentrification into develop"
     }
   ],
   "this_machine_data_state": {
-    "mss_status_editions": [
-      2015,
-      2017,
-      2019,
-      2021,
-      2023,
-      2025
-    ],
-    "mss_indicator_editions": [
-      2015,
-      2017,
-      2019,
-      2021,
-      2023,
-      2025
-    ],
-    "note": "MSS ingested. POI/EWR/LOR present. Keystone models populated; build green. E3 analysis scripts produce output to data/analysis/.",
+    "mss_status_editions": [2015, 2017, 2019, 2021, 2023, 2025],
+    "mss_indicator_editions": [2015, 2017, 2019, 2021, 2023, 2025],
+    "note": "All keystone models populated. A9 analysis script present (data/analysis/ CSVs produced by uv run poe analysis; data presence guard exits cleanly if data absent).",
     "keystone_populated": true
   },
   "weekly_pr": {
     "number": 111,
     "opened": "2026-06-29",
-    "batches": [
-      "#65 E1/E2 rewrite",
-      "#71 B2 back-test",
-      "#78 A8 trajectory",
-      "#109 ADR-0011"
-    ],
-    "note": "#32 E3 NOT yet in PR#111 (opened before E3 integrated). E3 goes into next weekly PR."
+    "batches": ["#65 E1/E2 rewrite", "#71 B2 back-test", "#78 A8 trajectory", "#109 ADR-0011"],
+    "note": "Next weekly PR should batch: #69 A6, #28 D2, #53 D1b, #112 BRW back-series, #113 Wohnlage multi-year, #29 D3 price/rent, #79 A9 spatial-dynamic. Refresh develop->main PR when maintainer is ready."
   },
   "unblocked_ready": [
     {
-      "issue": 69,
-      "title": "[A6] Distance-weighting + Gi* hotspots + MAUP",
-      "note": "IN PROGRESS \u2014 DE agent running. spatial-methods.md merged into develop."
+      "issue": 56,
+      "title": "[D1c] Strassenverzeichnis -> PLR geocoding for Mietspiegel",
+      "note": "Dependencies met: LOR done, Wohnlage multi-year (#113) done. PDF parsing via pdfplumber (MIT); ADR-0003 implies PDF approach. Top unblocked ticket."
     },
     {
-      "issue": 79,
-      "title": "[A9] Spatial-dynamic + spatial-econometric inference",
-      "note": "Depends on #69 spatial weights"
-    },
-    {
-      "issue": 28,
-      "title": "[D2] Source-completeness/coverage check on price/rent data",
-      "note": "Independent track"
+      "issue": 33,
+      "title": "[F1] ADR-0006 serving & hosting stack",
+      "note": "Epic F gating ADR. Architect work. Independent of D/R tracks. Good if maintainer wants to move toward website."
     }
   ],
   "still_blocked": [
     {
       "issue": 70,
-      "blocked_by": [
-        "Epic D start"
-      ],
+      "blocked_by": ["Epic D displacement data sources -- needs maintainer ADR decision"],
       "title": "[B1] Displacement & affordability dimension"
+    },
+    {
+      "issue": 80,
+      "blocked_by": ["#70 R-B1 (displacement) -- explicitly deferred in issue and plan"],
+      "title": "[A10] Causal/early-warning design -- DEFERRED"
     }
   ],
   "open_conditions_carried_forward": [
-    "ADR-0010 geo-DS conditions C1-C8 \u2192 discharge in docs/methodology/spatial-methods.md under R-C1 before any R-A6/R-A9 model merges. Distance-weighting must COMPOSE WITH OSM completeness-bias correction (ADR-0008 \u00a75).",
-    "#65 E1/E2 non-blocking conditions: H3b divergence honestly reported; H3c opposite direction (contested); both deferred to G2 methodology page.",
+    "#65 E1/E2 non-blocking: H3b divergence + H3c opposite direction deferred to G2 methodology page.",
     "R-A8 PASS WITH CONDITIONS: geo-DS conditions carried to spatial-methods.md and G2.",
-    "E3 geo-DS C2 (non-blocking): add C5 coverage-correction note wherever D3 dynamism shown in maps/narratives (before G2).",
-    "Clean-architecture: analysis/ layer uses CONFIGURABLE DuckDB connection (GENTRIDUCK_DB env var) \u2014 verified in E3 scripts.",
-    "spatial-methods.md domain C1: Gi* public label = amenity-change hotspot (not bare gentrification hotspot) in G2/maps. Binds at public render, not at implementation."
+    "E3 geo-DS C2 (non-blocking): C5 coverage-correction note for D3 dynamism maps/narratives (before G2).",
+    "spatial-methods.md domain C1: Gi* public label = amenity-change hotspot (not gentrification hotspot) in G2/maps.",
+    "R-A9 geo-DS carry-forward (non-binding): ewr_composite for lor_2021 when EWR join extended; LISA FDR note for G2.",
+    "R-A9 domain carry-forward (non-binding): HL LISA public label nuance; diffusion causal limits; D5 as missing moderator (Epic D)."
   ],
-  "next_session_decision": "#69 [A6] DE implementation in progress (distance-weighting + Gi* + MAUP). Await DE agent result then reviewer + sign-off + integrate."
+  "next_session_decision": "#56 [D1c] Strassenverzeichnis -> PLR geocoding. DE implements PDF ingestion (pdfplumber MIT-licensed); DE-reviewer verifies; no separate methodology gate (data engineering task). pdfplumber use is within ADR-0003 scope (PDF approach explicitly anticipated). Alternatively #33 [F1] ADR-0006 if Epic F is higher priority."
 }
