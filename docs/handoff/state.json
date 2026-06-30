@@ -1,18 +1,18 @@
 {
   "_schema": "gentriduck-session-state/v1",
-  "session": "2026-06-30-devmode-6",
-  "updated_at": "2026-06-30T12:30:00Z",
+  "session": "2026-06-30-devmode-7",
+  "updated_at": "2026-06-30T13:00:00Z",
   "build_status": {
     "result": "PASS",
     "pass": 478,
     "warn": 2,
     "error": 0,
     "warn_detail": [
-      "brw_residential_coverage_frac (expected by design - D3 back-series known gap)",
-      "test_c5_poi_share_spike (expected by design - OSM coverage growth signal)"
+      "brw_residential_coverage_frac (expected by design)",
+      "test_c5_poi_share_spike (expected by design)"
     ],
-    "branch": "b7-lor-pre2021-ts-panel",
-    "note": "Green. 478 tests pass (18 new from B7 — schema tests for int_poi_status_dynamism_pre2021, int_ewr_socioeco_pre2021, extended int_gentrification_ts)."
+    "branch": "develop",
+    "note": "Green. develop includes B7 (merge b9c47dd). 478 tests pass."
   },
   "open_prs": [
     {
@@ -20,14 +20,14 @@
       "title": "Weekly release: Epic R/D wave — spatial inference, price/rent dimension, A9 diffusion",
       "base": "main",
       "head": "develop",
-      "note": "Open. 17 items, 462 tests pass. Awaiting maintainer merge."
+      "note": "Open. Awaiting maintainer merge. Now includes B7 (#117) since develop was updated."
     },
     {
       "number": 121,
-      "title": "feat(#117): B7 — lor_pre2021 MSS 2015/2017/2019 panel in int_gentrification_ts",
+      "title": "feat(#117): B7 — lor_pre2021 MSS 2015/2017/2019 panel",
       "base": "develop",
       "head": "b7-lor-pre2021-ts-panel",
-      "note": "Open 2026-06-30. PR opened; data-engineer-reviewer launched in background. Methodology-bearing (analysis/*.py) → geo-DS sign-off required before PM integrates into develop (R-C1)."
+      "note": "Integrated into develop (b9c47dd). PR can be closed by maintainer."
     }
   ],
   "pending_adr_branches": [
@@ -35,40 +35,47 @@
       "branch": "feat/33-adr-0012-serving-hosting",
       "issue": 33,
       "title": "ADR-0012 serving & hosting stack",
-      "note": "Evidence.dev (MIT) + Cloudflare Pages. Blocked on maintainer sign-off."
+      "note": "Evidence.dev + Cloudflare Pages. Blocked on maintainer sign-off."
     },
     {
       "branch": "feat/82-adr-0013-whitepaper-tool",
       "issue": 82,
       "title": "ADR-0013 Quarto + Typst whitepaper authoring tool",
-      "note": "ADR drafted (de09c0d), Proposed status. Blocked on maintainer sign-off."
+      "note": "ADR drafted, Proposed status. Blocked on maintainer sign-off."
     }
   ],
   "completed_this_session": [
     "#116 [Infra] gh token read:project scope — fixed and closed",
     "Filed #117 B7, #118 B8, #119 B9, #120 B10 — thesis data gap tickets",
-    "Implemented #117 [B7] — lor_pre2021 MSS panel extension. PR #121 open; reviewer in progress."
+    "#117 [B7] INTEGRATED into develop — lor_pre2021 MSS panel, PR #121, 478 tests pass",
+    "Filed #122 — latent berlin_total_poi_count partition bug (info-severity, not blocking)"
   ],
-  "integrated_into_develop": [],
+  "integrated_into_develop": [
+    {
+      "issue": 117,
+      "title": "[B7] Wire lor_pre2021 MSS 2015/2017/2019 into int_gentrification_ts",
+      "merge_commit": "b9c47dd",
+      "pr": 121,
+      "date": "2026-06-30",
+      "note": "R-C1 dual gate: geo-DS + domain-expert PASS WITH CONDITIONS. 478 tests. Conditions C-1..C-4 + D-1..D-5 carried to G2."
+    }
+  ],
   "infra_blocker": null,
   "in_progress": {
-    "issue": 117,
-    "title": "[B7] Wire lor_pre2021 MSS 2015/2017/2019 into int_gentrification_ts",
-    "pr": 121,
-    "branch": "b7-lor-pre2021-ts-panel",
-    "status": "PR open — awaiting data-engineer-reviewer verdict, then geo-DS sign-off (methodology gate, analysis/*.py touched)",
-    "build": "478 PASS, 2 WARN, 0 ERROR",
-    "data_outcome": "int_gentrification_ts +1341 lor_pre2021 rows (447 PLRs × 3 editions). int_mss_lead_lag +871 k=1 +435 k=2 lor_pre2021 pairs.",
-    "e1_result": "MSS pre-2021 panel H2 directional PASS (rho -0.034/-0.047, not sig). H3b k=1 n=435 (2017→2019 only, 2015 lacks 2013 predecessor), rho=+0.057 wrong direction. H3b k=2 n=0 — needs B8 (#118) for 2013 MSS to populate delta_dynamism_t at edition_t=2015.",
-    "notes": "Key finding: H3b still not confirmed in pre-2021 panel because we lack the 2013 MSS edition for the full 3-edition delta_dynamism_t. B8 is the direct unblock for H3b k=2 coverage."
+    "issue": 118,
+    "title": "[B8] Ingest MSS 2013 edition",
+    "branch": "b8-mss-2013-ingest",
+    "status": "Starting — branch created off develop",
+    "motivation": "2013 MSS edition populates delta_dynamism_t for edition_t=2015, enabling H3b k=2 (2015→2019 pair, 4-year lag). Currently n=0 for all pre-2021 H3 k=2 cells.",
+    "notes": "MSS 2013 is lor_pre2021 vintage. Should appear in stg_berlin_mss automatically if ingestion covers 2013. Check what years are available in ingestion/download_mss.py or equivalent."
   },
   "this_machine_data_state": {
     "mss_status_editions": [2015, 2017, 2019, 2021, 2023, 2025],
     "mss_indicator_editions": [2015, 2017, 2019, 2021, 2023, 2025],
-    "note": "478 dbt tests pass. int_gentrification_ts now has 2 vintages (lor_2021: 1626 rows, lor_pre2021: 1341 rows). int_mss_lead_lag has lor_pre2021 k=1: 871, k=2: 435.",
+    "note": "478 dbt tests pass. B7 integrated. Need 2013 MSS for B8.",
     "keystone_populated": true,
     "ewr_lead_lag": {
-      "note": "int_ewr_lead_lag: 7588 rows, 542 PLRs x k={1,2,4}, 2014-2020, lor_2021 vintage.",
+      "note": "int_ewr_lead_lag: 7588 rows, lor_2021, k={1,2,4}, 2014-2020.",
       "thesis_comparison_window": "k=2 (2014→2016)"
     }
   },
@@ -77,47 +84,31 @@
     "opened": "2026-06-29",
     "updated": "2026-06-30",
     "batches": ["#65 E1/E2", "#69 A6", "#71 B2", "#78 A8", "#109 ADR-0011", "#28 D2", "#112 BRW back-series", "#113 Wohnlage multi-year", "#29 D3", "#53 D1b", "#56 D1c", "#79 A9", "#81 O1", "CITATION.cff", "#83 O4 milestone (partial)", "#114 int_ewr_lead_lag", "#115 EWR H2/H3 regressions"],
-    "note": "PR #111 open and current. Awaiting maintainer merge in GitHub UI. B7 (#121) will be in the NEXT weekly release."
+    "note": "PR #111 open. B7 (#117) now on develop, will be in NEXT weekly release. Awaiting maintainer merge for current PR."
   },
   "board_status": {
-    "note": "FULLY OPERATIONAL. #117 In Progress. #118/#119/#120 Todo, unblocked.",
+    "note": "FULLY OPERATIONAL. #117 Done. #118 In Progress. #119/#120 Todo.",
     "open_issues_by_dependency": {
-      "in_progress": ["#117 [B7] B7 PR open, reviewer running"],
-      "next_unblocked": ["#118 [B8] Ingest MSS 2013 (directly unblocks H3b k=2 in int_mss_lead_lag)", "#119 [B9] EWR pre-2014 (needs B7 merged first)", "#120 [B10] BZR/Bezirk aggregation (lowest priority)"],
-      "blocked_on_maintainer": ["#33 [F1] ADR-0012 approval", "#70 [B1] ADR displacement data", "#82 [O2] ADR-0013 approval"]
+      "in_progress": ["#118 [B8] Ingest MSS 2013 edition (branch b8-mss-2013-ingest)"],
+      "next_unblocked": ["#119 [B9] EWR pre-2014 (depends on B7 now merged)", "#120 [B10] BZR/Bezirk aggregation (lowest priority)"],
+      "blocked_on_maintainer": ["#33 [F1] ADR-0012", "#70 [B1] displacement data", "#82 [O2] ADR-0013"]
     }
   },
   "still_blocked": [
-    {
-      "issue": 33,
-      "blocked_by": ["Maintainer ADR approval for Evidence.dev + Cloudflare Pages"],
-      "title": "[F1] ADR-0012 serving & hosting stack"
-    },
-    {
-      "issue": 70,
-      "blocked_by": ["Maintainer ADR decision on displacement data sources"],
-      "title": "[B1] Displacement & affordability dimension"
-    },
-    {
-      "issue": 80,
-      "blocked_by": ["#70 R-B1 — explicitly deferred"],
-      "title": "[A10] Causal/early-warning design — DEFERRED"
-    },
-    {
-      "issue": 82,
-      "blocked_by": ["Maintainer ADR-0013 approval (Quarto + Typst whitepaper tool)"],
-      "title": "[O2] Methodology whitepaper — ADR-0013 pending"
-    }
+    {"issue": 33, "blocked_by": ["Maintainer ADR approval"], "title": "[F1] ADR-0012"},
+    {"issue": 70, "blocked_by": ["Maintainer ADR decision"], "title": "[B1] Displacement data"},
+    {"issue": 80, "blocked_by": ["#70 deferred"], "title": "[A10] Causal design — DEFERRED"},
+    {"issue": 82, "blocked_by": ["Maintainer ADR-0013 approval"], "title": "[O2] Whitepaper"}
   ],
   "open_conditions_carried_forward": [
-    "#65 E1/E2 non-blocking: H3b divergence + H3c opposite direction deferred to G2 methodology page.",
-    "R-A8 PASS WITH CONDITIONS: geo-DS conditions carried to spatial-methods.md and G2.",
-    "E3 geo-DS C2 (non-blocking): C5 coverage-correction note for D3 dynamism maps/narratives (before G2).",
-    "spatial-methods.md domain C1: Gi* public label = amenity-change hotspot (not gentrification hotspot) in G2/maps.",
-    "R-A9 geo-DS carry-forward (non-binding): ewr_composite for lor_2021 when EWR join extended; LISA FDR note for G2.",
-    "R-A9 domain carry-forward (non-binding): HL LISA public label nuance; diffusion causal limits; D5 as missing moderator (Epic D).",
-    "#115 EWR H2/H3: POI pseudo-replication caveat (35% of lor_2021 PLRs share poi_count via dominant crosswalk) documented. p-values inflated. Noted for G2.",
-    "#117 B7: H3b k=1 pre-2021 rho=+0.057 wrong direction; H3b k=2 n=0 because 2013 MSS missing. B8 is the direct unblock."
+    "#65 E1/E2: H3b divergence + H3c opposite direction deferred to G2 methodology page.",
+    "R-A8 PASS WITH CONDITIONS: conditions to spatial-methods.md and G2.",
+    "E3 geo-DS C2 (non-blocking): C5 note for D3 dynamism maps/narratives (before G2).",
+    "spatial-methods.md domain C1: Gi* = amenity-change hotspot label in G2.",
+    "R-A9 geo-DS: ewr_composite for lor_2021 when EWR join extended; LISA FDR note for G2.",
+    "R-A9 domain: HL LISA label nuance; diffusion causal limits; D5 missing (Epic D).",
+    "#115 EWR H2/H3: POI pseudo-replication caveat (35% PLRs share poi_count). p-values inflated. For G2.",
+    "#117 B7 geo-DS C-1..C-4 + domain D-1..D-5: MSS H3a/H3b = co-movement only; pre-2021 H3 single-pair caveat; ewr_composite not cross-vintage comparable; C5 attenuation note; migration 2017 break; uninhabited count per edition."
   ],
-  "next_session_decision": "Wait for data-engineer-reviewer verdict on PR #121. If PASS: spawn geo-DS to sign off (methodology gate), then PM integrates into develop. After integrate: start B8 (#118) — MSS 2013 ingestion, which directly populates H3b k=2 for the pre-2021 panel and is the single highest-impact follow-on to B7. ADR-0012 (#33) still blocked on maintainer; PR #111 still awaiting merge."
+  "next_session_decision": "B8 (#118) in progress on branch b8-mss-2013-ingest. Ingest MSS 2013 edition (lor_pre2021 vintage) to populate delta_dynamism_t for edition_t=2015, enabling H3b k=2 (2015→2019, 4-year lag). Check ingestion/download_mss.py for available years. If 2013 data is available from Berlin Open Data, extend the ingestion to cover it. After B8: B9 (#119) EWR pre-2014, then B10 (#120)."
 }

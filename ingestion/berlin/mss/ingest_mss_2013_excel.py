@@ -42,6 +42,14 @@ import pandas as pd
 import pyarrow as pa
 import pyarrow.parquet as pq
 
+# macOS Python does not ship CA certs; use certifi's bundle when available.
+try:
+    import certifi as _certifi
+
+    _SSL_CONTEXT = ssl.create_default_context(cafile=_certifi.where())
+except ImportError:
+    _SSL_CONTEXT = ssl.create_default_context()
+
 log = logging.getLogger("mss_2013_excel")
 logging.basicConfig(
     level=logging.INFO,
@@ -96,12 +104,9 @@ PARQUET_SCHEMA = pa.schema(
 
 
 def _fetch_excel(url: str) -> bytes:
-    ctx = ssl.create_default_context()
-    ctx.check_hostname = False
-    ctx.verify_mode = ssl.CERT_NONE
     req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0 Gentriduck/1.0"})
     try:
-        with urllib.request.urlopen(req, context=ctx, timeout=60) as resp:
+        with urllib.request.urlopen(req, context=_SSL_CONTEXT, timeout=60) as resp:
             return resp.read()
     except urllib.error.HTTPError as exc:
         raise RuntimeError(f"HTTP {exc.code} fetching {url}") from exc
