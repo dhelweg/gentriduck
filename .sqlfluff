@@ -7,6 +7,10 @@ templater = jinja
 exclude_rules = layout, structure.column_order
 max_line_length = 100
 large_file_skip_byte_limit = 0
+# Raised from default 255 to accommodate int_mss_bzr_aggregate.sql: two CTEs each with
+# a 13-WHEN CASE expression inside a multi-CTE query exceeds the default depth limit.
+# 512 is the next power of two above the observed ceiling for this model (B10 #120).
+max_parse_depth = 512
 
 [sqlfluff:templater:jinja]
 # Stub dbt's ref()/source()/config() so we don't need to compile via dbt.

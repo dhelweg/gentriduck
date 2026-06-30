@@ -33,9 +33,7 @@ select
     total_poi_count
     * 1.0
     / nullif(
-        sum(total_poi_count) over (
-            partition by city_code, snapshot_year, area_vintage
-        ),
+        sum(total_poi_count) over (partition by city_code, snapshot_year, area_vintage),
         0
     ) as plr_poi_share
 from {{ ref("int_poi_features_pivot") }}

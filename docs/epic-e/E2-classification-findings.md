@@ -23,7 +23,7 @@ The per-hypothesis thesis AUC reference values are reconstructed from thesis p.9
 
 | Task | N | Thesis AUC | Revival AUC | AUC std | F1w | F1w std | Leakage | Features |
 |---|---|---|---|---|---|---|---|---|
-| H1 | 436 | 0.87 | 0.7181 | 0.0573 | 0.6284 | 0.0586 | None — POI counts are independent of status_class_bi | total_poi_count, poi_cafe, poi_bar, poi_restaurant, poi_fast_food, poi_nightlife |
+| H1 | 436 | 0.87 | 0.7262 | 0.0320 | 0.6387 | 0.0468 | None — POI counts are independent of status_class_bi | total_poi_count, poi_cafe, poi_bar, poi_restaurant, poi_fast_food, poi_nightlife |
 | H2 (k=1) | 1071 | 0.77 | 0.7519 | 0.0510 | 0.9113 | 0.0146 | None — POI at t predicts status transition from t to t+k | poi_count_t, poi_cafe_t, poi_bar_t, poi_restaurant_t, poi_fast_food_t |
 | H2 (k=2) | 535 | 0.77 | 0.7312 | 0.0894 | 0.8785 | 0.0278 | None — POI at t predicts status transition from t to t+k | poi_count_t, poi_cafe_t, poi_bar_t, poi_restaurant_t, poi_fast_food_t |
 | H3a (k=1) | 535 | 0.72 | 0.6282 | 0.1012 | 0.9434 | 0.0183 | None — C5-corrected dynamism at t precedes status transition from t to t+k | delta_dynamism_t (C5-corrected), dynamism_score_t |
@@ -35,7 +35,7 @@ The per-hypothesis thesis AUC reference values are reconstructed from thesis p.9
 
 ### H1
 
-**H1**: AUC = 0.7181 ± 0.0573 (thesis: 0.87) — below thesis by -0.1519. F1w = 0.6284. n=436.
+**H1**: AUC = 0.7262 ± 0.0320 (thesis: 0.87) — below thesis by -0.1438. F1w = 0.6387. n=436.
 
 Partial agreement: AUC > 0.5 confirms above-chance classification; below thesis 0.87 likely reflects narrower feature set.
 
@@ -66,6 +66,14 @@ Diverges from thesis (H3b was confirmed in thesis). Possible cause: MSS panel co
 **H3c (k=1)**: AUC = 0.7058 ± 0.0341 (thesis: 0.71) — within ±0.05 of thesis (-0.0042). F1w = 0.9113. n=1071.
 
 **H3c (k=2)**: AUC = 0.6952 ± 0.1083 (thesis: 0.71) — within ±0.05 of thesis (-0.0148). F1w = 0.8785. n=535.
+
+## Results — Section 2: H1 at BZR Scale (Bezirksregion, ~137 units, B10 #120)
+
+| Task | N | Thesis AUC | Revival AUC | AUC std | F1w | F1w std | Leakage | Features |
+|---|---|---|---|---|---|---|---|---|
+| H1 (BZR scale) | 137 | 0.87 | 0.7567 | 0.0555 | 0.6985 | 0.0493 | None — POI counts are independent of status_class_bi | total_poi_count, poi_cafe, poi_bar, poi_restaurant, poi_fast_food, poi_nightlife |
+
+> MAUP note (B10): BZR AUC reflects spatial smoothing (~4-6 PLRs per BZR). Higher AUC expected vs PLR due to within-BZR variance cancellation (thesis §3.2; index-definition.md §8). Not an independent confirmation.
 
 ## Divergences from 2018 Thesis
 

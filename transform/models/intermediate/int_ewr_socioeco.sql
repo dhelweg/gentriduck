@@ -47,12 +47,12 @@
 -- Methodology notes:
 -- - NULLIF(stddev, 0) guards against degenerate years.
 -- - NULL indicator values (suppressed cells) are excluded from z-score computation.
---   A PLR with any suppressed key indicator will have a NULL z-score for that
---   indicator, which propagates to NULL ewr_composite. Downstream NULL handling
---   is documented in int_gentrification_ts.
+-- A PLR with any suppressed key indicator will have a NULL z-score for that
+-- indicator, which propagates to NULL ewr_composite. Downstream NULL handling
+-- is documented in int_gentrification_ts.
 -- - migration_background_share is methodologically stable only from 2017
---   (Mikrozensus reform); pre-2017 values are present but not directly comparable.
---   C4 consumers should apply reference_year >= 2017 for migration comparisons.
+-- (Mikrozensus reform); pre-2017 values are present but not directly comparable.
+-- C4 consumers should apply reference_year >= 2017 for migration comparisons.
 --
 -- Note on #63 (POI PLR2021 remap, 2026-06-19):
 -- int_poi_status_dynamism was updated to assign area_vintage='lor_2021' for all years
@@ -155,7 +155,8 @@ with
             ) as z_age_under18_share,
             -- Z-score: migration_background_share (absent pre-2014; methodological
             -- break ~2017: Mikrozensus reform. Pre-2017 values present but not
-            -- directly comparable. Use reference_year >= 2017 for migration comparisons.
+            -- directly comparable. Use reference_year >= 2017 for migration
+            -- comparisons.
             (
                 migration_background_share - avg(migration_background_share) over (
                     partition by city_code, reference_year
@@ -189,13 +190,14 @@ with
 
     -- EWR composite: mean of z-scores.
     -- Full composite (5 indicators, 2014+): ewr_composite.
-    --   NULL if any of the 5 z-scores is NULL (any key indicator suppressed or absent).
+    -- NULL if any of the 5 z-scores is NULL (any key indicator suppressed or absent).
     -- Partial composite (3 indicators, pre-2014, B9b):
-    --   ewr_composite_partial = mean(z_age_under18, z_mean_age, z_residence_5y).
-    --   Available for all years; cross-era pooling is NOT valid (see header comment).
-    --   is_partial_composite = TRUE when reference_year <= 2013.
+    -- ewr_composite_partial = mean(z_age_under18, z_mean_age, z_residence_5y).
+    -- Available for all years; cross-era pooling is NOT valid (see header comment).
+    -- is_partial_composite = TRUE when reference_year <= 2013.
     -- Higher composite = more socio-economically vulnerable population.
-    -- Sign convention: negated when entering gentrification_score in int_gentrification_ts.
+    -- Sign convention: negated when entering gentrification_score in
+    -- int_gentrification_ts.
     with_composite as (
         select
             *,
@@ -213,9 +215,7 @@ with
             -- residence_duration_5y_share only — excludes foreigners_share
             -- and migration_background_share (not available pre-2014).
             -- NOT comparable to ewr_composite; analysts must filter separately.
-            (
-                z_age_under18_share + z_mean_age_years + z_residence_duration_5y_share
-            )
+            (z_age_under18_share + z_mean_age_years + z_residence_duration_5y_share)
             / 3.0 as ewr_composite_partial,
             -- Flag rows where only the partial composite is available.
             -- Pre-2014: is_partial_composite = TRUE (ewr_composite will be NULL).
