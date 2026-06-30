@@ -1,10 +1,10 @@
 {
   "_schema": "gentriduck-session-state/v1",
   "session": "2026-06-30-devmode",
-  "updated_at": "2026-06-30T03:00:00Z",
+  "updated_at": "2026-06-30T06:45:00Z",
   "build_status": {
     "result": "PASS",
-    "pass": 426,
+    "pass": 443,
     "warn": 2,
     "error": 0,
     "warn_detail": [
@@ -12,61 +12,83 @@
       "test_c5_poi_share_spike (expected by design - OSM coverage growth signal)"
     ],
     "branch": "develop",
-    "note": "Green. develop includes #79 A9 spatial-dynamic. feat/79-a9-spatial-dynamic integrated at 5b68f42."
+    "note": "Green. develop includes #56 D1c, #81 O1, CITATION.cff."
   },
   "open_prs": [
     {
       "number": 111,
-      "title": "Weekly release: E1/E2 rewrite, B2 back-test, A8 trajectory, ADR-0011 develop model",
+      "title": "Weekly release: Epic R/D wave — spatial inference, price/rent dimension, A9 diffusion",
       "base": "main",
       "head": "develop",
-      "note": "Awaiting maintainer merge in GitHub UI. Opened 2026-06-29. Batches #65+#71+#78+#109. Does NOT yet include #79/#29/#113/#112/#28/#53/#69 -- next weekly PR should batch those."
+      "note": "Updated 2026-06-30 to include #56 D1c, #81 O1, CITATION.cff. Awaiting maintainer merge. 13 tickets total. PushNotification sent."
     }
   ],
-  "completed_this_session": [79],
+  "pending_adr_branches": [
+    {
+      "branch": "feat/33-adr-0012-serving-hosting",
+      "issue": 33,
+      "title": "ADR-0012 serving & hosting stack",
+      "note": "Evidence.dev (MIT) + Cloudflare Pages. Blocked on maintainer sign-off. PushNotification sent 2026-06-30."
+    }
+  ],
+  "completed_this_session": [56, 81],
   "integrated_into_develop": [
     {
-      "commit": "5b68f42",
-      "issue": 79,
-      "title": "feat(#79): integrate A9 spatial-dynamic gentrification into develop"
+      "commit": "af0ef9f",
+      "issue": 56,
+      "title": "feat(#56): D1c Strassenverzeichnis + PLR crosswalk"
+    },
+    {
+      "commit": "df33967",
+      "issue": 81,
+      "title": "docs(#81): O1 method showcase — operating model + retrospective"
+    },
+    {
+      "commit": "24218a7",
+      "issue": "82-partial",
+      "title": "docs: CITATION.cff (partial O2 progress)"
     }
   ],
   "this_machine_data_state": {
     "mss_status_editions": [2015, 2017, 2019, 2021, 2023, 2025],
     "mss_indicator_editions": [2015, 2017, 2019, 2021, 2023, 2025],
-    "note": "All keystone models populated. A9 analysis script present (data/analysis/ CSVs produced by uv run poe analysis; data presence guard exits cleanly if data absent).",
+    "note": "All keystone models populated. 443 dbt tests pass.",
     "keystone_populated": true
   },
   "weekly_pr": {
     "number": 111,
     "opened": "2026-06-29",
-    "batches": ["#65 E1/E2 rewrite", "#71 B2 back-test", "#78 A8 trajectory", "#109 ADR-0011"],
-    "note": "Next weekly PR should batch: #69 A6, #28 D2, #53 D1b, #112 BRW back-series, #113 Wohnlage multi-year, #29 D3 price/rent, #79 A9 spatial-dynamic. Refresh develop->main PR when maintainer is ready."
+    "updated": "2026-06-30",
+    "batches": ["#65 E1/E2", "#69 A6", "#71 B2", "#78 A8", "#109 ADR-0011", "#28 D2", "#112 BRW back-series", "#113 Wohnlage multi-year", "#29 D3", "#53 D1b", "#56 D1c", "#79 A9", "#81 O1", "CITATION.cff"],
+    "note": "PushNotification sent. Merge when ready."
   },
-  "unblocked_ready": [
-    {
-      "issue": 56,
-      "title": "[D1c] Strassenverzeichnis -> PLR geocoding for Mietspiegel",
-      "note": "Dependencies met: LOR done, Wohnlage multi-year (#113) done. PDF parsing via pdfplumber (MIT); ADR-0003 implies PDF approach. Top unblocked ticket."
-    },
-    {
-      "issue": 33,
-      "title": "[F1] ADR-0006 serving & hosting stack",
-      "note": "Epic F gating ADR. Architect work. Independent of D/R tracks. Good if maintainer wants to move toward website."
-    }
-  ],
   "still_blocked": [
     {
+      "issue": 33,
+      "blocked_by": ["Maintainer ADR approval for Evidence.dev + Cloudflare Pages"],
+      "title": "[F1] ADR-0012 serving & hosting stack",
+      "branch": "feat/33-adr-0012-serving-hosting",
+      "note": "Once approved: integrate feat/33-adr-0012-serving-hosting into develop, then start F2 (MotherDuck dbt target), F3 (ADR-0013 refresh), G0 (web-engineer agents)."
+    },
+    {
       "issue": 70,
-      "blocked_by": ["Epic D displacement data sources -- needs maintainer ADR decision"],
+      "blocked_by": ["Maintainer ADR decision on displacement data sources"],
       "title": "[B1] Displacement & affordability dimension"
     },
     {
       "issue": 80,
-      "blocked_by": ["#70 R-B1 (displacement) -- explicitly deferred in issue and plan"],
+      "blocked_by": ["#70 R-B1 -- explicitly deferred"],
       "title": "[A10] Causal/early-warning design -- DEFERRED"
     }
   ],
+  "gated_on_33": ["#34 F2", "#35 F3", "#36 G0", "#37 G1", "#38 G2", "#39 G3", "#40 H1", "#83 O4"],
+  "partial_progress": {
+    "issue": 82,
+    "title": "[O2] Methodology whitepaper",
+    "done": ["CITATION.cff added"],
+    "remaining": ["architect tool decision (Quarto/LaTeX/markdown)", "whitepaper prose", "geo-DS + domain-expert sign-off"],
+    "note": "Full whitepaper needs G2 (#38) first. Can start architect tool decision once F1 resolves."
+  },
   "open_conditions_carried_forward": [
     "#65 E1/E2 non-blocking: H3b divergence + H3c opposite direction deferred to G2 methodology page.",
     "R-A8 PASS WITH CONDITIONS: geo-DS conditions carried to spatial-methods.md and G2.",
@@ -75,5 +97,5 @@
     "R-A9 geo-DS carry-forward (non-binding): ewr_composite for lor_2021 when EWR join extended; LISA FDR note for G2.",
     "R-A9 domain carry-forward (non-binding): HL LISA public label nuance; diffusion causal limits; D5 as missing moderator (Epic D)."
   ],
-  "next_session_decision": "#56 [D1c] Strassenverzeichnis -> PLR geocoding. DE implements PDF ingestion (pdfplumber MIT-licensed); DE-reviewer verifies; no separate methodology gate (data engineering task). pdfplumber use is within ADR-0003 scope (PDF approach explicitly anticipated). Alternatively #33 [F1] ADR-0006 if Epic F is higher priority."
+  "next_session_decision": "Waiting on: (1) maintainer to approve ADR-0012 (#33 F1) → integrate feat/33-adr-0012-serving-hosting into develop, then chain F2/F3/G0 tickets; (2) maintainer to merge weekly PR #111; (3) #70 B1 ADR decision (displacement dimension). If #33 arrives: integrate ADR-0012, start G0 (author web-engineer agents) as next ticket."
 }
