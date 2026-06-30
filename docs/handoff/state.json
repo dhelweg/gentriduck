@@ -1,7 +1,7 @@
 {
   "_schema": "gentriduck-session-state/v1",
-  "session": "2026-06-30-devmode-4",
-  "updated_at": "2026-06-30T10:30:00Z",
+  "session": "2026-06-30-devmode-5",
+  "updated_at": "2026-06-30T11:33:00Z",
   "build_status": {
     "result": "PASS",
     "pass": 462,
@@ -12,12 +12,12 @@
       "test_c5_poi_share_spike (expected by design - OSM coverage growth signal)"
     ],
     "branch": "develop",
-    "note": "Green. develop includes #114 int_ewr_lead_lag + #115 EWR same-era H2/H3 comparison. No new code changes this session."
+    "note": "Green. develop unchanged from devmode-4. 462 tests pass. All work blocked on maintainer."
   },
   "open_prs": [
     {
       "number": 111,
-      "title": "Weekly release: Epic R/D wave — spatial inference, price/rent dimension, A9 diffusion",
+      "title": "Weekly release: Epic R/D wave \u2014 spatial inference, price/rent dimension, A9 diffusion",
       "base": "main",
       "head": "develop",
       "note": "Open. Last updated 2026-06-30T09:26Z (devmode-3). 17 items, 462 tests pass. Awaiting maintainer merge."
@@ -41,83 +41,163 @@
   "integrated_into_develop": [],
   "infra_blocker": {
     "issue": 116,
-    "title": "[Infra] gh token missing read:project scope — PM cannot read/update project board",
+    "title": "[Infra] gh token missing read:project scope \u2014 PM cannot read/update project board",
     "filed": "2026-06-30",
     "fix": "gh auth refresh -s read:project (interactive, requires browser on host machine)",
-    "impact": "PM cannot read board columns or move cards — reconciliation pass is blind to column drift. Issue states (OPEN/CLOSED) are the proxy but card column alignment is unverifiable."
+    "impact": "PM cannot read board columns or move cards \u2014 reconciliation pass is blind to column drift. Issue states (OPEN/CLOSED) are the proxy but card column alignment is unverifiable."
   },
   "this_machine_data_state": {
-    "mss_status_editions": [2015, 2017, 2019, 2021, 2023, 2025],
-    "mss_indicator_editions": [2015, 2017, 2019, 2021, 2023, 2025],
+    "mss_status_editions": [
+      2015,
+      2017,
+      2019,
+      2021,
+      2023,
+      2025
+    ],
+    "mss_indicator_editions": [
+      2015,
+      2017,
+      2019,
+      2021,
+      2023,
+      2025
+    ],
     "note": "All keystone models populated. 462 dbt tests pass.",
     "keystone_populated": true,
     "ewr_lead_lag": {
       "note": "int_ewr_lead_lag: 7588 rows, 542 PLRs x k={1,2,4}, 2014-2020, lor_2021 vintage. Non-null ewr_composite for 2014-2020 confirmed.",
-      "thesis_comparison_window": "k=2 (2014→2016)"
+      "thesis_comparison_window": "k=2 (2014\u21922016)"
     }
   },
   "weekly_pr": {
     "number": 111,
     "opened": "2026-06-29",
     "updated": "2026-06-30",
-    "batches": ["#65 E1/E2", "#69 A6", "#71 B2", "#78 A8", "#109 ADR-0011", "#28 D2", "#112 BRW back-series", "#113 Wohnlage multi-year", "#29 D3", "#53 D1b", "#56 D1c", "#79 A9", "#81 O1", "CITATION.cff", "#83 O4 milestone (partial)", "#114 int_ewr_lead_lag", "#115 EWR H2/H3 regressions"],
+    "batches": [
+      "#65 E1/E2",
+      "#69 A6",
+      "#71 B2",
+      "#78 A8",
+      "#109 ADR-0011",
+      "#28 D2",
+      "#112 BRW back-series",
+      "#113 Wohnlage multi-year",
+      "#29 D3",
+      "#53 D1b",
+      "#56 D1c",
+      "#79 A9",
+      "#81 O1",
+      "CITATION.cff",
+      "#83 O4 milestone (partial)",
+      "#114 int_ewr_lead_lag",
+      "#115 EWR H2/H3 regressions"
+    ],
     "note": "PR #111 open and current (updated 09:26Z). Awaiting maintainer merge in GitHub UI. No refresh needed this session."
   },
   "board_status": {
-    "note": "DEGRADED — gh token missing read:project scope (#116). Board card columns cannot be read or updated. Issue states verified via gh issue view as proxy.",
+    "note": "DEGRADED \u2014 gh token missing read:project scope (#116). Board card columns cannot be read or updated. Issue states verified via gh issue view as proxy.",
     "open_issues_by_dependency": {
-      "blocked_on_maintainer": ["#33 [F1] ADR-0012 approval", "#70 [B1] ADR displacement data", "#82 [O2] ADR-0013 approval"],
-      "gated_on_33": ["#34 F2", "#35 F3", "#36 G0", "#37 G1", "#38 G2", "#39 G3"],
-      "gated_on_33_and_others": ["#40 H1 (also needs mature Berlin pipeline)", "#83 O4 (dataset export + tooling docs)"],
-      "deferred": ["#80 A10 (explicitly deferred, tracked)"],
-      "infra": ["#116 gh token scope (new, filed this session)"]
+      "blocked_on_maintainer": [
+        "#33 [F1] ADR-0012 approval",
+        "#70 [B1] ADR displacement data",
+        "#82 [O2] ADR-0013 approval"
+      ],
+      "gated_on_33": [
+        "#34 F2",
+        "#35 F3",
+        "#36 G0",
+        "#37 G1",
+        "#38 G2",
+        "#39 G3"
+      ],
+      "gated_on_33_and_others": [
+        "#40 H1 (also needs mature Berlin pipeline)",
+        "#83 O4 (dataset export + tooling docs)"
+      ],
+      "deferred": [
+        "#80 A10 (explicitly deferred, tracked)"
+      ],
+      "infra": [
+        "#116 gh token scope (new, filed this session)"
+      ]
     }
   },
   "still_blocked": [
     {
       "issue": 33,
-      "blocked_by": ["Maintainer ADR approval for Evidence.dev + Cloudflare Pages"],
+      "blocked_by": [
+        "Maintainer ADR approval for Evidence.dev + Cloudflare Pages"
+      ],
       "title": "[F1] ADR-0012 serving & hosting stack",
       "branch": "feat/33-adr-0012-serving-hosting",
-      "note": "Once approved: integrate feat/33-adr-0012-serving-hosting into develop, then start F2 (MotherDuck dbt target), F3 (ADR-0013 refresh), G0 (web-engineer agents). This is the highest-leverage unblock — chains F2/F3/G0/G1/G2/G3."
+      "note": "Once approved: integrate feat/33-adr-0012-serving-hosting into develop, then start F2 (MotherDuck dbt target), F3 (ADR-0013 refresh), G0 (web-engineer agents). This is the highest-leverage unblock \u2014 chains F2/F3/G0/G1/G2/G3."
     },
     {
       "issue": 70,
-      "blocked_by": ["Maintainer ADR decision on displacement data sources"],
+      "blocked_by": [
+        "Maintainer ADR decision on displacement data sources"
+      ],
       "title": "[B1] Displacement & affordability dimension"
     },
     {
       "issue": 80,
-      "blocked_by": ["#70 R-B1 — explicitly deferred"],
-      "title": "[A10] Causal/early-warning design — DEFERRED"
+      "blocked_by": [
+        "#70 R-B1 \u2014 explicitly deferred"
+      ],
+      "title": "[A10] Causal/early-warning design \u2014 DEFERRED"
     },
     {
       "issue": 82,
-      "blocked_by": ["Maintainer ADR-0013 approval (Quarto + Typst whitepaper tool)"],
-      "title": "[O2] Methodology whitepaper — ADR-0013 pending",
+      "blocked_by": [
+        "Maintainer ADR-0013 approval (Quarto + Typst whitepaper tool)"
+      ],
+      "title": "[O2] Methodology whitepaper \u2014 ADR-0013 pending",
       "note": "CITATION.cff done; ADR-0013 Proposed on feat/82-adr-0013-whitepaper-tool. Whitepaper prose + sign-off wait on both ADR-0013 approval AND G2 (#38, which gates on #33)."
     },
     {
       "issue": 116,
-      "blocked_by": ["Interactive gh auth refresh -s read:project on host machine"],
+      "blocked_by": [
+        "Interactive gh auth refresh -s read:project on host machine"
+      ],
       "title": "[Infra] gh token missing read:project scope",
       "note": "Filed this session. Blocks board reconciliation. Fix: run 'gh auth refresh -s read:project' interactively on the machine."
     }
   ],
-  "gated_on_33": ["#34 F2", "#35 F3", "#36 G0", "#37 G1", "#38 G2", "#39 G3", "#40 H1"],
+  "gated_on_33": [
+    "#34 F2",
+    "#35 F3",
+    "#36 G0",
+    "#37 G1",
+    "#38 G2",
+    "#39 G3",
+    "#40 H1"
+  ],
   "in_progress_partial": [
     {
       "issue": 83,
       "title": "[O4] Open release",
-      "done": ["Communication artifact: docs/milestone/2026-Q2-gentriduck-milestone.md integrated into develop (0e1be37)"],
-      "remaining": ["Dataset export with open licence + regeneration path (gates on #33 F1)", "Ingestion tooling documentation for external reuse (gates on #33 F1)"],
+      "done": [
+        "Communication artifact: docs/milestone/2026-Q2-gentriduck-milestone.md integrated into develop (0e1be37)"
+      ],
+      "remaining": [
+        "Dataset export with open licence + regeneration path (gates on #33 F1)",
+        "Ingestion tooling documentation for external reuse (gates on #33 F1)"
+      ],
       "note": "Issue remains open. Full completion gates on ADR-0012 (#33) approval."
     },
     {
       "issue": 82,
       "title": "[O2] Methodology whitepaper",
-      "done": ["CITATION.cff added", "ADR-0013 drafted (Quarto + Typst, Proposed)"],
-      "remaining": ["Maintainer ADR-0013 approval", "whitepaper prose", "geo-DS + domain-expert sign-off"],
+      "done": [
+        "CITATION.cff added",
+        "ADR-0013 drafted (Quarto + Typst, Proposed)"
+      ],
+      "remaining": [
+        "Maintainer ADR-0013 approval",
+        "whitepaper prose",
+        "geo-DS + domain-expert sign-off"
+      ],
       "note": "Full whitepaper needs G2 (#38) first (which gates on #33)."
     }
   ],
@@ -130,5 +210,5 @@
     "R-A9 domain carry-forward (non-binding): HL LISA public label nuance; diffusion causal limits; D5 as missing moderator (Epic D).",
     "#115 EWR H2/H3: POI pseudo-replication caveat (35% of lor_2021 PLRs share poi_count via dominant crosswalk) documented in findings + docstring. Directional results valid; reported p-values inflated. Noted for G2 methodology page."
   ],
-  "next_session_decision": "HARD PAUSE — all remaining open tickets are blocked on maintainer decisions or #33. To unblock: (1) 'gh auth refresh -s read:project' on host machine to restore board management (#116); (2) approve ADR-0012 (#33, F1 serving stack) → highest leverage, chains F2/F3/G0/G1/G2/G3; (3) merge weekly PR #111 in GitHub UI (17 items, 462 tests); (4) optionally approve ADR-0013 (#82) for whitepaper; (5) optionally decide on displacement data sources (#70 B1). Until (1)+(2) are done, the PM loop cannot advance any work."
+  "next_session_decision": "HARD PAUSE (carried forward from devmode-4). To unblock: (1) run gh auth refresh -s read:project on host (#116); (2) approve ADR-0012 (#33, highest leverage \u2014 chains F2/F3/G0/G1/G2/G3); (3) merge PR #111 in GitHub UI (17 items, 462 tests); (4) optionally approve ADR-0013 (#82); (5) optionally decide displacement data sources (#70 B1)."
 }
