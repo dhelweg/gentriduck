@@ -4,7 +4,8 @@
 - **Issue:** #65 / #115
 - **Date:** 2026-06-30
 - **Data (H1/H1b):** stg_thesis_2018_result_plr + int_poi_features_pivot (2018), n=436
-- **Data (H2/H3 MSS):** int_mss_lead_lag + int_poi_features_pivot (2021–2025)
+- **Data (H2/H3 MSS 2021–2025):** int_mss_lead_lag (lor_2021) + int_poi_features_pivot
+- **Data (H2/H3 MSS 2015–2019, B7):** int_mss_lead_lag (lor_pre2021) + int_poi_features_pivot
 - **Data (H2/H3 EWR):** int_ewr_lead_lag + int_poi_features_pivot (2014–2020, same-era as thesis)
 - **Method:** Spearman rank correlation + OLS (scipy.stats)
 
@@ -12,10 +13,11 @@
 
 Spearman rank correlations and OLS regression test five hypotheses from the 2018 Berlin gentrification thesis (pp. 55-56, p. 91). POI category counts from `int_poi_features_pivot` are used as the primary predictor variables.
 
-**Two comparison sets for H2/H3:**
+**Three comparison sets for H2/H3:**
 
-1. **MSS panel (2021–2025):** Uses `int_mss_lead_lag` — a better ground truth (official Berlin social monitoring index) but a different era and index than the thesis.
-2. **EWR same-era (2014–2020):** Uses `int_ewr_lead_lag` — the same data source and timeframe as the 2018 thesis. k=2 (2014→2016) matches the thesis lead-lag gap exactly. delta_ewr is metric (z-score arithmetic diff) so OLS is also valid.
+1. **MSS panel (2021–2025):** Uses `int_mss_lead_lag` (lor_2021) — best ground truth (official Berlin social monitoring index) but a different era and index than the thesis.
+2. **MSS pre-2021 panel (2015–2019, B7 #117):** Uses `int_mss_lead_lag` (lor_pre2021) — thesis-era boundary system (447 PLRs). Enables same-era H3b lead-lag. k=1: 2015→2017, 2017→2019 pairs; k=2: 2015→2019. Z-scores not cross-vintage comparable.
+3. **EWR same-era (2014–2020):** Uses `int_ewr_lead_lag` — the same data source and timeframe as the 2018 thesis. k=2 (2014→2016) matches the thesis lead-lag gap exactly. delta_ewr is metric (z-score arithmetic diff) so OLS is also valid.
 
 The primary validation criterion is directional agreement (same sign as thesis expectation), consistent with the Epic B directional revival framing.
 
@@ -53,7 +55,25 @@ The primary validation criterion is directional agreement (same sign as thesis e
 
 **Directional agreement (H2/H3 MSS): 2/8. Significant: 3/8.**
 
-## Results — Section 3: H2/H3 EWR Same-Era (2014–2020, thesis source and timeframe)
+## Results — Section 3: H2/H3 MSS Pre-2021 Panel (thesis-era, 2015–2019, B7 #117)
+
+> lor_pre2021 boundary system (447 PLRs). Same-era H2/H3 panel as thesis. Z-scores normalised within lor_pre2021 population — NOT cross-vintage comparable to Section 2.
+> k=1 pairs: 2015→2017, 2017→2019. k=2 pair: 2015→2019 (4-year lag, matches thesis H3b gap).
+
+| Hyp | Test | N | Type | Value | p-value | Sig | Expected Dir | Actual Dir | Match | Description |
+|---|---|---|---|---|---|---|---|---|---|---|
+| H2 | Spearman k=1 | 871 | rho | -0.0344 | 0.3100 | No | negative | negative | PASS | Current-edition POI stock ~ future status change [k=1 MSS editions, 2015–2019 panel] |
+| H2 | Spearman k=2 | 435 | rho | -0.0470 | 0.3279 | No | negative | negative | PASS | Current-edition POI stock ~ future status change [k=2 MSS editions, 2015–2019 panel] |
+| H3a | Spearman k=1 | 435 | rho | 0.0571 | 0.2344 | No | negative | positive | FAIL | C5-corrected Δdynamism at t leads Δstatus at t+k (POI change leads status change) [k=1] |
+| H3b | Spearman k=1 | 435 | rho | 0.0571 | 0.2344 | No | negative | positive | FAIL | Δstatus at t leads Δdynamism at t+k (status change leads POI change) [k=1] |
+| H3c | Spearman k=1 | 871 | rho | 0.0310 | 0.3607 | No | negative | positive | FAIL | Simultaneous dynamism ~ status_index co-movement (same edition) [k=1] |
+| H3a | Spearman k=2 | 0 | rho | N/A | N/A | No | negative | N/A | FAIL | C5-corrected Δdynamism at t leads Δstatus at t+k (POI change leads status change) [k=2] |
+| H3b | Spearman k=2 | 0 | rho | N/A | N/A | No | negative | N/A | FAIL | Δstatus at t leads Δdynamism at t+k (status change leads POI change) [k=2] |
+| H3c | Spearman k=2 | 435 | rho | 0.1036 | 0.0308 | Yes | negative | positive | FAIL | Simultaneous dynamism ~ status_index co-movement (same edition) [k=2] |
+
+**Directional agreement (H2/H3 MSS pre-2021): 2/8. Significant: 1/8.**
+
+## Results — Section 4: H2/H3 EWR Same-Era (2014–2020, thesis source and timeframe)
 
 > Same data source and timeframe as the 2018 thesis. k=2 (2014→2016) is the direct comparison window.
 > delta_ewr is metric (z-score arithmetic difference) — OLS valid unlike MSS ordinal delta.
@@ -80,9 +100,10 @@ The primary validation criterion is directional agreement (same sign as thesis e
 
 ## Overall Scorecard
 
-**Total directional agreement: 20/26. Significant: 19/26.**
+**Total directional agreement: 22/34. Significant: 20/34.**
 
-**MSS panel (H1+H2+H3): 5/11 direction, 4/11 significant.**
+**MSS modern panel (H1+H2+H3, 2021–2025): 5/11 direction, 4/11 significant.**
+**MSS pre-2021 panel (H2+H3 only, 2015–2019): 2/8 direction, 1/8 significant.**
 **EWR same-era (H2+H3 only): 15/15 direction, 15/15 significant.**
 
 ## Divergences from 2018 Thesis
@@ -96,7 +117,7 @@ The primary validation criterion is directional agreement (same sign as thesis e
 
 ## Limitations
 
-- **k=3 MSS not tested**: Only 3 MSS editions available (2021, 2023, 2025); k=3 requires 2027 edition.
+- **k=3 MSS not tested (modern panel)**: Only 3 lor_2021 MSS editions available (2021, 2023, 2025); k=3 requires 2027 edition.
 - **EWR composite null pre-2014**: migration_background_share absent before 2014 makes ewr_composite null for 2008–2013 — EWR panel limited to 2014–2020.
-- **lor_2021 vintage throughout**: EWR pre-2021 years crosswalked via int_berlin_ewr_plr2021; comparison to thesis's lor_pre2021 (448 PLRs) is approximate.
+- **Cross-vintage z-scores not comparable**: lor_pre2021 and lor_2021 z-scores are normalised within their respective PLR populations and must not be compared directly.
 - **MAUP sensitivity**: results are PLR-only and may be sensitive to area definition.

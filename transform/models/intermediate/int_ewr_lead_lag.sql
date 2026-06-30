@@ -7,21 +7,21 @@
 -- annual EWR composite pairs at k=1, 2, and 4 year lags.
 --
 -- Theory grounding (thesis p. 55–56, p. 91):
---   H2  (p.55): Current POI stock predicts future social-status improvement.
---   H3a (p.91, REJECTED): Δamenity leads Δstatus.
---   H3b (p.91, CONFIRMED): Δstatus leads Δamenity.
---   H3c (p.91, UNCLEAR): Simultaneous co-movement.
+-- H2  (p.55): Current POI stock predicts future social-status improvement.
+-- H3a (p.91, REJECTED): Δamenity leads Δstatus.
+-- H3b (p.91, CONFIRMED): Δstatus leads Δamenity.
+-- H3c (p.91, UNCLEAR): Simultaneous co-movement.
 --
 -- Key differences from int_mss_lead_lag:
---   - Source: int_ewr_socioeco (annual EWR composite) not MSS (biennial status_index).
---   - Lag unit: calendar years (not MSS edition steps × 2 years).
---   - Delta type: ewr_composite is a metric z-score mean → delta_ewr is metric,
---     valid for OLS and Spearman (unlike MSS ordinal status_index where OLS is
---     prohibited; index-definition.md §3.3).
---   - Coverage: 2014–2020 only (ewr_composite is NULL for 2008–2013 and 2024–2025;
---     migration_background_share absent pre-2014).
---   - Vintage: lor_2021 throughout (all EWR years crosswalked via
---     int_berlin_ewr_plr2021; no lor_pre2021 rows).
+-- - Source: int_ewr_socioeco (annual EWR composite) not MSS (biennial status_index).
+-- - Lag unit: calendar years (not MSS edition steps × 2 years).
+-- - Delta type: ewr_composite is a metric z-score mean → delta_ewr is metric,
+-- valid for OLS and Spearman (unlike MSS ordinal status_index where OLS is
+-- prohibited; index-definition.md §3.3).
+-- - Coverage: 2014–2020 only (ewr_composite is NULL for 2008–2013 and 2024–2025;
+-- migration_background_share absent pre-2014).
+-- - Vintage: lor_2021 throughout (all EWR years crosswalked via
+-- int_berlin_ewr_plr2021; no lor_pre2021 rows).
 --
 -- Thesis comparison window: k=2 (2014→2016 = 2 annual steps) matches the thesis
 -- lead-lag gap exactly. k=1 and k=4 extend the analysis.
@@ -60,8 +60,7 @@ with
         select
             *,
             ewr_composite - lag(ewr_composite) over (
-                partition by city_code, area_code, area_vintage
-                order by reference_year
+                partition by city_code, area_code, area_vintage order by reference_year
             ) as delta_ewr_vs_prev
         from ewr
     ),
@@ -79,9 +78,11 @@ with
             base.reference_year + k_steps.lag_k as year_tk,
             base.ewr_composite as ewr_composite_t,
             lagged.ewr_composite as ewr_composite_tk,
-            -- Metric delta: ewr_composite is a z-score mean → arithmetic difference valid.
+            -- Metric delta: ewr_composite is a z-score mean → arithmetic difference
+            -- valid.
             lagged.ewr_composite - base.ewr_composite as delta_ewr,
-            -- Annual EWR change at base year (Δewr_composite vs prior year; H3b predictor).
+            -- Annual EWR change at base year (Δewr_composite vs prior year; H3b
+            -- predictor).
             base.delta_ewr_vs_prev as delta_ewr_t,
             -- Population at base year (context / uninhabited guard).
             base.residents_total as residents_total_t

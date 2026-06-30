@@ -23,7 +23,7 @@ The per-hypothesis thesis AUC reference values are reconstructed from thesis p.9
 
 | Task | N | Thesis AUC | Revival AUC | AUC std | F1w | F1w std | Leakage | Features |
 |---|---|---|---|---|---|---|---|---|
-| H1 | 436 | 0.87 | 0.7287 | 0.0467 | 0.6329 | 0.0300 | None — POI counts are independent of status_class_bi | total_poi_count, poi_cafe, poi_bar, poi_restaurant, poi_fast_food, poi_nightlife |
+| H1 | 436 | 0.87 | 0.7199 | 0.0666 | 0.6180 | 0.0762 | None — POI counts are independent of status_class_bi | total_poi_count, poi_cafe, poi_bar, poi_restaurant, poi_fast_food, poi_nightlife |
 | H2 (k=1) | 1071 | 0.77 | 0.7519 | 0.0510 | 0.9113 | 0.0146 | None — POI at t predicts status transition from t to t+k | poi_count_t, poi_cafe_t, poi_bar_t, poi_restaurant_t, poi_fast_food_t |
 | H2 (k=2) | 535 | 0.77 | 0.7312 | 0.0894 | 0.8785 | 0.0278 | None — POI at t predicts status transition from t to t+k | poi_count_t, poi_cafe_t, poi_bar_t, poi_restaurant_t, poi_fast_food_t |
 | H3a (k=1) | 535 | 0.72 | 0.6282 | 0.1012 | 0.9434 | 0.0183 | None — C5-corrected dynamism at t precedes status transition from t to t+k | delta_dynamism_t (C5-corrected), dynamism_score_t |
@@ -35,7 +35,7 @@ The per-hypothesis thesis AUC reference values are reconstructed from thesis p.9
 
 ### H1
 
-**H1**: AUC = 0.7287 ± 0.0467 (thesis: 0.87) — below thesis by -0.1413. F1w = 0.6329. n=436.
+**H1**: AUC = 0.7199 ± 0.0666 (thesis: 0.87) — below thesis by -0.1501. F1w = 0.6180. n=436.
 
 Partial agreement: AUC > 0.5 confirms above-chance classification; below thesis 0.87 likely reflects narrower feature set.
 
