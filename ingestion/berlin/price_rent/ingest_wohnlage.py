@@ -438,9 +438,7 @@ def ingest_year(year: int, out_dir: Path, max_pages: Optional[int] = None) -> in
 
     wfs_base_url = WFS_BASE_URL_TEMPLATE.format(year=year)
     wfs_type_names = f"wohnlagenadr{year}:wohnlagenadr{year}"
-    source_attribution = _ATTRIBUTION_OVERRIDES.get(
-        year, _ATTRIBUTION_TEMPLATE.format(year=year)
-    )
+    source_attribution = _ATTRIBUTION_OVERRIDES.get(year, _ATTRIBUTION_TEMPLATE.format(year=year))
     out_path = out_dir / f"wohnlage_{year}.parquet"
 
     log.info("=== Wohnlagen Mietspiegel %d ingestion started ===", year)

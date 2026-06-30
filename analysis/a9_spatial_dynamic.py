@@ -226,9 +226,7 @@ def build_queen_weights(geom_df: Any, from_wkb: Any, weights_mod: Any) -> tuple[
     try:
         # spatial-methods.md §6: Queen contiguity (shared edge or vertex).
         w = weights_mod.Queen.from_iterable(geoms, ids=area_codes)
-        log.info(
-            "Queen weights: %d PLRs, mean neighbours=%.1f", len(w.id_order), w.mean_neighbors
-        )
+        log.info("Queen weights: %d PLRs, mean neighbours=%.1f", len(w.id_order), w.mean_neighbors)
 
         # Island fallback (k-NN k=6) — water bodies, airport perimeter.
         islands = [k for k, v in w.neighbors.items() if len(v) == 0]
@@ -238,9 +236,7 @@ def build_queen_weights(geom_df: Any, from_wkb: Any, weights_mod: Any) -> tuple[
                 "(spatial-methods.md §6).",
                 len(islands),
             )
-            centroids = np.array(
-                [(g.centroid.x, g.centroid.y) for g in geoms], dtype=float
-            )
+            centroids = np.array([(g.centroid.x, g.centroid.y) for g in geoms], dtype=float)
             knn = weights_mod.KNN.from_array(centroids, k=6, ids=area_codes)
             for island_id in islands:
                 w.neighbors[island_id] = knn.neighbors[island_id]
@@ -441,9 +437,7 @@ def _align_to_weights(
             for ci, col in enumerate(x_cols):
                 X_arr[wi, ci] = _na_to_float(row.get(col))
 
-    valid_mask = ~(
-        np.isnan(y_arr) | np.any(np.isnan(X_arr), axis=1)
-    )
+    valid_mask = ~(np.isnan(y_arr) | np.any(np.isnan(X_arr), axis=1))
     return y_arr, X_arr, valid_mask
 
 
@@ -504,6 +498,7 @@ def run_ols_and_spatial(
     w_subset = w.sparse[np.ix_(np.where(valid_mask)[0], np.where(valid_mask)[0])]
     try:
         import libpysal
+
         w_valid = libpysal.weights.WSP(w_subset, id_order=valid_codes).to_W()
         w_valid.transform = "r"
     except Exception as e:
@@ -596,8 +591,7 @@ def run_ols_and_spatial(
 
     if not spatial_needed:
         log.info(
-            "Year=%d: LM diagnostics not significant — OLS is adequate "
-            "(spatial-methods.md §8).",
+            "Year=%d: LM diagnostics not significant — OLS is adequate (spatial-methods.md §8).",
             year,
         )
         return results
@@ -748,7 +742,7 @@ def run_diffusion_test(
     # Test on consecutive lor_2021 edition pairs: (2021,2023), (2023,2025)
     edition_pairs = [(years[i], years[i + 1]) for i in range(len(years) - 1) if len(years) > 1]
 
-    for (t_prev, t_curr) in edition_pairs:
+    for t_prev, t_curr in edition_pairs:
         df_prev = panel_df[panel_df["snapshot_year"] == t_prev].copy()
         df_curr = panel_df[panel_df["snapshot_year"] == t_curr].copy()
 
@@ -778,18 +772,13 @@ def run_diffusion_test(
             status_prev_fill = np.where(np.isnan(status_prev), 0.0, status_prev)
             w_lag = np.asarray(w_sparse.dot(status_prev_fill)).flatten()
         except Exception as e:
-            log.error(
-                "Spatial lag computation failed for %d→%d: %s", t_prev, t_curr, e
-            )
+            log.error("Spatial lag computation failed for %d→%d: %s", t_prev, t_curr, e)
             continue
 
         # Build regression dataset: valid mask = all required variables non-NaN.
         # ewr_composite is NULL for lor_2021 rows; use dynamism_score as control instead.
         valid_mask = (
-            ~np.isnan(status_prev)
-            & ~np.isnan(status_curr)
-            & ~np.isnan(dyn_prev)
-            & ~np.isnan(w_lag)
+            ~np.isnan(status_prev) & ~np.isnan(status_curr) & ~np.isnan(dyn_prev) & ~np.isnan(w_lag)
         )
         # Note: w_lag from zero-filled status_prev will always be numeric, but PLRs
         # with all-zero neighbours (islands with status_prev=NaN) get w_lag=0 —
@@ -816,9 +805,7 @@ def run_diffusion_test(
         try:
             import libpysal
 
-            w_subset_sparse = w.sparse[
-                np.ix_(np.where(valid_mask)[0], np.where(valid_mask)[0])
-            ]
+            w_subset_sparse = w.sparse[np.ix_(np.where(valid_mask)[0], np.where(valid_mask)[0])]
             w_valid = libpysal.weights.WSP(w_subset_sparse, id_order=valid_codes).to_W()
             w_valid.transform = "r"
         except Exception:
@@ -864,9 +851,7 @@ def run_diffusion_test(
                 # positive = deprived neighbours at t-1 → focal PLR more deprived at t
                 "beta_W_status_prev": b_wlag,
                 "p_W_status_prev": p_wlag,
-                "diffusion_significant": (
-                    bool(p_wlag < ALPHA) if p_wlag is not None else None
-                ),
+                "diffusion_significant": (bool(p_wlag < ALPHA) if p_wlag is not None else None),
                 # Controls (dynamism_score_prev replaces ewr_composite: NULL for lor_2021 panel)
                 "beta_status_prev": b_own,
                 "p_status_prev": p_own,
@@ -880,7 +865,11 @@ def run_diffusion_test(
         )
 
         # Log direction & significance for the diffusion hypothesis.
-        direction = "positive (supports diffusion)" if (b_wlag is not None and b_wlag > 0) else "negative (contradicts diffusion)"  # noqa: E501
+        direction = (
+            "positive (supports diffusion)"
+            if (b_wlag is not None and b_wlag > 0)
+            else "negative (contradicts diffusion)"
+        )  # noqa: E501
         sig = "significant" if (p_wlag is not None and p_wlag < ALPHA) else "not significant"
         log.info(
             "Diffusion test %d→%d: beta_W_status_prev=%.4f (%s, %s) "
@@ -890,7 +879,9 @@ def run_diffusion_test(
             b_wlag if b_wlag is not None else float("nan"),
             direction,
             sig,
-            "SUPPORTED" if (b_wlag is not None and b_wlag > 0 and p_wlag is not None and p_wlag < ALPHA) else "NOT SUPPORTED",  # noqa: E501
+            "SUPPORTED"
+            if (b_wlag is not None and b_wlag > 0 and p_wlag is not None and p_wlag < ALPHA)
+            else "NOT SUPPORTED",  # noqa: E501
         )
 
     return results
@@ -931,8 +922,7 @@ def main() -> None:
     for tbl in required_tables:
         if not _check_table(con, tbl):
             log.info(
-                "Required table '%s' not found. Run 'uv run poe build' first. "
-                "Exiting cleanly.",
+                "Required table '%s' not found. Run 'uv run poe build' first. Exiting cleanly.",
                 tbl,
             )
             con.close()
@@ -946,9 +936,7 @@ def main() -> None:
     con.close()
 
     if geom_df.empty:
-        log.error(
-            "No PLR geometries found. Run: uv run poe ingest && uv run poe build"
-        )
+        log.error("No PLR geometries found. Run: uv run poe ingest && uv run poe build")
         sys.exit(1)
 
     if panel_df.empty:
@@ -1014,9 +1002,7 @@ def main() -> None:
 
         for var in ["status_index", "dynamism_score"]:
             values = _build_arr(var, yr_df, code_idx, ordered_codes, np)
-            lisa_df = run_lisa(
-                values, w, ordered_codes, Moran_Local, np, pd, year, var
-            )
+            lisa_df = run_lisa(values, w, ordered_codes, Moran_Local, np, pd, year, var)
             if lisa_df is not None:
                 lisa_path = OUT_DIR / f"a9_lisa_{var}_{year}.csv"
                 lisa_df.to_csv(lisa_path, index=False)
@@ -1072,21 +1058,19 @@ def main() -> None:
             "→ focal PLR more deprived at t (supports diffusion)."
         )
         for r in diff_results:
-            verdict = "SUPPORTED" if (
-                r["beta_W_status_prev"] is not None
-                and r["beta_W_status_prev"] > 0
-                and r["diffusion_significant"]
-            ) else "NOT SUPPORTED"
+            verdict = (
+                "SUPPORTED"
+                if (
+                    r["beta_W_status_prev"] is not None
+                    and r["beta_W_status_prev"] > 0
+                    and r["diffusion_significant"]
+                )
+                else "NOT SUPPORTED"
+            )
             beta_str = (
-                f"{r['beta_W_status_prev']:.4f}"
-                if r["beta_W_status_prev"] is not None
-                else "N/A"
+                f"{r['beta_W_status_prev']:.4f}" if r["beta_W_status_prev"] is not None else "N/A"
             )
-            p_str = (
-                f"{r['p_W_status_prev']:.4f}"
-                if r["p_W_status_prev"] is not None
-                else "N/A"
-            )
+            p_str = f"{r['p_W_status_prev']:.4f}" if r["p_W_status_prev"] is not None else "N/A"
             print(
                 f"  {r['edition_prev']}→{r['edition_curr']}: "
                 f"beta_W_status_prev={beta_str}, "
