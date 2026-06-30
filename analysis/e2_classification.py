@@ -36,6 +36,7 @@ Usage:
 
 from __future__ import annotations
 
+import argparse
 import os
 import sys
 import warnings
@@ -180,6 +181,102 @@ def load_lead_lag_data(con: duckdb.DuckDBPyConnection) -> object:
             AND ll.area_vintage = p_tk.area_vintage
         WHERE ll.area_vintage = 'lor_2021'
     """).df()
+    return df
+
+
+def load_h1_bzr_data(con: duckdb.DuckDBPyConnection, scale: str = "bzr") -> object:
+    """Load BZR/Bezirk-level cross-section for H1 classification at coarser scales.
+
+    B10 (#120): extend E2 H1 AUC comparison to BZR (~137 units) and Bezirk (~12 districts).
+    Uses thesis BZR golden status_class_bi joined with BZR-level POI counts.
+    MAUP note: AUC at coarser scale reflects spatial smoothing, not independent confirmation.
+    At Bezirk scale (n=12), 5-fold CV is not feasible; use leave-one-out or skip.
+    """
+    if scale == "bzr":
+        df = con.execute("""
+            WITH bzr_poi AS (
+                SELECT
+                    SUBSTR(area_code, 1, 6) AS bzr_code,
+                    SUM(total_poi_count) AS total_poi_count,
+                    SUM(COALESCE(poi_cafe, 0)) AS poi_cafe,
+                    SUM(COALESCE(poi_bar, 0)) AS poi_bar,
+                    SUM(COALESCE(poi_restaurant, 0)) AS poi_restaurant,
+                    SUM(COALESCE(poi_fast_food, 0)) AS poi_fast_food,
+                    SUM(COALESCE(poi_nightlife, 0)) AS poi_nightlife,
+                    SUM(COALESCE(poi_hairdresser, 0)) AS poi_hairdresser,
+                    SUM(COALESCE(poi_clothing, 0)) AS poi_clothing,
+                    SUM(COALESCE(poi_beauty, 0)) AS poi_beauty
+                FROM main.int_poi_features_pivot
+                WHERE area_vintage = 'lor_pre2021' AND snapshot_year = 2018
+                GROUP BY bzr_code
+            )
+            SELECT
+                t.raum_id AS area_code,
+                t.status_class_bi AS target_status,
+                t.own_idx_class_bi AS target_own_idx,
+                p.total_poi_count,
+                p.poi_cafe, p.poi_bar, p.poi_restaurant, p.poi_fast_food,
+                p.poi_nightlife, p.poi_hairdresser, p.poi_clothing, p.poi_beauty
+            FROM main.stg_thesis_2018_result_bzr t
+            JOIN bzr_poi p ON t.raum_id = p.bzr_code
+            WHERE t.status_class_bi IS NOT NULL
+              AND p.total_poi_count IS NOT NULL
+        """).df()
+    else:
+        df = con.execute("""
+            WITH bzr_poi AS (
+                SELECT
+                    SUBSTR(area_code, 1, 6) AS bzr_code,
+                    SUM(total_poi_count) AS total_poi_count,
+                    SUM(COALESCE(poi_cafe, 0)) AS poi_cafe,
+                    SUM(COALESCE(poi_bar, 0)) AS poi_bar,
+                    SUM(COALESCE(poi_restaurant, 0)) AS poi_restaurant,
+                    SUM(COALESCE(poi_fast_food, 0)) AS poi_fast_food,
+                    SUM(COALESCE(poi_nightlife, 0)) AS poi_nightlife,
+                    SUM(COALESCE(poi_hairdresser, 0)) AS poi_hairdresser,
+                    SUM(COALESCE(poi_clothing, 0)) AS poi_clothing,
+                    SUM(COALESCE(poi_beauty, 0)) AS poi_beauty
+                FROM main.int_poi_features_pivot
+                WHERE area_vintage = 'lor_pre2021' AND snapshot_year = 2018
+                GROUP BY bzr_code
+            ),
+            bezirk_thesis AS (
+                SELECT
+                    SUBSTR(raum_id, 1, 2) AS bezirk_code,
+                    -- Population-weighted majority status_class_bi
+                    CASE WHEN SUM(CASE WHEN status_class_bi='high' THEN COALESCE(ew, 1.0) ELSE 0 END)
+                              > SUM(CASE WHEN status_class_bi='low' THEN COALESCE(ew, 1.0) ELSE 0 END)
+                         THEN 'high' ELSE 'low' END AS status_class_bi,
+                    'positive' AS target_own_idx
+                FROM main.stg_thesis_2018_result_bzr
+                WHERE status_class_bi IS NOT NULL
+                GROUP BY bezirk_code
+            ),
+            bezirk_poi AS (
+                SELECT
+                    SUBSTR(bzr_code, 1, 2) AS bezirk_code,
+                    SUM(total_poi_count) AS total_poi_count,
+                    SUM(poi_cafe) AS poi_cafe,
+                    SUM(poi_bar) AS poi_bar,
+                    SUM(poi_restaurant) AS poi_restaurant,
+                    SUM(poi_fast_food) AS poi_fast_food,
+                    SUM(poi_nightlife) AS poi_nightlife,
+                    SUM(poi_hairdresser) AS poi_hairdresser,
+                    SUM(poi_clothing) AS poi_clothing,
+                    SUM(poi_beauty) AS poi_beauty
+                FROM bzr_poi
+                GROUP BY bezirk_code
+            )
+            SELECT
+                t.bezirk_code AS area_code,
+                t.status_class_bi AS target_status,
+                t.target_own_idx AS target_own_idx,
+                p.total_poi_count,
+                p.poi_cafe, p.poi_bar, p.poi_restaurant, p.poi_fast_food,
+                p.poi_nightlife, p.poi_hairdresser, p.poi_clothing, p.poi_beauty
+            FROM bezirk_thesis t
+            JOIN bezirk_poi p ON t.bezirk_code = p.bezirk_code
+        """).df()
     return df
 
 
@@ -628,7 +725,7 @@ def print_results(all_results: list[dict]) -> None:
         )
 
 
-def write_findings(all_results: list[dict]) -> None:
+def write_findings(all_results: list[dict], results_bzr: list[dict] | None = None) -> None:
     OUTPUT_MD.parent.mkdir(parents=True, exist_ok=True)
     with open(OUTPUT_MD, "w") as f:
         f.write("# E2 Classification Findings -- Per-hypothesis AUC Comparison\n\n")
@@ -749,6 +846,26 @@ def write_findings(all_results: list[dict]) -> None:
                         "Diverges from thesis rejection: higher-than-expected AUC. Check for data leakage or panel period effects.\n\n"
                     )
 
+        if results_bzr:
+            f.write(
+                "## Results — Section 2: H1 at BZR Scale (Bezirksregion, ~137 units, B10 #120)\n\n"
+            )
+            f.write(
+                "| Task | N | Thesis AUC | Revival AUC | AUC std | F1w | F1w std | Leakage | Features |\n"
+            )
+            f.write("|---|---|---|---|---|---|---|---|---|\n")
+            for r in results_bzr:
+                f.write(
+                    f"| {r['task']} | {r['n']} | {r['thesis_auc']:.2f} | {r['auc_mean']:.4f} | "
+                    f"{r['auc_std']:.4f} | {r['f1_mean']:.4f} | {r['f1_std']:.4f} | "
+                    f"{r.get('leakage_note', 'None')} | {r['features'][:80]} |\n"
+                )
+            f.write(
+                "\n> MAUP note (B10): BZR AUC reflects spatial smoothing (~4-6 PLRs per BZR). "
+                "Higher AUC expected vs PLR due to within-BZR variance cancellation "
+                "(thesis §3.2; index-definition.md §8). Not an independent confirmation.\n\n"
+            )
+
         f.write("## Divergences from 2018 Thesis\n\n")
         f.write("- **D1 polarity correction**: `status_index` is inverse-numeric — lower value = ")
         f.write(
@@ -801,6 +918,17 @@ def write_findings(all_results: list[dict]) -> None:
 
 
 def main() -> None:
+    # B10 (#120): --scale argument for multi-scale AUC comparison.
+    parser = argparse.ArgumentParser(description="E2 classification: thesis H1-H3c, multi-scale")
+    parser.add_argument(
+        "--scale",
+        choices=["plr", "bzr", "all"],
+        default="all",
+        help="Spatial scale: plr (default), bzr, or all (runs PLR + BZR). B10 (#120).",
+    )
+    args = parser.parse_args()
+    run_bzr = args.scale in ("bzr", "all")
+
     if not DUCKDB_PATH.exists():
         print(
             f"INFO: DuckDB not found at {DUCKDB_PATH}. "
@@ -833,6 +961,16 @@ def main() -> None:
     print(
         f"  Loaded {len(df_ll)} lead-lag rows (k=1: {(df_ll['lag_k'] == 1).sum()}, k=2: {(df_ll['lag_k'] == 2).sum()})"
     )
+
+    # B10: load BZR H1 data before closing connection
+    df_bzr_h1 = None
+    if run_bzr and "int_mss_bzr_aggregate" in tables:
+        print("Loading H1 BZR data for E2 multi-scale (thesis BZR golden + BZR POI sums)...")
+        df_bzr_h1 = load_h1_bzr_data(con, scale="bzr")
+        print(f"  Loaded {len(df_bzr_h1)} BZR rows for E2 H1")
+    elif run_bzr:
+        print("INFO: int_mss_bzr_aggregate not found (B10) — run 'uv run poe build' first.")
+
     con.close()
 
     if len(df_h1) < 20:
@@ -862,9 +1000,26 @@ def main() -> None:
         print("INFO: No results produced — check data availability.")
         sys.exit(0)
 
+    # B10 (#120): BZR scale H1 AUC
+    results_bzr = []
+    if run_bzr and df_bzr_h1 is not None and len(df_bzr_h1) >= 20:
+        print("\n--- H1 at BZR scale: POI stock → BZR status class (thesis p.91, AUC 0.87) ---")
+        r_h1_bzr = task_h1(df_bzr_h1)
+        if r_h1_bzr:
+            r_h1_bzr["task"] = "H1 (BZR scale)"
+            r_h1_bzr["features"] = ", ".join(H1_FEATURE_COLS) + " [BZR aggregated]"
+            results_bzr.append(r_h1_bzr)
+        if results_bzr:
+            print("\n=== BZR SCALE — H1 AUC (B10 #120) ===")
+            print_results(results_bzr)
+            print(
+                "MAUP note: BZR-scale AUC reflects spatial smoothing of ~4-6 PLRs per BZR. "
+                "Higher AUC expected vs PLR due to within-BZR variance cancellation."
+            )
+
     print_results(all_results)
 
-    write_findings(all_results)
+    write_findings(all_results, results_bzr=results_bzr or None)
     print(f"\nFindings written to: {OUTPUT_MD}")
 
 

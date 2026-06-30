@@ -77,7 +77,7 @@ DATA_START_ROW = 5
 # Column positions in the raw sheet.
 COL_PLR_ID = 0
 COL_PLR_NAME = 1
-COL_STATUS = 3    # numeric: 1-4; 0 = uninhabited
+COL_STATUS = 3  # numeric: 1-4; 0 = uninhabited
 COL_DYNAMIK_RAW = 5  # symbol: '+', '+/-', '-'; 0 = uninhabited
 
 # Map raw dynamik symbols → WFS di_n codes (to keep gesamtindex formula consistent).
@@ -149,7 +149,11 @@ def _parse_excel(raw: bytes) -> pd.DataFrame:
 
         di_n = DYNAMIK_SYMBOL_TO_DI_N.get(raw_dynamik)
         if di_n is None:
-            log.warning("Unknown dynamik symbol %r for PLR %s — treating as uninhabited", raw_dynamik, plr_id)
+            log.warning(
+                "Unknown dynamik symbol %r for PLR %s — treating as uninhabited",
+                raw_dynamik,
+                plr_id,
+            )
             rows.append(
                 {
                     "edition": EDITION,
@@ -184,8 +188,12 @@ def _parse_excel(raw: bytes) -> pd.DataFrame:
 
 
 def main() -> int:
-    ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("--out-dir", default="data/raw/berlin/mss", help="Output directory for parquet file")
+    ap = argparse.ArgumentParser(
+        description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
+    )
+    ap.add_argument(
+        "--out-dir", default="data/raw/berlin/mss", help="Output directory for parquet file"
+    )
     ap.add_argument("--local-file", help="Use a local Excel file instead of fetching from URL")
     args = ap.parse_args()
 
@@ -209,7 +217,9 @@ def main() -> int:
     if not (440 <= len(df) <= 455):
         log.error("Unexpected PLR count: %d (expected ~447)", len(df))
         return 1
-    log.info("PLR count OK: %d total, %d inhabited, %d uninhabited", len(df), inhabited, uninhabited)
+    log.info(
+        "PLR count OK: %d total, %d inhabited, %d uninhabited", len(df), inhabited, uninhabited
+    )
 
     table = pa.Table.from_pandas(df, schema=PARQUET_SCHEMA, preserve_index=False)
     pq.write_table(table, out_path, compression="snappy")

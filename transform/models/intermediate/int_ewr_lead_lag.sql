@@ -32,12 +32,12 @@
 -- - Source: int_ewr_socioeco (annual EWR composite) not MSS (biennial status_index).
 -- - Lag unit: calendar years (not MSS edition steps × 2 years).
 -- - Delta type: ewr_composite is a metric z-score mean → delta_ewr is metric,
---   valid for OLS and Spearman (unlike MSS ordinal status_index where OLS is
---   prohibited; index-definition.md §3.3).
+-- valid for OLS and Spearman (unlike MSS ordinal status_index where OLS is
+-- prohibited; index-definition.md §3.3).
 -- - Coverage: 2008–2020 (extended from 2014–2020 by B9b).
---   Full composite: 2014–2020. Partial composite: 2008–2013.
+-- Full composite: 2014–2020. Partial composite: 2008–2013.
 -- - Vintage: lor_2021 throughout (all EWR years crosswalked via
---   int_berlin_ewr_plr2021; no lor_pre2021 rows).
+-- int_berlin_ewr_plr2021; no lor_pre2021 rows).
 --
 -- Thesis comparison window: k=2 (2014→2016 = 2 annual steps) matches the thesis
 -- lead-lag gap exactly. k=1 and k=4 extend the analysis.
@@ -63,7 +63,8 @@ with
             area_code,
             area_vintage,
             reference_year,
-            -- Effective composite: full 5-indicator preferred; partial 3-indicator fallback.
+            -- Effective composite: full 5-indicator preferred; partial 3-indicator
+            -- fallback.
             coalesce(ewr_composite, ewr_composite_partial) as ewr_composite_effective,
             ewr_composite,
             ewr_composite_partial,
@@ -78,12 +79,22 @@ with
 
     -- Annual delta of ewr_composite_effective within PLR (for H3a/H3b predictor side).
     -- Uses LAG over reference_year within (city_code, area_code, area_vintage).
+    -- NULL when prior year used partial composite (B9 C-2: cross-era differencing prohibited).
+    -- This ensures 2014 base-year rows (where lag = partial 2013 composite) yield
+    -- delta_ewr_vs_prev = NULL, so H3b naturally excludes them without an extra filter.
     ewr_with_delta as (
         select
             *,
-            ewr_composite_effective - lag(ewr_composite_effective) over (
-                partition by city_code, area_code, area_vintage order by reference_year
-            ) as delta_ewr_vs_prev
+            case
+                when lag(is_partial_composite) over (
+                    partition by city_code, area_code, area_vintage order by reference_year
+                ) = true
+                then null
+                else
+                    ewr_composite_effective - lag(ewr_composite_effective) over (
+                        partition by city_code, area_code, area_vintage order by reference_year
+                    )
+            end as delta_ewr_vs_prev
         from ewr
     ),
 
@@ -102,20 +113,22 @@ with
             lagged.ewr_composite_effective as ewr_composite_tk,
             -- Metric delta: ewr_composite_effective is a z-score mean → arithmetic
             -- difference valid.
-            lagged.ewr_composite_effective
-            - base.ewr_composite_effective as delta_ewr,
+            lagged.ewr_composite_effective - base.ewr_composite_effective as delta_ewr,
             -- Annual EWR change at base year (Δewr_composite vs prior year; H3b
             -- predictor).
             base.delta_ewr_vs_prev as delta_ewr_t,
             -- Population at base year (context / uninhabited guard).
             base.residents_total as residents_total_t,
-            -- B9b partial composite flags (critical: must filter any_endpoint_partial=FALSE
-            -- for valid H2/H3 pooled regressions — partial composite omits foreigners_share
+            -- B9b partial composite flags (critical: must filter
+            -- any_endpoint_partial=FALSE
+            -- for valid H2/H3 pooled regressions — partial composite omits
+            -- foreigners_share
             -- and migration_background_share; see B9-domain-signoff.md §3).
             base.is_partial_composite as is_partial_composite_t,
             lagged.is_partial_composite as is_partial_composite_tk,
-            (base.is_partial_composite or lagged.is_partial_composite)
-            as any_endpoint_partial
+            (
+                base.is_partial_composite or lagged.is_partial_composite
+            ) as any_endpoint_partial
         from ewr_with_delta as base
         cross join (values (1), (2), (4)) as k_steps(lag_k)
         -- Join outcome row: same PLR, same vintage, at year_t + lag_k

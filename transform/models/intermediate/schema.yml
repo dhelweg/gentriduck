@@ -1691,3 +1691,86 @@ models:
           - not_null:
               config:
                 where: "area_code is not null"
+
+  - name: int_mss_bzr_aggregate
+    description: >
+      B10 (#120): BZR (Bezirksregion) and Bezirk spatial aggregation of MSS, EWR, and POI
+      data. Rolls up PLR-level data from int_gentrification_ts to BZR (~138-143 units) and
+      Bezirk (~12 units) using population-weighted means.
+
+      BZR code = first 6 chars of 8-digit PLR area_code.
+      Bezirk code = first 2 chars of 8-digit PLR area_code ('01'-'12').
+
+      For lor_pre2021, BZR codes (6 chars) match the 2018 thesis BZR raum_ids exactly
+      (all 137 thesis BZR codes verified 2026-06-30).
+
+      Status_index and dynamik_index: population-weighted mean rounded to nearest ordinal.
+      POI counts: summed across constituent PLRs (extensive).
+      EWR composites and shares: population-weighted averages (intensive).
+      Typology: derived from aggregated status_index x dynamik_index (D1xD2 matrix, ADR-0008).
+
+      Output grain: (city_code, area_code, area_vintage, area_level, snapshot_year).
+      area_level: 'bzr' or 'bezirk'.
+    meta:
+      dbt_meta_owner: data-engineer
+    tests:
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns:
+              - city_code
+              - area_level
+              - area_code
+              - area_vintage
+              - snapshot_year
+    columns:
+      - name: city_code
+        description: City identifier (ADR-0005). Always 'BER'.
+        tests:
+          - not_null
+      - name: area_level
+        description: Area level. Values 'bzr' or 'bezirk'.
+        tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ["bzr", "bezirk"]
+      - name: area_code
+        description: Area code — 6-char BZR code or 2-char Bezirk code.
+        tests:
+          - not_null
+      - name: area_vintage
+        description: LOR boundary vintage ('lor_pre2021' or 'lor_2021').
+        tests:
+          - not_null
+      - name: snapshot_year
+        description: MSS edition year (2013, 2015, 2017, 2019, 2021, 2023, 2025).
+        tests:
+          - not_null
+      - name: status_index
+        description: >
+          Population-weighted mean of constituent PLR status_index values, rounded to
+          nearest ordinal (1=hoch/best … 4=sehr_niedrig/worst). Clamped to [1, 4].
+          INVERSE numeric vs 2018 thesis status_summe (same deprivation gradient).
+        tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: [1, 2, 3, 4]
+      - name: dynamik_index
+        description: >
+          Population-weighted mean of constituent PLR dynamik_index values, rounded to
+          nearest ordinal (1=positiv/improving … 3=negativ/worsening). Clamped to [1, 3].
+        tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: [1, 2, 3]
+      - name: n_plr
+        description: Number of constituent PLRs contributing to this rollup.
+        tests:
+          - not_null
+      - name: typology_stage
+        description: >
+          Indicative coarsened typology — derived from floored mean-of-ordinals status/dynamik.
+          NOT the official Senate BZR typology. For MAUP diagnostic use only; must not be fed
+          into gentrification_index mart or published as per-area verdicts (B10 domain sign-off Condition 4).

@@ -35,6 +35,7 @@ Usage:
 
 from __future__ import annotations
 
+import argparse
 import os
 import sys
 from pathlib import Path
@@ -235,6 +236,10 @@ def load_ewr_lead_lag_data(con: duckdb.DuckDBPyConnection) -> object:
             ON xw.plr_id_pre2021 = p_tk_pre.area_code
             AND ll.year_tk = p_tk_pre.snapshot_year
             AND p_tk_pre.area_vintage = 'lor_pre2021'
+        -- B9 sign-off condition C-2: main H2/H3 analysis uses full-composite pairs only.
+        -- Pre-2014 partial-composite rows (ewr_composite_partial only) are excluded here;
+        -- they have no matching POI data and would inject zero-POI rows that dilute the signal.
+        WHERE ll.any_endpoint_partial = FALSE
     """).df()
     return df
 
@@ -278,6 +283,232 @@ def load_lead_lag_data(con: duckdb.DuckDBPyConnection, vintage: str = "lor_2021"
             AND ll.edition_tk = p_tk.snapshot_year
             AND ll.area_vintage = p_tk.area_vintage
         WHERE ll.area_vintage = '{vintage}'
+    """).df()
+    return df
+
+
+def load_bzr_h1_data(con: duckdb.DuckDBPyConnection, scale: str = "bzr") -> object:
+    """Load BZR/Bezirk-level cross-section for H1 at coarser spatial scales.
+
+    B10 (#120): extend H1 to BZR (~137 units in lor_pre2021) and Bezirk (~12 districts).
+    Uses stg_thesis_2018_result_bzr for BZR status labels joined with BZR-level POI sums
+    from int_poi_features_pivot (summed over lor_pre2021 PLRs, snapshot 2018).
+
+    BZR code = first 6 chars of 8-char PLR area_code (pre-2021 system).
+    For lor_pre2021, these match the 2018 thesis BZR raum_ids exactly (verified B10).
+
+    Thesis BZR status_index is a z-score float (not the MSS ordinal 1-4).
+    We use the thesis status_index directly for H1 at BZR scale, same as PLR scale uses
+    stg_thesis_2018_result_plr.status_index.
+
+    For Bezirk scale (12 units), we aggregate thesis BZR data further to Bezirk level
+    (first 2 chars of BZR raum_id).
+
+    MAUP note (Thesis §3.2): correlations at coarser scales are typically stronger due to
+    spatial smoothing. BZR/Bezirk H1 results should be compared against PLR H1 to assess
+    MAUP sensitivity, not treated as independent confirmation.
+    """
+    if scale == "bzr":
+        # BZR level: thesis BZR golden joined with BZR POI sums
+        df = con.execute("""
+            WITH bzr_poi AS (
+                SELECT
+                    city_code,
+                    SUBSTR(area_code, 1, 6) AS bzr_code,
+                    snapshot_year,
+                    SUM(total_poi_count) AS total_poi_count,
+                    SUM(COALESCE(poi_cafe, 0)) AS poi_cafe,
+                    SUM(COALESCE(poi_bar, 0)) AS poi_bar,
+                    SUM(COALESCE(poi_restaurant, 0)) AS poi_restaurant,
+                    SUM(COALESCE(poi_fast_food, 0)) AS poi_fast_food,
+                    SUM(COALESCE(poi_nightlife, 0)) AS poi_nightlife,
+                    SUM(COALESCE(poi_hairdresser, 0)) AS poi_hairdresser,
+                    SUM(COALESCE(poi_clothing, 0)) AS poi_clothing,
+                    SUM(COALESCE(poi_beauty, 0)) AS poi_beauty
+                FROM main.int_poi_features_pivot
+                WHERE area_vintage = 'lor_pre2021' AND snapshot_year = 2018
+                GROUP BY city_code, bzr_code, snapshot_year
+            )
+            SELECT
+                t.raum_id AS area_code,
+                -- Thesis BZR status_index is a normalized float (z-score style)
+                -- Same D1 polarity caveat: higher status_summe = more deprived (thesis scale)
+                -- For thesis BZR, status_sum is the raw deprivation composite (higher=worse),
+                -- and status_index is its z-score. Use status_sum directly for Spearman
+                -- (monotonic transform preserves rank; see index-definition.md §5).
+                t.status_sum AS status_index,
+                t.ew AS residents_total,
+                p.total_poi_count,
+                p.poi_cafe, p.poi_bar, p.poi_restaurant, p.poi_fast_food,
+                p.poi_nightlife, p.poi_hairdresser, p.poi_clothing, p.poi_beauty
+            FROM main.stg_thesis_2018_result_bzr t
+            JOIN bzr_poi p ON t.raum_id = p.bzr_code
+            WHERE t.status_sum IS NOT NULL
+              AND p.total_poi_count IS NOT NULL
+        """).df()
+    elif scale == "bezirk":
+        # Bezirk level: aggregate BZR thesis data to 12 districts
+        df = con.execute("""
+            WITH bzr_poi AS (
+                SELECT
+                    SUBSTR(area_code, 1, 6) AS bzr_code,
+                    SUM(total_poi_count) AS total_poi_count,
+                    SUM(COALESCE(poi_cafe, 0)) AS poi_cafe,
+                    SUM(COALESCE(poi_bar, 0)) AS poi_bar,
+                    SUM(COALESCE(poi_restaurant, 0)) AS poi_restaurant,
+                    SUM(COALESCE(poi_fast_food, 0)) AS poi_fast_food,
+                    SUM(COALESCE(poi_nightlife, 0)) AS poi_nightlife,
+                    SUM(COALESCE(poi_hairdresser, 0)) AS poi_hairdresser,
+                    SUM(COALESCE(poi_clothing, 0)) AS poi_clothing,
+                    SUM(COALESCE(poi_beauty, 0)) AS poi_beauty
+                FROM main.int_poi_features_pivot
+                WHERE area_vintage = 'lor_pre2021' AND snapshot_year = 2018
+                GROUP BY bzr_code
+            ),
+            bezirk_thesis AS (
+                SELECT
+                    SUBSTR(raum_id, 1, 2) AS bezirk_code,
+                    SUM(status_sum * COALESCE(ew, 1.0)) / NULLIF(SUM(COALESCE(ew, 1.0)), 0) AS status_index,
+                    SUM(COALESCE(ew, 0.0)) AS residents_total
+                FROM main.stg_thesis_2018_result_bzr
+                WHERE status_sum IS NOT NULL
+                GROUP BY bezirk_code
+            ),
+            bezirk_poi AS (
+                SELECT
+                    SUBSTR(bzr_code, 1, 2) AS bezirk_code,
+                    SUM(total_poi_count) AS total_poi_count,
+                    SUM(poi_cafe) AS poi_cafe,
+                    SUM(poi_bar) AS poi_bar,
+                    SUM(poi_restaurant) AS poi_restaurant,
+                    SUM(poi_fast_food) AS poi_fast_food,
+                    SUM(poi_nightlife) AS poi_nightlife,
+                    SUM(poi_hairdresser) AS poi_hairdresser,
+                    SUM(poi_clothing) AS poi_clothing,
+                    SUM(poi_beauty) AS poi_beauty
+                FROM bzr_poi
+                GROUP BY bezirk_code
+            )
+            SELECT
+                t.bezirk_code AS area_code,
+                t.status_index,
+                t.residents_total,
+                p.total_poi_count,
+                p.poi_cafe, p.poi_bar, p.poi_restaurant, p.poi_fast_food,
+                p.poi_nightlife, p.poi_hairdresser, p.poi_clothing, p.poi_beauty
+            FROM bezirk_thesis t
+            JOIN bezirk_poi p ON t.bezirk_code = p.bezirk_code
+            WHERE t.status_index IS NOT NULL
+              AND p.total_poi_count IS NOT NULL
+        """).df()
+    else:
+        raise ValueError(f"Unknown scale: {scale!r}. Use 'plr', 'bzr', or 'bezirk'.")
+    return df
+
+
+def load_bzr_lead_lag_data(con: duckdb.DuckDBPyConnection, scale: str = "bzr") -> object:
+    """Load BZR/Bezirk-level MSS lead-lag panel for H2/H3 at coarser spatial scales.
+
+    B10 (#120): int_mss_bzr_aggregate provides population-weighted rollups of MSS,
+    EWR, and POI data at BZR and Bezirk level. We build a synthetic lead-lag panel
+    from consecutive MSS editions using the same lag_k structure as int_mss_lead_lag.
+
+    For lor_2021 editions: 2021->2023 (k=1), 2021->2025 (k=2).
+    For lor_pre2021 editions: 2015->2017 (k=1), 2017->2019 (k=1), 2015->2019 (k=2).
+
+    delta_status_ordinal = status_index_tk - status_index_t (same polarity as PLR).
+    status_transition: 'improved' if delta<0, 'worsened' if delta>0, 'stable' if delta=0.
+    dynamism_score_t / delta_dynamism_t: from the BZR aggregate.
+
+    MAUP note: BZR/Bezirk panels have far fewer rows (n_bzr*n_editions vs n_plr*n_editions).
+    Statistical power is reduced. Results at Bezirk scale (12 units) are particularly
+    susceptible to small-sample effects and should be interpreted with caution.
+    """
+    area_level = scale  # 'bzr' or 'bezirk'
+
+    df = con.execute(f"""
+        WITH base AS (
+            SELECT
+                city_code,
+                area_code,
+                area_vintage,
+                snapshot_year AS edition,
+                status_index,
+                dynamik_index,
+                dynamism_score,
+                total_poi_count
+            FROM main.int_mss_bzr_aggregate
+            WHERE area_level = '{area_level}'
+              AND status_index IS NOT NULL
+        ),
+        -- Generate lead-lag pairs for k=1 and k=2
+        -- lor_2021: (2021->2023, k=1), (2023->2025, k=1), (2021->2025, k=2)
+        -- lor_pre2021: (2015->2017, k=1), (2017->2019, k=1), (2015->2019, k=2)
+        pairs AS (
+            SELECT
+                b.city_code,
+                b.area_code,
+                b.area_vintage,
+                1 AS lag_k,
+                b.edition AS edition_t,
+                bk.edition AS edition_tk,
+                b.status_index AS status_index_t,
+                bk.status_index AS status_index_tk,
+                bk.status_index - b.status_index AS delta_status_ordinal,
+                b.dynamism_score AS dynamism_score_t,
+                bk.dynamism_score AS dynamism_score_tk,
+                bk.dynamism_score - b.dynamism_score AS delta_dynamism_t,
+                b.total_poi_count AS poi_count_t,
+                bk.total_poi_count AS poi_count_tk,
+                bk.total_poi_count - b.total_poi_count AS delta_poi
+            FROM base b
+            JOIN base bk
+                ON b.area_code = bk.area_code
+                AND b.area_vintage = bk.area_vintage
+                AND (
+                    -- lor_2021 k=1 pairs
+                    (b.area_vintage = 'lor_2021' AND b.edition = 2021 AND bk.edition = 2023)
+                    OR (b.area_vintage = 'lor_2021' AND b.edition = 2023 AND bk.edition = 2025)
+                    -- lor_pre2021 k=1 pairs
+                    OR (b.area_vintage = 'lor_pre2021' AND b.edition = 2015 AND bk.edition = 2017)
+                    OR (b.area_vintage = 'lor_pre2021' AND b.edition = 2017 AND bk.edition = 2019)
+                )
+            UNION ALL
+            SELECT
+                b.city_code,
+                b.area_code,
+                b.area_vintage,
+                2 AS lag_k,
+                b.edition AS edition_t,
+                bk.edition AS edition_tk,
+                b.status_index AS status_index_t,
+                bk.status_index AS status_index_tk,
+                bk.status_index - b.status_index AS delta_status_ordinal,
+                b.dynamism_score AS dynamism_score_t,
+                bk.dynamism_score AS dynamism_score_tk,
+                bk.dynamism_score - b.dynamism_score AS delta_dynamism_t,
+                b.total_poi_count AS poi_count_t,
+                bk.total_poi_count AS poi_count_tk,
+                bk.total_poi_count - b.total_poi_count AS delta_poi
+            FROM base b
+            JOIN base bk
+                ON b.area_code = bk.area_code
+                AND b.area_vintage = bk.area_vintage
+                AND (
+                    -- lor_2021 k=2 pair
+                    (b.area_vintage = 'lor_2021' AND b.edition = 2021 AND bk.edition = 2025)
+                    -- lor_pre2021 k=2 pair
+                    OR (b.area_vintage = 'lor_pre2021' AND b.edition = 2015 AND bk.edition = 2019)
+                )
+        )
+        SELECT
+            *,
+            CASE
+                WHEN delta_status_ordinal < 0 THEN 'improved'
+                WHEN delta_status_ordinal > 0 THEN 'worsened'
+                ELSE 'stable'
+            END AS status_transition
+        FROM pairs
     """).df()
     return df
 
@@ -815,6 +1046,8 @@ def write_findings(
     results_mss: list[dict],
     results_ewr: list[dict] | None = None,
     results_mss_pre: list[dict] | None = None,
+    results_bzr: list[dict] | None = None,
+    results_bezirk: list[dict] | None = None,
 ) -> None:
     import datetime
 
@@ -927,8 +1160,52 @@ def write_findings(
                 f"\n**Directional agreement (H2/H3 EWR): {n_pass_ewr}/{len(results_ewr)}. Significant: {n_sig_ewr}/{len(results_ewr)}.**\n\n"
             )
 
+        if results_bzr:
+            n_pass_bzr = sum(1 for r in results_bzr if r["dir_match"])
+            n_sig_bzr = sum(1 for r in results_bzr if r.get("sig"))
+            f.write(
+                "## Results — Section 5: H1/H2/H3 at BZR Scale (Bezirksregion, ~137 units, B10 #120)\n\n"
+            )
+            f.write(
+                "> B10: BZR scale (n≈137 units). Population-weighted rollup from PLR. "
+                "MAUP note: coarser-scale correlations tend to be stronger (spatial smoothing). "
+                "See index-definition.md §8 and B10-geo-signoff.md.\n\n"
+            )
+            _write_results_table(f, results_bzr)
+            f.write(
+                f"\n**Directional agreement (BZR): {n_pass_bzr}/{len(results_bzr)}. Significant: {n_sig_bzr}/{len(results_bzr)}.**\n\n"
+            )
+
+        if results_bezirk:
+            n_pass_bezirk = sum(1 for r in results_bezirk if r["dir_match"])
+            n_sig_bezirk = sum(1 for r in results_bezirk if r.get("sig"))
+            f.write(
+                "## Results — Section 6: H1/H2/H3 at Bezirk Scale (District, 12 units, B10 #120)\n\n"
+            )
+            f.write(
+                "> B10: Bezirk scale (n=12 districts). Population-weighted rollup from PLR. "
+                "CAUTION: n=12 is extremely small; results have very low statistical power "
+                "and should be treated as indicative only (see B10-geo-signoff.md §MAUP).\n"
+                ">\n"
+                "> **MAUP caveat:** Bezirk-level correlations reflect within-district smoothing, not "
+                "independent observations. Statistical significance at this scale is edge-fragile: "
+                "for H1 cross-section (n=12), |rho|≈0.58 needed for p<0.05; "
+                "for H2 lead-lag (n=24 at k=2), |rho|≈0.40 needed. "
+                "Significant H2 cells (k=1, k=2) should be read with this threshold in mind.\n\n"
+            )
+            _write_results_table(f, results_bezirk)
+            f.write(
+                f"\n**Directional agreement (Bezirk): {n_pass_bezirk}/{len(results_bezirk)}. Significant: {n_sig_bezirk}/{len(results_bezirk)}.**\n\n"
+            )
+
         f.write("## Overall Scorecard\n\n")
-        all_results = results_mss + (results_mss_pre or []) + (results_ewr or [])
+        all_results = (
+            results_mss
+            + (results_mss_pre or [])
+            + (results_ewr or [])
+            + (results_bzr or [])
+            + (results_bezirk or [])
+        )
         n_pass_all = sum(1 for r in all_results if r["dir_match"])
         n_sig_all = sum(1 for r in all_results if r.get("sig"))
         f.write(
@@ -985,6 +1262,21 @@ def write_findings(
 
 
 def main() -> None:
+    # B10 (#120): --scale argument for multi-scale analysis.
+    # PLR is the default (existing behavior preserved). BZR and Bezirk are new.
+    parser = argparse.ArgumentParser(description="E1 regressions: thesis H1-H3c, multi-scale")
+    parser.add_argument(
+        "--scale",
+        choices=["plr", "bzr", "bezirk", "all"],
+        default="all",
+        help="Spatial scale: plr (default), bzr, bezirk, or all (runs all three). "
+        "B10 (#120): 'all' adds BZR and Bezirk sections to findings doc.",
+    )
+    args = parser.parse_args()
+    run_plr = args.scale in ("plr", "all")
+    run_bzr = args.scale in ("bzr", "all")
+    run_bezirk = args.scale in ("bezirk", "all")
+
     if not DUCKDB_PATH.exists():
         print(
             f"INFO: DuckDB not found at {DUCKDB_PATH}. "
@@ -1036,6 +1328,32 @@ def main() -> None:
         )
     else:
         print("INFO: int_ewr_lead_lag not found — skipping same-era EWR comparison.")
+
+    # --- B10: load BZR/Bezirk data BEFORE closing connection ---
+    df_bzr_h1 = None
+    df_bzr_ll = None
+    df_bezirk_h1 = None
+    df_bezirk_ll = None
+
+    if run_bzr and "int_mss_bzr_aggregate" in tables:
+        print("\nLoading H1 BZR data (thesis BZR golden + BZR POI sums)...")
+        df_bzr_h1 = load_bzr_h1_data(con, scale="bzr")
+        print(f"  Loaded {len(df_bzr_h1)} BZR rows for H1")
+        print("Loading H2/H3 BZR lead-lag data...")
+        df_bzr_ll = load_bzr_lead_lag_data(con, scale="bzr")
+        print(f"  Loaded {len(df_bzr_ll)} BZR lead-lag rows")
+    elif run_bzr:
+        print("INFO: int_mss_bzr_aggregate not found (B10) — run 'uv run poe build' first.")
+
+    if run_bezirk and "int_mss_bzr_aggregate" in tables:
+        print("\nLoading H1 Bezirk data (thesis Bezirk aggregate + Bezirk POI sums)...")
+        df_bezirk_h1 = load_bzr_h1_data(con, scale="bezirk")
+        print(f"  Loaded {len(df_bezirk_h1)} Bezirk rows for H1")
+        print("Loading H2/H3 Bezirk lead-lag data...")
+        df_bezirk_ll = load_bzr_lead_lag_data(con, scale="bezirk")
+        print(f"  Loaded {len(df_bezirk_ll)} Bezirk lead-lag rows")
+    elif run_bezirk:
+        print("INFO: int_mss_bzr_aggregate not found (B10) — run 'uv run poe build' first.")
 
     con.close()
 
@@ -1094,7 +1412,62 @@ def main() -> None:
         print(f"\nEWR directional agreement: {n_pass_ewr}/{len(results_ewr)}")
         print(f"EWR significant at p<0.05: {n_sig_ewr}/{len(results_ewr)}")
 
-    write_findings(df_h1, results_mss, results_ewr, results_mss_pre=results_mss_pre)
+    # --- B10: BZR scale H1/H2/H3 (data loaded above, before con.close) ---
+    results_bzr = []
+    if run_bzr and df_bzr_h1 is not None:
+        print(f"  Loaded {len(df_bzr_h1)} BZR rows for H1")
+        print(f"  Loaded {len(df_bzr_ll)} BZR lead-lag rows")
+
+        if len(df_bzr_h1) >= 10:
+            print("\nRunning H1/H1b tests at BZR scale...")
+            results_bzr += test_h1(df_bzr_h1)
+
+        if len(df_bzr_ll) >= 10:
+            print("Running H2/H3 tests at BZR scale...")
+            results_bzr += test_h2(df_bzr_ll, panel_label="BZR lor_2021 panel")
+            results_bzr += test_h3(df_bzr_ll, panel_label="BZR lor_2021 panel")
+
+        if results_bzr:
+            print("\n=== BZR SCALE (~137 units) ===")
+            print_results(results_bzr)
+            n_pass_bzr = sum(1 for r in results_bzr if r["dir_match"])
+            n_sig_bzr = sum(1 for r in results_bzr if r.get("sig"))
+            print(f"\nBZR directional agreement: {n_pass_bzr}/{len(results_bzr)}")
+            print(f"BZR significant at p<0.05: {n_sig_bzr}/{len(results_bzr)}")
+    elif run_bzr:
+        print("INFO: int_mss_bzr_aggregate not found — run 'uv run poe build' first (B10).")
+
+    # --- B10: Bezirk scale H1/H2/H3 (12 districts — low power, indicative only) ---
+    # Data was loaded above, before con.close().
+    results_bezirk = []
+    if run_bezirk and df_bezirk_h1 is not None:
+        if len(df_bezirk_h1) >= 5:
+            print("\nRunning H1/H1b tests at Bezirk scale (n=12; low power — indicative only)...")
+            results_bezirk += test_h1(df_bezirk_h1)
+
+        if df_bezirk_ll is not None and len(df_bezirk_ll) >= 5:
+            print("Running H2/H3 tests at Bezirk scale (low power)...")
+            results_bezirk += test_h2(df_bezirk_ll, panel_label="Bezirk lor_2021 panel")
+            results_bezirk += test_h3(df_bezirk_ll, panel_label="Bezirk lor_2021 panel")
+
+        if results_bezirk:
+            print("\n=== BEZIRK SCALE (12 districts — LOW POWER) ===")
+            print_results(results_bezirk)
+            n_pass_bezirk = sum(1 for r in results_bezirk if r["dir_match"])
+            n_sig_bezirk = sum(1 for r in results_bezirk if r.get("sig"))
+            print(f"\nBezirk directional agreement: {n_pass_bezirk}/{len(results_bezirk)}")
+            print(f"Bezirk significant at p<0.05: {n_sig_bezirk}/{len(results_bezirk)}")
+    elif run_bezirk:
+        print("INFO: int_mss_bzr_aggregate not found — run 'uv run poe build' first (B10).")
+
+    write_findings(
+        df_h1 if run_plr else None,
+        results_mss,
+        results_ewr,
+        results_mss_pre=results_mss_pre,
+        results_bzr=results_bzr or None,
+        results_bezirk=results_bezirk or None,
+    )
     print(f"\nFindings written to: {OUTPUT_MD}")
 
 
