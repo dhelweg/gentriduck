@@ -478,3 +478,201 @@ models:
         data_type: boolean
         tests:
           - not_null
+
+  - name: mart_price_rent_dimension
+    description: >
+      D3 (#29): Price/rent dimension mart — structural LEVEL context for each PLR
+      per vintage year. Combines three signals:
+        (1) BRW area-weighted land value (from int_berlin_brw_plr)
+        (2) Wohnlage tier composition (from int_berlin_wohnlage_plr, pivoted)
+        (3) Modelled Mietspiegel rent estimate (Wohnlage-composition-weighted over a
+            fixed reference dwelling profile: 60–90 m², 1950–1964 construction year)
+
+      STRUCTURAL LEVEL, NOT DYNAMIC SIGNAL (geo condition 14, domain D2, ADR-0008):
+      All signals here are BASELINE/CONTEXT COVARIATES (D4-levels pattern,
+      index-definition §4.6). They must NOT be blended into the MSS Status×Dynamik
+      typology — that would reproduce the ADR-0008 legacy-averaging error.
+
+      BRW polarity (ambiguous, domain D2): high land value = price-surface / consolidation
+      CONTEXT COVARIATE — ambiguous between historic wealth, completed gentrification, and
+      active pressure. Sign-flip required if pooled into vulnerability composite.
+      DISPLACEMENT-RISK language attaches only to BRW CHANGE (brw_trend), not the level.
+
+      Wohnlage polarity (domain D3): high pct_einfach = vulnerability/headroom PRECONDITION.
+      High wohnlage_score = desirable = consolidated = LOW residual headroom; sign-flip for
+      vulnerability composite. The Aufwertung OUTCOME is declining einfach share over vintages
+      (built separately as a change indicator).
+
+      Modelled rent (domain D6, D7): "modelled/estimated net cold rent at a fixed reference
+      dwelling profile — NOT observed rent paid." Bestandsmiete/ortsübliche Vergleichsmiete
+      (Holm 2010); lagging, conservative; understates leading-edge displacement pressure.
+
+      Normalization: winsorized (1%/99%) z-scores per (city_code, snapshot_year) over
+      non-NULL, non-low-n PLRs. Rank/percentile of BRW value added (rank is the headline
+      for heavy-tailed land values; z-score secondary). OECD/JRC (2008) common polarity.
+
+      Ecological fallacy guardrail (domain D10, G-2): PLR-LEVEL aggregates only.
+      BRW is coarser than PLR (1,621 zones, area-interpolated) — NOT parcel precision.
+      Inferring an individual's rent/land-value/displacement from a PLR value is fallacious.
+
+      Milieuschutz/counter-misuse framing (domain D12): frame toward identifying quarters
+      that may warrant displacement protection (Holm 2010, Bernt 2016). NOT an investment
+      surface. Low land value + vulnerable population = flag for PROTECTION, not invitation.
+
+      R-C2 citations: Smith (1979) rent gap; Blasius & Dangschat (1990) Aufwertung;
+      Holm (2010) / Bernt (2016) Milieuschutz; Openshaw (1984) MAUP; OECD/JRC (2008).
+      Sign-offs: docs/epic-d/d3-price-rent-geo-signoff.md,
+                 docs/epic-d/d3-price-rent-domain-signoff.md.
+
+      Graceful degradation: returns zero rows when intermediate models return zero rows.
+    meta:
+      dbt_meta_owner: data-engineer
+    tests:
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns:
+              - city_code
+              - snapshot_year
+              - area_code
+              - area_vintage
+          config:
+            where: "area_code is not null"
+    columns:
+      - name: city_code
+        description: City identifier (ADR-0005). 'berlin' from stg_berlin_bodenrichtwert/stg_berlin_wohnlage.
+        tests:
+          - not_null:
+              config:
+                where: "area_code is not null"
+      - name: snapshot_year
+        description: >
+          Price/rent dimension vintage year (integer).
+          For BRW-only rows: derived from YEAR(brw.reference_date), 2017–2024.
+          For Wohnlage-only rows (e.g. 2026): Wohnlage WFS edition year.
+        tests:
+          - not_null:
+              config:
+                where: "area_code is not null"
+      - name: area_code
+        description: PLR area code (8-digit, zero-padded). LOR 2021 scheme for BRW; vintage-specific for Wohnlage.
+        tests:
+          - not_null
+      - name: area_vintage
+        description: >
+          LOR boundary vintage. 'lor_2021' for BRW rows (always lor_2021 in int_berlin_brw_plr).
+          'lor_pre2021' or 'lor_2021' for Wohnlage rows (vintage-specific join).
+        tests:
+          - not_null:
+              config:
+                where: "area_code is not null"
+          - accepted_values:
+              arguments:
+                values: ["lor_pre2021", "lor_2021"]
+              config:
+                where: "area_code is not null"
+      - name: brw_weighted_avg_eur_m2
+        description: >
+          Area-weighted mean Bodenrichtwert (EUR/m²) for residential BRW zones overlapping
+          this PLR. NULL for non-residential/uninhabited PLRs (pure park/water/airport).
+          POLARITY: ambiguous context covariate (domain D2). High = price-surface/consolidation.
+          Sign-flip required for vulnerability composite. NOT a vulnerability score.
+          BRW LEVEL ≠ rent gap (Smith 1979) — the rent gap is a difference, not a level (domain D1).
+      - name: n_brw_zones
+        description: Count of distinct residential BRW zones contributing to brw_weighted_avg_eur_m2.
+      - name: brw_residential_coverage_frac
+        description: >
+          Fraction of the PLR area covered by residential BRW zones (0–1).
+          NULL when no W% BRW zones overlap this PLR. Use to identify thin-signal PLRs.
+      - name: pct_einfach
+        description: >
+          Share of Wohnlage-classified addresses in the 'einfach' (simple/basic) tier for
+          this PLR-vintage. 0.0 if this tier is absent; NULL if no Wohnlage data available.
+          POLARITY: vulnerability-positive (high pct_einfach = more upgrading headroom;
+          inner-city precondition for gentrification per Blasius & Dangschat 1990; domain D3).
+      - name: pct_mittel
+        description: Share of addresses in the 'mittel' (medium) Wohnlage tier. 0.0 if absent.
+      - name: pct_gut
+        description: Share of addresses in the 'gut' (good/desirable) Wohnlage tier. 0.0 if absent.
+      - name: wohnlage_n_addresses
+        description: Total count of Wohnlage-classified address points in this PLR-vintage across all tiers.
+      - name: wohnlage_low_n
+        description: >
+          TRUE when this PLR-vintage has fewer than 10 total Wohnlage address points.
+          When TRUE: wohnlage_score, est_rent_mid/low/high, wohnlage_zscore, est_rent_zscore
+          are all NULL (unstable composition; geo condition 7).
+      - name: wohnlage_score
+        description: >
+          Ordinal-mean approximation of Wohnlage quality per PLR:
+          pct_einfach * 1 + pct_mittel * 2 + pct_gut * 3.
+          Range: [1.0, 3.0]. LABELLED AS ORDINAL-MEAN APPROXIMATION — the three tiers are
+          ordered but not equidistant; do not treat as interval-scaled in regression without noting.
+          NULL when wohnlage_low_n = TRUE.
+          POLARITY: high score = more desirable = consolidated = LOW residual headroom.
+          Sign-flip required for vulnerability composite (for vulnerability framing, use pct_einfach).
+      - name: est_rent_mid
+        description: >
+          Modelled/estimated net cold rent (EUR/m²/month) at the fixed reference dwelling profile:
+          size = 60–90 m², construction year = 1950–1964, standard equipment (mit SH/Bad/IWC).
+          Formula: pct_einfach * ms_einfach_mid + pct_mittel * ms_mittel_mid + pct_gut * ms_gut_mid
+          using the Mietspiegel rent_mid values for the nearest-<= vintage.
+          "modelled/estimated net cold rent at a fixed reference dwelling profile — NOT observed
+           rent paid." (domain D6; Mietspiegel ortsübliche Vergleichsmiete; Holm 2010.)
+          Bestandsmiete/lagging bias: conservative, understates leading-edge rent pressure (domain D7).
+          NULL when wohnlage_low_n = TRUE (geo condition 7).
+          POLARITY: affordability-negative (high = less affordable; Bestandsmiete-lagging).
+      - name: est_rent_low
+        description: >
+          Composition-weighted lower bound (3/4-Spanne) of Mietspiegel reference rent.
+          Same formula and fixed profile as est_rent_mid, using rent_low.
+          NULL when wohnlage_low_n = TRUE.
+      - name: est_rent_high
+        description: >
+          Composition-weighted upper bound (3/4-Spanne) of Mietspiegel reference rent.
+          Same formula and fixed profile as est_rent_mid, using rent_high.
+          NULL when wohnlage_low_n = TRUE.
+      - name: mietspiegel_vintage_used
+        description: >
+          Mietspiegel edition year used for the modelled rent estimate.
+          Nearest-<= match to the Wohnlage vintage year (geo condition 8).
+          Approximation disclosure (domain D13): 2026 Wohnlage uses 2026 Mietspiegel
+          (stands in for the 2025 MSS panel edition; disclose on G2).
+      - name: wohnlage_vintage_matched
+        description: >
+          The Wohnlage vintage year that was joined to this BRW snapshot_year.
+          Nearest-<= Wohnlage vintage for the BRW year. NULL for BRW years before the
+          first available Wohnlage vintage. Same as snapshot_year for Wohnlage-only rows.
+      - name: brw_zscore
+        description: >
+          Winsorized (1%/99%) z-score of brw_weighted_avg_eur_m2 per (city_code, snapshot_year),
+          computed over non-NULL, non-low-n PLRs only.
+          POLARITY: ambiguous (see brw_weighted_avg_eur_m2). Sign-flip if pooled into vulnerability.
+          NULL when brw_weighted_avg_eur_m2 is NULL or normalization moments unavailable.
+          (geo condition 13; OECD/JRC 2008)
+      - name: wohnlage_zscore
+        description: >
+          Winsorized (1%/99%) z-score of wohnlage_score per (city_code, snapshot_year),
+          computed over non-NULL, non-low-n PLRs only.
+          POLARITY: high = desirable = consolidated = LOW vulnerability headroom.
+          Sign-flip required for vulnerability composite; use pct_einfach for vuln framing.
+          NULL when wohnlage_score is NULL or normalization moments unavailable.
+          (geo condition 13; OECD/JRC 2008)
+      - name: est_rent_zscore
+        description: >
+          Winsorized (1%/99%) z-score of est_rent_mid per (city_code, snapshot_year),
+          computed over non-NULL, non-low-n PLRs only.
+          POLARITY: affordability-negative (high = less affordable = more pressure).
+          NULL when est_rent_mid is NULL or normalization moments unavailable.
+          (geo condition 13; OECD/JRC 2008)
+      - name: brw_rank
+        description: >
+          Rank of this PLR by brw_weighted_avg_eur_m2 within (city_code, snapshot_year),
+          ascending (1 = lowest land value; higher rank = higher land value).
+          NULL PLRs sorted last. Headline display metric for heavy-tailed land values (G2 page)
+          because rank is outlier-insensitive (a few super-prime PLRs skew the z-score).
+          (geo condition 13)
+      - name: brw_percentile
+        description: >
+          PERCENT_RANK of brw_weighted_avg_eur_m2 within (city_code, snapshot_year),
+          ascending. Range [0, 1]; 0 = lowest, 1 = highest land value.
+          NULL PLRs sorted last.
+          (geo condition 13)

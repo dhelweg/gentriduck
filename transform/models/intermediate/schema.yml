@@ -1162,6 +1162,178 @@ models:
           True if area_vintage = 'lor_pre2021' (the 447-PLR series; thesis universe; longest
           MSS time series). Epic B headline analysis uses this series (index-definition.md §6.2).
 
+  - name: int_berlin_brw_plr
+    description: >
+      D3 (#29): Area-weighted spatial join of BRW land value zones → LOR 2021 PLR boundaries.
+      Thesis §3.4: land value as structural rent-gap indicator.
+
+      Method: ST_Intersects(brw_geom, plr_geom) as join predicate; weight = ST_Area(intersection)
+      / ST_Area(brw_zone); brw_weighted_avg_eur_m2 = SUM(value * weight) / SUM(weight).
+      Residential zones only: nutzung LIKE 'W%' (Wohngebiet variants WA, WR, WB, WS, etc.).
+      Non-trivial intersection guard: ST_Area(intersection) > 1.0 m².
+
+      Always uses lor_2021 PLR geometries for temporal consistency across the 2017–2024 BRW series.
+      snapshot_year derived from YEAR(brw.reference_date).
+
+      Graceful degradation: returns zero rows when stg_berlin_bodenrichtwert or stg_berlin_lor
+      return zero rows (no parquets ingested yet). Build passes before data is downloaded.
+
+      Source: stg_berlin_bodenrichtwert + stg_berlin_lor. CRS: EPSG:25833 throughout.
+    meta:
+      dbt_meta_owner: data-engineer
+    tests:
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns:
+              - city_code
+              - snapshot_year
+              - area_code
+              - area_vintage
+          config:
+            where: "area_code is not null"
+      - dbt_utils.expression_is_true:
+          arguments:
+            expression: "brw_weighted_avg_eur_m2 > 0"
+          config:
+            where: "brw_weighted_avg_eur_m2 is not null"
+    columns:
+      - name: city_code
+        description: City identifier (ADR-0005). Always 'berlin' (from stg_berlin_bodenrichtwert staging boundary).
+        tests:
+          - not_null:
+              config:
+                where: "area_code is not null"
+      - name: snapshot_year
+        description: BRW reference year (integer, derived from YEAR(reference_date); 2017–2024).
+        tests:
+          - not_null:
+              config:
+                where: "area_code is not null"
+      - name: area_code
+        description: PLR area code in LOR 2021 scheme (8-digit, zero-padded). FK -> stg_berlin_lor.
+        tests:
+          - not_null
+      - name: area_vintage
+        description: >
+          LOR geometry vintage. Always 'lor_2021' (only lor_2021 PLR geometries are joined
+          to provide a stable spatial reference across the full 2017–2024 BRW series).
+        tests:
+          - not_null:
+              config:
+                where: "area_code is not null"
+          - accepted_values:
+              arguments:
+                values: ["lor_2021"]
+              config:
+                where: "area_code is not null"
+      - name: brw_weighted_avg_eur_m2
+        description: >
+          Area-weighted mean Bodenrichtwert (EUR/m²) for this PLR in this year.
+          Formula: SUM(value_eur_per_m2 * overlap_area) / SUM(overlap_area) — intensive
+          variable formula (Openshaw 1984; mirrors int_berlin_ewr_plr2021 note).
+          Residential zones only (nutzung LIKE 'W%'; BauNVO Wohngebiet variants).
+          NULL if no residential BRW zones overlap this PLR for this year (pure park/water/
+          industrial/airport PLR). Never 0 — zero EUR/m² is a false statement (geo cond 4).
+      - name: n_brw_zones
+        description: >
+          Count of distinct residential BRW zones contributing to this PLR's weighted mean.
+          Always >= 1 when brw_weighted_avg_eur_m2 is not null.
+      - name: brw_residential_coverage_frac
+        description: >
+          Fraction of the PLR area covered by residential (nutzung LIKE 'W%') BRW zones:
+          SUM(intersection_area_m2) / ST_Area(plr_geom) per PLR.
+          Ranges from 0 to 1 (may exceed 1.0 in rare edge cases due to slivers post-makevalid).
+          NULL when no W% BRW zones overlap this PLR (pure park/water/industrial).
+          Consumers: use to identify where the BRW signal is thin or absent. Zero-residential
+          PLRs yield NULL brw_weighted_avg_eur_m2 and NULL here — transparent, not silently 0.
+          (geo condition 4; index-definition §7 "exclude, don't zero-impute").
+
+  - name: int_berlin_wohnlage_plr
+    description: >
+      D3 (#29): Wohnlage residential quality tier composition per PLR per WFS edition year.
+      Thesis §3.4: Wohnlage residential quality tier composition per PLR — Mietspiegel basis.
+
+      Method: ST_Within(wohnlage_point, plr_polygon) — point-in-polygon, same predicate as
+      int_osm_poi_plr (geo-DS approved C3 method). Vintage alignment mirrors int_osm_poi_plr:
+      vintage <= 2020 → lor_pre2021 geometries; vintage >= 2021 → lor_2021 geometries.
+      pct_wohnlage = n_addresses / SUM(n_addresses) OVER (PARTITION BY vintage, area_code, area_vintage).
+
+      Graceful degradation: returns zero rows when stg_berlin_wohnlage or stg_berlin_lor
+      return zero rows (no parquets ingested yet). Build passes before data is downloaded.
+
+      Source: stg_berlin_wohnlage + stg_berlin_lor. CRS: EPSG:25833 throughout.
+    meta:
+      dbt_meta_owner: data-engineer
+    tests:
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns:
+              - city_code
+              - vintage
+              - area_code
+              - area_vintage
+              - wohnlage
+          config:
+            where: "area_code is not null"
+      - dbt_utils.expression_is_true:
+          arguments:
+            expression: "pct_wohnlage between 0 and 1"
+          config:
+            where: "pct_wohnlage is not null"
+    columns:
+      - name: city_code
+        description: City identifier (ADR-0005). Always 'berlin' (from stg_berlin_wohnlage staging boundary).
+        tests:
+          - not_null:
+              config:
+                where: "area_code is not null"
+      - name: vintage
+        description: "WFS edition year (integer: 2017, 2019, 2021, 2023, 2026)."
+        tests:
+          - not_null:
+              config:
+                where: "area_code is not null"
+      - name: area_code
+        description: "PLR area code. Vintage-specific (8-digit, zero-padded): lor_pre2021 or lor_2021 codes."
+        tests:
+          - not_null
+      - name: area_vintage
+        description: >
+          LOR geometry vintage used for the spatial join.
+          'lor_pre2021' for vintage <= 2020 (448 PLRs); 'lor_2021' for vintage >= 2021 (542 PLRs).
+        tests:
+          - not_null:
+              config:
+                where: "area_code is not null"
+          - accepted_values:
+              arguments:
+                values: ["lor_pre2021", "lor_2021"]
+              config:
+                where: "area_code is not null"
+      - name: wohnlage
+        description: >
+          Wohnlage residential quality tier (from WFS wol attribute).
+          Values include 'einfach', 'mittel', 'gut' and their combinations.
+          The exact tier vocabulary changes slightly across WFS vintages.
+        tests:
+          - not_null
+      - name: n_addresses
+        description: Count of Wohnlage-classified addresses in this PLR for this tier and vintage.
+      - name: pct_wohnlage
+        description: >
+          Share of addresses in this Wohnlage tier within this PLR for this vintage year.
+          pct_wohnlage = n_addresses / SUM(n_addresses) OVER (PARTITION BY vintage, area_code, area_vintage).
+          Sums to 1.0 within each (vintage, area_code, area_vintage) group.
+          Ranges from 0 to 1 inclusive.
+      - name: wohnlage_low_n
+        description: >
+          Flag: TRUE when the PLR-vintage has fewer than 10 total Wohnlage address points
+          (sum of n_addresses across all tiers for this PLR-vintage).
+          Composition is computed but the share is statistically unstable with < 10 points.
+          Downstream consumers (mart_price_rent_dimension) NULL the derived wohnlage_score
+          and estimated rent for low-N PLR-vintages. Never zero-filled (geo condition 7).
+          Low-N PLRs largely coincide with the BRW-NULL/uninhabited set — QA cross-check.
+
   - name: int_osm_poi_plr_weighted
     description: >
       A6 (#69): Distance-weighted PLR POI counts — Gaussian kernel variant.
