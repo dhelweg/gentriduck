@@ -15,7 +15,7 @@ website of **gentrification & social-development statistics** for Berlin (and, l
 | `transform/` | dbt project (staging → intermediate → marts) |
 | `ingestion/` | Python data ingestion (OSM history, Berlin open data) |
 | `web/` | public website (added later) |
-| `docs/` | project plan + architecture decision records (`docs/adr/`) |
+| `docs/` | project plan (`docs/PROJECT_PLAN.md`), architecture decision records (`docs/adr/`), and AI-assisted operating model + engineering retrospective (`docs/method/`) |
 | `reference/` | original thesis SQL + golden output CSVs (read-only reference) |
 | `data/` | local data artefacts — **gitignored**, rebuilt from open sources |
 | `.claude/` | agent + skill definitions for the agent team |
