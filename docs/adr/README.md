@@ -17,7 +17,7 @@ ADR before adopting a new tool, library, or data source** (no "first tool that w
 | [0010](0010-spatial-distance-weighting.md) | Spatial distance weighting | Accepted |
 | [0011](0011-autonomous-merge-develop-branch.md) | Autonomous merge via a `develop` integration branch | Accepted |
 | [0012](0012-serving-and-hosting-stack.md) | Serving & hosting stack | Accepted |
-| 0013 | Quarto + Typst whitepaper authoring tool | Draft on branch `feat/82-adr-0013-whitepaper-tool`, blocked on #82 (not yet on `develop`) |
+| [0013](0013-whitepaper-authoring-tool.md) | Whitepaper authoring tool (Quarto + Typst) | Accepted (2026-07-09) |
 | [0014](0014-hamburg-data-sources.md) | Hamburg data sources (second city) | Accepted |
 | [0015](0015-data-refresh-orchestration.md) | Data refresh / orchestration (`uv run poe refresh`) | Accepted |
 | [0016](0016-ingested-data-drift-detection.md) | Ingested-data drift detection across local instances | Accepted (2026-07-06) |
