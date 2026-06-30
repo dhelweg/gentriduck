@@ -494,6 +494,106 @@ models:
           NULL for the first year per PLR/vintage or when stddev is 0.
           Controls OSM completeness-bias vs pre-C5 raw-count-delta z-score.
 
+  - name: int_poi_status_dynamism_pre2021
+    description: >
+      B7 (#117): POI status and dynamism scores for the lor_pre2021 PLR system (448 PLRs,
+      2008-2020). Mirrors int_poi_status_dynamism but stays in the lor_pre2021 coordinate
+      system, bypassing the crosswalk in int_poi_share_base_2021.
+
+      Enables int_gentrification_ts to produce thesis-era rows (MSS 2015/2017/2019) with
+      POI predictors in the same PLR boundary system as the MSS outcomes.
+
+      Z-scores are normalised within the lor_pre2021 PLR population for each snapshot_year
+      (matching the thesis computation which ran on ~447 lor_pre2021 PLRs). NOT directly
+      comparable to int_poi_status_dynamism z-scores (different reference population).
+      Cross-vintage z-score comparison is prohibited; int_mss_lead_lag enforces
+      within-vintage lag via the area_vintage constraint.
+    meta:
+      dbt_meta_owner: data-engineer
+    tests:
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns:
+              - city_code
+              - snapshot_year
+              - area_code
+          config:
+            where: "area_code is not null"
+      - assert_not_empty:
+          config:
+            severity: error
+    columns:
+      - name: city_code
+        tests:
+          - not_null
+      - name: snapshot_year
+        description: Calendar year of the OSM snapshot (integer, 2008-2020 for lor_pre2021).
+        tests:
+          - not_null
+      - name: area_code
+        description: PLR identifier in the lor_pre2021 system (8-digit, zero-padded).
+        tests:
+          - not_null
+      - name: area_vintage
+        description: Always 'lor_pre2021' for this model.
+        tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ["lor_pre2021"]
+
+  - name: int_ewr_socioeco_pre2021
+    description: >
+      B7 (#117): EWR socio-economic composite for the lor_pre2021 PLR system (2008-2020).
+      Mirrors int_ewr_socioeco but reads directly from stg_berlin_ewr (lor_pre2021 rows),
+      bypassing the crosswalk in int_berlin_ewr_plr2021. Preserves lor_pre2021 area codes.
+
+      Key indicators (Thesis §3.1; EWR codebook): foreigners_share, age_under18_share,
+      migration_background_share (NULL pre-2014), mean_age_years, residence_duration_5y_share.
+      ewr_composite = mean of 5 z-scores; NULL when any key indicator is suppressed or absent
+      (migration_background_share absent pre-2014 → ewr_composite NULL pre-2014).
+
+      Z-scores normalised within the lor_pre2021 PLR population per year. NOT directly
+      comparable to int_ewr_socioeco (lor_2021 reference population, 542 PLRs).
+    meta:
+      dbt_meta_owner: data-engineer
+    tests:
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns:
+              - city_code
+              - area_code
+              - area_vintage
+              - reference_year
+          config:
+            where: "area_code is not null"
+      - assert_not_empty:
+          config:
+            severity: error
+    columns:
+      - name: city_code
+        tests:
+          - not_null
+      - name: area_code
+        description: PLR identifier in the lor_pre2021 system (8-digit, zero-padded).
+        tests:
+          - not_null
+      - name: area_vintage
+        description: Always 'lor_pre2021' for this model.
+        tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ["lor_pre2021"]
+      - name: reference_year
+        description: EWR reference year (2008-2020 for lor_pre2021 data).
+        tests:
+          - not_null
+      - name: ewr_composite
+        description: >
+          Mean of 5 z-scores (foreigners, under-18, migration-background, mean-age,
+          residence-duration). NULL pre-2014 (migration_background_share absent).
+
   - name: int_osm_poi_harmonized
     description: >
       C2 POI taxonomy harmonization view.  Selects from stg_osm_poi and applies
@@ -825,9 +925,15 @@ models:
 
   - name: int_gentrification_ts
     description: >
-      R-A1 re-grounded time-series panel (#64): combines D3 predictors (POI), D1/D2 MSS
-      social outcomes, and D4 EWR baseline covariate. One row per PLR per MSS edition year
-      where POI data also exists (same-year join: snapshot_year = MSS edition year).
+      R-A1 re-grounded time-series panel (#64, B7 #117): combines D3 predictors (POI), D1/D2
+      MSS social outcomes, and D4 EWR baseline covariate. Two branches UNIONed:
+
+      Branch A — lor_2021 (editions 2021, 2023, 2025, 542 PLRs): MSS + int_poi_status_dynamism
+      + int_ewr_socioeco. All in lor_2021 PLR coordinate system.
+
+      Branch B — lor_pre2021 (editions 2015, 2017, 2019, ~447 PLRs, B7 #117): MSS +
+      int_poi_status_dynamism_pre2021 + int_ewr_socioeco_pre2021. All in lor_pre2021 PLR
+      coordinate system. Enables thesis-era H2/H3 lead-lag panel in int_mss_lead_lag.
 
       ADR-0008 architectural fix: the pre-R-A1 model averaged predictors and outcomes into
       a single gentrification_score (no theoretical grounding). R-A1 separates the dimensions:
@@ -838,6 +944,10 @@ models:
 
       D1 POLARITY: 1=hoch (low deprivation) … 4=sehr_niedrig (most deprived). INVERSE numeric
       vs 2018 thesis status_summe but SAME deprivation gradient. See SQL model for full note.
+
+      Z-SCORE CROSS-VINTAGE NOTE (binding): lor_pre2021 and lor_2021 z-scores are computed
+      within their respective PLR populations and are NOT directly comparable. Cross-vintage
+      comparison is prohibited. int_mss_lead_lag enforces within-vintage lag via area_vintage.
 
       D4 BASELINE DISCIPLINE: D4 enters ONLY as a cross-sectional LEVEL. D4 changes are
       near-tautological outcome proxies (Döring & Ulbricht 2016) and are EXCLUDED.

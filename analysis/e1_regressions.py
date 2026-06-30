@@ -239,16 +239,19 @@ def load_ewr_lead_lag_data(con: duckdb.DuckDBPyConnection) -> object:
     return df
 
 
-def load_lead_lag_data(con: duckdb.DuckDBPyConnection) -> object:
+def load_lead_lag_data(con: duckdb.DuckDBPyConnection, vintage: str = "lor_2021") -> object:
     """Load MSS lead-lag panel joined with POI pivot counts for H3a/H3b/H3c.
 
     int_mss_lead_lag provides lag_k=1,2 MSS edition pairs.
     int_poi_features_pivot is joined at edition_t and edition_tk snapshot years.
     delta_poi = poi_count_tk - poi_count_t (POI stock change over lag window).
     delta_status = status_index_tk - status_index_t (MSS ordinal status change).
+
+    B7 (#117): vintage parameter selects the LOR boundary system.
+    'lor_2021' = modern 2021-2025 panel (default).
+    'lor_pre2021' = thesis-era 2015-2019 panel (k=1: 2015→2017, 2017→2019; k=2: 2015→2019).
     """
-    # Thesis p.91 H3a/H3b/H3c: lead-lag tested at k=1 (2yr) and k=2 (4yr) editions
-    df = con.execute("""
+    df = con.execute(f"""
         SELECT
             ll.area_code,
             ll.lag_k,
@@ -274,7 +277,7 @@ def load_lead_lag_data(con: duckdb.DuckDBPyConnection) -> object:
             ON ll.area_code = p_tk.area_code
             AND ll.edition_tk = p_tk.snapshot_year
             AND ll.area_vintage = p_tk.area_vintage
-        WHERE ll.area_vintage = 'lor_2021'
+        WHERE ll.area_vintage = '{vintage}'
     """).df()
     return df
 
@@ -307,7 +310,15 @@ def run_ols(x: np.ndarray, y: np.ndarray, label: str) -> dict:
     mask = ~(np.isnan(x) | np.isnan(y))
     xc, yc = x[mask], y[mask]
     n = int(mask.sum())
-    _null_result = {"label": label, "n": n, "coef": None, "p": None, "r2": None, "sig": None, "stat_type": "beta"}
+    _null_result = {
+        "label": label,
+        "n": n,
+        "coef": None,
+        "p": None,
+        "r2": None,
+        "sig": None,
+        "stat_type": "beta",
+    }
     if n < 10:
         return _null_result
     if np.std(xc) == 0 or np.std(yc) == 0:
@@ -417,13 +428,11 @@ def test_h1(df) -> list[dict]:
     return results
 
 
-def test_h2(df_ll: object) -> list[dict]:
+def test_h2(df_ll: object, panel_label: str = "2021+ panel") -> list[dict]:
     """H2: Current POI stock predicts future social-status change.
 
     Thesis p.55 H2: POI stock → Δstatus over lag window.
-    Tested here on the 2021+ live panel (not the 2018 cross-section — the thesis
-    PLRs use the pre-2021 LOR vintage while the lead-lag panel uses lor_2021).
-    poi_count_t at edition_t predicts delta_status_ordinal k editions later.
+    panel_label: human-readable era label for descriptions (e.g. '2021+ panel' or '2015–2019 panel').
 
     D1 POLARITY (index-definition.md §5 polarity table; int_mss_lead_lag.sql lines 19-23):
     delta_status_ordinal = status_index_tk - status_index_t.
@@ -437,12 +446,13 @@ def test_h2(df_ll: object) -> list[dict]:
     """
     results = []
 
-    # Thesis p.55 H2: test at k=1 and k=2 using live MSS panel
+    # Thesis p.55 H2: test at k=1 and k=2
     # poi_count_t at edition_t predicts delta_status_ordinal
-    # k=3 skipped: only 3 MSS editions currently (2021, 2023, 2025); testable once 2027 edition ingested
-    print(
-        "  NOTE: k=3 skipped — only 3 MSS editions available (2021, 2023, 2025); k=3 requires 2027 edition"
-    )
+    if panel_label == "2021+ panel":
+        # k=3 requires 2027 MSS edition
+        print(
+            "  NOTE: k=3 skipped — only 3 MSS editions available (2021, 2023, 2025); k=3 requires 2027 edition"
+        )
     for k in [1, 2]:
         sub = df_ll[df_ll["lag_k"] == k].copy()
         if len(sub) < 10:
@@ -456,7 +466,7 @@ def test_h2(df_ll: object) -> list[dict]:
             {
                 "hyp": "H2",
                 "test": f"Spearman k={k}",
-                "desc": f"Current-edition POI stock ~ future status change [k={k} MSS editions, 2021+ panel]",
+                "desc": f"Current-edition POI stock ~ future status change [k={k} MSS editions, {panel_label}]",
                 "citation": THESIS_HYPOTHESES["H2"]["citation"],
                 "stat_val": r["rho"],
                 "stat_type": "rho",
@@ -473,7 +483,7 @@ def test_h2(df_ll: object) -> list[dict]:
     return results
 
 
-def test_h3(df_ll: object) -> list[dict]:
+def test_h3(df_ll: object, panel_label: str = "2021+ panel") -> list[dict]:
     """H3a/H3b/H3c: Lead-lag relationships between POI change and status change.
 
     Thesis p.91:
@@ -511,10 +521,11 @@ def test_h3(df_ll: object) -> list[dict]:
     """
     results = []
 
-    # k=3 skipped: only 3 MSS editions currently (2021, 2023, 2025); testable once 2027 edition ingested
-    print(
-        "  NOTE: k=3 skipped — only 3 MSS editions available (2021, 2023, 2025); k=3 requires 2027 edition"
-    )
+    if panel_label == "2021+ panel":
+        # k=3 requires 2027 MSS edition
+        print(
+            "  NOTE: k=3 skipped — only 3 MSS editions available (2021, 2023, 2025); k=3 requires 2027 edition"
+        )
     for k in [1, 2]:
         sub = df_ll[df_ll["lag_k"] == k].copy()
         if len(sub) < 10:
@@ -619,39 +630,43 @@ def test_h2_ewr(df_ewr: object) -> list[dict]:
         x = sub["poi_count_t"].values.astype(float)
         y = sub["delta_ewr"].values.astype(float)
         r_sp = run_spearman(x, y, f"Spearman(poi_count_t, delta_ewr, k={k})")
-        results.append({
-            "hyp": "H2",
-            "test": f"Spearman k={k}",
-            "source": "EWR",
-            "desc": f"POI stock at year_t ~ delta_ewr over k={k} annual years [EWR 2014–2020, same-era]",
-            "citation": THESIS_HYPOTHESES["H2"]["citation"],
-            "stat_val": r_sp["rho"],
-            "stat_type": "rho",
-            "n": r_sp["n"],
-            "p": r_sp["p"],
-            "sig": r_sp["sig"],
-            "r2": None,
-            "expected_dir": THESIS_HYPOTHESES["H2"]["expected_dir"],
-            "actual_dir": _dir(r_sp["rho"]),
-            "dir_match": _dir_match(r_sp["rho"], THESIS_HYPOTHESES["H2"]["expected_dir"]),
-        })
+        results.append(
+            {
+                "hyp": "H2",
+                "test": f"Spearman k={k}",
+                "source": "EWR",
+                "desc": f"POI stock at year_t ~ delta_ewr over k={k} annual years [EWR 2014–2020, same-era]",
+                "citation": THESIS_HYPOTHESES["H2"]["citation"],
+                "stat_val": r_sp["rho"],
+                "stat_type": "rho",
+                "n": r_sp["n"],
+                "p": r_sp["p"],
+                "sig": r_sp["sig"],
+                "r2": None,
+                "expected_dir": THESIS_HYPOTHESES["H2"]["expected_dir"],
+                "actual_dir": _dir(r_sp["rho"]),
+                "dir_match": _dir_match(r_sp["rho"], THESIS_HYPOTHESES["H2"]["expected_dir"]),
+            }
+        )
         r_ols = run_ols(x, y, f"OLS(delta_ewr ~ poi_count_t, k={k})")
-        results.append({
-            "hyp": "H2",
-            "test": f"OLS k={k}",
-            "source": "EWR",
-            "desc": f"POI stock at year_t ~ delta_ewr over k={k} annual years [EWR 2014–2020, same-era]",
-            "citation": THESIS_HYPOTHESES["H2"]["citation"],
-            "stat_val": r_ols["coef"],
-            "stat_type": "beta",
-            "n": r_ols["n"],
-            "p": r_ols["p"],
-            "sig": r_ols["sig"],
-            "r2": r_ols["r2"],
-            "expected_dir": THESIS_HYPOTHESES["H2"]["expected_dir"],
-            "actual_dir": _dir(r_ols["coef"]),
-            "dir_match": _dir_match(r_ols["coef"], THESIS_HYPOTHESES["H2"]["expected_dir"]),
-        })
+        results.append(
+            {
+                "hyp": "H2",
+                "test": f"OLS k={k}",
+                "source": "EWR",
+                "desc": f"POI stock at year_t ~ delta_ewr over k={k} annual years [EWR 2014–2020, same-era]",
+                "citation": THESIS_HYPOTHESES["H2"]["citation"],
+                "stat_val": r_ols["coef"],
+                "stat_type": "beta",
+                "n": r_ols["n"],
+                "p": r_ols["p"],
+                "sig": r_ols["sig"],
+                "r2": r_ols["r2"],
+                "expected_dir": THESIS_HYPOTHESES["H2"]["expected_dir"],
+                "actual_dir": _dir(r_ols["coef"]),
+                "dir_match": _dir_match(r_ols["coef"], THESIS_HYPOTHESES["H2"]["expected_dir"]),
+            }
+        )
     return results
 
 
@@ -680,60 +695,66 @@ def test_h3_ewr(df_ewr: object) -> list[dict]:
 
         # H3a: delta_poi (POI change at t) leads delta_ewr (status change t→t+k)
         r3a = run_spearman(delta_poi, delta_ewr, f"Spearman(delta_poi, delta_ewr, k={k})")
-        results.append({
-            "hyp": "H3a",
-            "test": f"Spearman k={k}",
-            "source": "EWR",
-            "desc": f"Δpoi leads Δewr_composite [k={k} annual years, EWR 2014–2020, same-era]",
-            "citation": THESIS_HYPOTHESES["H3a"]["citation"],
-            "stat_val": r3a["rho"],
-            "stat_type": "rho",
-            "n": r3a["n"],
-            "p": r3a["p"],
-            "sig": r3a["sig"],
-            "r2": None,
-            "expected_dir": THESIS_HYPOTHESES["H3a"]["expected_dir"],
-            "actual_dir": _dir(r3a["rho"]),
-            "dir_match": _dir_match(r3a["rho"], THESIS_HYPOTHESES["H3a"]["expected_dir"]),
-        })
+        results.append(
+            {
+                "hyp": "H3a",
+                "test": f"Spearman k={k}",
+                "source": "EWR",
+                "desc": f"Δpoi leads Δewr_composite [k={k} annual years, EWR 2014–2020, same-era]",
+                "citation": THESIS_HYPOTHESES["H3a"]["citation"],
+                "stat_val": r3a["rho"],
+                "stat_type": "rho",
+                "n": r3a["n"],
+                "p": r3a["p"],
+                "sig": r3a["sig"],
+                "r2": None,
+                "expected_dir": THESIS_HYPOTHESES["H3a"]["expected_dir"],
+                "actual_dir": _dir(r3a["rho"]),
+                "dir_match": _dir_match(r3a["rho"], THESIS_HYPOTHESES["H3a"]["expected_dir"]),
+            }
+        )
 
         # H3b: delta_ewr_t (annual status change at t) leads delta_poi
         r3b = run_spearman(delta_ewr_t, delta_poi, f"Spearman(delta_ewr_t, delta_poi, k={k})")
-        results.append({
-            "hyp": "H3b",
-            "test": f"Spearman k={k}",
-            "source": "EWR",
-            "desc": f"Δewr_composite at t leads Δpoi [k={k} annual years, EWR 2014–2020, same-era]",
-            "citation": THESIS_HYPOTHESES["H3b"]["citation"],
-            "stat_val": r3b["rho"],
-            "stat_type": "rho",
-            "n": r3b["n"],
-            "p": r3b["p"],
-            "sig": r3b["sig"],
-            "r2": None,
-            "expected_dir": THESIS_HYPOTHESES["H3b"]["expected_dir"],
-            "actual_dir": _dir(r3b["rho"]),
-            "dir_match": _dir_match(r3b["rho"], THESIS_HYPOTHESES["H3b"]["expected_dir"]),
-        })
+        results.append(
+            {
+                "hyp": "H3b",
+                "test": f"Spearman k={k}",
+                "source": "EWR",
+                "desc": f"Δewr_composite at t leads Δpoi [k={k} annual years, EWR 2014–2020, same-era]",
+                "citation": THESIS_HYPOTHESES["H3b"]["citation"],
+                "stat_val": r3b["rho"],
+                "stat_type": "rho",
+                "n": r3b["n"],
+                "p": r3b["p"],
+                "sig": r3b["sig"],
+                "r2": None,
+                "expected_dir": THESIS_HYPOTHESES["H3b"]["expected_dir"],
+                "actual_dir": _dir(r3b["rho"]),
+                "dir_match": _dir_match(r3b["rho"], THESIS_HYPOTHESES["H3b"]["expected_dir"]),
+            }
+        )
 
         # H3c: contemporaneous ewr_composite_t ~ poi_count_t
         r3c = run_spearman(poi_t, ewr_t, f"Spearman(poi_count_t, ewr_composite_t, k={k})")
-        results.append({
-            "hyp": "H3c",
-            "test": f"Spearman k={k}",
-            "source": "EWR",
-            "desc": f"poi_count_t ~ ewr_composite_t (contemporaneous) [k={k}, EWR 2014–2020, same-era]",
-            "citation": THESIS_HYPOTHESES["H3c"]["citation"],
-            "stat_val": r3c["rho"],
-            "stat_type": "rho",
-            "n": r3c["n"],
-            "p": r3c["p"],
-            "sig": r3c["sig"],
-            "r2": None,
-            "expected_dir": THESIS_HYPOTHESES["H3c"]["expected_dir"],
-            "actual_dir": _dir(r3c["rho"]),
-            "dir_match": _dir_match(r3c["rho"], THESIS_HYPOTHESES["H3c"]["expected_dir"]),
-        })
+        results.append(
+            {
+                "hyp": "H3c",
+                "test": f"Spearman k={k}",
+                "source": "EWR",
+                "desc": f"poi_count_t ~ ewr_composite_t (contemporaneous) [k={k}, EWR 2014–2020, same-era]",
+                "citation": THESIS_HYPOTHESES["H3c"]["citation"],
+                "stat_val": r3c["rho"],
+                "stat_type": "rho",
+                "n": r3c["n"],
+                "p": r3c["p"],
+                "sig": r3c["sig"],
+                "r2": None,
+                "expected_dir": THESIS_HYPOTHESES["H3c"]["expected_dir"],
+                "actual_dir": _dir(r3c["rho"]),
+                "dir_match": _dir_match(r3c["rho"], THESIS_HYPOTHESES["H3c"]["expected_dir"]),
+            }
+        )
 
     return results
 
@@ -772,7 +793,9 @@ def print_results(results: list[dict]) -> None:
 
 
 def _write_results_table(f, results: list[dict]) -> None:
-    f.write("| Hyp | Test | N | Type | Value | p-value | Sig | Expected Dir | Actual Dir | Match | Description |\n")
+    f.write(
+        "| Hyp | Test | N | Type | Value | p-value | Sig | Expected Dir | Actual Dir | Match | Description |\n"
+    )
     f.write("|---|---|---|---|---|---|---|---|---|---|---|\n")
     for r in results:
         val_str = _fmt_val(r["stat_val"])
@@ -787,8 +810,14 @@ def _write_results_table(f, results: list[dict]) -> None:
         )
 
 
-def write_findings(df_h1, results_mss: list[dict], results_ewr: list[dict] | None = None) -> None:
+def write_findings(
+    df_h1,
+    results_mss: list[dict],
+    results_ewr: list[dict] | None = None,
+    results_mss_pre: list[dict] | None = None,
+) -> None:
     import datetime
+
     today = datetime.date.today().isoformat()
 
     n_pass_mss = sum(1 for r in results_mss if r["dir_match"])
@@ -803,20 +832,40 @@ def write_findings(df_h1, results_mss: list[dict], results_ewr: list[dict] | Non
         f.write(
             f"- **Data (H1/H1b):** stg_thesis_2018_result_plr + int_poi_features_pivot (2018), n={len(df_h1)}\n"
         )
-        f.write("- **Data (H2/H3 MSS):** int_mss_lead_lag + int_poi_features_pivot (2021–2025)\n")
+        f.write(
+            "- **Data (H2/H3 MSS 2021–2025):** int_mss_lead_lag (lor_2021) + int_poi_features_pivot\n"
+        )
+        f.write(
+            "- **Data (H2/H3 MSS 2015–2019, B7):** int_mss_lead_lag (lor_pre2021) + int_poi_features_pivot\n"
+        )
         if results_ewr:
-            f.write("- **Data (H2/H3 EWR):** int_ewr_lead_lag + int_poi_features_pivot (2014–2020, same-era as thesis)\n")
+            f.write(
+                "- **Data (H2/H3 EWR):** int_ewr_lead_lag + int_poi_features_pivot (2014–2020, same-era as thesis)\n"
+            )
         f.write("- **Method:** Spearman rank correlation + OLS (scipy.stats)\n\n")
 
         f.write("## Methodology\n\n")
         f.write("Spearman rank correlations and OLS regression test five hypotheses from the 2018 ")
         f.write("Berlin gentrification thesis (pp. 55-56, p. 91). POI category counts from ")
         f.write("`int_poi_features_pivot` are used as the primary predictor variables.\n\n")
-        f.write("**Two comparison sets for H2/H3:**\n\n")
-        f.write("1. **MSS panel (2021–2025):** Uses `int_mss_lead_lag` — a better ground truth ")
-        f.write("(official Berlin social monitoring index) but a different era and index than the thesis.\n")
-        f.write("2. **EWR same-era (2014–2020):** Uses `int_ewr_lead_lag` — the same data source ")
-        f.write("and timeframe as the 2018 thesis. k=2 (2014→2016) matches the thesis lead-lag gap ")
+        f.write("**Three comparison sets for H2/H3:**\n\n")
+        f.write(
+            "1. **MSS panel (2021–2025):** Uses `int_mss_lead_lag` (lor_2021) — best ground truth "
+        )
+        f.write(
+            "(official Berlin social monitoring index) but a different era and index than the thesis.\n"
+        )
+        f.write(
+            "2. **MSS pre-2021 panel (2015–2019, B7 #117):** Uses `int_mss_lead_lag` (lor_pre2021) — "
+        )
+        f.write("thesis-era boundary system (447 PLRs). Enables same-era H3b lead-lag. ")
+        f.write(
+            "k=1: 2015→2017, 2017→2019 pairs; k=2: 2015→2019. Z-scores not cross-vintage comparable.\n"
+        )
+        f.write("3. **EWR same-era (2014–2020):** Uses `int_ewr_lead_lag` — the same data source ")
+        f.write(
+            "and timeframe as the 2018 thesis. k=2 (2014→2016) matches the thesis lead-lag gap "
+        )
         f.write("exactly. delta_ewr is metric (z-score arithmetic diff) so OLS is also valid.\n\n")
         f.write("The primary validation criterion is directional agreement (same sign as thesis ")
         f.write("expectation), consistent with the Epic B directional revival framing.\n\n")
@@ -832,30 +881,70 @@ def write_findings(df_h1, results_mss: list[dict], results_ewr: list[dict] | Non
         f.write("\n")
 
         f.write("## Results — Section 2: H2/H3 MSS Panel (modern era, 2021–2025)\n\n")
-        f.write("> Different era and index than thesis. MSS is a better ground truth but covers 2021–2025, not 2012–2018.\n\n")
+        f.write(
+            "> Different era and index than thesis. MSS is a better ground truth but covers 2021–2025, not 2012–2018.\n\n"
+        )
         mss_h23 = [r for r in results_mss if r["hyp"] not in ("H1", "H1b")]
         _write_results_table(f, mss_h23)
         n_pass_mss_h23 = sum(1 for r in mss_h23 if r["dir_match"])
         n_sig_mss_h23 = sum(1 for r in mss_h23 if r.get("sig"))
-        f.write(f"\n**Directional agreement (H2/H3 MSS): {n_pass_mss_h23}/{len(mss_h23)}. Significant: {n_sig_mss_h23}/{len(mss_h23)}.**\n\n")
+        f.write(
+            f"\n**Directional agreement (H2/H3 MSS): {n_pass_mss_h23}/{len(mss_h23)}. Significant: {n_sig_mss_h23}/{len(mss_h23)}.**\n\n"
+        )
+
+        if results_mss_pre:
+            n_pass_pre = sum(1 for r in results_mss_pre if r["dir_match"])
+            n_sig_pre = sum(1 for r in results_mss_pre if r.get("sig"))
+            f.write(
+                "## Results — Section 3: H2/H3 MSS Pre-2021 Panel (thesis-era, 2015–2019, B7 #117)\n\n"
+            )
+            f.write(
+                "> lor_pre2021 boundary system (447 PLRs). Same-era H2/H3 panel as thesis. "
+                "Z-scores normalised within lor_pre2021 population — NOT cross-vintage comparable to Section 2.\n"
+            )
+            f.write(
+                "> k=1 pairs: 2015→2017, 2017→2019. k=2 pair: 2015→2019 (4-year lag, matches thesis H3b gap).\n\n"
+            )
+            _write_results_table(f, results_mss_pre)
+            f.write(
+                f"\n**Directional agreement (H2/H3 MSS pre-2021): {n_pass_pre}/{len(results_mss_pre)}. Significant: {n_sig_pre}/{len(results_mss_pre)}.**\n\n"
+            )
 
         if results_ewr:
-            f.write("## Results — Section 3: H2/H3 EWR Same-Era (2014–2020, thesis source and timeframe)\n\n")
-            f.write("> Same data source and timeframe as the 2018 thesis. k=2 (2014→2016) is the direct comparison window.\n")
-            f.write("> delta_ewr is metric (z-score arithmetic difference) — OLS valid unlike MSS ordinal delta.\n\n")
+            f.write(
+                "## Results — Section 4: H2/H3 EWR Same-Era (2014–2020, thesis source and timeframe)\n\n"
+            )
+            f.write(
+                "> Same data source and timeframe as the 2018 thesis. k=2 (2014→2016) is the direct comparison window.\n"
+            )
+            f.write(
+                "> delta_ewr is metric (z-score arithmetic difference) — OLS valid unlike MSS ordinal delta.\n\n"
+            )
             _write_results_table(f, results_ewr)
             n_pass_ewr = sum(1 for r in results_ewr if r["dir_match"])
             n_sig_ewr = sum(1 for r in results_ewr if r.get("sig"))
-            f.write(f"\n**Directional agreement (H2/H3 EWR): {n_pass_ewr}/{len(results_ewr)}. Significant: {n_sig_ewr}/{len(results_ewr)}.**\n\n")
+            f.write(
+                f"\n**Directional agreement (H2/H3 EWR): {n_pass_ewr}/{len(results_ewr)}. Significant: {n_sig_ewr}/{len(results_ewr)}.**\n\n"
+            )
 
         f.write("## Overall Scorecard\n\n")
-        all_results = results_mss + (results_ewr or [])
+        all_results = results_mss + (results_mss_pre or []) + (results_ewr or [])
         n_pass_all = sum(1 for r in all_results if r["dir_match"])
         n_sig_all = sum(1 for r in all_results if r.get("sig"))
-        f.write(f"**Total directional agreement: {n_pass_all}/{len(all_results)}. Significant: {n_sig_all}/{len(all_results)}.**\n\n")
-        f.write(f"**MSS panel (H1+H2+H3): {n_pass_mss}/{len(results_mss)} direction, {n_sig_mss}/{len(results_mss)} significant.**\n")
+        f.write(
+            f"**Total directional agreement: {n_pass_all}/{len(all_results)}. Significant: {n_sig_all}/{len(all_results)}.**\n\n"
+        )
+        f.write(
+            f"**MSS modern panel (H1+H2+H3, 2021–2025): {n_pass_mss}/{len(results_mss)} direction, {n_sig_mss}/{len(results_mss)} significant.**\n"
+        )
+        if results_mss_pre:
+            f.write(
+                f"**MSS pre-2021 panel (H2+H3 only, 2015–2019): {n_pass_pre}/{len(results_mss_pre)} direction, {n_sig_pre}/{len(results_mss_pre)} significant.**\n"
+            )
         if results_ewr:
-            f.write(f"**EWR same-era (H2+H3 only): {n_pass_ewr}/{len(results_ewr)} direction, {n_sig_ewr}/{len(results_ewr)} significant.**\n\n")
+            f.write(
+                f"**EWR same-era (H2+H3 only): {n_pass_ewr}/{len(results_ewr)} direction, {n_sig_ewr}/{len(results_ewr)} significant.**\n\n"
+            )
 
         f.write("## Divergences from 2018 Thesis\n\n")
         f.write("- **D1 polarity correction**: `status_index` is inverse-numeric — lower value = ")
@@ -867,20 +956,27 @@ def write_findings(df_h1, results_mss: list[dict], results_ewr: list[dict] | Non
         f.write("thesis's 2012–2018 EWR cross-section. Different era, different index.\n")
         f.write("- **H2/H3 EWR**: tested on 2014–2020 annual panel (lor_2021, ~542 rows per lag). ")
         f.write("Same source as thesis. k=2 (2014→2016) matches thesis gap. delta_ewr is metric ")
-        f.write("(arithmetic z-score diff); OLS additionally applied where MSS ordinal prohibits it.\n")
+        f.write(
+            "(arithmetic z-score diff); OLS additionally applied where MSS ordinal prohibits it.\n"
+        )
         f.write("- **No multiple-comparison correction** applied across hypotheses.\n")
         f.write("- Epic B framing: directional revival — exact number reproduction not required. ")
         f.write("See CLAUDE.md §Epic B framing.\n\n")
 
         f.write("## Limitations\n\n")
-        f.write("- **k=3 MSS not tested**: Only 3 MSS editions available (2021, 2023, 2025); ")
+        f.write(
+            "- **k=3 MSS not tested (modern panel)**: Only 3 lor_2021 MSS editions available (2021, 2023, 2025); "
+        )
         f.write("k=3 requires 2027 edition.\n")
         f.write("- **EWR composite null pre-2014**: migration_background_share absent before 2014 ")
         f.write("makes ewr_composite null for 2008–2013 — EWR panel limited to 2014–2020.\n")
-        f.write("- **lor_2021 vintage throughout**: EWR pre-2021 years crosswalked via ")
-        f.write("int_berlin_ewr_plr2021; comparison to thesis's lor_pre2021 (448 PLRs) is approximate.\n")
-        f.write("- **MAUP sensitivity**: results are PLR-only and may be sensitive to area definition.\n")
-
+        f.write(
+            "- **Cross-vintage z-scores not comparable**: lor_pre2021 and lor_2021 z-scores are "
+            "normalised within their respective PLR populations and must not be compared directly.\n"
+        )
+        f.write(
+            "- **MAUP sensitivity**: results are PLR-only and may be sensitive to area definition.\n"
+        )
 
 
 # ---------------------------------------------------------------------------
@@ -918,9 +1014,15 @@ def main() -> None:
     print(f"  Loaded {len(df_h1)} PLR rows (H1/H1b)")
 
     print("Loading H2/H3 MSS lead-lag data (int_mss_lead_lag + int_poi_features_pivot)...")
-    df_ll = load_lead_lag_data(con)
+    df_ll = load_lead_lag_data(con, vintage="lor_2021")
     print(
         f"  Loaded {len(df_ll)} MSS lead-lag rows (k=1: {(df_ll['lag_k'] == 1).sum()}, k=2: {(df_ll['lag_k'] == 2).sum()})"
+    )
+
+    print("Loading H2/H3 MSS pre-2021 panel (lor_pre2021, 2015-2019)...")
+    df_ll_pre = load_lead_lag_data(con, vintage="lor_pre2021")
+    print(
+        f"  Loaded {len(df_ll_pre)} pre-2021 lead-lag rows (k=1: {(df_ll_pre['lag_k'] == 1).sum()}, k=2: {(df_ll_pre['lag_k'] == 2).sum()})"
     )
 
     ewr_available = "int_ewr_lead_lag" in tables
@@ -946,10 +1048,19 @@ def main() -> None:
     results_mss = test_h1(df_h1)
 
     print("Running H2 tests — MSS panel (POI stock → future MSS status change, 2021–2025)...")
-    results_mss += test_h2(df_ll)
+    results_mss += test_h2(df_ll, panel_label="2021+ panel")
 
     print("Running H3a/H3b/H3c — MSS panel (k=1,2)...")
-    results_mss += test_h3(df_ll)
+    results_mss += test_h3(df_ll, panel_label="2021+ panel")
+
+    # --- MSS pre-2021 panel (B7 #117): thesis-era H2/H3 on lor_pre2021 (2015-2019) ---
+    results_mss_pre = []
+    if len(df_ll_pre) >= 10:
+        print("\nRunning H2 tests — MSS pre-2021 panel (2015–2019)...")
+        results_mss_pre += test_h2(df_ll_pre, panel_label="2015–2019 panel")
+
+        print("Running H3a/H3b/H3c — MSS pre-2021 panel (2015–2019)...")
+        results_mss_pre += test_h3(df_ll_pre, panel_label="2015–2019 panel")
 
     # --- EWR same-era results (2014–2020, matches thesis source and timeframe) ---
     results_ewr = []
@@ -967,6 +1078,14 @@ def main() -> None:
     print(f"\nMSS directional agreement: {n_pass_mss}/{len(results_mss)}")
     print(f"MSS significant at p<0.05: {n_sig_mss}/{len(results_mss)}")
 
+    if results_mss_pre:
+        print("\n=== MSS PRE-2021 PANEL (thesis-era, 2015–2019) ===")
+        print_results(results_mss_pre)
+        n_pass_pre = sum(1 for r in results_mss_pre if r["dir_match"])
+        n_sig_pre = sum(1 for r in results_mss_pre if r.get("sig"))
+        print(f"\nMSS pre-2021 directional agreement: {n_pass_pre}/{len(results_mss_pre)}")
+        print(f"MSS pre-2021 significant at p<0.05: {n_sig_pre}/{len(results_mss_pre)}")
+
     if results_ewr:
         print("\n=== EWR SAME-ERA (2014–2020, thesis source and timeframe) ===")
         print_results(results_ewr)
@@ -975,7 +1094,7 @@ def main() -> None:
         print(f"\nEWR directional agreement: {n_pass_ewr}/{len(results_ewr)}")
         print(f"EWR significant at p<0.05: {n_sig_ewr}/{len(results_ewr)}")
 
-    write_findings(df_h1, results_mss, results_ewr)
+    write_findings(df_h1, results_mss, results_ewr, results_mss_pre=results_mss_pre)
     print(f"\nFindings written to: {OUTPUT_MD}")
 
 
