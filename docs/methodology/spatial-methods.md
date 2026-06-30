@@ -223,6 +223,143 @@ the dbt build path.
   aggregation (carried via `index-definition.md`).
 - Openshaw (1984), *The Modifiable Areal Unit Problem*, CATMOG 38 — MAUP framing for §7.
 - PySAL `libpysal` / `esda` / `spreg` (BSD-3); Uber `h3` (Apache-2.0). <https://pysal.org/>
+- Moran (1950), *Notes on Continuous Stochastic Phenomena*, Biometrika 37(1) — Moran's I.
+- Dangschat (1988), *Gentrification — die Aufwertung innenstadtnaher Wohnviertel* — invasion-succession / diffusion hypothesis.
+
+---
+
+## A9 Section: Spatial-Dynamic Gentrification Analysis (#79)
+
+**Implemented in:** `analysis/a9_spatial_dynamic.py`
+**Issue:** #79 [R-A9]
+**R-C2 grounding:** Anselin (1988) (spatial-lag/error models, LM diagnostics); Moran (1950) (global
+autocorrelation); Anselin (1995) (LISA); Dangschat (1988) (invasion-succession / diffusion). See
+script header for full citations.
+
+### A9.1 Global Moran's I
+
+Global spatial autocorrelation in `status_index` (D1 MSS ordinal, inverse-numeric: higher =
+more deprived) and `dynamism_score` (D3 C5-corrected share-change z-score) is computed per MSS
+edition year (lor_2021 vintage: 2021, 2023, 2025) using `esda.Moran`.
+
+```
+esda.Moran(y, w, permutations=999, seed=42)
+```
+
+- `w`: Queen contiguity weights (§6, EPSG:25833, row-standardized; same matrix as §6).
+- `permutations=999, seed=42`: reproducible permutation inference (R-C3; ADR-0010 Required 4).
+- Output: Moran's I statistic, expected value E[I], z-score (normality approximation),
+  permutation p-value. Significant at α=0.05 → `significant=True`.
+- Output CSV: `data/analysis/a9_moran.csv` (columns: snapshot_year, variable, I, EI, z_norm,
+  p_norm, p_sim, significant, n_valid).
+- Interpretation: positive significant I → PLRs with similar deprivation/dynamism levels cluster
+  spatially (Moran 1950). Confirms that PLR observations are **not independent** (Tobler's first
+  law) and that naive OLS inflates significance (§8 above).
+
+### A9.2 Local Moran's I (LISA)
+
+Local indicators of spatial association (Anselin 1995) identify cluster and outlier PLRs per year.
+
+```
+esda.Moran_Local(y, w, permutations=999, seed=42)
+```
+
+- LISA quadrant labels (standard PySAL convention; significant at α=0.05 only):
+  - **HH** (High-High cluster): deprived PLR surrounded by deprived neighbours
+    → spatial concentration of disadvantage / persistent-deprivation Kiez
+  - **LL** (Low-Low cluster): affluent PLR surrounded by affluent neighbours
+    → stable-established / coldspot cluster (§6 analogue for status)
+  - **HL** (High-Low outlier): deprived PLR within affluent surroundings
+    → possible pioneer frontier under pressure (Dangschat 1988)
+  - **LH** (Low-High outlier): affluent PLR within deprived surroundings
+    → possible pocket of early gentrification
+  - **ns**: not significant at α=0.05.
+- Output CSV: `data/analysis/a9_lisa_{variable}_{year}.csv` per variable per year.
+  Columns: area_code, snapshot_year, variable, value, local_I, lisa_pvalue, lisa_label.
+- Public-labelling convention (G-2 guardrail; same as §6): internal LISA labels (`HH`, `LL` etc.)
+  are internal analysis artefacts. Public-facing labels must use hedged qualifiers: "spatial
+  concentration of social disadvantage" (HH) or "spatial clustering of social improvement" (LL).
+  The §1.2 G-2 ecological-inference disclaimer applies: cluster labels are PLR-level aggregates,
+  not individual displacement statements.
+
+### A9.3 Spatial Regression: OLS vs Spatial-Lag / Spatial-Error
+
+Implements the three-step protocol of §8 (`spatial-methods.md §8`):
+
+**Regression specification (H1-type; thesis p.55, operationalized in `e1_regressions.py`):**
+
+```
+y  = status_index[t]    (D1 MSS ordinal, used as numeric proxy; same licence as e1_regressions.py
+                          Spearman rank correlation: ordinal-transition treatment,
+                          index-definition.md §3.2. OLS betas interpreted directionally only.)
+X  = [total_poi_count,  (H1 predictor: POI density, thesis p.55)
+      ewr_composite]    (D4 socio-economic baseline covariate)
+```
+
+Step 1 — `spreg.OLS(y, X, w=w, spat_diag=True)`: Naive OLS with Lagrange-multiplier diagnostics.
+Moran's I on residuals (`ols.moran_res`) and LM-lag / LM-error tests extracted.
+
+Step 2 — If either LM-lag or LM-error is significant at α=0.05:
+Upgrade using the **Anselin–Florax LM decision rule** (Anselin 1988):
+  - LM-lag p < LM-error p → `spreg.ML_Lag` (spatial-autoregressive: `y = ρ·W·y + Xβ + ε`; ρ
+    is the spatial-lag parameter, testing the degree of spatial dependence in outcomes).
+  - LM-error p < LM-lag p → `spreg.ML_Error` (spatial-error: `y = Xβ + u; u = λ·W·u + ε`;
+    λ is the spatial-error parameter, capturing error correlation from omitted spatial processes).
+
+Step 3 — Report naive OLS and spatial model side by side (required by §8; never publish
+significance claims from naive OLS alone when spatial autocorrelation is detected).
+
+Output CSV: `data/analysis/a9_regression.csv`.
+Columns: snapshot_year, model_type (OLS / ML_Lag / ML_Error), n, beta_poi_count, p_poi_count,
+beta_ewr, p_ewr, beta_intercept, r2, moran_resid_I, moran_resid_p, moran_resid_significant,
+lm_lag_stat, lm_lag_p, lm_error_stat, lm_error_p, spatial_model_needed, rho, lambda_.
+
+**Comparison metric for reviewers:** `moran_resid_significant` signals whether spatial
+autocorrelation is present in OLS residuals, justifying the spatial upgrade. `rho` / `lambda_`
+report the spatial dependence parameter from the upgraded model.
+
+### A9.4 Diffusion Feature: W·status[t−1] (Dangschat 1988 Contagion)
+
+**Theory:** Dangschat (1988) invasion-succession model predicts that gentrification *diffuses*
+from pioneering Kieze into adjacent areas — a neighbour's high deprivation at t−1 (on the
+frontier of the gentrification wave) raises the focal PLR's odds of status worsening at t.
+
+**Operationalization:**
+
+```
+Diffusion feature = W * status_index[t-1]   (spatial lag of prior-edition D1 status)
+Regression: status_index[t] ~ β₁·(W*status[t-1]) + β₂·status[t-1] + β₃·ewr_composite
+```
+
+- Tested per lor_2021 consecutive edition pair: (2021→2023), (2023→2025).
+- `W` = Queen contiguity weight matrix (§6, row-standardized). The spatial lag `W*status[t-1]`
+  computes each PLR's weighted mean of neighbours' prior status.
+- D1 POLARITY (index-definition.md §5): status_index is **inverse-numeric** (higher = more
+  deprived). A **positive** `β₁` means: more deprived neighbours at t−1 → focal PLR status
+  worsens at t → **consistent with Dangschat (1988) displacement-pressure diffusion from deprived
+  frontier Kieze**. A negative β₁ would contradict the contagion hypothesis.
+- Output CSV: `data/analysis/a9_diffusion.csv`.
+  Columns: edition_prev, edition_curr, n, beta_W_status_prev, p_W_status_prev,
+  diffusion_significant, beta_status_prev, p_status_prev, beta_ewr, p_ewr,
+  beta_intercept, r2, moran_resid_I, moran_resid_p.
+
+**Interpretation guard:** OLS is used here because the diffusion feature (`W*status[t-1]`) is
+a regressor constructed from the prior edition, not the current-period spatial lag. This avoids
+the simultaneity/endogeneity that requires ML_Lag for a spatial-lag model of the current period
+(Anselin 1988). Residual Moran's I is still reported; reviewers should flag if significant
+autocorrelation remains in diffusion residuals.
+
+### A9.5 Implementation Constraints
+
+All A9 code observes the same constraints as §9 (A6):
+
+1. No geopandas; Queen weights from shapely geometries via WKB in EPSG:25833 (ADR-0010 Required 1).
+2. `pandas>=2.2,<3.0` (ADR-0010 Required 2).
+3. Geometry handoff = `ST_AsWKB` output in EPSG:25833, parsed with `shapely.from_wkb`, no pyproj
+   (ADR-0010 Required 3).
+4. Explicit `seed=42` on every `esda.Moran` and `esda.Moran_Local` call (R-C3; ADR-0010 Required 4).
+5. Script lives in `analysis/a9_spatial_dynamic.py` only, never in the dbt build path.
+6. Data-presence guard: exits cleanly (status 0) if DuckDB or required tables are absent.
 
 ---
 

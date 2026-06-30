@@ -64,6 +64,7 @@ analysis = { sequence = [
     "python analysis/e2_classification.py",
     "python analysis/a6_hotspots.py",
     "python analysis/a6_maup.py",
+    "python analysis/a9_spatial_dynamic.py",
 ], default_item_type = "cmd" }
 # B2: back-test harness — validates live index against MSS classes and known hotspot/coldspot PLRs.
 # Run after `poe build`. Results written to docs/methodology/backtest.md.
