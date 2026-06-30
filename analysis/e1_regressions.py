@@ -186,7 +186,14 @@ def load_ewr_lead_lag_data(con: duckdb.DuckDBPyConnection) -> object:
     int_poi_features_pivot for years < 2021 uses lor_pre2021 area_codes (448 PLRs).
     int_ewr_lead_lag uses lor_2021 area_codes (542 PLRs, crosswalked).
     To bridge: use seed_lor_crosswalk_2006_to_2021 with the dominant (max-weight) pre-2021
-    PLR for each lor_2021 PLR. PLRs created new in the 2021 reform (~94) get poi_count=0.
+    PLR for each lor_2021 PLR. All 542 lor_2021 PLRs resolve to a dominant pre-2021 PLR
+    and receive a non-zero poi_count — no PLR falls through to the COALESCE(0) sentinel.
+
+    Pseudo-replication caveat: ~78 pre-2021 PLRs are the dominant match for 2+ lor_2021
+    PLRs (up to 6 each), meaning ~35% of lor_2021 PLRs share their poi_count_t with at
+    least one neighbour. This inflates effective N and may overstate p-value precision.
+    Treat EWR regression results as directional evidence, not independent-observation
+    p-values.
     """
     df = con.execute("""
         WITH
@@ -212,35 +219,14 @@ def load_ewr_lead_lag_data(con: duckdb.DuckDBPyConnection) -> object:
             ll.ewr_composite_tk,
             ll.delta_ewr,
             ll.delta_ewr_t,
-            -- POI at year_t: try lor_2021 first (for 2021+ years), then lor_pre2021 via crosswalk.
-            COALESCE(
-                p_t_2021.total_poi_count,
-                p_t_pre.total_poi_count,
-                0
-            ) AS poi_count_t,
-            -- POI at year_tk: same strategy
-            COALESCE(
-                p_tk_2021.total_poi_count,
-                p_tk_pre.total_poi_count,
-                0
-            ) AS poi_count_tk,
-            COALESCE(
-                p_tk_2021.total_poi_count, p_tk_pre.total_poi_count, 0
-            ) - COALESCE(
-                p_t_2021.total_poi_count, p_t_pre.total_poi_count, 0
-            ) AS delta_poi
+            -- POI via pre-2021 crosswalk (all EWR years are 2014-2020, so lor_pre2021 only).
+            -- Dominant PLR crosswalk: every lor_2021 PLR maps to exactly one lor_pre2021 PLR.
+            COALESCE(p_t_pre.total_poi_count, 0)   AS poi_count_t,
+            COALESCE(p_tk_pre.total_poi_count, 0)  AS poi_count_tk,
+            COALESCE(p_tk_pre.total_poi_count, 0) - COALESCE(p_t_pre.total_poi_count, 0) AS delta_poi
         FROM main.int_ewr_lead_lag ll
         LEFT JOIN xw_dominant xw ON ll.area_code = xw.plr_id_2021
-        -- lor_2021 direct join (works for 2021+ snapshot years)
-        LEFT JOIN main.int_poi_features_pivot p_t_2021
-            ON ll.area_code = p_t_2021.area_code
-            AND ll.year_t = p_t_2021.snapshot_year
-            AND p_t_2021.area_vintage = 'lor_2021'
-        LEFT JOIN main.int_poi_features_pivot p_tk_2021
-            ON ll.area_code = p_tk_2021.area_code
-            AND ll.year_tk = p_tk_2021.snapshot_year
-            AND p_tk_2021.area_vintage = 'lor_2021'
-        -- lor_pre2021 crosswalk join (works for pre-2021 snapshot years)
+        -- lor_pre2021 crosswalk join: maps lor_2021 EWR area_code → lor_pre2021 POI area_code
         LEFT JOIN main.int_poi_features_pivot p_t_pre
             ON xw.plr_id_pre2021 = p_t_pre.area_code
             AND ll.year_t = p_t_pre.snapshot_year
@@ -757,6 +743,15 @@ def test_h3_ewr(df_ewr: object) -> list[dict]:
 # ---------------------------------------------------------------------------
 
 
+def _fmt_val(val: float | None) -> str:
+    """Format a stat value; switch to scientific notation when |val| < 0.001."""
+    if val is None:
+        return "N/A"
+    if abs(val) < 0.001:
+        return f"{val:.2e}"
+    return f"{val:.4f}"
+
+
 def print_results(results: list[dict]) -> None:
     print("\n" + "=" * 100)
     print("E1 REGRESSION RESULTS — Thesis H1-H3c Validation (real hypotheses, POI predictors)")
@@ -765,7 +760,7 @@ def print_results(results: list[dict]) -> None:
     print(hdr)
     print("-" * 100)
     for r in results:
-        val_str = f"{r['stat_val']:.4f}" if r["stat_val"] is not None else "N/A"
+        val_str = _fmt_val(r["stat_val"])
         p_str = f"{r['p']:.4f}" if r.get("p") is not None else "N/A"
         sig_str = "YES" if r.get("sig") else "NO"
         match_str = "PASS" if r["dir_match"] else "FAIL"
@@ -780,7 +775,7 @@ def _write_results_table(f, results: list[dict]) -> None:
     f.write("| Hyp | Test | N | Type | Value | p-value | Sig | Expected Dir | Actual Dir | Match | Description |\n")
     f.write("|---|---|---|---|---|---|---|---|---|---|---|\n")
     for r in results:
-        val_str = f"{r['stat_val']:.4f}" if r["stat_val"] is not None else "N/A"
+        val_str = _fmt_val(r["stat_val"])
         if r.get("r2") is not None:
             val_str += f" R2={r['r2']:.4f}"
         p_str = f"{r['p']:.4f}" if r.get("p") is not None else "N/A"

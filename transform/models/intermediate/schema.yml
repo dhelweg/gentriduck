@@ -1050,6 +1050,9 @@ models:
       - dbt_utils.expression_is_true:
           arguments:
             expression: "year_tk <= 2024"
+      - dbt_utils.expression_is_true:
+          arguments:
+            expression: "abs(delta_ewr - (ewr_composite_tk - ewr_composite_t)) < 1e-10"
       - assert_not_empty:
           config:
             severity: error

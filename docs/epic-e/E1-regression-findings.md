@@ -33,7 +33,7 @@ The primary validation criterion is directional agreement (same sign as thesis e
 | Hyp | Test | N | Type | Value | p-value | Sig | Expected Dir | Actual Dir | Match | Description |
 |---|---|---|---|---|---|---|---|---|---|---|
 | H1 | Spearman | 436 | rho | -0.0463 | 0.3348 | No | negative | negative | PASS | POI stock (total_poi_count) ~ MSS social status (status_index) |
-| H1 | OLS | 436 | beta | -0.0004 R2=0.0044 | 0.1670 | No | negative | negative | PASS | POI stock (total_poi_count) ~ MSS social status (status_index) |
+| H1 | OLS | 436 | beta | -3.97e-04 R2=0.0044 | 0.1670 | No | negative | negative | PASS | POI stock (total_poi_count) ~ MSS social status (status_index) |
 | H1b | Spearman | 436 | rho | 0.1364 | 0.0043 | Yes | positive | positive | PASS | Fast-food POI count ~ MSS social status (status_index) |
 
 ## Results — Section 2: H2/H3 MSS Panel (modern era, 2021–2025)
@@ -61,11 +61,11 @@ The primary validation criterion is directional agreement (same sign as thesis e
 | Hyp | Test | N | Type | Value | p-value | Sig | Expected Dir | Actual Dir | Match | Description |
 |---|---|---|---|---|---|---|---|---|---|---|
 | H2 | Spearman k=1 | 3252 | rho | -0.2606 | 0.0000 | Yes | negative | negative | PASS | POI stock at year_t ~ delta_ewr over k=1 annual years [EWR 2014–2020, same-era] |
-| H2 | OLS k=1 | 3252 | beta | -0.0000 R2=0.0099 | 0.0000 | Yes | negative | negative | PASS | POI stock at year_t ~ delta_ewr over k=1 annual years [EWR 2014–2020, same-era] |
+| H2 | OLS k=1 | 3252 | beta | -3.87e-05 R2=0.0099 | 0.0000 | Yes | negative | negative | PASS | POI stock at year_t ~ delta_ewr over k=1 annual years [EWR 2014–2020, same-era] |
 | H2 | Spearman k=2 | 2710 | rho | -0.3117 | 0.0000 | Yes | negative | negative | PASS | POI stock at year_t ~ delta_ewr over k=2 annual years [EWR 2014–2020, same-era] |
-| H2 | OLS k=2 | 2710 | beta | -0.0001 R2=0.0209 | 0.0000 | Yes | negative | negative | PASS | POI stock at year_t ~ delta_ewr over k=2 annual years [EWR 2014–2020, same-era] |
+| H2 | OLS k=2 | 2710 | beta | -8.70e-05 R2=0.0209 | 0.0000 | Yes | negative | negative | PASS | POI stock at year_t ~ delta_ewr over k=2 annual years [EWR 2014–2020, same-era] |
 | H2 | Spearman k=4 | 1626 | rho | -0.3908 | 0.0000 | Yes | negative | negative | PASS | POI stock at year_t ~ delta_ewr over k=4 annual years [EWR 2014–2020, same-era] |
-| H2 | OLS k=4 | 1626 | beta | -0.0002 R2=0.0436 | 0.0000 | Yes | negative | negative | PASS | POI stock at year_t ~ delta_ewr over k=4 annual years [EWR 2014–2020, same-era] |
+| H2 | OLS k=4 | 1626 | beta | -2.08e-04 R2=0.0436 | 0.0000 | Yes | negative | negative | PASS | POI stock at year_t ~ delta_ewr over k=4 annual years [EWR 2014–2020, same-era] |
 | H3a | Spearman k=1 | 3252 | rho | -0.1693 | 0.0000 | Yes | negative | negative | PASS | Δpoi leads Δewr_composite [k=1 annual years, EWR 2014–2020, same-era] |
 | H3b | Spearman k=1 | 2710 | rho | -0.1694 | 0.0000 | Yes | negative | negative | PASS | Δewr_composite at t leads Δpoi [k=1 annual years, EWR 2014–2020, same-era] |
 | H3c | Spearman k=1 | 3252 | rho | -0.4122 | 0.0000 | Yes | negative | negative | PASS | poi_count_t ~ ewr_composite_t (contemporaneous) [k=1, EWR 2014–2020, same-era] |
