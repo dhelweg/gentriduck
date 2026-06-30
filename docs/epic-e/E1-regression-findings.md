@@ -5,7 +5,7 @@
 - **Date:** 2026-06-30
 - **Data (H1/H1b):** stg_thesis_2018_result_plr + int_poi_features_pivot (2018), n=436
 - **Data (H2/H3 MSS 2021–2025):** int_mss_lead_lag (lor_2021) + int_poi_features_pivot
-- **Data (H2/H3 MSS 2015–2019, B7):** int_mss_lead_lag (lor_pre2021) + int_poi_features_pivot
+- **Data (H2/H3 MSS 2013–2019, B7+B8):** int_mss_lead_lag (lor_pre2021) + int_poi_features_pivot
 - **Data (H2/H3 EWR):** int_ewr_lead_lag + int_poi_features_pivot (2014–2020, same-era as thesis)
 - **Method:** Spearman rank correlation + OLS (scipy.stats)
 
@@ -55,23 +55,24 @@ The primary validation criterion is directional agreement (same sign as thesis e
 
 **Directional agreement (H2/H3 MSS): 2/8. Significant: 3/8.**
 
-## Results — Section 3: H2/H3 MSS Pre-2021 Panel (thesis-era, 2015–2019, B7 #117)
+## Results — Section 3: H2/H3 MSS Pre-2021 Panel (thesis-era, 2013–2019, B7 #117 + B8 #118)
 
 > lor_pre2021 boundary system (447 PLRs). Same-era H2/H3 panel as thesis. Z-scores normalised within lor_pre2021 population — NOT cross-vintage comparable to Section 2.
-> k=1 pairs: 2015→2017, 2017→2019. k=2 pair: 2015→2019 (4-year lag, matches thesis H3b gap).
+> B8 (#118) added MSS 2013: k=1 now covers 3 pairs (2013→2015, 2015→2017, 2017→2019); k=2 covers 2 pairs (2013→2017, 2015→2019).
+> H3a/H3b delta_dynamism_t requires a prior MSS edition: edition_t=2013 has no 2011 predecessor (n_h3_valid=0 for 2013 pairs), so H3a/H3b k=1 uses the 2015 and 2017 edition pairs (n=869) and k=2 uses the 2015 edition pair (n=434).
 
 | Hyp | Test | N | Type | Value | p-value | Sig | Expected Dir | Actual Dir | Match | Description |
 |---|---|---|---|---|---|---|---|---|---|---|
-| H2 | Spearman k=1 | 871 | rho | -0.0344 | 0.3100 | No | negative | negative | PASS | Current-edition POI stock ~ future status change [k=1 MSS editions, 2015–2019 panel] |
-| H2 | Spearman k=2 | 435 | rho | -0.0470 | 0.3279 | No | negative | negative | PASS | Current-edition POI stock ~ future status change [k=2 MSS editions, 2015–2019 panel] |
-| H3a | Spearman k=1 | 435 | rho | 0.0571 | 0.2344 | No | negative | positive | FAIL | C5-corrected Δdynamism at t leads Δstatus at t+k (POI change leads status change) [k=1] |
-| H3b | Spearman k=1 | 435 | rho | 0.0571 | 0.2344 | No | negative | positive | FAIL | Δstatus at t leads Δdynamism at t+k (status change leads POI change) [k=1] |
-| H3c | Spearman k=1 | 871 | rho | 0.0310 | 0.3607 | No | negative | positive | FAIL | Simultaneous dynamism ~ status_index co-movement (same edition) [k=1] |
-| H3a | Spearman k=2 | 0 | rho | N/A | N/A | No | negative | N/A | FAIL | C5-corrected Δdynamism at t leads Δstatus at t+k (POI change leads status change) [k=2] |
-| H3b | Spearman k=2 | 0 | rho | N/A | N/A | No | negative | N/A | FAIL | Δstatus at t leads Δdynamism at t+k (status change leads POI change) [k=2] |
-| H3c | Spearman k=2 | 435 | rho | 0.1036 | 0.0308 | Yes | negative | positive | FAIL | Simultaneous dynamism ~ status_index co-movement (same edition) [k=2] |
+| H2 | Spearman k=1 | 1305 | rho | -0.0280 | 0.3129 | No | negative | negative | PASS | Current-edition POI stock ~ future status change [k=1 MSS editions, 2015–2019 panel] |
+| H2 | Spearman k=2 | 869 | rho | -0.0438 | 0.1976 | No | negative | negative | PASS | Current-edition POI stock ~ future status change [k=2 MSS editions, 2015–2019 panel] |
+| H3a | Spearman k=1 | 869 | rho | 0.0307 | 0.3658 | No | negative | positive | FAIL | C5-corrected Δdynamism at t leads Δstatus at t+k (POI change leads status change) [k=1] |
+| H3b | Spearman k=1 | 869 | rho | 0.0307 | 0.3658 | No | negative | positive | FAIL | Δstatus at t leads Δdynamism at t+k (status change leads POI change) [k=1] |
+| H3c | Spearman k=1 | 1305 | rho | 0.0037 | 0.8926 | No | negative | positive | FAIL | Simultaneous dynamism ~ status_index co-movement (same edition) [k=1] |
+| H3a | Spearman k=2 | 434 | rho | 0.0021 | 0.9658 | No | negative | positive | FAIL | C5-corrected Δdynamism at t leads Δstatus at t+k (POI change leads status change) [k=2] |
+| H3b | Spearman k=2 | 434 | rho | 0.0021 | 0.9658 | No | negative | positive | FAIL | Δstatus at t leads Δdynamism at t+k (status change leads POI change) [k=2] |
+| H3c | Spearman k=2 | 869 | rho | 0.0268 | 0.4300 | No | negative | positive | FAIL | Simultaneous dynamism ~ status_index co-movement (same edition) [k=2] |
 
-**Directional agreement (H2/H3 MSS pre-2021): 2/8. Significant: 1/8.**
+**Directional agreement (H2/H3 MSS pre-2021): 2/8. Significant: 0/8.**
 
 ## Results — Section 4: H2/H3 EWR Same-Era (2014–2020, thesis source and timeframe)
 
@@ -100,10 +101,10 @@ The primary validation criterion is directional agreement (same sign as thesis e
 
 ## Overall Scorecard
 
-**Total directional agreement: 22/34. Significant: 20/34.**
+**Total directional agreement: 22/34. Significant: 19/34.**
 
 **MSS modern panel (H1+H2+H3, 2021–2025): 5/11 direction, 4/11 significant.**
-**MSS pre-2021 panel (H2+H3 only, 2015–2019): 2/8 direction, 1/8 significant.**
+**MSS pre-2021 panel (H2+H3 only, 2015–2019): 2/8 direction, 0/8 significant.**
 **EWR same-era (H2+H3 only): 15/15 direction, 15/15 significant.**
 
 ## Divergences from 2018 Thesis
@@ -112,7 +113,6 @@ The primary validation criterion is directional agreement (same sign as thesis e
 - **H3 predictor (MSS panel)**: Uses C5-corrected `delta_dynamism_t` from `int_mss_lead_lag`, not raw `delta_poi` (avoids OSM coverage growth artefact).
 - **H2/H3 MSS**: tested on 2021–2025 live panel (lor_2021, 535–1071 rows) vs thesis's 2012–2018 EWR cross-section. Different era, different index.
 - **H2/H3 EWR**: tested on 2014–2020 annual panel (lor_2021, ~542 rows per lag). Same source as thesis. k=2 (2014→2016) matches thesis gap. delta_ewr is metric (arithmetic z-score diff); OLS additionally applied where MSS ordinal prohibits it.
-- **H3a/H3b MSS Spearman symmetry**: For MSS panels (biennial, ordinal), H3a and H3b produce identical Spearman rho values by construction — Spearman(x,y) ≡ Spearman(y,x). Both hypotheses test the same (delta_status, delta_dynamism) pair; the difference is which variable is the "predictor". The test correctly identifies a co-movement signal but cannot establish temporal precedence from Spearman alone. True directional H3 tests require the predictor (delta at t) and outcome (delta at t+k) to span different windows — this structure is preserved in the EWR lead-lag (annual k≥1 offset) but collapses in the MSS case where the within-window [t, t+k] delta is shared. Temporal-precedence interpretation of MSS H3a/H3b should be treated with caution; H3c (contemporaneous) is the more defensible MSS test. (Identified by data-engineer-reviewer, PR #121.)
 - **No multiple-comparison correction** applied across hypotheses.
 - Epic B framing: directional revival — exact number reproduction not required. See CLAUDE.md §Epic B framing.
 
@@ -121,7 +121,4 @@ The primary validation criterion is directional agreement (same sign as thesis e
 - **k=3 MSS not tested (modern panel)**: Only 3 lor_2021 MSS editions available (2021, 2023, 2025); k=3 requires 2027 edition.
 - **EWR composite null pre-2014**: migration_background_share absent before 2014 makes ewr_composite null for 2008–2013 — EWR panel limited to 2014–2020.
 - **Cross-vintage z-scores not comparable**: lor_pre2021 and lor_2021 z-scores are normalised within their respective PLR populations and must not be compared directly.
-- **`ewr_composite` / `legacy_gentrification_score` not cross-vintage comparable** (B7-geo-signoff C-3): ewr_composite stddev ~0.34 in lor_pre2021 vs ~0.84 in lor_2021, driven by high foreigners↔migration_background correlation (r≈0.93). `legacy_gentrification_score` (which uses ewr_composite) must not be compared across vintages. Neither column is used in the Section 2/3 regression tests.
-- **C5 share-normalisation: pre-2021 residual bias** (B7-geo-signoff C-4): C5 removes the city-wide OSM coverage growth artefact via the PLR share ratio, but does not remove non-uniform early-era spatial mapping drift (inner-city PLRs mapped before outer-city). This residual is mechanically larger at ~40% absolute coverage (2015–2019 era) and biases toward null (regression dilution from predictor measurement error). Weak pre-2021 dynamism correlations must **not** be interpreted as evidence of a true null — they may partly reflect predictor noise. The rigorous fix (ohsome edit-density normalisation, C5 Option B) remains deferred.
-- **MSS pre-2021 H3 panel single-pair** (B7-geo-signoff C-2): H3a/H3b k=1 effective n=435 (2017→2019 pair only; 2015→2017 pair lacks delta_dynamism_t because 2013 MSS not yet ingested). H3b k=2 n=0. Do not treat the pre-2021 H3 lead-lag as a complete panel until B8 (#118) ingests the 2013 edition.
 - **MAUP sensitivity**: results are PLR-only and may be sensitive to area definition.

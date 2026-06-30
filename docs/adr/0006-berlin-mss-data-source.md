@@ -204,10 +204,20 @@ Python-ingestible via HTTP, and PLR grain.
 
 ## Open questions
 
-1. **Pre-2019 WFS availability.** Confirm whether MSS 2013/2015/2017 have live
+1. **Pre-2019 WFS availability.** ~~Confirm whether MSS 2013/2015/2017 have live
    `gdi.berlin.de/services/wfs/mss_<YEAR>` services or only WMS/report PDFs. If WFS is
    missing, fall back to a re-tabulated class-distribution seed (Option C) for those years —
-   decided by the DE pair during R-A3.
+   decided by the DE pair during R-A3.~~
+
+   **DISCHARGED (B8 #118, 2026-06-30):** MSS 2015/2017 WFS services exist (probed live).
+   MSS 2013 WFS (`gdi.berlin.de/services/wfs/mss_2013`) returns HTTP 404 — no WFS service
+   for 2013. The DE pair chose the official Berlin Senate Excel table
+   (`1-sdi_mss2013.xlsx`, dl-de-zero-2.0 licence,
+   `berlin.de/sen/stadt/_assets/stadtdaten/stadtwissen/monitoring-soziale-stadtentwicklung/bericht-2013/`)
+   over the class-count seed originally envisioned in Option C. The Excel table provides
+   full PLR-level data (447 rows, Status/Dynamik/Gesamtindex per PLR) — strictly richer
+   than a class-distribution aggregate. Ingestion: `ingestion/berlin/mss/ingest_mss_2013_excel.py`
+   (wired into `poe ingest`). No new tool ADR required for openpyxl (Excel parsing only).
 2. **Exact attribute names per edition.** Field names (`STATUSINDEX`, `DYNAMIKINDEX`,
    `GESAMTINDEX`, PLR key) may vary slightly across editions; the adapter normalises them.
    Capture the per-edition mapping in the adapter, not this ADR.

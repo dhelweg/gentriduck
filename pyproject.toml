@@ -26,6 +26,7 @@ dependencies = [
     "esda>=2.5",
     "spreg>=1.4",
     "h3>=4.0",
+    "openpyxl>=3.1.5",
 ]
 
 # Dev tooling lives in an isolated group; installed via `uv sync`.
@@ -74,5 +75,6 @@ backtest = "python analysis/backtest_index.py"
 ingest = { sequence = [
     "python ingestion/berlin/lor/ingest_lor_geometries.py --out-dir data/raw/berlin/lor",
     "python ingestion/berlin/mss/ingest_mss.py --out-dir data/raw/berlin/mss",
+    "python ingestion/berlin/mss/ingest_mss_2013_excel.py --out-dir data/raw/berlin/mss",
     "python ingestion/berlin/mss/ingest_mss_indicators.py --out-dir data/raw/berlin/mss",
 ], default_item_type = "cmd" }
