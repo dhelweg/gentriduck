@@ -90,7 +90,8 @@ with
         -- Join outcome row: same PLR, same vintage, at year_t + lag_k
         inner join
             ewr_with_delta as lagged
-            on base.area_code = lagged.area_code
+            on base.city_code = lagged.city_code
+            and base.area_code = lagged.area_code
             and base.area_vintage = lagged.area_vintage
             and lagged.reference_year = base.reference_year + k_steps.lag_k
     )

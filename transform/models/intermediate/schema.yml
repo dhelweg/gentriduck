@@ -1044,6 +1044,12 @@ models:
       - dbt_utils.expression_is_true:
           arguments:
             expression: "year_tk = year_t + lag_k"
+      - dbt_utils.expression_is_true:
+          arguments:
+            expression: "year_t >= 2014 AND year_t <= 2020"
+      - dbt_utils.expression_is_true:
+          arguments:
+            expression: "year_tk <= 2024"
       - assert_not_empty:
           config:
             severity: error
