@@ -441,8 +441,6 @@ def _extract_from_pdf(pdf_path: Path, vintage: int) -> list[dict]:
     import pdfplumber  # noqa: PLC0415
 
     rows: list[dict] = []
-    total_pages = 0
-    skipped_pages = 0
 
     with pdfplumber.open(str(pdf_path)) as pdf:
         total_pages = len(pdf.pages)
@@ -463,13 +461,7 @@ def _extract_from_pdf(pdf_path: Path, vintage: int) -> list[dict]:
                             "vintage=%d page=%d: could not parse segment %r", vintage, page_num, seg
                         )
 
-    log.info(
-        "vintage=%d: extracted %d rows from %d pages (%d skipped)",
-        vintage,
-        len(rows),
-        total_pages,
-        skipped_pages,
-    )
+    log.info("vintage=%d: extracted %d rows from %d pages", vintage, len(rows), total_pages)
     return rows
 
 

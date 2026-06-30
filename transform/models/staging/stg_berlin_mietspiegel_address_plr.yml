@@ -25,6 +25,11 @@ models:
       Grain: one row per (vintage, plr_area_code).
     meta:
       dbt_meta_owner: data-engineer
+    tests:
+      - dbt_utils.expression_is_true:
+          expression: "abs(wohnlage_einfach_frac + wohnlage_mittel_frac + wohnlage_gut_frac - 1.0) < 0.001"
+          config:
+            where: "address_count > 0"
     columns:
       - name: vintage
         description: >
