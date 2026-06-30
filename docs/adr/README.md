@@ -16,7 +16,8 @@ ADR before adopting a new tool, library, or data source** (no "first tool that w
 | [0009](0009-agent-skill-tooling-superpowers.md) | Agent-skill tooling — selectively adopt Superpowers | Accepted |
 | [0010](0010-spatial-distance-weighting.md) | Spatial distance weighting | Accepted |
 | [0011](0011-autonomous-merge-develop-branch.md) | Autonomous merge via a `develop` integration branch | Accepted |
-| — | Serving & hosting stack | Deferred (task F1) |
+| [0012](0012-serving-and-hosting-stack.md) | Serving & hosting stack (Evidence.dev + Cloudflare Pages) | Proposed (task F1, pending maintainer approval) |
+| [0013](0013-whitepaper-authoring-tool.md) | Whitepaper authoring tool (Quarto + Typst) | Proposed (task O2, pending maintainer approval) |
 | — | Data refresh / orchestration | Deferred (task F3) |
 
 Format: each ADR has **Status**, **Context**, **Decision**, **Consequences**. Supersede rather
