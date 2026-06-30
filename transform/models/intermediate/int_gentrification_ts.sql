@@ -182,6 +182,13 @@ with
             ewr.mean_age_years,
             ewr.residence_duration_5y_share,
             ewr.residents_total,
+            -- NOT CROSS-VINTAGE COMPARABLE (B7-geo-signoff C-3): ewr_composite std
+            -- ~0.34
+            -- in lor_pre2021 vs ~0.84 in lor_2021 due to high foreigners↔migration
+            -- r≈0.93.
+            -- legacy_gentrification_score is a pre-R-A1 diagnostic retained per
+            -- ADR-0004;
+            -- DO NOT compare across vintages or use for new analysis.
             (poi.status_score + poi.dynamism_score - ewr.ewr_composite)
             / 3.0 as legacy_gentrification_score
         from mss_pre2021 as mss
