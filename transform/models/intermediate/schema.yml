@@ -1010,6 +1010,100 @@ models:
           DO NOT use for new analysis. Refer to D1/D2 columns for outcome analysis
           and D3 columns for predictor analysis (R-A1; ADR-0008).
 
+  - name: int_ewr_lead_lag
+    description: >
+      #114: EWR-based annual lead-lag panel for same-era H2/H3 thesis comparison.
+
+      The E1 regressions test H2/H3 against the MSS 2021–2025 panel, but the 2018 thesis
+      used EWR data at the 2014→2016 snapshot gap. This model provides the same-era,
+      same-source comparison: annual EWR composite pairs at k=1, 2, and 4 year lags.
+
+      Key difference from int_mss_lead_lag: ewr_composite is a metric z-score mean so
+      delta_ewr is a valid arithmetic delta (OLS + Spearman both permitted), unlike the
+      MSS ordinal status_index where metric differencing is prohibited (index-definition.md §3.3).
+
+      Coverage: 2014–2020 only (ewr_composite NULL for 2008–2013 and 2024–2025).
+      Vintage: lor_2021 throughout (pre-2021 EWR years crosswalked via int_berlin_ewr_plr2021).
+      Thesis comparison window: k=2 (2014→2016) matches the thesis lead-lag gap exactly.
+
+      Grain: one row per (area_code, area_vintage, year_t, lag_k).
+      lag_k ∈ {1, 2, 4} — annual steps.
+    meta:
+      dbt_meta_owner: data-engineer
+    tests:
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns:
+              - city_code
+              - area_code
+              - area_vintage
+              - year_t
+              - lag_k
+          config:
+            where: "area_code is not null"
+      - dbt_utils.expression_is_true:
+          arguments:
+            expression: "year_tk = year_t + lag_k"
+      - assert_not_empty:
+          config:
+            severity: error
+    columns:
+      - name: city_code
+        description: City identifier (ADR-0005). Always 'BER'.
+        tests:
+          - not_null
+      - name: area_code
+        description: PLR area code (8-digit, zero-padded, lor_2021 vintage).
+        tests:
+          - not_null
+      - name: area_vintage
+        description: LOR boundary vintage. Always 'lor_2021' (all EWR years crosswalked).
+        tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ["lor_2021"]
+      - name: year_t
+        description: Base year of the lead-lag pair.
+        tests:
+          - not_null
+      - name: lag_k
+        description: Lag in annual steps. One of 1, 2, or 4.
+        tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: [1, 2, 4]
+      - name: year_tk
+        description: Outcome year (year_t + lag_k).
+        tests:
+          - not_null
+      - name: ewr_composite_t
+        description: EWR composite z-score at base year. Non-null by construction.
+        tests:
+          - not_null
+      - name: ewr_composite_tk
+        description: EWR composite z-score at outcome year. Non-null by construction.
+        tests:
+          - not_null
+      - name: delta_ewr
+        description: >
+          Metric delta of ewr_composite (ewr_composite_tk - ewr_composite_t).
+          Positive = population became MORE socio-economically vulnerable (status worsened).
+          Negative = population became LESS vulnerable (status improved, gentrification).
+          Valid for OLS and Spearman (z-score arithmetic difference).
+        tests:
+          - not_null
+      - name: delta_ewr_t
+        description: >
+          Annual change in ewr_composite at base year vs prior year
+          (ewr_composite_t - ewr_composite_{t-1}). Used as the H3b predictor side.
+          NULL for the earliest available year per PLR.
+      - name: residents_total_t
+        description: Total residents at base year (uninhabited guard — always > 0).
+        tests:
+          - not_null
+
   - name: int_mss_lead_lag
     description: >
       R-A1 lead-lag validation model (#64): primary analysis table for the thesis's temporal
