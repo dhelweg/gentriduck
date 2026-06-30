@@ -1,10 +1,10 @@
 {
   "_schema": "gentriduck-session-state/v1",
-  "session": "2026-06-30-devmode-2",
-  "updated_at": "2026-06-30T09:25:00Z",
+  "session": "2026-06-30-devmode-3",
+  "updated_at": "2026-06-30T09:40:00Z",
   "build_status": {
     "result": "PASS",
-    "pass": 443,
+    "pass": 462,
     "warn": 2,
     "error": 0,
     "warn_detail": [
@@ -12,7 +12,7 @@
       "test_c5_poi_share_spike (expected by design - OSM coverage growth signal)"
     ],
     "branch": "develop",
-    "note": "Green. develop includes #56 D1c, #81 O1, CITATION.cff, ADR-0013, #83 O4 milestone artifact."
+    "note": "Green. develop includes #114 int_ewr_lead_lag + #115 EWR same-era H2/H3 comparison."
   },
   "open_prs": [
     {
@@ -20,7 +20,7 @@
       "title": "Weekly release: Epic R/D wave — spatial inference, price/rent dimension, A9 diffusion",
       "base": "main",
       "head": "develop",
-      "note": "Awaiting maintainer merge. Now also includes #83 O4 milestone doc + ADR-0013 branch (pending approval). PushNotification sent 2026-06-30. PR description update pending."
+      "note": "Awaiting maintainer merge. PR description updated 2026-06-30 devmode-3 to include #114 and #115 (17 items total, 462 tests pass). PushNotification sent 2026-06-30."
     }
   ],
   "pending_adr_branches": [
@@ -34,10 +34,10 @@
       "branch": "feat/82-adr-0013-whitepaper-tool",
       "issue": 82,
       "title": "ADR-0013 Quarto + Typst whitepaper authoring tool",
-      "note": "ADR drafted (de09c0d), Proposed status. Blocked on maintainer sign-off. PushNotification sent 2026-06-30 (this session)."
+      "note": "ADR drafted (de09c0d), Proposed status. Blocked on maintainer sign-off. PushNotification sent 2026-06-30."
     }
   ],
-  "completed_this_session": [56, 81],
+  "completed_this_session": [56, 81, 114, 115],
   "integrated_into_develop": [
     {
       "commit": "af0ef9f",
@@ -58,20 +58,34 @@
       "commit": "0e1be37",
       "issue": "83-partial",
       "title": "docs(#83): O4 milestone summary — Berlin gentrification patterns 2021-2025"
+    },
+    {
+      "commit": "a951e1c",
+      "issue": 114,
+      "title": "feat(#114): int_ewr_lead_lag — EWR annual lead-lag panel"
+    },
+    {
+      "commit": "05bc48f",
+      "issue": 115,
+      "title": "integrate(#115): same-era EWR H2/H3 comparison in e1_regressions.py"
     }
   ],
   "this_machine_data_state": {
     "mss_status_editions": [2015, 2017, 2019, 2021, 2023, 2025],
     "mss_indicator_editions": [2015, 2017, 2019, 2021, 2023, 2025],
-    "note": "All keystone models populated. 443 dbt tests pass.",
-    "keystone_populated": true
+    "note": "All keystone models populated. 462 dbt tests pass.",
+    "keystone_populated": true,
+    "ewr_lead_lag": {
+      "note": "int_ewr_lead_lag: 7588 rows, 542 PLRs × k={1,2,4}, 2014-2020, lor_2021 vintage. Non-null ewr_composite for 2014-2020 confirmed.",
+      "thesis_comparison_window": "k=2 (2014→2016)"
+    }
   },
   "weekly_pr": {
     "number": 111,
     "opened": "2026-06-29",
     "updated": "2026-06-30",
-    "batches": ["#65 E1/E2", "#69 A6", "#71 B2", "#78 A8", "#109 ADR-0011", "#28 D2", "#112 BRW back-series", "#113 Wohnlage multi-year", "#29 D3", "#53 D1b", "#56 D1c", "#79 A9", "#81 O1", "CITATION.cff", "#83 O4 milestone (partial)"],
-    "note": "PushNotification sent. Merge when ready."
+    "batches": ["#65 E1/E2", "#69 A6", "#71 B2", "#78 A8", "#109 ADR-0011", "#28 D2", "#112 BRW back-series", "#113 Wohnlage multi-year", "#29 D3", "#53 D1b", "#56 D1c", "#79 A9", "#81 O1", "CITATION.cff", "#83 O4 milestone (partial)", "#114 int_ewr_lead_lag", "#115 EWR H2/H3 regressions"],
+    "note": "PushNotification sent 2026-06-30. PR description updated (17 items, 462 tests). Merge when ready."
   },
   "still_blocked": [
     {
@@ -88,8 +102,8 @@
     },
     {
       "issue": 80,
-      "blocked_by": ["#70 R-B1 -- explicitly deferred"],
-      "title": "[A10] Causal/early-warning design -- DEFERRED"
+      "blocked_by": ["#70 R-B1 — explicitly deferred"],
+      "title": "[A10] Causal/early-warning design — DEFERRED"
     },
     {
       "issue": 82,
@@ -121,7 +135,8 @@
     "E3 geo-DS C2 (non-blocking): C5 coverage-correction note for D3 dynamism maps/narratives (before G2).",
     "spatial-methods.md domain C1: Gi* public label = amenity-change hotspot (not gentrification hotspot) in G2/maps.",
     "R-A9 geo-DS carry-forward (non-binding): ewr_composite for lor_2021 when EWR join extended; LISA FDR note for G2.",
-    "R-A9 domain carry-forward (non-binding): HL LISA public label nuance; diffusion causal limits; D5 as missing moderator (Epic D)."
+    "R-A9 domain carry-forward (non-binding): HL LISA public label nuance; diffusion causal limits; D5 as missing moderator (Epic D).",
+    "#115 EWR H2/H3: POI pseudo-replication caveat (35% of lor_2021 PLRs share poi_count via dominant crosswalk) documented in findings + docstring. Directional results valid; reported p-values inflated. Noted for G2 methodology page."
   ],
-  "next_session_decision": "Waiting on: (1) maintainer to approve ADR-0012 (#33 F1) → integrate feat/33-adr-0012-serving-hosting into develop, then chain F2/F3/G0 tickets; (2) maintainer to merge weekly PR #111; (3) maintainer to approve ADR-0013 (#82) → start whitepaper prose; (4) #70 B1 ADR decision (displacement dimension). All engineering work is blocked pending maintainer responses. If #33 arrives: integrate ADR-0012, start G0 (author web-engineer agents) as next ticket."
+  "next_session_decision": "Waiting on: (1) maintainer to approve ADR-0012 (#33 F1) → integrate feat/33-adr-0012-serving-hosting into develop, then chain F2/F3/G0 tickets; (2) maintainer to merge weekly PR #111 (now 17 items, 462 tests); (3) maintainer to approve ADR-0013 (#82) → start whitepaper prose; (4) #70 B1 ADR decision (displacement dimension). All remaining unblocked Epic E work (#114/#115) is integrated. If #33 arrives: integrate ADR-0012, start G0 (author web-engineer agents) as next ticket."
 }
