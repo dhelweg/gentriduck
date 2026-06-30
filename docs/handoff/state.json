@@ -1,7 +1,7 @@
 {
   "_schema": "gentriduck-session-state/v1",
-  "session": "2026-06-30-devmode-7",
-  "updated_at": "2026-06-30T13:00:00Z",
+  "session": "2026-06-30-devmode-8",
+  "updated_at": "2026-06-30T16:30:00Z",
   "build_status": {
     "result": "PASS",
     "pass": 478,
@@ -12,7 +12,7 @@
       "test_c5_poi_share_spike (expected by design)"
     ],
     "branch": "develop",
-    "note": "Green. develop includes B7 (merge b9c47dd). 478 tests pass."
+    "note": "Green. develop includes #122 (partition fix) and #119 (B9b partial composite). 478 tests pass."
   },
   "open_prs": [
     {
@@ -20,14 +20,7 @@
       "title": "Weekly release: Epic R/D wave — spatial inference, price/rent dimension, A9 diffusion",
       "base": "main",
       "head": "develop",
-      "note": "Open. Awaiting maintainer merge. Now includes B7 (#117) since develop was updated."
-    },
-    {
-      "number": 121,
-      "title": "feat(#117): B7 — lor_pre2021 MSS 2015/2017/2019 panel",
-      "base": "develop",
-      "head": "b7-lor-pre2021-ts-panel",
-      "note": "Integrated into develop (b9c47dd). PR can be closed by maintainer."
+      "note": "Open. Awaiting maintainer merge. Now includes B7/B8/B9/B-infra-122 since develop was updated."
     }
   ],
   "pending_adr_branches": [
@@ -45,52 +38,31 @@
     }
   ],
   "completed_this_session": [
-    "#116 [Infra] gh token read:project scope — fixed and closed",
-    "Filed #117 B7, #118 B8, #119 B9, #120 B10 — thesis data gap tickets",
-    "#117 [B7] INTEGRATED into develop — lor_pre2021 MSS panel, PR #121, 478 tests pass",
-    "Filed #122 — latent berlin_total_poi_count partition bug (info-severity, not blocking)"
+    "#122 [B-infra] poi_share_base area_vintage partition fix — integrated into develop",
+    "#119 [B9] EWR pre-2014 partial composite — integrated into develop with geo+domain PASS WITH CONDITIONS"
   ],
   "integrated_into_develop": [
     {
-      "issue": 117,
-      "title": "[B7] Wire lor_pre2021 MSS 2015/2017/2019 into int_gentrification_ts",
-      "merge_commit": "b9c47dd",
-      "pr": 121,
+      "issue": 122,
+      "title": "[B-infra] int_poi_share_base partition fix",
+      "merge_commit": "3650cc3",
       "date": "2026-06-30",
-      "note": "R-C1 dual gate: geo-DS + domain-expert PASS WITH CONDITIONS. 478 tests. Conditions C-1..C-4 + D-1..D-5 carried to G2."
+      "note": "Latent bug fix: area_vintage added to berlin_total_poi_count window. 478 tests pass."
+    },
+    {
+      "issue": 119,
+      "title": "[B9] EWR pre-2014 partial composite",
+      "merge_commit": "9282c19",
+      "date": "2026-06-30",
+      "note": "ewr_composite_partial (3-indicator) added; int_ewr_lead_lag extended 2014-2020 → 2008-2020. Dual PASS WITH CONDITIONS. 478 tests pass."
     }
   ],
-  "infra_blocker": null,
-  "in_progress": {
-    "issue": 118,
-    "title": "[B8] Ingest MSS 2013 edition",
-    "branch": "b8-mss-2013-ingest",
-    "status": "Starting — branch created off develop",
-    "motivation": "2013 MSS edition populates delta_dynamism_t for edition_t=2015, enabling H3b k=2 (2015→2019 pair, 4-year lag). Currently n=0 for all pre-2021 H3 k=2 cells.",
-    "notes": "MSS 2013 is lor_pre2021 vintage. Should appear in stg_berlin_mss automatically if ingestion covers 2013. Check what years are available in ingestion/download_mss.py or equivalent."
-  },
-  "this_machine_data_state": {
-    "mss_status_editions": [2015, 2017, 2019, 2021, 2023, 2025],
-    "mss_indicator_editions": [2015, 2017, 2019, 2021, 2023, 2025],
-    "note": "478 dbt tests pass. B7 integrated. Need 2013 MSS for B8.",
-    "keystone_populated": true,
-    "ewr_lead_lag": {
-      "note": "int_ewr_lead_lag: 7588 rows, lor_2021, k={1,2,4}, 2014-2020.",
-      "thesis_comparison_window": "k=2 (2014→2016)"
-    }
-  },
-  "weekly_pr": {
-    "number": 111,
-    "opened": "2026-06-29",
-    "updated": "2026-06-30",
-    "batches": ["#65 E1/E2", "#69 A6", "#71 B2", "#78 A8", "#109 ADR-0011", "#28 D2", "#112 BRW back-series", "#113 Wohnlage multi-year", "#29 D3", "#53 D1b", "#56 D1c", "#79 A9", "#81 O1", "CITATION.cff", "#83 O4 milestone (partial)", "#114 int_ewr_lead_lag", "#115 EWR H2/H3 regressions"],
-    "note": "PR #111 open. B7 (#117) now on develop, will be in NEXT weekly release. Awaiting maintainer merge for current PR."
-  },
+  "in_progress": null,
   "board_status": {
-    "note": "FULLY OPERATIONAL. #117 Done. #118 In Progress. #119/#120 Todo.",
+    "note": "FULLY OPERATIONAL. 65 Done. 0 In Progress. 13 Todo.",
     "open_issues_by_dependency": {
-      "in_progress": ["#118 [B8] Ingest MSS 2013 edition (branch b8-mss-2013-ingest)"],
-      "next_unblocked": ["#119 [B9] EWR pre-2014 (depends on B7 now merged)", "#120 [B10] BZR/Bezirk aggregation (lowest priority)"],
+      "in_progress": [],
+      "next_unblocked": ["#120 [B10] BZR/Bezirk aggregation (methodology-bearing, needs sign-off)"],
       "blocked_on_maintainer": ["#33 [F1] ADR-0012", "#70 [B1] displacement data", "#82 [O2] ADR-0013"]
     }
   },
@@ -108,7 +80,8 @@
     "R-A9 geo-DS: ewr_composite for lor_2021 when EWR join extended; LISA FDR note for G2.",
     "R-A9 domain: HL LISA label nuance; diffusion causal limits; D5 missing (Epic D).",
     "#115 EWR H2/H3: POI pseudo-replication caveat (35% PLRs share poi_count). p-values inflated. For G2.",
-    "#117 B7 geo-DS C-1..C-4 + domain D-1..D-5: MSS H3a/H3b = co-movement only; pre-2021 H3 single-pair caveat; ewr_composite not cross-vintage comparable; C5 attenuation note; migration 2017 break; uninhabited count per edition."
+    "#117 B7 geo-DS C-1..C-4 + domain D-1..D-5: MSS H3a/H3b = co-movement only; pre-2021 H3 single-pair caveat; ewr_composite not cross-vintage comparable; C5 attenuation note; migration 2017 break; uninhabited count per edition.",
+    "#119 B9 geo-DS C-1/C-2/C-3 + domain D-1/D-2/D-3: partial composite std ~10% higher; no foreigners/migration claims pre-2014; E1 must filter any_endpoint_partial=FALSE; public label required."
   ],
-  "next_session_decision": "B8 (#118) in progress on branch b8-mss-2013-ingest. Ingest MSS 2013 edition (lor_pre2021 vintage) to populate delta_dynamism_t for edition_t=2015, enabling H3b k=2 (2015→2019, 4-year lag). Check ingestion/download_mss.py for available years. If 2013 data is available from Berlin Open Data, extend the ingestion to cover it. After B8: B9 (#119) EWR pre-2014, then B10 (#120)."
+  "next_session_decision": "#120 [B10] BZR/Bezirk spatial aggregation — add BZR and Bezirk level aggregations to E1/E2 analysis to match thesis three-scale pooling. Methodology-bearing work (analysis/*.py); will need dual sign-off. Next unblocked after B9."
 }
