@@ -1,0 +1,133 @@
+version: 2
+
+models:
+  - name: stg_berlin_mietspiegel_address_plr
+    description: >
+      D1c (#56): PLR-level Wohnlage residential quality tier distribution derived from
+      the official Berlin Mietspiegel Wohnlage WFS address-point data spatially joined
+      to LOR PLR polygons.
+
+      Source (address points): WFS GDI Berlin, Wohnlagen nach Adressen zum Berliner
+      Mietspiegel. Feature type wohnlagenadr{year}:wohnlagenadr{year}, CRS EPSG:25833.
+      Licence: dl-de-zero-2.0. Vintages: 2017, 2019, 2021, 2023, 2026.
+
+      Source (PLR polygons): stg_berlin_lor — GDI Berlin WFS, CC BY 3.0 DE.
+      Pre-2021: 448 PLRs (lor_pre2021); LOR 2021 reform: 542 PLRs (lor_2021).
+
+      Spatial method: ST_Within point-in-polygon with vintage-alignment cutoff
+      (vintage <= 2020 → lor_pre2021; vintage >= 2021 → lor_2021), mirroring the
+      geo-DS-approved methodology from int_berlin_wohnlage_plr and int_osm_poi_plr.
+
+      Returns zero rows (typed stub) until wohnlage and LOR parquet files are ingested.
+      Populated by ingestion/berlin/price_rent/ingest_wohnlage.py (wohnlage) and
+      ingestion/berlin/lor/ingest_lor_geometries.py (LOR).
+
+      Grain: one row per (vintage, plr_area_code).
+    meta:
+      dbt_meta_owner: data-engineer
+    columns:
+      - name: vintage
+        description: >
+          Wohnlage WFS edition year (2017/2019/2021/2023/2026); NOT the Stichtag year.
+          Determines which LOR boundary vintage is used for the spatial join:
+          vintage <= 2020 → lor_pre2021; vintage >= 2021 → lor_2021.
+        tests:
+          - not_null:
+              config:
+                where: "plr_area_code is not null"
+      - name: city_code
+        description: City identifier; always 'berlin' (ADR-0005).
+        tests:
+          - not_null:
+              config:
+                where: "plr_area_code is not null"
+          - accepted_values:
+              arguments:
+                values: ["berlin"]
+              config:
+                where: "plr_area_code is not null"
+      - name: plr_area_code
+        description: >
+          PLR (Planungsraum) identifier, zero-padded 8-character code from stg_berlin_lor.
+          Joins to dim_area and stg_berlin_lor.
+        tests:
+          - not_null:
+              config:
+                where: "vintage is not null"
+      - name: wohnlage_einfach_frac
+        description: >
+          Fraction of address points in this PLR classified as einfache Wohnlage
+          for the given vintage. Range [0, 1]. 0.0 when no addresses are classified
+          as einfach in this PLR.
+        tests:
+          - not_null:
+              config:
+                where: "plr_area_code is not null"
+          - dbt_utils.expression_is_true:
+              arguments:
+                expression: "between 0.0 and 1.0"
+              config:
+                where: "plr_area_code is not null"
+      - name: wohnlage_mittel_frac
+        description: >
+          Fraction of address points in this PLR classified as mittlere Wohnlage
+          for the given vintage. Range [0, 1].
+        tests:
+          - not_null:
+              config:
+                where: "plr_area_code is not null"
+          - dbt_utils.expression_is_true:
+              arguments:
+                expression: "between 0.0 and 1.0"
+              config:
+                where: "plr_area_code is not null"
+      - name: wohnlage_gut_frac
+        description: >
+          Fraction of address points in this PLR classified as gute Wohnlage
+          for the given vintage. Range [0, 1].
+        tests:
+          - not_null:
+              config:
+                where: "plr_area_code is not null"
+          - dbt_utils.expression_is_true:
+              arguments:
+                expression: "between 0.0 and 1.0"
+              config:
+                where: "plr_area_code is not null"
+      - name: wohnlage_dominant
+        description: >
+          Dominant Wohnlage tier in this PLR for the given vintage — the tier with
+          the highest number of address points. Tie-break: gut > mittel > einfach
+          (deterministic; higher quality wins). 'mittel' is used as fallback when
+          the PLR has zero address points (address_count = 0).
+        tests:
+          - not_null:
+              config:
+                where: "plr_area_code is not null"
+          - accepted_values:
+              arguments:
+                values: ["einfach", "mittel", "gut"]
+              config:
+                where: "plr_area_code is not null"
+      - name: address_count
+        description: >
+          Total number of Wohnlage address points (from stg_berlin_wohnlage) assigned
+          to this PLR for the given vintage. Used as sample-size indicator; PLRs with
+          very low counts may have unreliable fraction estimates.
+        tests:
+          - not_null:
+              config:
+                where: "plr_area_code is not null"
+          - dbt_utils.expression_is_true:
+              arguments:
+                expression: ">= 0"
+              config:
+                where: "plr_area_code is not null"
+      - name: source_attribution
+        description: >
+          Attribution string citing WFS GDI Berlin (Wohnlage, dl-de-zero-2.0)
+          and LOR geometries (Geoportal Berlin / GDI Berlin, CC BY 3.0 DE).
+        tests:
+          - not_null:
+              config:
+                where: "plr_area_code is not null"
