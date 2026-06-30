@@ -1,7 +1,7 @@
 {
   "_schema": "gentriduck-session-state/v1",
   "session": "2026-06-30-devmode-5",
-  "updated_at": "2026-06-30T11:45:00Z",
+  "updated_at": "2026-06-30T12:05:00Z",
   "build_status": {
     "result": "PASS",
     "pass": 462,
@@ -38,7 +38,8 @@
     }
   ],
   "completed_this_session": [
-    "#116 [Infra] gh token read:project scope \u2014 fixed and closed"
+    "#116 [Infra] gh token read:project scope \u2014 fixed and closed",
+    "Filed #117 B7, #118 B8, #119 B9, #120 B10 \u2014 thesis data gap tickets"
   ],
   "integrated_into_develop": [],
   "infra_blocker": null,
@@ -113,6 +114,12 @@
       ],
       "deferred": [
         "#80 A10 (explicitly deferred, tracked)"
+      ],
+      "new_thesis_comparison": [
+        "#117 [B7] Wire lor_pre2021 MSS into int_gentrification_ts (unblocked, high impact)",
+        "#118 [B8] Ingest MSS 2013 edition (unblocked)",
+        "#119 [B9] Extend EWR ingestion pre-2014 (unblocked, depends on B7 first)",
+        "#120 [B10] BZR/Bezirk aggregation for E1/E2 (unblocked, lower priority)"
       ]
     }
   },
@@ -203,5 +210,5 @@
     "R-A9 domain carry-forward (non-binding): HL LISA public label nuance; diffusion causal limits; D5 as missing moderator (Epic D).",
     "#115 EWR H2/H3: POI pseudo-replication caveat (35% of lor_2021 PLRs share poi_count via dominant crosswalk) documented in findings + docstring. Directional results valid; reported p-values inflated. Noted for G2 methodology page."
   ],
-  "next_session_decision": "HARD PAUSE. Board access restored (#116 closed). All remaining work still blocked on: (1) ADR-0012 approval (#33, highest leverage \u2014 chains F2/F3/G0/G1/G2/G3); (2) PR #111 merge in GitHub UI (17 items, 462 tests); (3) optionally ADR-0013 (#82) and displacement data decision (#70 B1)."
+  "next_session_decision": "B7 (#117) is the top unblocked ticket \u2014 wire lor_pre2021 MSS 2015/2017/2019 into int_gentrification_ts. Both MSS (stg_berlin_mss) and POI (int_poi_features_pivot) data already exist for lor_pre2021. Expected to fix H3b AUC collapse. Do B8 (#118) in same pass (MSS 2013 ingestion). Then B9 (#119) EWR pre-2014. B10 (#120) last. ADR-0012 (#33) still blocked on maintainer; PR #111 still awaiting merge."
 }
