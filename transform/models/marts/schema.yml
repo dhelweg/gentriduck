@@ -539,9 +539,16 @@ models:
             where: "area_code is not null"
     columns:
       - name: city_code
-        description: City identifier (ADR-0005). 'berlin' from stg_berlin_bodenrichtwert/stg_berlin_wohnlage.
+        description: >
+          City identifier (ADR-0005). Always 'BER' — normalised by int_berlin_brw_plr and
+          int_berlin_wohnlage_plr (staging layers emit 'berlin'; normalised for dim_city FK).
         tests:
           - not_null:
+              config:
+                where: "area_code is not null"
+          - accepted_values:
+              arguments:
+                values: ["BER"]
               config:
                 where: "area_code is not null"
       - name: snapshot_year

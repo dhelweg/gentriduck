@@ -20,6 +20,8 @@
 --   EUR/m² is a density/rate (intensive), so area-weighted mean is the correct
 --   aggregation; SUM is incorrect. Formula:
 --   brw_plr_i = SUM_z(value_z * area(intersect(zone_z,plr_i))) / SUM_z(area(...))
+-- ADR-0003 §Price/rent (P-A Bodenrichtwerte): approved source; governs ingestion and
+--   staging of Berlin Bodenrichtwert polygon data. See docs/adr/0003-*.md. (R-C2, geo 15)
 -- Sign-offs: docs/epic-d/d3-price-rent-geo-signoff.md (PASS WITH CONDITIONS, 16 conditions)
 --            docs/epic-d/d3-price-rent-domain-signoff.md (PASS WITH CONDITIONS, 14 conditions)
 --
@@ -48,14 +50,15 @@
 --
 -- Sliver guard (geo condition 3):
 --   ST_MakeValid applied to inputs before intersection.
---   Drop pairs where: overlap area < 1 m² OR overlap fraction < 0.5% of the smaller polygon.
---   Slivers carry near-zero weight but degenerate geometries crash ST_Area; removing them
---   keeps the weight denominator clean.
+--   Drop pairs where: overlap area < 1 m² AND overlap fraction < 0.5% of the smaller polygon.
+--   (AND semantics per geo condition 3: both must be below threshold to drop a pair; a large
+--   but thin overlap that passes the fraction check is retained.) Slivers carry near-zero
+--   weight but degenerate geometries crash ST_Area; removing them keeps the denominator clean.
 --
 -- Area weighting for intensive variable:
---   weight = ST_Area(intersection) / ST_Area(PLR) — note: denominator is PLR area, not BRW area,
---   so the result is the overlap-area-weighted mean over all BRW zones that cover the PLR.
+--   weight = ST_Area(intersection) — the intersection area itself (not normalised by any polygon).
 --   Final formula: SUM(value * overlap_area) / SUM(overlap_area) per PLR.
+--   Consistent with the geo sign-off intensive-variable formula and int_berlin_ewr_plr2021.
 --
 -- brw_residential_coverage_frac (geo condition 4):
 --   = SUM(intersection_area_m2) / ST_Area(plr_geom) per PLR.
@@ -69,7 +72,8 @@
 --   alignment across the full 2017–2024 BRW series. snapshot_year = YEAR(reference_date).
 --
 -- CRS: EPSG:25833 throughout. Both datasets are native 25833; no ST_Transform needed.
---   Berlin axis-order sanity: x ∈ [3.7e5, 4.2e5], y ∈ [5.79e6, 5.84e6] (EPSG:25833 northing).
+--   Berlin axis-order sanity enforced as WHERE filter in the brw CTE (geo condition 1):
+--   x ∈ [3.7e5, 4.2e5], y ∈ [5.79e6, 5.84e6] (EPSG:25833; guards against WGS84 swap).
 --
 -- Zero-residential-BRW PLRs → NULL, not 0 (index-definition §7 "exclude, don't zero-impute").
 --   Matches is_uninhabited treatment in int_gentrification_ts.
@@ -109,6 +113,11 @@ with
             and geometry_wkb is not null
             and value_eur_per_m2 is not null
             and value_eur_per_m2 > 0
+            -- Axis-order sanity (geo condition 1): Berlin EPSG:25833 centroids must be in
+            -- x ∈ [3.7e5, 4.2e5], y ∈ [5.79e6, 5.84e6]. Guards against coordinate-swap
+            -- (WGS84 loaded into a 25833 column produces near-zero intersections silently).
+            and st_x(st_centroid(st_makevalid(st_geomfromwkb(geometry_wkb)))) between 3.7e5 and 4.2e5
+            and st_y(st_centroid(st_makevalid(st_geomfromwkb(geometry_wkb)))) between 5.79e6 and 5.84e6
     ),
 
     -- PLR geometries: LOR 2021 vintage only for consistent alignment with the BRW series.
@@ -160,9 +169,10 @@ with
             plr_area_m2,
             brw_area_m2
         from candidate_pairs
+        -- Sliver guard (geo condition 3 AND semantics): drop only when BOTH thresholds fail.
+        -- Keep a pair when EITHER: overlap area >= 1 m² OR fraction >= 0.5% of smaller polygon.
         where st_area(intersection_geom) > 1.0
-            -- 0.5% fraction guard: overlap / min(plr_area, brw_area) >= 0.005
-            and case
+            or case
                 when least(plr_area_m2, brw_area_m2) > 0
                 then st_area(intersection_geom) / least(plr_area_m2, brw_area_m2) >= 0.005
                 else false
@@ -181,7 +191,8 @@ with
 --
 -- n_brw_zones: count of distinct residential BRW zones contributing to each PLR.
 select
-    city_code,
+    -- Normalise to canonical city code per ADR-0005; stg_berlin_bodenrichtwert emits 'berlin'.
+    case when city_code = 'berlin' then 'BER' else city_code end as city_code,
     year(reference_date) as snapshot_year,
     area_code,
     area_vintage,

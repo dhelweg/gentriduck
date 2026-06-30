@@ -1168,9 +1168,10 @@ models:
       Thesis §3.4: land value as structural rent-gap indicator.
 
       Method: ST_Intersects(brw_geom, plr_geom) as join predicate; weight = ST_Area(intersection)
-      / ST_Area(brw_zone); brw_weighted_avg_eur_m2 = SUM(value * weight) / SUM(weight).
+      (the raw overlap area, not normalised); brw_weighted_avg_eur_m2 = SUM(value_eur_per_m2 *
+      intersection_area_m2) / SUM(intersection_area_m2) — intensive-variable formula per geo-DS.
       Residential zones only: nutzung LIKE 'W%' (Wohngebiet variants WA, WR, WB, WS, etc.).
-      Non-trivial intersection guard: ST_Area(intersection) > 1.0 m².
+      Sliver guard: drop when overlap area < 1 m² AND fraction < 0.5% (AND semantics, geo cond 3).
 
       Always uses lor_2021 PLR geometries for temporal consistency across the 2017–2024 BRW series.
       snapshot_year derived from YEAR(brw.reference_date).
@@ -1196,11 +1197,24 @@ models:
             expression: "brw_weighted_avg_eur_m2 > 0"
           config:
             where: "brw_weighted_avg_eur_m2 is not null"
+      - dbt_utils.expression_is_true:
+          arguments:
+            expression: "brw_residential_coverage_frac <= 1.05"
+          config:
+            where: "brw_residential_coverage_frac is not null"
+            severity: warn
     columns:
       - name: city_code
-        description: City identifier (ADR-0005). Always 'berlin' (from stg_berlin_bodenrichtwert staging boundary).
+        description: >
+          City identifier (ADR-0005). Normalised to 'BER' by this model
+          (stg_berlin_bodenrichtwert emits 'berlin'; normalised here for dim_city FK compatibility).
         tests:
           - not_null:
+              config:
+                where: "area_code is not null"
+          - accepted_values:
+              arguments:
+                values: ["BER"]
               config:
                 where: "area_code is not null"
       - name: snapshot_year
@@ -1242,7 +1256,8 @@ models:
         description: >
           Fraction of the PLR area covered by residential (nutzung LIKE 'W%') BRW zones:
           SUM(intersection_area_m2) / ST_Area(plr_geom) per PLR.
-          Ranges from 0 to 1 (may exceed 1.0 in rare edge cases due to slivers post-makevalid).
+          Expected range: (0, 1]. Values > 1.0 indicate topological artefacts post-makevalid
+          — flag in QA; do not treat > 1.0 as valid coverage. A warn-severity test guards this.
           NULL when no W% BRW zones overlap this PLR (pure park/water/industrial).
           Consumers: use to identify where the BRW signal is thin or absent. Zero-residential
           PLRs yield NULL brw_weighted_avg_eur_m2 and NULL here — transparent, not silently 0.
@@ -1282,9 +1297,16 @@ models:
             where: "pct_wohnlage is not null"
     columns:
       - name: city_code
-        description: City identifier (ADR-0005). Always 'berlin' (from stg_berlin_wohnlage staging boundary).
+        description: >
+          City identifier (ADR-0005). Normalised to 'BER' by this model
+          (stg_berlin_wohnlage emits 'berlin'; normalised here for dim_city FK compatibility).
         tests:
           - not_null:
+              config:
+                where: "area_code is not null"
+          - accepted_values:
+              arguments:
+                values: ["BER"]
               config:
                 where: "area_code is not null"
       - name: vintage

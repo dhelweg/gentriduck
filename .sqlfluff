@@ -6,6 +6,7 @@ dialect = duckdb
 templater = jinja
 exclude_rules = layout, structure.column_order
 max_line_length = 100
+large_file_skip_byte_limit = 0
 
 [sqlfluff:templater:jinja]
 # Stub dbt's ref()/source()/config() so we don't need to compile via dbt.

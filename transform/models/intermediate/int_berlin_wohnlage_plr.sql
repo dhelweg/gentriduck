@@ -15,6 +15,8 @@
 -- wohnlage_score: share-weighted ordinal mean (einfach=1, mittel=2, gut=3). Labelled
 --   as an ORDINAL-MEAN APPROXIMATION — the three tiers are ordered but not equidistant;
 --   do not treat as interval-scaled in regression without noting this limitation.
+-- ADR-0003 §Price/rent (P-B Mietspiegel/Wohnlage): approved source; governs ingestion and
+--   staging of Berlin Wohnlage address-tier data. See docs/adr/0003-*.md. (R-C2, geo 15)
 -- Sign-offs: docs/epic-d/d3-price-rent-geo-signoff.md (PASS WITH CONDITIONS, 16 conditions)
 --            docs/epic-d/d3-price-rent-domain-signoff.md (PASS WITH CONDITIONS, 14 conditions)
 --
@@ -166,7 +168,8 @@ with
 -- wohnlage_low_n: TRUE when the PLR-vintage has < 10 total address points.
 --   Downstream: NULL wohnlage_score and estimated rent for low-N PLR-vintages.
 select
-    a.city_code,
+    -- Normalise to canonical city code per ADR-0005; stg_berlin_wohnlage emits 'berlin'.
+    case when a.city_code = 'berlin' then 'BER' else a.city_code end as city_code,
     a.vintage,
     a.area_code,
     a.area_vintage,
