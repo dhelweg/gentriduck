@@ -82,8 +82,7 @@ try:
     from shapely.geometry import shape as shapely_shape
 except ImportError as exc:
     raise ImportError(
-        "shapely is required for Kauffälle ingestion. "
-        "It is in pyproject.toml — run `uv sync`."
+        "shapely is required for Kauffälle ingestion. It is in pyproject.toml — run `uv sync`."
     ) from exc
 
 # ---------------------------------------------------------------------------
@@ -190,9 +189,7 @@ def fetch_page(base_url: str, type_name: str, offset: int, timeout: int = 120) -
     try:
         data = json.loads(raw)
     except json.JSONDecodeError as exc:
-        raise RuntimeError(
-            f"Invalid JSON for {type_name} offset={offset}: {exc}"
-        ) from exc
+        raise RuntimeError(f"Invalid JSON for {type_name} offset={offset}: {exc}") from exc
 
     if data.get("type") != "FeatureCollection":
         raise RuntimeError(
@@ -262,9 +259,7 @@ def parse_feature(
         geom = shapely_shape(geom_raw)
         wkb_bytes = bytes(shapely_to_wkb(geom))
     except Exception as exc:
-        log.warning(
-            "Feature %s (idx=%d) geometry error: %s; skipping.", feature_id, idx, exc
-        )
+        log.warning("Feature %s (idx=%d) geometry error: %s; skipping.", feature_id, idx, exc)
         return None
 
     kaufpreis = _first_match(props, PRICE_CANDIDATES)
@@ -293,20 +288,12 @@ def parse_feature(
 def rows_to_table(rows: list[dict]) -> pa.Table:
     return pa.table(
         {
-            "reference_date": pa.array(
-                [r["reference_date"] for r in rows], type=pa.date32()
-            ),
+            "reference_date": pa.array([r["reference_date"] for r in rows], type=pa.date32()),
             "city_code": pa.array([r["city_code"] for r in rows], type=pa.string()),
             "teilmarkt": pa.array([r["teilmarkt"] for r in rows], type=pa.string()),
-            "geometry_wkb": pa.array(
-                [r["geometry_wkb"] for r in rows], type=pa.large_binary()
-            ),
-            "transaction_id": pa.array(
-                [r["transaction_id"] for r in rows], type=pa.string()
-            ),
-            "kaufpreis_eur": pa.array(
-                [r["kaufpreis_eur"] for r in rows], type=pa.float64()
-            ),
+            "geometry_wkb": pa.array([r["geometry_wkb"] for r in rows], type=pa.large_binary()),
+            "transaction_id": pa.array([r["transaction_id"] for r in rows], type=pa.string()),
+            "kaufpreis_eur": pa.array([r["kaufpreis_eur"] for r in rows], type=pa.float64()),
             "flaeche_m2": pa.array([r["flaeche_m2"] for r in rows], type=pa.float64()),
             "kauftyp": pa.array([r["kauftyp"] for r in rows], type=pa.string()),
             "raw_properties_json": pa.array(
@@ -381,9 +368,7 @@ def ingest_year(year: int, out_dir: Path) -> int:
             else:
                 skipped += 1
 
-        log.info(
-            "%s: %d valid rows, %d skipped.", teilmarkt, len(layer_rows), skipped
-        )
+        log.info("%s: %d valid rows, %d skipped.", teilmarkt, len(layer_rows), skipped)
         all_rows.extend(layer_rows)
 
     if not all_rows:

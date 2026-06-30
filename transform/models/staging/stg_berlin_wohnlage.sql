@@ -3,18 +3,18 @@
 -- ingestion/berlin/price_rent/ingest_wohnlage.py (D1, dl-de-zero-2.0).
 --
 -- Source: WFS GDI Berlin, Wohnlagen nach Adressen zum Berliner Mietspiegel
---   URL pattern: https://gdi.berlin.de/services/wfs/wohnlagenadr{year}
---   Feature type: wohnlagenadr{year}:wohnlagenadr{year}
---   CRS: EPSG:25833 (native, not reprojected)
---   Licence: dl-de-zero-2.0
---   All vintages confirmed live on GDI Berlin 2026-06-18.
+-- URL pattern: https://gdi.berlin.de/services/wfs/wohnlagenadr{year}
+-- Feature type: wohnlagenadr{year}:wohnlagenadr{year}
+-- CRS: EPSG:25833 (native, not reprojected)
+-- Licence: dl-de-zero-2.0
+-- All vintages confirmed live on GDI Berlin 2026-06-18.
 --
 -- Storage paths (gitignored per ADR-0008; rebuilt by the ingestion script):
---   data/raw/berlin/price_rent/wohnlage_2017.parquet  (Stichtag 01.09.2016)
---   data/raw/berlin/price_rent/wohnlage_2019.parquet  (Stichtag 01.09.2018)
---   data/raw/berlin/price_rent/wohnlage_2021.parquet  (Stichtag 01.09.2020)
---   data/raw/berlin/price_rent/wohnlage_2023.parquet  (Stichtag 01.09.2022)
---   data/raw/berlin/price_rent/wohnlage_2026.parquet  (Stichtag 01.09.2025)
+-- data/raw/berlin/price_rent/wohnlage_2017.parquet  (Stichtag 01.09.2016)
+-- data/raw/berlin/price_rent/wohnlage_2019.parquet  (Stichtag 01.09.2018)
+-- data/raw/berlin/price_rent/wohnlage_2021.parquet  (Stichtag 01.09.2020)
+-- data/raw/berlin/price_rent/wohnlage_2023.parquet  (Stichtag 01.09.2022)
+-- data/raw/berlin/price_rent/wohnlage_2026.parquet  (Stichtag 01.09.2025)
 --
 -- Graceful-degradation: returns zero rows with the target schema when no parquet
 -- files have been ingested, so downstream models and uv run poe build pass before
@@ -90,18 +90,21 @@
             source_attribution
         from read_parquet('{{ src.parquet }}')
         where wohnlage is not null
-        {% if not loop.last %}union all{% endif %}
+        {% if not loop.last %}
+            union all
+        {% endif %}
     {% endfor %}
 
 {% else %}
 
     -- Zero-row typed stub: no wohnlage_{year}.parquet found.
     -- Run ingestion/berlin/price_rent/ingest_wohnlage.py to populate
-    -- data/raw/berlin/price_rent/ (vintages 2017, 2019, 2021, 2023, 2026 available via WFS).
+    -- data/raw/berlin/price_rent/ (vintages 2017, 2019, 2021, 2023, 2026 available
+    -- via WFS).
     select
         cast(null as integer) as vintage,
         cast(null as varchar) as city_code,
-        cast(null as blob)    as geometry_wkb,
+        cast(null as blob) as geometry_wkb,
         cast(null as varchar) as wohnlage,
         cast(null as varchar) as address_id,
         cast(null as varchar) as source_attribution
