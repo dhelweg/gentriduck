@@ -12,6 +12,11 @@
 -- Output: one row per (city_code, snapshot_year, area_code, area_vintage)
 -- with total_poi_count, berlin_total_poi_count, and plr_poi_share.
 --
+-- Fix (#122): area_vintage added to berlin_total_poi_count window partition so that
+-- lor_pre2021 and lor_2021 rows are never summed together. Currently safe (lor_pre2021
+-- covers 2008-2020; lor_2021 covers 2021+; no calendar year has both) but the invariant
+-- was previously implicit and could silently break on a future backfill.
+--
 -- dbt_meta_owner: data-engineer
 -- depends_on: {{ ref('int_poi_features_pivot') }}
 {{ config(materialized="table", meta={"dbt_meta_owner": "data-engineer"}) }}
@@ -23,11 +28,14 @@ select
     area_vintage,
     total_poi_count,
     sum(total_poi_count) over (
-        partition by city_code, snapshot_year
+        partition by city_code, snapshot_year, area_vintage
     ) as berlin_total_poi_count,
     total_poi_count
     * 1.0
     / nullif(
-        sum(total_poi_count) over (partition by city_code, snapshot_year), 0
+        sum(total_poi_count) over (
+            partition by city_code, snapshot_year, area_vintage
+        ),
+        0
     ) as plr_poi_share
 from {{ ref("int_poi_features_pivot") }}
