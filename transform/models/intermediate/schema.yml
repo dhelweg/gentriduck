@@ -1132,7 +1132,7 @@ models:
       delta_ewr is a valid arithmetic delta (OLS + Spearman both permitted), unlike the
       MSS ordinal status_index where metric differencing is prohibited (index-definition.md §3.3).
 
-      Coverage: 2014–2020 only (ewr_composite NULL for 2008–2013 and 2024–2025).
+      Coverage: 2008–2020 (full composite 2014–2020; partial 3-indicator composite 2008–2013 via B9b).
       Vintage: lor_2021 throughout (pre-2021 EWR years crosswalked via int_berlin_ewr_plr2021).
       Thesis comparison window: k=2 (2014→2016) matches the thesis lead-lag gap exactly.
 
@@ -1156,7 +1156,7 @@ models:
             expression: "year_tk = year_t + lag_k"
       - dbt_utils.expression_is_true:
           arguments:
-            expression: "year_t >= 2014 AND year_t <= 2020"
+            expression: "year_t >= 2008 AND year_t <= 2020"
       - dbt_utils.expression_is_true:
           arguments:
             expression: "year_tk <= 2024"
@@ -1222,6 +1222,18 @@ models:
         description: Total residents at base year (uninhabited guard — always > 0).
         tests:
           - not_null
+      - name: is_partial_composite_t
+        description: >
+          TRUE when the base year uses the 3-indicator partial composite (year_t <= 2013).
+          Pre-2014 EWR lacks foreigners_share and migration_background_share (B9b).
+      - name: is_partial_composite_tk
+        description: >
+          TRUE when the outcome year uses the 3-indicator partial composite (year_tk <= 2013).
+      - name: any_endpoint_partial
+        description: >
+          TRUE if either the base or outcome year uses the partial composite.
+          MUST be filtered to FALSE for any pooled H2/H3 regression -- partial and full
+          composites are not cross-era comparable (see B9-domain-signoff.md).
 
   - name: int_mss_lead_lag
     description: >
