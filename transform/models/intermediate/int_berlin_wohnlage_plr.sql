@@ -42,8 +42,10 @@
 --   loaded into a 25833 column — a silent failure that would produce zero matches.
 --
 -- Deterministic boundary tie-break (geo condition 5):
---   QUALIFY ROW_NUMBER() OVER (PARTITION BY address_id ORDER BY area_code) = 1
---   ensures exactly one PLR per address point when a point falls on a shared boundary.
+--   QUALIFY ROW_NUMBER() OVER (PARTITION BY address_id, vintage ORDER BY area_code) = 1
+--   ensures exactly one PLR per (address point, vintage) when a point falls on a shared
+--   boundary. Partitioning by vintage prevents cross-vintage row elimination (same address_id
+--   appears in multiple WFS editions).
 --
 -- Vintage alignment (mirrors int_osm_poi_plr):
 --   vintage <= 2020 → area_vintage = 'lor_pre2021' (448 PLRs)
@@ -135,7 +137,7 @@ with
             )
         -- Tie-break: when a point lands on a boundary shared by two PLRs, keep the
         -- PLR with the lexicographically smallest area_code (deterministic).
-        qualify row_number() over (partition by w.address_id order by p.area_code) = 1
+        qualify row_number() over (partition by w.address_id, w.vintage order by p.area_code) = 1
     ),
 
     -- Aggregate: count addresses per (vintage, PLR, wohnlage tier)

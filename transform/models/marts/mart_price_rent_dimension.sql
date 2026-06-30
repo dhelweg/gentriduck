@@ -192,23 +192,23 @@ with
     mietspiegel_pivot as (
         select
             ms_vintage,
-            sum(case when wohnlage = 'einfach' then rent_low else null end)
+            sum(case when wohnlage = 'einfach' then rent_low end)
                 as ms_einfach_low,
-            sum(case when wohnlage = 'einfach' then rent_mid else null end)
+            sum(case when wohnlage = 'einfach' then rent_mid end)
                 as ms_einfach_mid,
-            sum(case when wohnlage = 'einfach' then rent_high else null end)
+            sum(case when wohnlage = 'einfach' then rent_high end)
                 as ms_einfach_high,
-            sum(case when wohnlage = 'mittel' then rent_low else null end)
+            sum(case when wohnlage = 'mittel' then rent_low end)
                 as ms_mittel_low,
-            sum(case when wohnlage = 'mittel' then rent_mid else null end)
+            sum(case when wohnlage = 'mittel' then rent_mid end)
                 as ms_mittel_mid,
-            sum(case when wohnlage = 'mittel' then rent_high else null end)
+            sum(case when wohnlage = 'mittel' then rent_high end)
                 as ms_mittel_high,
-            sum(case when wohnlage = 'gut' then rent_low else null end)
+            sum(case when wohnlage = 'gut' then rent_low end)
                 as ms_gut_low,
-            sum(case when wohnlage = 'gut' then rent_mid else null end)
+            sum(case when wohnlage = 'gut' then rent_mid end)
                 as ms_gut_mid,
-            sum(case when wohnlage = 'gut' then rent_high else null end)
+            sum(case when wohnlage = 'gut' then rent_high end)
                 as ms_gut_high
         from mietspiegel_fixed
         group by ms_vintage
@@ -375,8 +375,8 @@ with
             est_rent_high,
             mietspiegel_vintage_used,
             snapshot_year as wohnlage_vintage_matched
-        from wohnlage_with_rent
-        where snapshot_year not in (select distinct snapshot_year from brw)
+        from wohnlage_with_rent as wwr
+        where wwr.snapshot_year not in (select distinct b.snapshot_year from brw as b)
     ),
 
     -- Normalization (geo condition 13):

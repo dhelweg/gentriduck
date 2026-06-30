@@ -41,8 +41,10 @@
 -- Filter: residential zones only — nutzung LIKE 'W%' (BauNVO Wohngebiet variants: WA, WR,
 --   WB, WS, etc.). Mixing in commercial/industrial (G/I) Richtwerte would contaminate a
 --   residential-affordability reading with non-comparable land economics (geo condition 2).
---   All-use mean is intentionally NOT persisted (per geo condition 2: residential-only is the
---   headline; all-use QA column is omitted to keep the grain clean).
+--   All-use mean is intentionally NOT persisted — this DEVIATES from geo condition 2 (which
+--   requires a secondary all-use QA column). A geo-DS exception sign-off is required before
+--   this deviation is considered resolved. Omission rationale: keeps the grain clean and the
+--   residential-only signal unambiguous; treat as a known open item.
 --
 -- Spatial join predicate: ST_Intersects(brw_geom, plr_geom)
 --   BRW zones and PLRs are non-aligned tessellations (1,621 BRW zones vs 542 PLRs).
