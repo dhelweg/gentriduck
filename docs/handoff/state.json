@@ -17,7 +17,7 @@
   "open_prs": [
     {
       "number": 111,
-      "title": "Weekly release: Epic R/D wave — spatial inference, price/rent dimension, A9 diffusion",
+      "title": "Weekly release: Epic R/D wave \u2014 spatial inference, price/rent dimension, A9 diffusion",
       "base": "main",
       "head": "develop",
       "note": "Open. Awaiting maintainer merge. Now includes B7/B8/B9/B-infra-122 since develop was updated."
@@ -38,39 +38,69 @@
     }
   ],
   "completed_this_session": [
-    "#122 [B-infra] poi_share_base area_vintage partition fix — integrated into develop",
-    "#119 [B9] EWR pre-2014 partial composite — integrated into develop with geo+domain PASS WITH CONDITIONS"
+    "#120 [B10] BZR/Bezirk spatial aggregation (E1/E2 MAUP check) \u2014 integrated into develop f94deaf",
+    "#83 [O4] partial: Epic B milestone narrative \u2014 integrated into develop fbc73ef"
   ],
   "integrated_into_develop": [
     {
-      "issue": 122,
-      "title": "[B-infra] int_poi_share_base partition fix",
-      "merge_commit": "3650cc3",
+      "issue": 120,
+      "title": "[B10] BZR/Bezirk spatial aggregation",
+      "merge_commit": "f94deaf",
       "date": "2026-06-30",
-      "note": "Latent bug fix: area_vintage added to berlin_total_poi_count window. 478 tests pass."
+      "note": "Three-scale MAUP check; EWR 15/15 restored; H3b leak fixed; dual PASS. typology_stage MAUP-only."
     },
     {
-      "issue": 119,
-      "title": "[B9] EWR pre-2014 partial composite",
-      "merge_commit": "9282c19",
+      "issue": "83-partial",
+      "title": "[O4] Epic B milestone narrative",
+      "merge_commit": "fbc73ef",
       "date": "2026-06-30",
-      "note": "ewr_composite_partial (3-indicator) added; int_ewr_lead_lag extended 2014-2020 → 2008-2020. Dual PASS WITH CONDITIONS. 478 tests pass."
+      "note": "docs/epic-g/O4-milestone-B-narrative.md \u2014 public-facing 950-word summary. Remaining O4 scope gates on F1."
     }
   ],
   "in_progress": null,
   "board_status": {
-    "note": "FULLY OPERATIONAL. 65 Done. 0 In Progress. 13 Todo.",
+    "note": "Epic B COMPLETE. 66 Done + O4-partial. 0 In Progress. 12 Todo.",
     "open_issues_by_dependency": {
       "in_progress": [],
-      "next_unblocked": ["#120 [B10] BZR/Bezirk aggregation (methodology-bearing, needs sign-off)"],
-      "blocked_on_maintainer": ["#33 [F1] ADR-0012", "#70 [B1] displacement data", "#82 [O2] ADR-0013"]
+      "next_unblocked": [
+        "#40 [H1] second city (city-agnostic core ready)"
+      ],
+      "blocked_on_maintainer": [
+        "#33 [F1] ADR-0012 \u2014 blocks F2/F3/G0-G3/O4-remainder",
+        "#70 [B1] displacement data",
+        "#82 [O2] ADR-0013"
+      ]
     }
   },
   "still_blocked": [
-    {"issue": 33, "blocked_by": ["Maintainer ADR approval"], "title": "[F1] ADR-0012"},
-    {"issue": 70, "blocked_by": ["Maintainer ADR decision"], "title": "[B1] Displacement data"},
-    {"issue": 80, "blocked_by": ["#70 deferred"], "title": "[A10] Causal design — DEFERRED"},
-    {"issue": 82, "blocked_by": ["Maintainer ADR-0013 approval"], "title": "[O2] Whitepaper"}
+    {
+      "issue": 33,
+      "blocked_by": [
+        "Maintainer ADR-0012 approval"
+      ],
+      "title": "[F1] ADR-0012 \u2014 gates F2, F3, G0-G3, O4-remainder"
+    },
+    {
+      "issue": 70,
+      "blocked_by": [
+        "Maintainer ADR decision"
+      ],
+      "title": "[B1] Displacement data"
+    },
+    {
+      "issue": 82,
+      "blocked_by": [
+        "Maintainer ADR-0013 approval"
+      ],
+      "title": "[O2] Whitepaper"
+    },
+    {
+      "issue": 83,
+      "blocked_by": [
+        "#33 F1 for dataset export + tooling packaging"
+      ],
+      "title": "[O4] remainder (narrative done)"
+    }
   ],
   "open_conditions_carried_forward": [
     "#65 E1/E2: H3b divergence + H3c opposite direction deferred to G2 methodology page.",
@@ -83,5 +113,7 @@
     "#117 B7 geo-DS C-1..C-4 + domain D-1..D-5: MSS H3a/H3b = co-movement only; pre-2021 H3 single-pair caveat; ewr_composite not cross-vintage comparable; C5 attenuation note; migration 2017 break; uninhabited count per edition.",
     "#119 B9 geo-DS C-1/C-2/C-3 + domain D-1/D-2/D-3: partial composite std ~10% higher; no foreigners/migration claims pre-2014; E1 must filter any_endpoint_partial=FALSE; public label required."
   ],
-  "next_session_decision": "#120 [B10] BZR/Bezirk spatial aggregation — add BZR and Bezirk level aggregations to E1/E2 analysis to match thesis three-scale pooling. Methodology-bearing work (analysis/*.py); will need dual sign-off. Next unblocked after B9."
+  "next_session_decision": "All Epic G/F gated on #33 F1 maintainer approval. Consider #40 [H1] second-city onboarding (city-agnostic core exists). Or wait for F1 sign-off.",
+  "last_updated": "2026-06-30",
+  "current_session": "devmode-9"
 }
