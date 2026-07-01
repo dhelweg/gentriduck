@@ -1,10 +1,10 @@
 {
   "_schema": "gentriduck-session-state/v1",
-  "session": "2026-07-01-devmode-10",
-  "updated_at": "2026-07-01T20:00:00Z",
+  "session": "2026-07-01-devmode-11",
+  "updated_at": "2026-07-01T21:35:00Z",
   "build_status": {
     "result": "PASS",
-    "pass": 478,
+    "pass": 503,
     "warn": 2,
     "error": 0,
     "warn_detail": [
@@ -12,15 +12,15 @@
       "test_c5_poi_share_spike (expected by design)"
     ],
     "branch": "develop",
-    "note": "No dbt-model changes this session (ADR-only + closing #124 research doc). Build unaffected."
+    "note": "Full uv run poe build after merging the Hamburg geometry ingestion slice (#40). Both warnings pre-existing/unrelated."
   },
   "open_prs": [
     {
       "number": 111,
-      "title": "Weekly release: Epic R/D wave — spatial inference, price/rent dimension, A9 diffusion",
+      "title": "Weekly release: Epic R/D wave — spatial inference, price/rent, A9 diffusion, Epic B complete, H0/ADR-0014/H1-geometry",
       "base": "main",
       "head": "develop",
-      "note": "Open, auto-refreshed (93 commits), mergeable. Awaiting maintainer merge in GitHub UI. Ready/due for the weekly ping."
+      "note": "Open, refreshed (98 commits), description updated this cycle to include #124/ADR-0014/#40-partial. Mergeable. Awaiting maintainer merge in GitHub UI."
     }
   ],
   "pending_adr_branches": [
@@ -38,34 +38,26 @@
     }
   ],
   "completed_this_session": [
-    "#124 [H0] Hamburg data-landscape research — found uncommitted from prior session, committed to develop (3a97016), issue closed, card moved Done (was stuck In Progress with the deliverable file untracked — drift fixed).",
-    "#40 [H1] ADR-0014 (Hamburg data sources) drafted + self-ratified + integrated into develop (71fd9a4). Full source/licence/access decision for all 5 Hamburg pillars. Renumbered 0012→0014 to avoid collision with the pending feat/33 and feat/82 ADR branches. Issue #40 left OPEN / card left In Progress — the ADR is only the first step of H1; the DE ingestion build (ingestion/hamburg/**, stg_hamburg_*) is substantial multi-cycle work not started this session."
+    "#40 [H1] first ingestion slice — Hamburg geometry (statistische Gebiete/Stadtteile/Bezirke), ADR-0014 Pillar 4 'geometry first'. Real WFS endpoints probed and verified live (geodienste.hamburg.de; discovered the outputFormat=application/geo+json quirk vs Berlin's application/json). ingestion/hamburg/geo/ingest_hamburg_geo.py ingested 945+104+7 real features into data/raw/hamburg/geo/*.parquet. stg_hamburg_geo staging view + dim_area/dim_city wiring (dim_city gains native_crs_epsg: BER=25833, HH=25832). Not methodology-bearing (pure dimension/geometry plumbing) — no gate required. Full build green. Merged into develop at 0c2e453. Issue #40 stays OPEN / card stays In Progress — only 1 of 5 ADR-0014 pillars done; remaining pillars (Sozialmonitoring outcome, EWR-equivalent predictors, displacement zones, rent) documented as follow-up in a progress comment on #40 rather than split into sub-issues (avoiding backlog noise)."
   ],
   "integrated_into_develop": [
     {
-      "issue": 124,
-      "title": "[H0] Hamburg data-landscape research",
-      "merge_commit": "3a97016",
-      "date": "2026-07-01",
-      "note": "docs/epic-h/H1-hamburg-data-landscape.md. Was uncommitted/untracked from a prior session — found and committed this cycle as part of the reconciliation pass."
-    },
-    {
       "issue": 40,
-      "title": "[H1] ADR-0014 Hamburg data sources (source-selection step only)",
-      "merge_commit": "71fd9a4",
+      "title": "[H1] Hamburg geometry ingestion (Pillar 4 of ADR-0014, partial)",
+      "merge_commit": "0c2e453",
       "date": "2026-07-01",
-      "note": "docs/adr/0014-hamburg-data-sources.md. Scoped as a source-selection ADR (licence/access/dim_area mapping), same class as ADR-0003/0006 — no geo-DS/domain sign-off file required (no weight/normalization/spatial-method decision; C5 re-fit explicitly deferred). H1 issue stays open for the DE build phase."
+      "note": "ingestion/hamburg/geo/ingest_hamburg_geo.py, stg_hamburg_geo, dim_area union, seed_dim_city.native_crs_epsg, seed_dim_area_level district/subarea_l1/subarea_l2. Verified against live Hamburg WFS (not just desk research)."
     }
   ],
   "in_progress": {
     "issue": 40,
     "title": "[H1] Onboard a second city via adapters",
-    "note": "ADR-0014 done. Next: ingestion/hamburg/geo/ (statistische Gebiete/Stadtteil/Bezirk WFS, EPSG:25832→WGS84), then Sozialmonitoring adapter, EWR-equivalent adapter(s), displacement+rent adapters, dim_city row + index params. DE pair + geo-DS. Recommended order is written into ADR-0014's own body."
+    "note": "ADR-0014 done. Geometry ingestion (Pillar 4) done and integrated. Next slices in order: (1) OSM POI reuse (Pillar 1, low risk, Epic C ohsome ingestion unchanged except polygons); (2) Sozialmonitoring outcome adapter (Pillar 2, ingestion/hamburg/sozialmonitoring/, PDF reconciliation gate mirrors ADR-0006); (3) EWR-equivalent predictors (Pillar 3, methodology-bearing two-grain reconciliation needs geo-DS+domain sign-off); (4) displacement+rent (Pillar 5). Progress tracked via comments on #40, not sub-issues."
   },
   "board_status": {
-    "note": "1 In Progress (#40 H1). 0 closed-but-not-Done drift (reconciliation pass clean). Todo top-of-queue is all blocked-on-maintainer (#33, #70, #82) plus O4-remainder (#83, gated on #33) and deferred #80.",
+    "note": "1 In Progress (#40 H1). 0 closed-but-not-Done drift (reconciliation pass clean at start and end of session). Todo top-of-queue is all blocked-on-maintainer (#33, #70, #82) plus O4-remainder (#83, gated on #33) and deferred #80.",
     "open_issues_by_dependency": {
-      "in_progress": ["#40 [H1] second city — ADR-0014 done, DE build phase next"],
+      "in_progress": ["#40 [H1] second city — geometry slice done, next: OSM POI reuse or Sozialmonitoring adapter"],
       "next_unblocked": [],
       "blocked_on_maintainer": [
         "#33 [F1] ADR-0012 — blocks F2/F3/G0-G3/O4-remainder",
@@ -106,9 +98,9 @@
     "#115 EWR H2/H3: POI pseudo-replication caveat (35% PLRs share poi_count). p-values inflated. For G2.",
     "#117 B7 geo-DS C-1..C-4 + domain D-1..D-5: MSS H3a/H3b = co-movement only; pre-2021 H3 single-pair caveat; ewr_composite not cross-vintage comparable; C5 attenuation note; migration 2017 break; uninhabited count per edition.",
     "#119 B9 geo-DS C-1/C-2/C-3 + domain D-1/D-2/D-3: partial composite std ~10% higher; no foreigners/migration claims pre-2014; E1 must filter any_endpoint_partial=FALSE; public label required.",
-    "ADR-0014 open questions (Hamburg): exact WFS feature-type/CSV schemas (Medium confidence, DE probes at ingestion); 943→941 statistische-Gebiete crosswalk; Wohndauer fine-grain availability (hands-on probe, no paid fallback if absent); Soziale-Erhaltungsverordnung in-force-date attribute; two-grain social-pillar reconciliation is methodology-bearing — needs geo-DS+domain sign-off when H1's actual models are built (not yet — ADR only set the source contract)."
+    "ADR-0014 open questions (Hamburg): exact WFS feature-type/CSV schemas — RESOLVED for geometry (app:statistische_gebiete, app:stadtteile, app:bezirke, all confirmed live); still open for Sozialmonitoring/EWR/displacement/rent pillars; 943→941 statistische-Gebiete crosswalk (ingested 'current' vintage only, 945 features, crosswalk deferred); Wohndauer fine-grain availability (hands-on probe, no paid fallback if absent); Soziale-Erhaltungsverordnung in-force-date attribute; two-grain social-pillar reconciliation is methodology-bearing — needs geo-DS+domain sign-off when H1's Pillar-3 models are built."
   ],
-  "next_session_decision": "Continue #40 [H1]: DE pair builds ingestion/hamburg/geo/ (geometry adapter, lowest risk per ADR-0014's recommended order), then stg_hamburg_geo. All other Todo items remain blocked on maintainer (#33/#70/#82) — H1 is the only unblocked substantive work until one of those clears.",
+  "next_session_decision": "Continue #40 [H1]: next slice is either (a) OSM POI reuse for Hamburg (Pillar 1, lowest risk, reuses Epic C ohsome ingestion unchanged except for the new Hamburg polygons from stg_hamburg_geo) or (b) the Sozialmonitoring outcome adapter (Pillar 2, ingestion/hamburg/sozialmonitoring/, mirrors ingestion/berlin/mss/). Either is a coherent next increment. All other Todo items remain blocked on maintainer (#33/#70/#82) — H1 is the only unblocked substantive work until one of those clears.",
   "last_updated": "2026-07-01",
-  "current_session": "devmode-10"
+  "current_session": "devmode-11"
 }
