@@ -532,6 +532,111 @@ models:
         description: Mandatory dl-de/by-2.0 attribution string (ADR-0014).
         tests:
           - not_null
+  - name: stg_hamburg_ewr_stadtteil
+    description: >
+      Staging view over Hamburg "Regionalstatistische Daten der Stadtteile
+      Hamburgs" (Stadtteil-grain socio-economic predictors) — ADR-0014
+      Pillar 3, PRIMARY source only, direct conceptual analogue of
+      stg_berlin_ewr but at Stadtteil grain (~104-105 areas) rather than
+      statistisches-Gebiet grain. PLUMBING, not methodology (R-C1): raw
+      ingestion + long-format staging only, at the grain the source itself
+      publishes at. Does NOT join/reconcile down to statistisches-Gebiete
+      (the two-grain reconciliation is methodology-bearing per ADR-0014
+      open question #5, deferred to a dedicated geo-DS + domain-expert
+      sign-off slice) and does NOT compute any weighted index or
+      normalization. Source: Hamburg Transparenzportal CSV release,
+      dl-de/by-2.0 (attribution: "Statistisches Amt fuer Hamburg und
+      Schleswig-Holstein") — endpoint URL and column schema UNCONFIRMED
+      live in this environment (no outbound network access); see the
+      ingestion script's docstring for the verification caveat (mirrors
+      every prior Hamburg-pillar ingestor's disclosure). Ingestion
+      adapter: ingestion/hamburg/ewr/ingest_hamburg_ewr_stadtteil.py.
+      Storage: data/raw/hamburg/ewr_stadtteil/stadtteile.parquet
+      (gitignored). Indicator set (7, narrower than Berlin's 13):
+      residents_total, residents_male_share, residents_female_share,
+      age_under18_share, age_65plus_share, foreigners_share,
+      unemployment_share. Returns zero rows (typed stub) when no parquet
+      has been ingested.
+    meta:
+      dbt_meta_owner: data-engineer
+    tests:
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns:
+              - reference_year
+              - area_code
+              - indicator
+          config:
+            where: "area_code is not null"
+      # Data-presence gate (docs/lessons/local-first-data-presence.md):
+      - assert_not_empty:
+          config:
+            severity: warn
+      - assert_min_rows:
+          arguments:
+            min_rows: 500
+          config:
+            severity: warn
+    columns:
+      - name: city_code
+        description: Canonical city code 'HH' (ADR-0005; matches dim_city.city_code).
+        tests:
+          - not_null:
+              config:
+                where: "area_code is not null"
+          - accepted_values:
+              arguments:
+                values: ["HH"]
+              config:
+                where: "area_code is not null"
+      - name: area_code
+        description: >
+          Stadtteil Schluessel. Joins to stg_hamburg_geo.area_code where
+          area_level='subarea_l1'.
+        tests:
+          - not_null
+      - name: area_vintage
+        description: "'current' — single Stadtteil boundary edition (no vintage split needed)."
+      - name: reference_year
+        description: Calendar year of the annual Regionalstatistik release (2013 onward).
+        tests:
+          - not_null:
+              config:
+                where: "area_code is not null"
+      - name: indicator
+        description: >
+          One of the 7 indicator keys (see model description). UNCONFIRMED
+          against the real source column headers — re-verify at first live
+          ingestion (see ingest_hamburg_ewr_stadtteil.py docstring).
+        tests:
+          - not_null:
+              config:
+                where: "area_code is not null"
+          - accepted_values:
+              arguments:
+                values:
+                  - residents_total
+                  - residents_male_share
+                  - residents_female_share
+                  - age_under18_share
+                  - age_65plus_share
+                  - foreigners_share
+                  - unemployment_share
+              config:
+                where: "area_code is not null"
+      - name: indicator_value
+        description: Indicator value (NULL if privacy-suppressed in the source CSV).
+      - name: is_suppressed_any
+        description: >
+          True if any indicator cell was privacy-suppressed for this
+          Stadtteil x year (never coerced to 0).
+      - name: source_attribution
+        description: Mandatory dl-de/by-2.0 attribution string (ADR-0014).
+        tests:
+          - not_null:
+              config:
+                where: "area_code is not null"
+
   - name: stg_berlin_ewr
     description: >
       Staging view over annual EWR (Einwohnerregister) Parquet snapshots for Berlin.
