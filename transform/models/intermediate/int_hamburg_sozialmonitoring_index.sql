@@ -67,8 +67,8 @@
 -- no rows.
 --
 -- dbt_meta_owner: data-engineer
--- geo-ds-sign-off: PENDING (H1-geo-signoff.md)
--- domain-sign-off: PENDING (H1-domain-signoff.md)
+-- geo-ds-sign-off: PASS WITH CONDITIONS (docs/epic-h/H1-geo-signoff.md, 2026-07-01, issue #40)
+-- domain-sign-off: PASS WITH CONDITIONS (docs/epic-h/H1-domain-signoff.md, 2026-07-01, issue #40)
 -- depends_on: {{ ref('stg_hamburg_sozialmonitoring') }}
 {{ config(materialized="table", meta={"dbt_meta_owner": "data-engineer"}) }}
 
