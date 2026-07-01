@@ -922,6 +922,15 @@ models:
       area_name). See int_ewr_socioeco_hamburg's header for the full
       methodology rationale (this model implements the join mechanics; that
       model carries the sign-off requirement).
+      #125 (2026-07-01, H1-geo-signoff Condition 1): the crosswalk join now
+      normalizes away internal whitespace/dots/colons/hyphens and applies an
+      explicit alias for Sozialmonitoring's Hamm-Mitte/Hamm-Nord/Hamm-Süd
+      three-way split (-> single Stadtteil 'Hamm'), raising the measured
+      match rate from 88.5% to >=98% (see
+      test_hamburg_gebiet_stadtteil_crosswalk_match_rate). Residual
+      non-matches are legitimate data-coverage gaps (uninhabited/harbor
+      Stadtteile below Sozialmonitoring's scoring threshold), not
+      normalization bugs.
       Graceful degradation: returns zero rows when any upstream has no rows.
     meta:
       dbt_meta_owner: data-engineer
