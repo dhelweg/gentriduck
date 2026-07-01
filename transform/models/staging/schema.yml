@@ -471,6 +471,67 @@ models:
               config:
                 where: "area_code is not null"
 
+  - name: stg_hamburg_displacement_zones
+    description: >
+      Staging view over Hamburg "Soziale Erhaltungsverordnungen — Gebiete in
+      Hamburg" (displacement-protection-zone polygons) — ADR-0014 Pillar 4,
+      direct legal analogue of Berlin's Milieuschutz areas (§172 BauGB soziale
+      Erhaltungssatzung). Berlin's own equivalent (#70 [B1]) remains `blocked`
+      pending an architect ADR + maintainer source approval for FIS-Broker;
+      this Hamburg pillar uses a different, already-ADR-0014-approved source
+      (Transparenzportal, dl-de/by-2.0) and does not depend on #70. PLUMBING,
+      not methodology (R-C1): straight polygon-attribute staging, no
+      weighting/scoring/index-construction logic. Source: LGV Hamburg WFS
+      (geodienste.hamburg.de) — endpoint/attribute names UNCONFIRMED live in
+      this environment (no outbound network access); see the ingestion
+      script's docstring for the endpoint-verification caveat. Ingestion
+      adapter: ingestion/hamburg/displacement/ingest_hamburg_displacement.py.
+      Storage: data/raw/hamburg/displacement/erhaltungsverordnung.parquet
+      (gitignored). ~17 designated areas expected per ADR-0014. Returns zero
+      rows (typed stub) when no parquet has been ingested.
+    meta:
+      dbt_meta_owner: data-engineer
+    # Data-presence gate (docs/lessons/local-first-data-presence.md):
+    tests:
+      - assert_not_empty:
+          config:
+            severity: warn
+      - assert_min_rows:
+          arguments:
+            min_rows: 10
+          config:
+            severity: warn
+    columns:
+      - name: city_code
+        description: Canonical city code 'HH' (ADR-0005; matches dim_city.city_code).
+        tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ["HH"]
+      - name: area_code
+        description: >
+          Natural key / feature id for the designated Erhaltungsverordnung
+          area. Does NOT join to stg_hamburg_geo.area_code (a bespoke
+          designation boundary, not a statistisches-Gebiet aggregate).
+        tests:
+          - not_null
+      - name: area_name
+        description: Human-readable designation name (e.g. "Sternschanze").
+      - name: bezirk_name
+        description: Informational Bezirk the area sits in; NOT a join key.
+      - name: in_force_date
+        description: >
+          ISO date string the Erhaltungsverordnung took effect, if published
+          (ADR-0014 open question #4). Null where the source omits it.
+      - name: geometry_wkb
+        description: Geometry in WKB, native CRS EPSG:25832 (not reprojected).
+        tests:
+          - not_null
+      - name: source_attribution
+        description: Mandatory dl-de/by-2.0 attribution string (ADR-0014).
+        tests:
+          - not_null
   - name: stg_berlin_ewr
     description: >
       Staging view over annual EWR (Einwohnerregister) Parquet snapshots for Berlin.
