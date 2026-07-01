@@ -188,16 +188,19 @@ models:
     columns:
       - name: city_code
         description: >
-          City identifier; always 'berlin' for this adapter (ADR-0005).
-          Note: Epic B thesis models use 'BER'; this model uses lowercase 'berlin'
-          per the ingestion convention (normalized at the staging boundary).
+          City identifier. Berlin rows use lowercase 'berlin' (legacy
+          ingestion convention, predates ADR-0005 canonicalization; Epic B
+          thesis models use 'BER' instead -- see int_osm_poi_plr for the
+          Berlin-side reconciliation). Hamburg rows (#40 H1, ADR-0014) use
+          the canonical 'HH' (matches dim_city.city_code) since this is a
+          fresh adapter with no legacy convention to preserve.
         tests:
           - not_null:
               config:
                 where: "osm_id is not null"
           - accepted_values:
               arguments:
-                values: ["berlin"]
+                values: ["berlin", "HH"]
               config:
                 where: "osm_id is not null"
       - name: snapshot_year
