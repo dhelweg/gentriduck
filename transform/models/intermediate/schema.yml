@@ -788,6 +788,127 @@ models:
               config:
                 where: "osm_id is not null"
 
+  - name: int_osm_poi_hamburg
+    description: >
+      H1 (#40) -- Spatial join model that assigns each Hamburg OSM POI to its
+      statistisches-Gebiet area_code (Hamburg's PLR-analogue, ADR-0014 Pillar
+      1's finest grain, subarea_l2). Mirrors int_osm_poi_plr's design for the
+      Hamburg city scope (ADR-0014 Pillar 6: OSM sourcing needs "no new
+      adapter mechanics, only passing Hamburg's polygons instead of Berlin's
+      PLR polygons"). Single-vintage join ('current' live WFS edition) -- no
+      pre2021/2021-style vintage-cutoff branch, since only one Hamburg
+      geometry vintage exists yet (ADR-0014 open question #2, deferred).
+      Spatial predicate: ST_Within in EPSG:25832 (Hamburg's native CRS, NOT
+      Berlin's EPSG:25833) -- first OSM-POI exercise of the ADR-0005 per-city
+      CRS parameter. Left join: POIs outside all Gebiete receive
+      area_code = NULL (water bodies, airport perimeter, out-of-city-limits
+      bbox spillover).
+      Graceful-degradation: returns zero rows when Hamburg OSM or geometry
+      parquet files are absent so dbt build passes before ingestion is run.
+      Materialised as table (spatial join is expensive; avoids recomputation
+      on every downstream ref).
+      Not methodology-bearing: reuses the already-approved ST_Within
+      predicate (Epic C3-join) against a new city's geometry/POI pair.
+      Source: LGV Hamburg WFS (dl-de/by-2.0) + Geofabrik .osh.pbf (ODbL).
+    meta:
+      dbt_meta_owner: data-engineer
+    tests:
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns:
+              - snapshot_year
+              - osm_id
+          config:
+            where: "osm_id is not null"
+    columns:
+      - name: city_code
+        description: City identifier; always 'HH' (ADR-0005 canonical, ADR-0014).
+        tests:
+          - not_null:
+              config:
+                where: "osm_id is not null"
+          - accepted_values:
+              arguments:
+                values: ["HH"]
+              config:
+                where: "osm_id is not null"
+      - name: snapshot_year
+        description: Calendar year of the OSM snapshot (integer, e.g. 2018).
+        tests:
+          - not_null:
+              config:
+                where: "osm_id is not null"
+      - name: osm_id
+        description: OSM node identifier (e.g. 'node/12345678').
+        tests:
+          - not_null:
+              config:
+                where: "snapshot_year is not null"
+      - name: area_code
+        description: >
+          statistisches-Gebiet area code from spatial join. NULL when the POI
+          falls outside all Gebiet boundaries (water bodies, airport
+          perimeter, bbox spillover into neighbouring states).
+        tests:
+          - assert_null_rate_below:
+              arguments:
+                column_name: area_code
+                partition_by: snapshot_year
+                max_null_fraction: 0.12
+              config:
+                severity: warn
+                where: "snapshot_year is not null"
+          - relationships:
+              arguments:
+                to: ref('dim_area')
+                field: area_code
+              config:
+                severity: warn
+                where: "area_code is not null"
+      - name: area_vintage
+        description: >
+          Hamburg geometry vintage used for the spatial join. 'current' for
+          this first slice (single live-WFS edition; see ADR-0014 open
+          question #2 on the deferred historical crosswalk).
+        tests:
+          - accepted_values:
+              arguments:
+                values: ["current"]
+              config:
+                where: "area_code is not null"
+      - name: poi_domain_h
+        description: >
+          Harmonized POI domain (from int_osm_poi_harmonized).
+          COALESCE(canonical_poi_domain, poi_domain).
+        tests:
+          - not_null:
+              config:
+                where: "osm_id is not null"
+      - name: poi_category_h
+        description: >
+          Harmonized POI category (from int_osm_poi_harmonized).
+          COALESCE(canonical_poi_category, poi_category).
+        tests:
+          - not_null:
+              config:
+                where: "osm_id is not null"
+      - name: poi_type_h
+        description: >
+          Harmonized POI type (from int_osm_poi_harmonized).
+          COALESCE(canonical_poi_type, poi_type).
+        tests:
+          - not_null:
+              config:
+                where: "osm_id is not null"
+      - name: harmonization_provenance
+        description: >
+          Provenance of the harmonized classification (from int_osm_poi_harmonized).
+          'native', 'drift_remap', 'ambiguous', or 'unmapped'.
+        tests:
+          - not_null:
+              config:
+                where: "osm_id is not null"
+
   - name: int_poi_share_base
     description: >
       C5 helper: pre-materializes PLR POI share per year before dynamism computation.
