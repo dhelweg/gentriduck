@@ -359,6 +359,115 @@ models:
         tests:
           - not_null
 
+  - name: stg_hamburg_sozialmonitoring
+    description: >
+      Staging view over the Hamburg Sozialmonitoring parquet — ADR-0014 Pillar 2,
+      direct conceptual analogue of stg_berlin_mss (ADR-0006). Source: LGV Hamburg
+      WFS (geodienste.hamburg.de/wfs_sozialmonitoring, feature type
+      de.hh.up:sozialmonitoring), dl-de/by-2.0 (attribution required). One row per
+      (edition, statistisches Gebiet); editions annual 2013-2025 (NOT biennial like
+      Berlin's MSS). This is the **outcome / ground-truth** variable for R-A1-style
+      re-grounding — never a predictor (mirrors ADR-0006 decision 6). Ingestion
+      adapter: ingestion/hamburg/sozialmonitoring/ingest_hamburg_sozialmonitoring.py.
+      Storage: data/raw/hamburg/sozialmonitoring/sozialmonitoring.parquet (gitignored).
+      status_index/dynamik_index are Hamburg's own text-coded ordinal labels
+      ('hoch'|'mittel'|'niedrig'|'sehr niedrig' / 'positiv'|'stabil'|'negativ'),
+      deliberately NOT remapped to Berlin's numeric 1-4/1-3 scale at this layer —
+      any ordinal-to-numeric cross-city encoding is a methodology decision (R-C1)
+      for a downstream int_*-equivalent model. Hamburg's Dynamik is a 3-year change
+      window vs Berlin's 2-year (ADR-0014 non-equivalence note) — Dynamik magnitude
+      is not directly comparable across cities without accounting for this.
+      Returns zero rows (typed stub) when no parquet has been ingested.
+    meta:
+      dbt_meta_owner: data-engineer
+    tests:
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns:
+              - city_code
+              - edition
+              - area_code
+          config:
+            where: "area_code is not null"
+      # Data-presence gate (docs/lessons/local-first-data-presence.md):
+      # status_index is the outcome variable for Hamburg's re-grounded index —
+      # an empty Sozialmonitoring source means the outcome is hollow.
+      - assert_not_empty:
+          config:
+            severity: error
+      - assert_min_rows:
+          arguments:
+            min_rows: 8000
+          config:
+            severity: warn
+    columns:
+      - name: city_code
+        description: Canonical city code 'HH' (ADR-0005; matches dim_city.city_code).
+        tests:
+          - not_null:
+              config:
+                where: "area_code is not null"
+          - accepted_values:
+              arguments:
+                values: ["HH"]
+              config:
+                where: "area_code is not null"
+      - name: edition
+        description: Sozialmonitoring publication year ('jahr'), annual 2013-2025.
+        tests:
+          - not_null:
+              config:
+                where: "area_code is not null"
+      - name: area_code
+        description: >
+          statistisches-Gebiet id ('statgeb'). Joins to stg_hamburg_geo.area_code
+          where area_level='subarea_l2'.
+        tests:
+          - not_null
+      - name: stadtteil_name
+        description: Informational Stadtteil name from the source; NOT a join key.
+      - name: population
+        description: >
+          'bevoelkerung' — residents in the statistisches Gebiet. The source's own
+          >300-residents scoring threshold is already applied upstream; gebiete
+          below it are absent for that year, not present-with-nulls.
+      - name: status_index
+        description: >
+          Sozialmonitoring Status-Index text label: 'hoch'|'mittel'|'niedrig'|
+          'sehr niedrig'. Source's own ordinal coding, not remapped to numbers here.
+        tests:
+          - not_null:
+              config:
+                where: "area_code is not null"
+          - accepted_values:
+              arguments:
+                values: ["hoch", "mittel", "niedrig", "sehr niedrig"]
+              config:
+                where: "status_index is not null"
+      - name: dynamik_index
+        description: >
+          Sozialmonitoring Dynamik-Index text label: 'positiv'|'stabil'|'negativ'.
+          Computed over a 3-year change window (vs Berlin MSS's 2-year).
+        tests:
+          - not_null:
+              config:
+                where: "area_code is not null"
+          - accepted_values:
+              arguments:
+                values: ["positiv", "stabil", "negativ"]
+              config:
+                where: "dynamik_index is not null"
+      - name: gesamtindex_label
+        description: >
+          Source's own free-text composite label, e.g. "Status mittel - Dynamik 0".
+          Hamburg does not publish Berlin's compact 2-digit numeric Gesamtindex code.
+      - name: source_attribution
+        description: Mandatory dl-de/by-2.0 attribution string (ADR-0014).
+        tests:
+          - not_null:
+              config:
+                where: "area_code is not null"
+
   - name: stg_berlin_ewr
     description: >
       Staging view over annual EWR (Einwohnerregister) Parquet snapshots for Berlin.
