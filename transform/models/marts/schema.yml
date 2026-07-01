@@ -295,12 +295,15 @@ models:
         tests:
           - not_null
       - name: area_vintage
-        description: LOR vintage used for the spatial join ('lor_pre2021' or 'lor_2021').
+        description: >
+          Spatial-join vintage. 'lor_pre2021'/'lor_2021' for Berlin LOR; 'current'
+          for Hamburg statistische Gebiete (single live-WFS edition, ADR-0014
+          Pillar 1 — no historical vintage crosswalk yet).
         tests:
           - not_null
           - accepted_values:
               arguments:
-                values: ["lor_pre2021", "lor_2021"]
+                values: ["lor_pre2021", "lor_2021", "current"]
       - name: poi_category_h
         description: Harmonized POI category.
         tests:

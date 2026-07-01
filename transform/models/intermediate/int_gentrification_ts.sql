@@ -27,7 +27,7 @@
 -- delta), NOT of raw count deltas. Controls OSM completeness-bias (~40% coverage;
 -- ADR-0008 D5). C5 geo-DS sign-off: PASS (docs/epic-c/C5-geo-signoff.md, 2026-06-19).
 --
--- TWO BRANCHES (B7 #117):
+-- THREE BRANCHES (B7 #117; Hamburg branch added #40 H1 integration slice):
 -- Branch A — lor_2021 (2021–2025):
 -- MSS area_vintage='lor_2021'; POI from int_poi_status_dynamism (lor_2021, all years);
 -- EWR from int_ewr_socioeco (lor_2021, all years). Join on (area_code, edition year).
@@ -35,6 +35,15 @@
 -- MSS area_vintage='lor_pre2021'; POI from int_poi_status_dynamism_pre2021
 -- (lor_pre2021, 2008-2020); EWR from int_ewr_socioeco_pre2021 (lor_pre2021, 2008-2020).
 -- Join on (area_code, edition year) — codes match within the lor_pre2021 system.
+-- Branch C — Hamburg 'current' (2013-2025, ADR-0014):
+-- Outcome from int_hamburg_sozialmonitoring_index (annual editions, statistisches
+-- Gebiet grain, numeric-mapped D1/D2 -- see that model's header for the
+-- methodology-bearing label mapping); POI from int_poi_status_dynamism
+-- (already city-agnostic, filtered to city_code='HH'); EWR from
+-- int_ewr_socioeco_hamburg (two-grain-reconciled composite -- see that model's
+-- header for the ADR-0014 open-question-#5 methodology). Join on
+-- (area_code, edition year). city_code='HH' throughout, distinguishing this
+-- branch from Berlin's 'BER'/'berlin' rows in every downstream consumer.
 --
 -- Z-score cross-vintage note (binding; index-definition.md §6.2):
 -- lor_pre2021 z-scores (int_poi_status_dynamism_pre2021, int_ewr_socioeco_pre2021)
@@ -60,6 +69,8 @@
 -- depends_on: {{ ref('stg_berlin_mss') }}
 -- depends_on: {{ ref('int_ewr_socioeco') }}
 -- depends_on: {{ ref('int_ewr_socioeco_pre2021') }}
+-- depends_on: {{ ref('int_hamburg_sozialmonitoring_index') }}
+-- depends_on: {{ ref('int_ewr_socioeco_hamburg') }}
 {{ config(materialized="table", meta={"dbt_meta_owner": "data-engineer"}) }}
 
 {% set typology_case %}
@@ -113,6 +124,13 @@ with
         select * from {{ ref("stg_berlin_mss") }} where area_vintage = 'lor_pre2021'
     ),
     ewr_pre2021 as (select * from {{ ref("int_ewr_socioeco_pre2021") }}),
+
+    -- Branch C sources: Hamburg 'current' (2013-2025, #40 H1 integration slice)
+    poi_hamburg as (
+        select * from {{ ref("int_poi_status_dynamism") }} where city_code = 'HH'
+    ),
+    mss_hamburg as (select * from {{ ref("int_hamburg_sozialmonitoring_index") }}),
+    ewr_hamburg as (select * from {{ ref("int_ewr_socioeco_hamburg") }}),
 
     -- Branch A: lor_2021 join (POI and EWR already carry area_vintage='lor_2021')
     joined_2021 as (
@@ -200,11 +218,75 @@ with
             ewr_pre2021 as ewr
             on mss.area_code = ewr.area_code
             and mss.edition = ewr.reference_year
+    ),
+
+    -- Branch C: Hamburg join (#40 H1 integration slice).
+    -- mss_hamburg (int_hamburg_sozialmonitoring_index) already carries numeric
+    -- status_index/dynamik_index on the SAME 1-4/1-3 scale as Berlin's MSS (see
+    -- that model's header for the label-mapping methodology), so typology_case
+    -- (D1xD2 matrix, ADR-0008) applies unmodified -- the matrix logic operates
+    -- purely on the shared numeric scale, not on any Berlin-specific column.
+    -- ewr_hamburg (int_ewr_socioeco_hamburg) carries a 3-indicator composite
+    -- (vs Berlin's 5-indicator) -- see that model's header for why migration_
+    -- background_share and residence_duration_5y_share are NULL for Hamburg
+    -- rows (not available in the ingested Hamburg source set, ADR-0014 open
+    -- question #3).
+    -- is_uninhabited: Hamburg has no gesamtindex analogue; a Gebiet below the
+    -- Sozialmonitoring's own >300-resident threshold is simply absent from
+    -- mss_hamburg for that edition (row-absence, not a NULL flag -- see
+    -- int_hamburg_sozialmonitoring_index header) and therefore never appears
+    -- here at all via the inner join below. is_uninhabited is hard-coded FALSE
+    -- for all Hamburg rows that do appear (they are, by construction, above
+    -- the scoring threshold).
+    joined_hamburg as (
+        select
+            'HH' as city_code,
+            mss.edition as snapshot_year,
+            mss.area_code,
+            mss.area_vintage,
+            poi.total_poi_count,
+            poi.plr_poi_share_prev_year,
+            poi.share_yoy_change,
+            poi.status_score,
+            poi.dynamism_score,
+            mss.status_index,
+            mss.dynamik_index,
+            mss.gesamtindex,
+            mss.edition as mss_edition,
+            false as is_uninhabited,
+            {{ typology_case }} as typology_stage,
+            ewr.ewr_composite,
+            ewr.foreigners_share,
+            ewr.age_under18_share,
+            cast(null as double) as migration_background_share,
+            cast(null as double) as mean_age_years,
+            cast(null as double) as residence_duration_5y_share,
+            ewr.residents_total,
+            -- NOT CROSS-CITY COMPARABLE to Berlin's legacy_gentrification_score
+            -- (different EWR indicator set; see int_ewr_socioeco_hamburg header).
+            -- Retained only for Hamburg-internal diagnostic parity with the
+            -- Berlin branches' own column, per ADR-0004.
+            (poi.status_score + poi.dynamism_score - ewr.ewr_composite)
+            / 3.0 as legacy_gentrification_score
+        from mss_hamburg as mss
+        inner join
+            poi_hamburg as poi
+            on mss.area_code = poi.area_code
+            and mss.edition = poi.snapshot_year
+        left join
+            ewr_hamburg as ewr
+            on mss.area_code = ewr.area_code
+            and mss.edition = ewr.reference_year
     )
 
--- UNION both branches. No row can appear in both (area_vintage values are disjoint).
+-- UNION all three branches. No row can appear in more than one (area_vintage /
+-- city_code combinations are disjoint: 'BER'+'lor_2021', 'BER'+'lor_pre2021',
+-- 'HH'+'current').
 select *
 from joined_2021
 union all
 select *
 from joined_pre2021
+union all
+select *
+from joined_hamburg

@@ -909,6 +909,173 @@ models:
               config:
                 where: "osm_id is not null"
 
+  - name: int_ewr_socioeco_hamburg_disagg
+    description: >
+      #40 H1 integration slice: helper model performing the Stadtteil ->
+      statistisches-Gebiet disaggregation JOIN for Hamburg's EWR-equivalent
+      predictors (ADR-0014 open question #5). Split out from
+      int_ewr_socioeco_hamburg purely to avoid a DuckDB nested-window-function
+      binder limitation (same pattern as int_poi_share_base). Every Gebiet
+      inherits its matched Stadtteil's indicator values unchanged (uniform
+      disaggregation via a name-matched crosswalk built from
+      stg_hamburg_sozialmonitoring.stadtteil_name -> stg_hamburg_geo Stadtteil
+      area_name). See int_ewr_socioeco_hamburg's header for the full
+      methodology rationale (this model implements the join mechanics; that
+      model carries the sign-off requirement).
+      Graceful degradation: returns zero rows when any upstream has no rows.
+    meta:
+      dbt_meta_owner: data-engineer
+    tests:
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns:
+              - city_code
+              - area_code
+              - area_vintage
+              - reference_year
+          config:
+            where: "area_code is not null and reference_year is not null"
+    columns:
+      - name: city_code
+        description: City identifier (ADR-0005). Always 'HH'.
+      - name: area_code
+        description: statistisches-Gebiet area code (subarea_l2 grain).
+      - name: area_vintage
+        description: Always 'current' (single Hamburg geometry edition, ADR-0014 Pillar 1).
+      - name: is_disaggregated_from_stadtteil
+        description: >
+          Always TRUE -- every row's indicator values are inherited unchanged from
+          the matched parent Stadtteil (see model description).
+
+  - name: int_ewr_socioeco_hamburg
+    description: >
+      #40 H1 methodology-gated integration slice: Hamburg EWR-equivalent composite
+      socio-economic score (D4 baseline covariate), the city-agnostic analogue of
+      int_ewr_socioeco. Resolves ADR-0014 open question #5 (two-grain reconciliation):
+      Stadtteil-grain predictors (stg_hamburg_ewr_stadtteil) are disaggregated down to
+      statistisches-Gebiet grain via a name-matched crosswalk built from
+      stg_hamburg_sozialmonitoring's informational stadtteil_name field, joined to
+      stg_hamburg_geo's Stadtteil area_name. Every Gebiet within a Stadtteil inherits
+      identical indicator values (uniform disaggregation -- no population-weighted
+      split; see SQL header for the full rationale and its documented resolution-loss
+      property). Composite is a 3-indicator z-score mean (age_under18_share,
+      foreigners_share, unemployment_share) -- narrower than Berlin's 5-indicator
+      composite (Hamburg lacks migration_background_share/residence_duration_5y_share
+      in the ingested source set). NOT directly comparable in magnitude to Berlin's
+      ewr_composite; see SQL header for the full cross-city caveat.
+      geo-DS + domain-expert sign-off REQUIRED before this model may be used beyond
+      the develop-integration slice (R-C1).
+      Graceful degradation: returns zero rows when any upstream has no rows.
+    meta:
+      dbt_meta_owner: data-engineer
+    tests:
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns:
+              - city_code
+              - area_code
+              - area_vintage
+              - reference_year
+          config:
+            where: "area_code is not null and reference_year is not null"
+    columns:
+      - name: city_code
+        description: City identifier (ADR-0005). Always 'HH'.
+        tests:
+          - accepted_values:
+              arguments:
+                values: ["HH"]
+              config:
+                where: "area_code is not null"
+      - name: area_code
+        description: statistisches-Gebiet area code (subarea_l2 grain).
+      - name: area_vintage
+        description: Always 'current' (single Hamburg geometry edition, ADR-0014 Pillar 1).
+        tests:
+          - accepted_values:
+              arguments:
+                values: ["current"]
+              config:
+                where: "area_code is not null"
+      - name: reference_year
+        description: Calendar year of the Stadtteil-grain EWR-equivalent release.
+      - name: is_disaggregated_from_stadtteil
+        description: >
+          Always TRUE for this model's rows -- every Gebiet inherits its value from
+          Stadtteil grain (see SQL header, two-grain reconciliation method). Downstream
+          consumers should not treat Gebiete within the same Stadtteil as independent
+          observations for iid-assuming statistical tests.
+      - name: ewr_composite
+        description: >
+          D4 baseline covariate: 3-indicator z-score mean (age_under18_share,
+          foreigners_share, unemployment_share). Higher = more socio-economically
+          vulnerable (same sign convention as Berlin's int_ewr_socioeco.ewr_composite).
+          NOT directly comparable in magnitude to Berlin's 5-indicator composite.
+
+  - name: int_hamburg_sozialmonitoring_index
+    description: >
+      #40 H1 methodology-gated integration slice: numeric-ordinal mapping of Hamburg
+      Sozialmonitoring's text-coded Status-Index/Dynamik-Index labels onto the SAME
+      1-4 (status)/1-3 (dynamik) integer scale Berlin's MSS already uses in
+      int_gentrification_ts -- the outcome-pillar half of ADR-0014 open question #5.
+      status_index: 1=hoch...4=sehr niedrig (direct label correspondence to Berlin's
+      MSS polarity). dynamik_index: 1=positiv, 2=stabil, 3=negativ (identical label
+      set to Berlin's MSS). CAVEAT: Hamburg's Dynamik uses a 3-year change window
+      (vs Berlin's 2-year) and annual editions (vs Berlin's biennial) -- ordinal
+      category is comparable, magnitude/pooled-regression use is not without
+      controlling for window/cadence (ADR-0014 Pillar-2 non-equivalence note).
+      gesamtindex is always NULL (Hamburg publishes no numeric-code analogue).
+      geo-DS + domain-expert sign-off REQUIRED before this model may be used beyond
+      the develop-integration slice (R-C1).
+      Graceful degradation: returns zero rows when stg_hamburg_sozialmonitoring is empty.
+    meta:
+      dbt_meta_owner: data-engineer
+    tests:
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns:
+              - city_code
+              - area_code
+              - edition
+          config:
+            where: "area_code is not null"
+    columns:
+      - name: city_code
+        description: City identifier (ADR-0005). Always 'HH'.
+        tests:
+          - accepted_values:
+              arguments:
+                values: ["HH"]
+              config:
+                where: "area_code is not null"
+      - name: edition
+        description: Sozialmonitoring publication year (annual, 2013-2025).
+      - name: area_code
+        description: statistisches-Gebiet id ('statgeb'), subarea_l2 grain.
+      - name: status_index
+        description: >
+          D1 outcome, numeric-mapped: 1=hoch (best) ... 4=sehr niedrig (worst).
+          Same polarity as Berlin's MSS status_index. Treat as ORDINAL.
+        tests:
+          - accepted_values:
+              arguments:
+                values: [1, 2, 3, 4]
+              config:
+                where: "status_index is not null"
+      - name: dynamik_index
+        description: >
+          D2 outcome, numeric-mapped: 1=positiv, 2=stabil, 3=negativ. Same label
+          set as Berlin's MSS dynamik_index but a 3-year (vs 2-year) change window
+          -- see model description for the cross-city magnitude caveat.
+        tests:
+          - accepted_values:
+              arguments:
+                values: [1, 2, 3]
+              config:
+                where: "dynamik_index is not null"
+      - name: gesamtindex
+        description: Always NULL -- Hamburg publishes no numeric gesamtindex analogue.
+
   - name: int_poi_share_base
     description: >
       C5 helper: pre-materializes PLR POI share per year before dynamism computation.
@@ -1062,6 +1229,12 @@ models:
       int_poi_status_dynamism_pre2021 + int_ewr_socioeco_pre2021. All in lor_pre2021 PLR
       coordinate system. Enables thesis-era H2/H3 lead-lag panel in int_mss_lead_lag.
 
+      Branch C — Hamburg 'current' (annual editions 2013-2025, #40 H1 integration slice,
+      ADR-0014): int_hamburg_sozialmonitoring_index (outcome, numeric-mapped D1/D2) +
+      int_poi_status_dynamism (POI, filtered city_code='HH') + int_ewr_socioeco_hamburg
+      (D4, two-grain-reconciled 3-indicator composite -- see that model's header for the
+      ADR-0014 open-question-#5 methodology). city_code='HH' throughout.
+
       ADR-0008 architectural fix: the pre-R-A1 model averaged predictors and outcomes into
       a single gentrification_score (no theoretical grounding). R-A1 separates the dimensions:
         D1 = status_index (1=hoch … 4=sehr_niedrig) — social STATUS outcome
@@ -1105,14 +1278,20 @@ models:
             severity: error
     columns:
       - name: city_code
-        description: City identifier (ADR-0005). Always 'BER'.
+        description: City identifier (ADR-0005). 'BER' (Berlin branches A/B) or 'HH' (Hamburg branch C, #40).
         tests:
           - not_null:
               config:
                 where: "area_code is not null"
+          - accepted_values:
+              arguments:
+                values: ["BER", "HH"]
+              config:
+                where: "area_code is not null"
       - name: snapshot_year
         description: >
-          MSS edition year (biennial: 2013, 2015, 2017, 2019, 2021, 2023, 2025).
+          MSS/Sozialmonitoring edition year. Berlin: biennial (2013, 2015, 2017, 2019, 2021,
+          2023, 2025). Hamburg: annual (2013-2025, ADR-0014 Pillar 2 cadence note).
         tests:
           - not_null:
               config:
@@ -1125,15 +1304,16 @@ models:
                 where: "snapshot_year is not null"
       - name: area_vintage
         description: >
-          LOR boundary vintage from stg_berlin_mss: 'lor_pre2021' (edition ≤2019)
-          or 'lor_2021' (edition ≥2021). Follows the native MSS vintage.
+          Berlin: LOR boundary vintage from stg_berlin_mss, 'lor_pre2021' (edition ≤2019)
+          or 'lor_2021' (edition ≥2021). Hamburg: 'current' (single live-WFS statistisches-
+          Gebiete edition, ADR-0014 Pillar 1 -- no historical vintage crosswalk yet).
         tests:
           - not_null:
               config:
                 where: "area_code is not null"
           - accepted_values:
               arguments:
-                values: ["lor_pre2021", "lor_2021"]
+                values: ["lor_pre2021", "lor_2021", "current"]
               config:
                 where: "area_code is not null"
       - name: total_poi_count
