@@ -637,6 +637,128 @@ models:
               config:
                 where: "area_code is not null"
 
+  - name: stg_hamburg_wohnlage
+    description: >
+      Staging view over Hamburg "Wohnlagenverzeichnis" (address/street ->
+      Wohnlage location-quality-tier crosswalk) — ADR-0014 Pillar 5,
+      direct analogue of Berlin's stg_berlin_wohnlage. Companion dataset
+      to stg_hamburg_mietenspiegel (the rent-table matrix itself).
+      PLUMBING, not methodology (R-C1): a straight address/street-attribute
+      staging pull, no weighting/scoring/index-construction logic and no
+      cross-grain join to statistische Gebiete/Stadtteile. Deliberately
+      preserves Hamburg's own Wohnlage label scheme as-published rather
+      than remapping onto Berlin's einfach/mittel/gut scale (mirrors
+      stg_hamburg_sozialmonitoring's decision not to invent a cross-city
+      mapping ahead of the methodology-gated integration slice). Source:
+      Hamburg Transparenzportal / geodienste.hamburg.de WFS, "Hamburger
+      Mietenspiegel" dataset family (dl-de/by-2.0) — endpoint/attribute
+      names UNCONFIRMED live in this environment (no outbound network
+      access); see the ingestion script's docstring for the
+      endpoint-verification caveat. Ingestion adapter:
+      ingestion/hamburg/rent/ingest_hamburg_rent.py. Storage:
+      data/raw/hamburg/rent/wohnlage.parquet (gitignored). Returns zero
+      rows (typed stub) when no parquet has been ingested.
+    meta:
+      dbt_meta_owner: data-engineer
+    # Data-presence gate (docs/lessons/local-first-data-presence.md):
+    tests:
+      - assert_not_empty:
+          config:
+            severity: warn
+    columns:
+      - name: city_code
+        description: Canonical city code 'HH' (ADR-0005; matches dim_city.city_code).
+        tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ["HH"]
+      - name: address_id
+        description: >
+          Natural key / feature id for the address or street segment
+          (schema TBC at live probe).
+      - name: street_name
+        description: Street name, if published at street rather than address grain.
+      - name: wohnlage
+        description: >
+          Hamburg's own location-quality tier label (NOT assumed identical
+          to Berlin's einfach/mittel/gut scheme). UNCONFIRMED against the
+          real source schema — re-verify at first live ingestion.
+        tests:
+          - not_null
+      - name: geometry_wkb
+        description: >
+          Address/street geometry in WKB, native CRS EPSG:25832 (not
+          reprojected), if published.
+      - name: source_attribution
+        description: Mandatory dl-de/by-2.0 attribution string (ADR-0014).
+        tests:
+          - not_null
+
+  - name: stg_hamburg_mietenspiegel
+    description: >
+      Staging view over the Hamburger Mietenspiegel (biennial rent-table
+      matrix: year-built x size x Wohnlage -> rent range) — ADR-0014
+      Pillar 5, direct analogue of Berlin's stg_berlin_mietspiegel.
+      Companion dataset to stg_hamburg_wohnlage (address/street ->
+      Wohnlage crosswalk). PLUMBING, not methodology (R-C1): a straight
+      rent-table staging pull, no weighting/scoring/index-construction
+      logic and no cross-grain join to statistische Gebiete/Stadtteile.
+      Deliberately preserves Hamburg's own year_built_bucket/size_bucket/
+      wohnlage labels as-published rather than remapping onto Berlin's
+      bucket keys (mirrors stg_hamburg_wohnlage's and
+      stg_hamburg_sozialmonitoring's decision not to invent a cross-city
+      mapping ahead of the methodology-gated integration slice). Source:
+      Hamburg Transparenzportal / geodienste.hamburg.de WFS, "Hamburger
+      Mietenspiegel" dataset (dl-de/by-2.0) — endpoint/attribute names
+      UNCONFIRMED live in this environment (no outbound network access);
+      see the ingestion script's docstring for the endpoint-verification
+      caveat. A PDF-fallback re-tabulation path (mirroring Berlin's D1
+      Mietspiegel treatment) is NOT attempted in this slice and remains
+      an open follow-up if the machine-readable WFS formats prove
+      incomplete at live ingestion. Ingestion adapter:
+      ingestion/hamburg/rent/ingest_hamburg_rent.py. Storage:
+      data/raw/hamburg/rent/mietenspiegel.parquet (gitignored). Returns
+      zero rows (typed stub) when no parquet has been ingested.
+    meta:
+      dbt_meta_owner: data-engineer
+    # Data-presence gate (docs/lessons/local-first-data-presence.md):
+    tests:
+      - assert_not_empty:
+          config:
+            severity: warn
+    columns:
+      - name: edition_year
+        description: Mietenspiegel edition year (biennial; e.g. 2025).
+        tests:
+          - not_null
+      - name: city_code
+        description: Canonical city code 'HH' (ADR-0005; matches dim_city.city_code).
+        tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ["HH"]
+      - name: year_built_bucket
+        description: >
+          Construction-period bucket, preserved as-published (NOT
+          remapped onto Berlin's year_built_bucket keys in this staging
+          layer).
+      - name: size_bucket
+        description: Apartment-size bucket, preserved as-published.
+      - name: wohnlage
+        description: Location tier, matching stg_hamburg_wohnlage's label scheme.
+      - name: rent_low
+        description: Lower rent-range bound (EUR/sqm/month).
+      - name: rent_mid
+        description: Mittelwert / central rent value (EUR/sqm/month).
+      - name: rent_high
+        description: Upper rent-range bound (EUR/sqm/month).
+      - name: source_attribution
+        description: Mandatory dl-de/by-2.0 attribution string (ADR-0014).
+        tests:
+          - not_null
+
   - name: stg_berlin_ewr
     description: >
       Staging view over annual EWR (Einwohnerregister) Parquet snapshots for Berlin.
