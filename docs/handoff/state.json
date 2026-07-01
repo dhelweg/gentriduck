@@ -1,7 +1,7 @@
 {
   "_schema": "gentriduck-session-state/v1",
-  "session": "2026-06-30-devmode-8",
-  "updated_at": "2026-06-30T16:30:00Z",
+  "session": "2026-07-01-devmode-10",
+  "updated_at": "2026-07-01T20:00:00Z",
   "build_status": {
     "result": "PASS",
     "pass": 478,
@@ -12,15 +12,15 @@
       "test_c5_poi_share_spike (expected by design)"
     ],
     "branch": "develop",
-    "note": "Green. develop includes #122 (partition fix) and #119 (B9b partial composite). 478 tests pass."
+    "note": "No dbt-model changes this session (ADR-only + closing #124 research doc). Build unaffected."
   },
   "open_prs": [
     {
       "number": 111,
-      "title": "Weekly release: Epic R/D wave \u2014 spatial inference, price/rent dimension, A9 diffusion",
+      "title": "Weekly release: Epic R/D wave — spatial inference, price/rent dimension, A9 diffusion",
       "base": "main",
       "head": "develop",
-      "note": "Open. Awaiting maintainer merge. Now includes B7/B8/B9/B-infra-122 since develop was updated."
+      "note": "Open, auto-refreshed (93 commits), mergeable. Awaiting maintainer merge in GitHub UI. Ready/due for the weekly ping."
     }
   ],
   "pending_adr_branches": [
@@ -38,35 +38,37 @@
     }
   ],
   "completed_this_session": [
-    "#120 [B10] BZR/Bezirk spatial aggregation (E1/E2 MAUP check) \u2014 integrated into develop f94deaf",
-    "#83 [O4] partial: Epic B milestone narrative \u2014 integrated into develop fbc73ef"
+    "#124 [H0] Hamburg data-landscape research — found uncommitted from prior session, committed to develop (3a97016), issue closed, card moved Done (was stuck In Progress with the deliverable file untracked — drift fixed).",
+    "#40 [H1] ADR-0014 (Hamburg data sources) drafted + self-ratified + integrated into develop (71fd9a4). Full source/licence/access decision for all 5 Hamburg pillars. Renumbered 0012→0014 to avoid collision with the pending feat/33 and feat/82 ADR branches. Issue #40 left OPEN / card left In Progress — the ADR is only the first step of H1; the DE ingestion build (ingestion/hamburg/**, stg_hamburg_*) is substantial multi-cycle work not started this session."
   ],
   "integrated_into_develop": [
     {
-      "issue": 120,
-      "title": "[B10] BZR/Bezirk spatial aggregation",
-      "merge_commit": "f94deaf",
-      "date": "2026-06-30",
-      "note": "Three-scale MAUP check; EWR 15/15 restored; H3b leak fixed; dual PASS. typology_stage MAUP-only."
+      "issue": 124,
+      "title": "[H0] Hamburg data-landscape research",
+      "merge_commit": "3a97016",
+      "date": "2026-07-01",
+      "note": "docs/epic-h/H1-hamburg-data-landscape.md. Was uncommitted/untracked from a prior session — found and committed this cycle as part of the reconciliation pass."
     },
     {
-      "issue": "83-partial",
-      "title": "[O4] Epic B milestone narrative",
-      "merge_commit": "fbc73ef",
-      "date": "2026-06-30",
-      "note": "docs/epic-g/O4-milestone-B-narrative.md \u2014 public-facing 950-word summary. Remaining O4 scope gates on F1."
+      "issue": 40,
+      "title": "[H1] ADR-0014 Hamburg data sources (source-selection step only)",
+      "merge_commit": "71fd9a4",
+      "date": "2026-07-01",
+      "note": "docs/adr/0014-hamburg-data-sources.md. Scoped as a source-selection ADR (licence/access/dim_area mapping), same class as ADR-0003/0006 — no geo-DS/domain sign-off file required (no weight/normalization/spatial-method decision; C5 re-fit explicitly deferred). H1 issue stays open for the DE build phase."
     }
   ],
-  "in_progress": null,
+  "in_progress": {
+    "issue": 40,
+    "title": "[H1] Onboard a second city via adapters",
+    "note": "ADR-0014 done. Next: ingestion/hamburg/geo/ (statistische Gebiete/Stadtteil/Bezirk WFS, EPSG:25832→WGS84), then Sozialmonitoring adapter, EWR-equivalent adapter(s), displacement+rent adapters, dim_city row + index params. DE pair + geo-DS. Recommended order is written into ADR-0014's own body."
+  },
   "board_status": {
-    "note": "Epic B COMPLETE. 66 Done + O4-partial. 0 In Progress. 12 Todo.",
+    "note": "1 In Progress (#40 H1). 0 closed-but-not-Done drift (reconciliation pass clean). Todo top-of-queue is all blocked-on-maintainer (#33, #70, #82) plus O4-remainder (#83, gated on #33) and deferred #80.",
     "open_issues_by_dependency": {
-      "in_progress": [],
-      "next_unblocked": [
-        "#40 [H1] second city (city-agnostic core ready)"
-      ],
+      "in_progress": ["#40 [H1] second city — ADR-0014 done, DE build phase next"],
+      "next_unblocked": [],
       "blocked_on_maintainer": [
-        "#33 [F1] ADR-0012 \u2014 blocks F2/F3/G0-G3/O4-remainder",
+        "#33 [F1] ADR-0012 — blocks F2/F3/G0-G3/O4-remainder",
         "#70 [B1] displacement data",
         "#82 [O2] ADR-0013"
       ]
@@ -75,30 +77,22 @@
   "still_blocked": [
     {
       "issue": 33,
-      "blocked_by": [
-        "Maintainer ADR-0012 approval"
-      ],
-      "title": "[F1] ADR-0012 \u2014 gates F2, F3, G0-G3, O4-remainder"
+      "blocked_by": ["Maintainer ADR-0012 approval"],
+      "title": "[F1] ADR-0012 — gates F2, F3, G0-G3, O4-remainder"
     },
     {
       "issue": 70,
-      "blocked_by": [
-        "Maintainer ADR decision"
-      ],
+      "blocked_by": ["Maintainer ADR decision"],
       "title": "[B1] Displacement data"
     },
     {
       "issue": 82,
-      "blocked_by": [
-        "Maintainer ADR-0013 approval"
-      ],
+      "blocked_by": ["Maintainer ADR-0013 approval"],
       "title": "[O2] Whitepaper"
     },
     {
       "issue": 83,
-      "blocked_by": [
-        "#33 F1 for dataset export + tooling packaging"
-      ],
+      "blocked_by": ["#33 F1 for dataset export + tooling packaging"],
       "title": "[O4] remainder (narrative done)"
     }
   ],
@@ -111,9 +105,10 @@
     "R-A9 domain: HL LISA label nuance; diffusion causal limits; D5 missing (Epic D).",
     "#115 EWR H2/H3: POI pseudo-replication caveat (35% PLRs share poi_count). p-values inflated. For G2.",
     "#117 B7 geo-DS C-1..C-4 + domain D-1..D-5: MSS H3a/H3b = co-movement only; pre-2021 H3 single-pair caveat; ewr_composite not cross-vintage comparable; C5 attenuation note; migration 2017 break; uninhabited count per edition.",
-    "#119 B9 geo-DS C-1/C-2/C-3 + domain D-1/D-2/D-3: partial composite std ~10% higher; no foreigners/migration claims pre-2014; E1 must filter any_endpoint_partial=FALSE; public label required."
+    "#119 B9 geo-DS C-1/C-2/C-3 + domain D-1/D-2/D-3: partial composite std ~10% higher; no foreigners/migration claims pre-2014; E1 must filter any_endpoint_partial=FALSE; public label required.",
+    "ADR-0014 open questions (Hamburg): exact WFS feature-type/CSV schemas (Medium confidence, DE probes at ingestion); 943→941 statistische-Gebiete crosswalk; Wohndauer fine-grain availability (hands-on probe, no paid fallback if absent); Soziale-Erhaltungsverordnung in-force-date attribute; two-grain social-pillar reconciliation is methodology-bearing — needs geo-DS+domain sign-off when H1's actual models are built (not yet — ADR only set the source contract)."
   ],
-  "next_session_decision": "All Epic G/F gated on #33 F1 maintainer approval. Consider #40 [H1] second-city onboarding (city-agnostic core exists). Or wait for F1 sign-off.",
-  "last_updated": "2026-06-30",
-  "current_session": "devmode-9"
+  "next_session_decision": "Continue #40 [H1]: DE pair builds ingestion/hamburg/geo/ (geometry adapter, lowest risk per ADR-0014's recommended order), then stg_hamburg_geo. All other Todo items remain blocked on maintainer (#33/#70/#82) — H1 is the only unblocked substantive work until one of those clears.",
+  "last_updated": "2026-07-01",
+  "current_session": "devmode-10"
 }
