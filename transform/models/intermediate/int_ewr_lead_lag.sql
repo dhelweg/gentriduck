@@ -79,20 +79,25 @@ with
 
     -- Annual delta of ewr_composite_effective within PLR (for H3a/H3b predictor side).
     -- Uses LAG over reference_year within (city_code, area_code, area_vintage).
-    -- NULL when prior year used partial composite (B9 C-2: cross-era differencing prohibited).
+    -- NULL when prior year used partial composite (B9 C-2: cross-era differencing
+    -- prohibited).
     -- This ensures 2014 base-year rows (where lag = partial 2013 composite) yield
     -- delta_ewr_vs_prev = NULL, so H3b naturally excludes them without an extra filter.
     ewr_with_delta as (
         select
             *,
             case
-                when lag(is_partial_composite) over (
-                    partition by city_code, area_code, area_vintage order by reference_year
-                ) = true
+                when
+                    lag(is_partial_composite) over (
+                        partition by city_code, area_code, area_vintage
+                        order by reference_year
+                    )
+                    = true
                 then null
                 else
                     ewr_composite_effective - lag(ewr_composite_effective) over (
-                        partition by city_code, area_code, area_vintage order by reference_year
+                        partition by city_code, area_code, area_vintage
+                        order by reference_year
                     )
             end as delta_ewr_vs_prev
         from ewr

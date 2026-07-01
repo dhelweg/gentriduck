@@ -21,7 +21,8 @@
 --
 -- AGGREGATION STRATEGY:
 -- MSS status_index / dynamik_index are ORDINAL, not metric. For district-level rollup:
--- - Use population-weighted mean of PLR ordinal status codes, rounded to nearest integer
+-- - Use population-weighted mean of PLR ordinal status codes, rounded to nearest
+-- integer
 -- and clamped to the ordinal range. This is a population-weighted mean-of-PLR-ordinals
 -- approximation that DIFFERS from the Senate/thesis method: the Senate re-z-scores
 -- aggregated raw indicators (s1-s4) within the BZR population then re-classifies
@@ -247,19 +248,32 @@ with
             residents_total,
             n_plr,
             case
-                when agg_status_index is null then null
-                when agg_status_index = 1 and agg_dynamik_index = 1 then 'consolidation-pressure'
-                when agg_status_index = 1 and agg_dynamik_index = 2 then 'stable-established'
-                when agg_status_index = 1 and agg_dynamik_index = 3 then 'stable-established'
-                when agg_status_index = 2 and agg_dynamik_index = 1 then 'active-gentrification'
-                when agg_status_index = 2 and agg_dynamik_index = 2 then 'stable-established'
-                when agg_status_index = 2 and agg_dynamik_index = 3 then 'pre-gentrification'
-                when agg_status_index = 3 and agg_dynamik_index = 1 then 'pioneer-signal'
-                when agg_status_index = 3 and agg_dynamik_index = 2 then 'pre-gentrification'
-                when agg_status_index = 3 and agg_dynamik_index = 3 then 'pre-gentrification'
-                when agg_status_index = 4 and agg_dynamik_index = 1 then 'improving-vulnerable'
-                when agg_status_index = 4 and agg_dynamik_index = 2 then 'pre-gentrification'
-                when agg_status_index = 4 and agg_dynamik_index = 3 then 'pre-gentrification'
+                when agg_status_index is null
+                then null
+                when agg_status_index = 1 and agg_dynamik_index = 1
+                then 'consolidation-pressure'
+                when agg_status_index = 1 and agg_dynamik_index = 2
+                then 'stable-established'
+                when agg_status_index = 1 and agg_dynamik_index = 3
+                then 'stable-established'
+                when agg_status_index = 2 and agg_dynamik_index = 1
+                then 'active-gentrification'
+                when agg_status_index = 2 and agg_dynamik_index = 2
+                then 'stable-established'
+                when agg_status_index = 2 and agg_dynamik_index = 3
+                then 'pre-gentrification'
+                when agg_status_index = 3 and agg_dynamik_index = 1
+                then 'pioneer-signal'
+                when agg_status_index = 3 and agg_dynamik_index = 2
+                then 'pre-gentrification'
+                when agg_status_index = 3 and agg_dynamik_index = 3
+                then 'pre-gentrification'
+                when agg_status_index = 4 and agg_dynamik_index = 1
+                then 'improving-vulnerable'
+                when agg_status_index = 4 and agg_dynamik_index = 2
+                then 'pre-gentrification'
+                when agg_status_index = 4 and agg_dynamik_index = 3
+                then 'pre-gentrification'
             end as typology_stage
         from bzr_agg
     ),
@@ -285,19 +299,32 @@ with
             residents_total,
             n_plr,
             case
-                when agg_status_index is null then null
-                when agg_status_index = 1 and agg_dynamik_index = 1 then 'consolidation-pressure'
-                when agg_status_index = 1 and agg_dynamik_index = 2 then 'stable-established'
-                when agg_status_index = 1 and agg_dynamik_index = 3 then 'stable-established'
-                when agg_status_index = 2 and agg_dynamik_index = 1 then 'active-gentrification'
-                when agg_status_index = 2 and agg_dynamik_index = 2 then 'stable-established'
-                when agg_status_index = 2 and agg_dynamik_index = 3 then 'pre-gentrification'
-                when agg_status_index = 3 and agg_dynamik_index = 1 then 'pioneer-signal'
-                when agg_status_index = 3 and agg_dynamik_index = 2 then 'pre-gentrification'
-                when agg_status_index = 3 and agg_dynamik_index = 3 then 'pre-gentrification'
-                when agg_status_index = 4 and agg_dynamik_index = 1 then 'improving-vulnerable'
-                when agg_status_index = 4 and agg_dynamik_index = 2 then 'pre-gentrification'
-                when agg_status_index = 4 and agg_dynamik_index = 3 then 'pre-gentrification'
+                when agg_status_index is null
+                then null
+                when agg_status_index = 1 and agg_dynamik_index = 1
+                then 'consolidation-pressure'
+                when agg_status_index = 1 and agg_dynamik_index = 2
+                then 'stable-established'
+                when agg_status_index = 1 and agg_dynamik_index = 3
+                then 'stable-established'
+                when agg_status_index = 2 and agg_dynamik_index = 1
+                then 'active-gentrification'
+                when agg_status_index = 2 and agg_dynamik_index = 2
+                then 'stable-established'
+                when agg_status_index = 2 and agg_dynamik_index = 3
+                then 'pre-gentrification'
+                when agg_status_index = 3 and agg_dynamik_index = 1
+                then 'pioneer-signal'
+                when agg_status_index = 3 and agg_dynamik_index = 2
+                then 'pre-gentrification'
+                when agg_status_index = 3 and agg_dynamik_index = 3
+                then 'pre-gentrification'
+                when agg_status_index = 4 and agg_dynamik_index = 1
+                then 'improving-vulnerable'
+                when agg_status_index = 4 and agg_dynamik_index = 2
+                then 'pre-gentrification'
+                when agg_status_index = 4 and agg_dynamik_index = 3
+                then 'pre-gentrification'
             end as typology_stage
         from bezirk_agg
     )

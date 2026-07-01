@@ -106,12 +106,14 @@ models:
     description: >
       Conformed area dimension (ADR-0005 city-agnostic seam). Distinct
       (city_code, area_level, area_code, area_name) from int_thesis_2018_area_index
-      joined with seed_dim_area_level for level_name.
+      + stg_berlin_lor + stg_hamburg_geo (#40 H1, ADR-0014), joined with
+      seed_dim_area_level for level_name.
       NOTE: parent_area_code is intentionally omitted until stg_berlin_lor is
       populated (Epic B2/C). When the LOR geometry ingestion lands, add the parent
       crosswalk via a join on (city_code, area_code, area_level). See model SQL for
       details.
-      Area names are Berlin proper nouns and are kept in German.
+      Area names are proper nouns kept in their local language (German for both
+      Berlin and Hamburg).
     meta:
       dbt_meta_owner: data-engineer
     columns:
@@ -124,18 +126,22 @@ models:
                 to: ref('dim_city')
                 field: city_code
       - name: area_level
-        description: Area level identifier.
+        description: >
+          Area level identifier. Berlin uses 'bezirk'/'bzr'/'plr'; Hamburg
+          (#40 H1, ADR-0014) uses the generic 'district'/'subarea_l1'/'subarea_l2'
+          levels (see seed_dim_area_level).
         tests:
           - not_null
           - accepted_values:
               arguments:
-                values: ["bezirk", "bzr", "plr"]
+                values:
+                  ["bezirk", "bzr", "plr", "district", "subarea_l1", "subarea_l2"]
       - name: area_code
         description: Area code. Natural key within (city_code, area_level).
         tests:
           - not_null
       - name: area_name
-        description: Area name (German proper noun; Berlin place names).
+        description: Area name (German proper noun; Berlin or Hamburg place names).
         tests:
           - not_null
       - name: level_name
