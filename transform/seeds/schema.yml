@@ -27,21 +27,33 @@ seeds:
   - name: seed_dim_city
     description: >
       City dimension seed (ADR-0005 city-agnostic seam). One row per city.
-      Currently Berlin only (BER). Multi-city expansion (Epic H) adds a new row.
+      Berlin (BER) + Hamburg (HH, ADR-0014, #40 H1). Multi-city expansion
+      (Epic H) adds a new row per additional city.
     meta:
       dbt_meta_owner: data-engineer
     columns:
       - name: city_code
-        description: Short city identifier (e.g. 'BER'). Natural key.
+        description: Short city identifier (e.g. 'BER', 'HH'). Natural key.
         tests:
           - not_null
           - unique
       - name: city_name
-        description: Human-readable city name (e.g. 'Berlin').
+        description: Human-readable city name (e.g. 'Berlin', 'Hamburg').
         tests:
           - not_null
       - name: country_code
         description: ISO 3166-1 alpha-2 country code (e.g. 'DE').
+        tests:
+          - not_null
+      - name: native_crs_epsg
+        description: >
+          EPSG code of the city's native projected CRS used for spatial
+          distance/area computations (ADR-0005 per-city CRS parameter,
+          first exercised by Hamburg in ADR-0014: Berlin=25833 ETRS89/UTM33N,
+          Hamburg=25832 ETRS89/UTM32N). Geometries are stored in this native
+          CRS in staging (not reprojected at ingestion); ST_Transform to
+          WGS84 happens per-consumer (e.g. the ohsome join), matching the
+          existing Berlin int_osm_poi_plr_weighted.sql convention.
         tests:
           - not_null
 
