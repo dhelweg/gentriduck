@@ -1,15 +1,16 @@
 """
 ingestion/hamburg/displacement/ingest_hamburg_displacement.py
 ================================================================
-H1 (#40) — Hamburg displacement-protection zone ingestion (ADR-0014
-Pillar 4: "Soziale Erhaltungsverordnungen — Gebiete in Hamburg"). Direct
-conceptual/legal analogue of Berlin's Milieuschutz areas (§172 BauGB
-soziale Erhaltungssatzung, the same statute underlying both cities'
-designations) — tracked for Berlin under the still-`blocked` #70 [B1]
-(architect ADR + maintainer approval pending for the FIS-Broker source).
-Hamburg's equivalent source is a *different*, already-ADR-0014-approved
-data source (Transparenzportal, dl-de/by-2.0) — this ingestion does not
-depend on #70's resolution and is not gated by it.
+H1 (#40) / H2 (#125) — Hamburg displacement-protection zone ingestion
+(ADR-0014 Pillar 4: "Soziale Erhaltungsverordnungen — Gebiete in
+Hamburg"). Direct conceptual/legal analogue of Berlin's Milieuschutz
+areas (§172 BauGB soziale Erhaltungssatzung, the same statute underlying
+both cities' designations) — tracked for Berlin under the still-`blocked`
+#70 [B1] (architect ADR + maintainer approval pending for the FIS-Broker
+source). Hamburg's equivalent source is a *different*,
+already-ADR-0014-approved data source (Transparenzportal, dl-de/by-2.0)
+— this ingestion does not depend on #70's resolution and is not gated by
+it.
 
 This is PLUMBING, not methodology: a straight polygon-attribute staging
 pull (area boundary + designation name + in-force date), analogous in
@@ -25,37 +26,65 @@ Source: Hamburg Transparenzportal / LGV WFS (deegree instance), dataset
   Portal listing: https://suche.transparenz.hamburg.de/dataset/soziale-erhaltungsverordnungen-gebiete-in-hamburg14
   Also mirrored on data.europa.eu / INSPIRE per ADR-0014.
 
-NOTE on endpoint verification (ADR-0014 open question #1 applies to
-every Hamburg pillar independently — geometry and Sozialmonitoring each
-needed their own live GetCapabilities probe with differing URL/casing
-conventions; this pillar has NOT yet had that live probe performed in
-this environment, which has no outbound network access). The WFS base
-URL below follows the same geodienste.hamburg.de HH_WFS_* naming
-convention ingest_hamburg_geo.py confirmed live for the geometry
-pillar's "Statistische Gebiete"/"Verwaltungsgrenzen" datasets — the
-*likeliest* convention for another LGV-published administrative-area
-layer, but UNCONFIRMED for this specific dataset. If this typeNames
-value 404s or resolves to a different feature type, re-probe
-GetCapabilities against the base URL before assuming the source has
-moved (mirrors ADR-0014 Pillar-2's ingest script precedent, where the
-sozialmonitoring endpoint turned out to use a distinct naming pattern
-discovered via the Transparenzportal CKAN API rather than the geometry
-pillar's convention). This is flagged, not silently guessed as fact.
+Endpoint (CONFIRMED live via GetCapabilities probe, 2026-07-01; #125):
+  https://geodienste.hamburg.de/HH_WFS_SozErhVO
+  Feature types (WFS 2.0.0 GetCapabilities):
+    de.hh.up:sozerhvo_inkraft         — currently in-force designations
+                                          (16 features confirmed live)
+    de.hh.up:sozerhvo_inaufstellung   — designations in preparation
+                                          (0 features live 2026-07-01;
+                                          fetched but expected often-empty)
+  This differs from the geometry pillar's `HH_WFS_<Layer>` / `app:<noun>`
+  convention this ingestor originally guessed (`HH_WFS_Soziale_
+  Erhaltungsverordnung` / `app:soziale_erhaltungsverordnung`, both 404) —
+  the real service uses an abbreviated `SozErhVO` slug and a
+  `de.hh.up:`-namespaced, lifecycle-suffixed (`_inkraft` /
+  `_inaufstellung`) typeName, mirroring the Sozialmonitoring pillar's
+  precedent that each Hamburg dataset can use its own naming convention
+  and must be independently GetCapabilities-probed (ADR-0014 open
+  question #1).
 
-Licence: dl-de/by-2.0 (attribution required) — confirm the exact
-attribution string for this specific dataset at first live ingestion;
-ADR-0014 notes only the licence *family* is pre-confirmed, not the
-per-dataset string (mirrors its own "Open item" note for this pillar).
+Feature attributes (CONFIRMED via live GetFeature sample, 2026-07-01):
+  gebietsname  — designation name (e.g. "St.Georg"; note the source's own
+                 punctuation is inconsistent across areas, e.g. "St.Georg"
+                 vs "St.Pauli" with no space — preserved as-published, no
+                 normalization applied here)
+  bezirk       — Bezirk **code** (integer 1-7, NOT a name; e.g. 1 =
+                 Hamburg-Mitte). No name field is published on this
+                 feature type; the numeric code is carried as-is rather
+                 than joined to a name in this staging-only ingestor
+                 (that join belongs in the dbt staging model, which can
+                 ref stg_hamburg_geo's bezirk layer).
+  datum        — ISO-8601 timestamp the Erhaltungsverordnung took effect
+                 (in_force_date; renders as e.g. "2012-02-15T00:00:00")
+  (feature `id`, not `properties` — e.g. "DE.HH.UP_SOZERHVO_INKRAFT_99" —
+   used as area_code; no natural business key is published in properties)
+  Additional unused source properties: `fundstelle` (Gazette PDF link),
+  `internet` (info page link) — not carried into the output schema.
+
+Licence: dl-de/by-2.0 (attribution required). ADR-0014 pre-confirmed the
+licence *family*; the per-dataset attribution string below follows the
+same "Freie und Hansestadt Hamburg, Behörde für Stadtentwicklung und
+Wohnen" pattern as the Sozialmonitoring pillar (same authority publishes
+both datasets per the Transparenzportal listing).
 
 Output parquet schema (data/raw/hamburg/displacement/erhaltungsverordnung.parquet):
   city_code           (string): 'HH' (ADR-0005)
-  area_code           (string): natural key / feature id for the designated area
-  area_name           (string): human-readable designation name (e.g. "Sternschanze")
-  bezirk_name         (string, nullable): informational Bezirk the area sits in
-  in_force_date        (string, nullable ISO date): date the Erhaltungsverordnung took
-                                  effect, if published (ADR-0014 open question #4 —
-                                  Medium confidence this attribute exists; if absent
-                                  from the source, left null rather than fabricated)
+  area_code           (string): WFS feature id (natural key; no separate
+                                  business key is published)
+  area_name           (string): designation name (gebietsname, as-published)
+  status              (string): 'in_force' | 'in_preparation' (which WFS
+                                  feature type the row came from)
+  bezirk_name         (string, nullable): Bezirk **code** as published
+                                  (numeric string, e.g. "1") — NOT a name;
+                                  field kept as bezirk_name for output-
+                                  schema continuity with the original
+                                  design, but documented here as
+                                  code-only. A downstream dbt model may
+                                  join to stg_hamburg_geo's bezirk layer
+                                  for the human-readable name.
+  in_force_date        (string, nullable ISO date): date the Erhaltungsverordnung
+                                  took effect (datum), if published
   geometry_wkb         (bytes): designated-area polygon, WKB, native CRS EPSG:25832
   source_attribution   (string): dl-de/by-2.0 attribution
 
@@ -68,13 +97,11 @@ Usage:
       --out-dir data/raw/hamburg/displacement --dry-run
 
 Attribution (mandatory — dl-de/by-2.0, ADR-0014 Pillar 4):
-  "Freie und Hansestadt Hamburg, Behörde für Stadtentwicklung und Wohnen"
-  (Erhaltungsverordnungen are a BSW instrument, same authority as the
-  Sozialmonitoring pillar — see ingest_hamburg_sozialmonitoring.py;
-  confirm this exact string against the dataset's own metadata at first
-  live ingestion, per the licence note above.)
+  "Freie und Hansestadt Hamburg, Behörde für Stadtentwicklung und Wohnen,
+  Soziale Erhaltungsverordnungen — Gebiete in Hamburg, dl-de/by-2.0"
 
-Runtime: expected seconds (small dataset, ~17 designated areas per ADR-0014).
+Runtime: seconds (small dataset, 16 in-force + 0 in-preparation areas
+confirmed live 2026-07-01).
 """
 
 from __future__ import annotations
@@ -83,6 +110,7 @@ import argparse
 import logging
 import ssl
 import sys
+import urllib.error
 import urllib.parse
 import urllib.request
 from pathlib import Path
@@ -120,29 +148,29 @@ SOURCE_ATTRIBUTION = (
 )
 CITY_CODE = "HH"
 
-# UNCONFIRMED live (no outbound network access in this environment) — best
-# guess following ingest_hamburg_geo.py's confirmed HH_WFS_* convention for
-# another LGV administrative-boundary layer. Re-probe GetCapabilities
-# against this base URL before trusting typeNames blindly; see module
-# docstring "NOTE on endpoint verification" above.
-WFS_BASE_URL = "https://geodienste.hamburg.de/HH_WFS_Soziale_Erhaltungsverordnung"
-WFS_TYPE_NAMES = "app:soziale_erhaltungsverordnung"
+# CONFIRMED live 2026-07-01 (#125) via WFS GetCapabilities probe.
+WFS_BASE_URL = "https://geodienste.hamburg.de/HH_WFS_SozErhVO"
 
-# Candidate attribute names — unconfirmed, following the geometry pillar's
-# lowercase-German-noun convention (statgebiet, stadtteil_schluessel, ...).
-# parse_features() degrades gracefully (warns + keeps None) if these don't
-# match the live schema; a real ingestion run must confirm via a sample
-# GetFeature call, exactly as the sozialmonitoring pillar did.
-ATTR_AREA_ID = "gebiet"
-ATTR_AREA_NAME = "bezeichnung"
-ATTR_BEZIRK_NAME = "bezirk_name"
-ATTR_IN_FORCE_DATE = "datum_inkrafttreten"
+# Two lifecycle feature types; both fetched and unioned (status column
+# distinguishes them). "_inaufstellung" is often empty (0 features live
+# 2026-07-01) but is fetched anyway in case designations are in prep at
+# ingestion time.
+WFS_LAYERS = {
+    "in_force": "de.hh.up:sozerhvo_inkraft",
+    "in_preparation": "de.hh.up:sozerhvo_inaufstellung",
+}
+
+# CONFIRMED attribute names via live GetFeature sample, 2026-07-01 (#125).
+ATTR_AREA_NAME = "gebietsname"
+ATTR_BEZIRK_CODE = "bezirk"
+ATTR_IN_FORCE_DATE = "datum"
 
 DISPLACEMENT_PARQUET_SCHEMA = pa.schema(
     [
         pa.field("city_code", pa.string()),
         pa.field("area_code", pa.string()),
         pa.field("area_name", pa.string()),
+        pa.field("status", pa.string()),
         pa.field("bezirk_name", pa.string()),
         pa.field("in_force_date", pa.string()),
         pa.field("geometry_wkb", pa.large_binary()),
@@ -171,11 +199,8 @@ def build_wfs_url(base_url: str, type_names: str) -> str:
     """Build the WFS 2.0.0 GetFeature URL.
 
     NOTE: outputFormat 'application/geo+json' matches the deegree quirk
-    confirmed live for the other two Hamburg WFS pillars (geometry,
-    Sozialmonitoring) — 'application/json' raised InvalidParameterValue on
-    those instances. Assumed (not yet independently confirmed for this
-    dataset) to hold here too, since Hamburg's Transparenzportal WFS
-    instances share the same deegree software stack.
+    confirmed live for all Hamburg WFS pillars — 'application/json' raises
+    InvalidParameterValue on these instances.
     """
     params = {
         "service": "WFS",
@@ -188,7 +213,13 @@ def build_wfs_url(base_url: str, type_names: str) -> str:
 
 
 def fetch_geojson(url: str, timeout: int = 120) -> dict:
-    """Fetch GeoJSON from a WFS URL. Returns parsed JSON dict; raises on error."""
+    """Fetch GeoJSON from a WFS URL. Returns parsed JSON dict; raises on error.
+
+    Tolerates a bare `{"type": "FeatureCollection"}` response with no
+    `features` key (deegree's empty-result shape, confirmed live for the
+    "_inaufstellung" layer 2026-07-01) by treating it as zero features
+    rather than an error.
+    """
     log.info("Fetching WFS GeoJSON from: %s", url)
     try:
         with urllib.request.urlopen(url, timeout=timeout, context=_SSL_CONTEXT) as resp:  # noqa: S310
@@ -209,6 +240,7 @@ def fetch_geojson(url: str, timeout: int = 120) -> dict:
             f"got type={data.get('type')!r}. Response excerpt: {str(raw[:200])}"
         )
 
+    data.setdefault("features", [])
     return data
 
 
@@ -217,10 +249,10 @@ def fetch_geojson(url: str, timeout: int = 120) -> dict:
 # ---------------------------------------------------------------------------
 
 
-def parse_features(geojson: dict) -> list[dict]:
+def parse_features(geojson: dict, status: str) -> list[dict]:
     """Parse GeoJSON features into row dicts for the output parquet."""
     features = geojson.get("features", [])
-    log.info("Parsing %d features", len(features))
+    log.info("Parsing %d %s features", len(features), status)
 
     rows: list[dict] = []
     skipped = 0
@@ -228,11 +260,10 @@ def parse_features(geojson: dict) -> list[dict]:
     for feat in features:
         props = feat.get("properties") or {}
 
-        raw_id = props.get(ATTR_AREA_ID)
+        raw_id = feat.get("id")
         if raw_id is None or str(raw_id).strip() == "":
             log.warning(
-                "Feature missing %s attribute; skipping. Props: %s",
-                ATTR_AREA_ID,
+                "Feature missing id; skipping. Props: %s",
                 list(props.keys())[:10],
             )
             skipped += 1
@@ -241,7 +272,7 @@ def parse_features(geojson: dict) -> list[dict]:
 
         area_name = str(props.get(ATTR_AREA_NAME) or "").strip()
 
-        raw_bezirk = props.get(ATTR_BEZIRK_NAME)
+        raw_bezirk = props.get(ATTR_BEZIRK_CODE)
         bezirk_name = str(raw_bezirk).strip() if raw_bezirk is not None else None
 
         raw_date = props.get(ATTR_IN_FORCE_DATE)
@@ -266,6 +297,7 @@ def parse_features(geojson: dict) -> list[dict]:
                 "city_code": CITY_CODE,
                 "area_code": area_code,
                 "area_name": area_name,
+                "status": status,
                 "bezirk_name": bezirk_name,
                 "in_force_date": in_force_date,
                 "geometry_wkb": wkb_bytes,
@@ -274,9 +306,9 @@ def parse_features(geojson: dict) -> list[dict]:
         )
 
     if skipped:
-        log.warning("Skipped %d features (missing id/geometry)", skipped)
+        log.warning("Skipped %d %s features (missing id/geometry)", skipped, status)
 
-    log.info("Parsed %d valid rows", len(rows))
+    log.info("Parsed %d valid %s rows", len(rows), status)
     return rows
 
 
@@ -292,6 +324,7 @@ def write_parquet(rows: list[dict], out_path: Path) -> None:
             "city_code": pa.array([r["city_code"] for r in rows], type=pa.string()),
             "area_code": pa.array([r["area_code"] for r in rows], type=pa.string()),
             "area_name": pa.array([r["area_name"] for r in rows], type=pa.string()),
+            "status": pa.array([r["status"] for r in rows], type=pa.string()),
             "bezirk_name": pa.array([r["bezirk_name"] for r in rows], type=pa.string()),
             "in_force_date": pa.array([r["in_force_date"] for r in rows], type=pa.string()),
             "geometry_wkb": pa.array([r["geometry_wkb"] for r in rows], type=pa.large_binary()),
@@ -313,30 +346,33 @@ def write_parquet(rows: list[dict], out_path: Path) -> None:
 
 
 def run(out_dir: Path, dry_run: bool = False) -> bool:
-    """Fetch WFS, parse features, write parquet. Returns True on success."""
+    """Fetch both WFS lifecycle layers, parse features, write parquet. Returns True on success."""
     out_path = out_dir / "erhaltungsverordnung.parquet"
-    wfs_url = build_wfs_url(WFS_BASE_URL, WFS_TYPE_NAMES)
 
     log.info("Attribution: %s", SOURCE_ATTRIBUTION)
 
     if dry_run:
-        log.info("[dry-run] Would fetch %s -> %s", wfs_url, out_path)
+        for status, type_names in WFS_LAYERS.items():
+            wfs_url = build_wfs_url(WFS_BASE_URL, type_names)
+            log.info("[dry-run] Would fetch (%s) %s -> %s", status, wfs_url, out_path)
         return True
 
-    try:
-        geojson = fetch_geojson(wfs_url)
-    except RuntimeError as exc:
-        log.error("Failed to fetch WFS: %s", exc)
-        return False
+    all_rows: list[dict] = []
+    for status, type_names in WFS_LAYERS.items():
+        wfs_url = build_wfs_url(WFS_BASE_URL, type_names)
+        try:
+            geojson = fetch_geojson(wfs_url)
+        except RuntimeError as exc:
+            log.error("Failed to fetch WFS (%s): %s", status, exc)
+            return False
+        all_rows.extend(parse_features(geojson, status))
 
-    rows = parse_features(geojson)
-
-    if not rows:
+    if not all_rows:
         log.error("No valid rows produced — not writing parquet.")
         return False
 
     try:
-        write_parquet(rows, out_path)
+        write_parquet(all_rows, out_path)
     except Exception as exc:
         log.error("Failed to write parquet: %s", exc)
         return False

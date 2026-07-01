@@ -1,11 +1,11 @@
 """
 ingestion/hamburg/ewr/ingest_hamburg_ewr_stadtteil.py
 ========================================================
-H1 (#40) — Hamburg EWR-equivalent socio-economic predictor ingestion
-(ADR-0014 Pillar 3, PRIMARY source only: "Regionalstatistische Daten der
-Stadtteile Hamburgs", Transparenzportal). Direct conceptual analogue of
-Berlin's EWR (ingestion/berlin/ewr/ingest_ewr.py, ADR-0003) — but at
-Stadtteil grain (~104-105 areas), not statistisches-Gebiet grain.
+H1 (#40) / H2 (#125) — Hamburg EWR-equivalent socio-economic predictor
+ingestion (ADR-0014 Pillar 3, PRIMARY source only: "Regionalstatistische
+Daten der Stadtteile Hamburgs", Transparenzportal). Direct conceptual
+analogue of Berlin's EWR (ingestion/berlin/ewr/ingest_ewr.py, ADR-0003)
+— but at Stadtteil grain (~104-105 areas), not statistisches-Gebiet grain.
 
 **Scope discipline (R-C1 — this slice is PLUMBING, not methodology):**
 This ingestor and its paired staging model (stg_hamburg_ewr_stadtteil)
@@ -20,68 +20,91 @@ the source itself publishes at. They do NOT:
     Berlin-only / city-agnostic-core files gated separately).
 A later, dedicated methodology-gated slice will do the two-grain join
 and any index-weighting integration once this raw layer exists to build
-on — tracked as the next H1 increment on #40 once all plumbing pillars
-land.
+on.
 
 Source (ADR-0014, Pillar 3, primary): Hamburg Transparenzportal —
   "Regionalstatistische Daten der Stadtteile Hamburgs"
   Portal listing: https://suche.transparenz.hamburg.de/dataset/regionalstatistische-daten-der-stadtteile-hamburgs20
   Licence: dl-de/by-2.0 — attribution: "Statistisches Amt fuer Hamburg
   und Schleswig-Holstein" (ADR-0014 Pillar 3).
-  Formats offered: CSV (zip), GeoJSON (zip), GML, OGC API-Features, WFS.
-  Time coverage: 2013 onward.
 
-NOTE on endpoint/schema verification (ADR-0014 open question #1 applies
-independently per pillar — this environment has no outbound network
-access, mirroring the caveat already flagged for the displacement-zone
-pillar's ingestor). The CKAN dataset slug/CSV download URL below is the
-*likeliest* shape given the Transparenzportal CKAN API pattern already
-confirmed live for the Sozialmonitoring pillar (package_show by dataset
-slug), but is UNCONFIRMED for this specific dataset and flagged as such.
-A real ingestion run must probe the CKAN API
-(https://suche.transparenz.hamburg.de/api/3/action/package_show?id=regionalstatistische-daten-der-stadtteile-hamburgs20)
-to resolve the exact resource URL(s) and inspect a sample CSV's column
-headers before trusting COLUMN_MAP below, exactly as every prior
-Hamburg-pillar ingestor's docstring requires.
+Endpoint (CONFIRMED live, 2026-07-01; #125): the original CKAN
+dataset-slug download URL 404'd; the live, most-recently-updated CKAN
+package is a *different* slug/id
+("regionalstatistische-daten-der-stadtteile-hamburgs23",
+metadata_modified 2026-04-29) whose `package_show` resources list a
+`geodienste.hamburg.de/download?...` redirector URL (not a direct
+Transparenzportal-hosted file):
+  https://geodienste.hamburg.de/download?url=https://geodienste.hamburg.de/wfs_regionalstatistische_daten_stadtteile&f=csv
+This returns a ZIP containing two CSVs (one per CRS: EPSG:4326,
+EPSG:25832 — geometry-less, so CRS choice is immaterial; either file's
+attribute columns are used) plus a `dialect.json`. This ingestor always
+uses the EPSG:4326-suffixed member for determinism.
 
-Indicator set (this slice — deliberately narrower than Berlin's 13-item
-EWR set; ADR-0014 Pillar 3 notes the Stadtteil release's exact column
-set was not hands-on inspected at H0/ADR ratification time). Columns
-below are the commonly-published "Regionalstatistische Daten" fields per
-the H0 research deliverable (docs/epic-h/H1-hamburg-data-landscape.md);
-COLUMN_MAP must be re-verified against the real CSV header at first live
-run and this list amended if names differ:
-  residents_total              -- Einwohner insgesamt (count)
-  residents_male_share         -- maennlich / insgesamt (share)
-  residents_female_share       -- weiblich / insgesamt (share)
-  age_under18_share            -- unter 18 Jahre / insgesamt (share)
-  age_65plus_share             -- 65 Jahre und aelter / insgesamt (share)
-  foreigners_share             -- Auslaenderanteil (share)
-  unemployment_share           -- Arbeitslosenquote (share) -- NOTE: this
-                                   is also one of the Sozialmonitoring's
-                                   seven attention-indicators; carried
-                                   here too because the Stadtteil release
-                                   publishes it independently at its own
-                                   grain -- no methodology judgement about
-                                   which source "wins" is made in this
-                                   staging layer (deferred to the gated
-                                   integration slice).
+CSV schema (CONFIRMED via live sample, 2026-07-01; #125): `;`-delimited,
+UTF-8 with BOM, **plain `.` decimal points (NOT German-comma decimals,
+unlike Berlin's EWR CSVs — do not apply Berlin's comma-parsing logic
+here)**. 170 columns; the ones relevant to this slice's indicator set:
+  jahr                              -- reference_year
+  stadtteil_nr                      -- 3-digit Stadtteil number (e.g.
+                                        "101"), NOT the 5-digit Stadtteil-
+                                        Schluessel stg_hamburg_geo's
+                                        stadtteil layer uses as area_code
+                                        (e.g. "02101"). CONFIRMED
+                                        crosswalk (#125 item 2's crosswalk
+                                        concern, corroborated here for a
+                                        second Hamburg pillar): Hamburg's
+                                        Land code is "02" and
+                                        area_code = "02" + stadtteil_nr
+                                        (zero-padding already present in
+                                        stadtteil_nr, e.g. "101" not "1").
+                                        This ingestor applies that
+                                        transform so downstream joins to
+                                        stg_hamburg_geo need no further
+                                        translation.
+  bev_insgesamt                     -- residents_total
+  bev_maennlich, bev_weiblich       -- residents_male/female (raw counts;
+                                        shares computed here, matching
+                                        Berlin EWR's share convention)
+  bev_u18_proz                      -- age_under18_share (already a
+                                        percentage 0-100 in source; this
+                                        ingestor divides by 100 for a
+                                        0-1 share, matching Berlin EWR's
+                                        share convention)
+  bev_ab65_proz                     -- age_65plus_share (same /100 note)
+  bev_auslaender_proz               -- foreigners_share (same /100 note)
+  arb_arbeitslose_ingesamt_proz     -- unemployment_share (same /100
+                                        note; NOTE the source's own
+                                        column-name typo "ingesamt" for
+                                        "insgesamt", preserved verbatim
+                                        as the real header)
+
+This supersedes the original UNCONFIRMED COLUMN_MAP (which guessed
+German-comma decimals and different column names entirely, e.g.
+"einwohner_insgesamt", "auslaenderanteil" — none of which exist in the
+live schema).
+
+Suppression handling: this CSV does not use Berlin-style sentinel/blank
+suppression markers for the indicators in this slice's scope (spot-
+checked: all sampled rows populate all seven indicator columns) — but
+the parser still coerces unparseable/blank cells to NaN (never 0),
+mirroring Berlin EWR's suppressed-cell discipline (#57/#58) as a
+defensive default in case suppression appears in unsampled rows/years.
 
 No cross-grain, no weighting, no index math: this script only reshapes
-one wide CSV (one row per Stadtteil x year) into long format
-(one row per Stadtteil x year x indicator) and writes Parquet, mirroring
-stg_berlin_ewr's UNPIVOT shape at the dbt layer.
+one wide CSV (one row per Stadtteil x year) into the wide output schema,
+later UNPIVOTed to long format by stg_hamburg_ewr_stadtteil.
 
-Output parquet schema (wide format, one row per Stadtteil x year, later
-UNPIVOTed to long format by stg_hamburg_ewr_stadtteil):
+Output parquet schema (wide format, one row per Stadtteil x year):
   city_code            (string): 'HH' (ADR-0005)
-  area_code            (string): Stadtteil Schluessel (matches
-                                  stg_hamburg_geo's subarea_l1 area_code)
+  area_code            (string): Stadtteil-Schluessel, "02" + stadtteil_nr
+                                  (matches stg_hamburg_geo's subarea_l1
+                                  area_code, e.g. "02101")
   area_vintage          (string): 'current' (single Stadtteil boundary
                                   edition; Stadtteil boundaries are far
-                                  more stable than statistische-Gebiete,
-                                  no vintage split needed for this slice)
+                                  more stable than statistische-Gebiete)
   reference_year        (int): calendar year of the annual release
+                                  (jahr; 2013-2024 confirmed live)
   residents_total        (double, nullable)
   residents_male_share   (double, nullable)
   residents_female_share (double, nullable)
@@ -89,8 +112,8 @@ UNPIVOTed to long format by stg_hamburg_ewr_stadtteil):
   age_65plus_share       (double, nullable)
   foreigners_share       (double, nullable)
   unemployment_share     (double, nullable)
-  is_suppressed_any      (bool): True if any indicator cell was
-                                  privacy-suppressed in the source CSV
+  is_suppressed_any      (bool): True if any indicator cell was null
+                                  after parsing
   source_attribution     (string): dl-de/by-2.0 attribution
 
 Usage:
@@ -102,10 +125,10 @@ Usage:
   uv run python ingestion/hamburg/ewr/ingest_hamburg_ewr_stadtteil.py \\
       --out-dir data/raw/hamburg/ewr_stadtteil --years 2013-2025 --dry-run
 
-  # Override the CSV URL (e.g. once the real CKAN resource URL is known):
+  # Override the CSV/ZIP URL:
   uv run python ingestion/hamburg/ewr/ingest_hamburg_ewr_stadtteil.py \\
       --out-dir data/raw/hamburg/ewr_stadtteil --years 2024 \\
-      --url-override https://example.com/regionalstatistik_stadtteile.csv
+      --url-override https://example.com/regionalstatistik_stadtteile.zip
 
 Attribution (mandatory -- dl-de/by-2.0, ADR-0014 Pillar 3):
   "Statistisches Amt fuer Hamburg und Schleswig-Holstein"
@@ -113,11 +136,8 @@ Attribution (mandatory -- dl-de/by-2.0, ADR-0014 Pillar 3):
   model (stg_hamburg_ewr_stadtteil) and the website attribution page
   (Epic G3) must surface this.
 
-Runtime: expected <30s for the full 2013-2025 back series on normal
-broadband (single CSV/zip download, no per-year requests like Berlin's
-EWR CKAN discovery pattern -- the Transparenzportal release appears to
-bundle all years in one file per H0's research; VERIFY at first live run
-and switch to a per-year loop if the source turns out to be split).
+Runtime: ~5-10s (single ~11MB ZIP download + in-memory CSV parse,
+confirmed live 2026-07-01).
 """
 
 from __future__ import annotations
@@ -129,6 +149,7 @@ import ssl
 import sys
 import urllib.error
 import urllib.request
+import zipfile
 from pathlib import Path
 from typing import Optional
 
@@ -153,33 +174,52 @@ SOURCE_ATTRIBUTION = (
     "dl-de/by-2.0 — https://transparenz.hamburg.de/"
 )
 
-# UNCONFIRMED — best-known-guess CKAN resource URL, following the same
-# suche.transparenz.hamburg.de CKAN API pattern already confirmed live for
-# the Sozialmonitoring pillar's dataset discovery. Re-probe package_show
-# for slug "regionalstatistische-daten-der-stadtteile-hamburgs20" before
-# trusting this at first live run (see module docstring).
-DEFAULT_CSV_URL = (
-    "https://suche.transparenz.hamburg.de/dataset/"
-    "regionalstatistische-daten-der-stadtteile-hamburgs20/download/"
-    "regionalstatistik_stadtteile.csv"
+# CONFIRMED live 2026-07-01 (#125) via the CKAN package_show API
+# (regionalstatistische-daten-der-stadtteile-hamburgs23, the most
+# recently modified of the several dataset-id variants).
+DEFAULT_ZIP_URL = (
+    "https://geodienste.hamburg.de/download?"
+    "url=https://geodienste.hamburg.de/wfs_regionalstatistische_daten_stadtteile&f=csv"
 )
+ZIP_MEMBER_NAME = "de_hh_up_regionalstatistische_daten_stadtteile_EPSG_4326.csv"
 
-# Source column -> canonical indicator name. UNCONFIRMED against a real
-# header row (see module docstring) -- re-verify at first live ingestion.
+# Hamburg's Land code, used to translate the CSV's 3-digit stadtteil_nr
+# into stg_hamburg_geo's 5-digit Stadtteil-Schluessel area_code (see
+# module docstring crosswalk note).
+HAMBURG_LAND_CODE = "02"
+
+# CONFIRMED source column -> canonical indicator name, 2026-07-01 (#125).
+# Percent-valued source columns (suffix _proz) are stored 0-100 in the
+# source; PERCENT_COLUMNS lists which canonical columns need /100 to
+# become a 0-1 share (matching Berlin EWR's share convention).
 COLUMN_MAP = {
-    "einwohner_insgesamt": "residents_total",
-    "maennlich_anteil": "residents_male_share",
-    "weiblich_anteil": "residents_female_share",
-    "unter_18_anteil": "age_under18_share",
-    "ab_65_anteil": "age_65plus_share",
-    "auslaenderanteil": "foreigners_share",
-    "arbeitslosenquote": "unemployment_share",
+    "bev_insgesamt": "residents_total",
+    "bev_maennlich": "residents_male_count",
+    "bev_weiblich": "residents_female_count",
+    "bev_u18_proz": "age_under18_share",
+    "bev_ab65_proz": "age_65plus_share",
+    "bev_auslaender_proz": "foreigners_share",
+    "arb_arbeitslose_ingesamt_proz": "unemployment_share",
 }
-INDICATOR_COLUMNS = list(COLUMN_MAP.values())
+PERCENT_COLUMNS = {
+    "age_under18_share",
+    "age_65plus_share",
+    "foreigners_share",
+    "unemployment_share",
+}
+# residents_male_share / residents_female_share are derived (count / total),
+# not read directly from a _proz column (the source has no such column).
+INDICATOR_COLUMNS = [
+    "residents_total",
+    "residents_male_share",
+    "residents_female_share",
+    "age_under18_share",
+    "age_65plus_share",
+    "foreigners_share",
+    "unemployment_share",
+]
 
-# Columns expected to identify the Stadtteil + year in the source CSV.
-# UNCONFIRMED naming -- re-verify at first live ingestion.
-STADTTEIL_ID_COL = "stadtteil_schluessel"
+STADTTEIL_NR_COL = "stadtteil_nr"
 YEAR_COL = "jahr"
 
 OUTPUT_SCHEMA = pa.schema(
@@ -211,9 +251,9 @@ log = logging.getLogger("hamburg_ewr_stadtteil_ingest")
 # ---------------------------------------------------------------------------
 
 
-def fetch_csv_bytes(url: str, timeout: int = 120) -> bytes:
-    """Fetch raw CSV bytes from a URL. Raises RuntimeError on failure."""
-    log.info("Fetching CSV from: %s", url)
+def fetch_zip_bytes(url: str, timeout: int = 120) -> bytes:
+    """Fetch raw ZIP bytes from a URL. Raises RuntimeError on failure."""
+    log.info("Fetching ZIP from: %s", url)
     try:
         with urllib.request.urlopen(url, timeout=timeout, context=_SSL_CONTEXT) as resp:  # noqa: S310
             return resp.read()
@@ -223,20 +263,31 @@ def fetch_csv_bytes(url: str, timeout: int = 120) -> bytes:
         raise RuntimeError(f"Unexpected error fetching {url}: {exc}") from exc
 
 
-def _parse_german_decimal(series: pd.Series) -> pd.Series:
-    """Parse a column that may use German decimal commas and suppression
-    markers ('-', '.', blank) into a float Series, preserving NaN for
-    suppressed cells (never coerced to 0), mirroring stg_berlin_ewr's
-    suppressed-cell discipline.
+def extract_csv_from_zip(raw_zip: bytes, member_name: str = ZIP_MEMBER_NAME) -> bytes:
+    """Extract the target CSV member from the downloaded ZIP.
+
+    Falls back to the first .csv member if the expected name is absent
+    (defensive against a filename change upstream), logging a warning.
     """
-    cleaned = (
-        series.astype(str)
-        .str.strip()
-        .replace({"-": None, ".": None, "": None, "nan": None, "None": None})
-        .str.replace(".", "", regex=False)  # thousands separator
-        .str.replace(",", ".", regex=False)  # decimal comma -> dot
-    )
-    return pd.to_numeric(cleaned, errors="coerce")
+    zf = zipfile.ZipFile(io.BytesIO(raw_zip))
+    names = zf.namelist()
+    if member_name in names:
+        target = member_name
+    else:
+        csv_names = [n for n in names if n.lower().endswith(".csv")]
+        if not csv_names:
+            raise RuntimeError(
+                f"No CSV member found in ZIP (members: {names}); expected {member_name!r}."
+            )
+        target = csv_names[0]
+        log.warning(
+            "Expected ZIP member %r not found; falling back to %r (members: %s).",
+            member_name,
+            target,
+            names,
+        )
+    with zf.open(target) as f:
+        return f.read()
 
 
 def parse_stadtteil_csv(raw: bytes, years: Optional[set[int]] = None) -> pd.DataFrame:
@@ -245,8 +296,6 @@ def parse_stadtteil_csv(raw: bytes, years: Optional[set[int]] = None) -> pd.Data
     identifier columns are absent (column-name drift is a known Berlin-EWR
     class of trap per ADR-0014 Pillar 3, cf. #50/#57/#58).
     """
-    # German CKAN CSV exports commonly use ';' delimiters and latin-1/utf-8
-    # encoding; try utf-8-sig first (handles BOM), then latin-1.
     for encoding in ("utf-8-sig", "latin-1"):
         try:
             df = pd.read_csv(io.BytesIO(raw), sep=";", encoding=encoding, dtype=str)
@@ -258,12 +307,12 @@ def parse_stadtteil_csv(raw: bytes, years: Optional[set[int]] = None) -> pd.Data
 
     df.columns = [c.strip().lower() for c in df.columns]
 
-    if STADTTEIL_ID_COL not in df.columns:
+    if STADTTEIL_NR_COL not in df.columns:
         raise RuntimeError(
-            f"Expected identifier column {STADTTEIL_ID_COL!r} not found in CSV "
+            f"Expected identifier column {STADTTEIL_NR_COL!r} not found in CSV "
             f"(columns present: {list(df.columns)[:20]}). The Transparenzportal "
-            "schema may have drifted from this ingestor's UNCONFIRMED COLUMN_MAP "
-            "-- re-probe the CKAN resource and update COLUMN_MAP/STADTTEIL_ID_COL."
+            "schema may have drifted from this ingestor's confirmed COLUMN_MAP "
+            "-- re-probe the CKAN resource and update COLUMN_MAP/STADTTEIL_NR_COL."
         )
     if YEAR_COL not in df.columns:
         raise RuntimeError(
@@ -272,13 +321,30 @@ def parse_stadtteil_csv(raw: bytes, years: Optional[set[int]] = None) -> pd.Data
         )
 
     out = pd.DataFrame()
-    out["area_code"] = df[STADTTEIL_ID_COL].astype(str).str.strip()
+    # Crosswalk: 3-digit stadtteil_nr -> 5-digit Stadtteil-Schluessel
+    # area_code, matching stg_hamburg_geo (see module docstring).
+    out["area_code"] = HAMBURG_LAND_CODE + df[STADTTEIL_NR_COL].astype(str).str.strip()
     out["reference_year"] = pd.to_numeric(df[YEAR_COL], errors="coerce").astype("Int64")
 
+    male = pd.to_numeric(df.get("bev_maennlich"), errors="coerce")
+    female = pd.to_numeric(df.get("bev_weiblich"), errors="coerce")
+    total = pd.to_numeric(df.get("bev_insgesamt"), errors="coerce")
+
     present_indicators = []
+    out["residents_total"] = total
+    present_indicators.append("residents_total")
+    out["residents_male_share"] = male / total
+    out["residents_female_share"] = female / total
+    present_indicators += ["residents_male_share", "residents_female_share"]
+
     for src_col, canon_col in COLUMN_MAP.items():
+        if canon_col in ("residents_total",):
+            continue  # already handled above
         if src_col in df.columns:
-            out[canon_col] = _parse_german_decimal(df[src_col])
+            vals = pd.to_numeric(df[src_col], errors="coerce")
+            if canon_col in PERCENT_COLUMNS:
+                vals = vals / 100.0
+            out[canon_col] = vals
             present_indicators.append(canon_col)
         else:
             log.warning(
@@ -288,10 +354,9 @@ def parse_stadtteil_csv(raw: bytes, years: Optional[set[int]] = None) -> pd.Data
                 canon_col,
             )
             out[canon_col] = pd.NA
+            present_indicators.append(canon_col)
 
-    out["is_suppressed_any"] = (
-        out[present_indicators].isna().any(axis=1) if present_indicators else False
-    )
+    out["is_suppressed_any"] = out[present_indicators].isna().any(axis=1)
     out["city_code"] = CITY_CODE
     out["area_vintage"] = "current"
     out["source_attribution"] = SOURCE_ATTRIBUTION
@@ -368,7 +433,7 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument(
         "--url-override",
         default=None,
-        help="Override the CSV download URL (default: best-known UNCONFIRMED CKAN URL).",
+        help="Override the ZIP download URL (default: confirmed live geodienste.hamburg.de redirector).",
     )
     p.add_argument(
         "--dry-run",
@@ -391,7 +456,7 @@ def main(argv: Optional[list[str]] = None) -> int:
         logging.getLogger().setLevel(logging.DEBUG)
 
     out_dir = args.out_dir.resolve()
-    url = args.url_override or DEFAULT_CSV_URL
+    url = args.url_override or DEFAULT_ZIP_URL
     years = parse_years_arg(args.years)
 
     log.info("Attribution: %s", SOURCE_ATTRIBUTION)
@@ -402,13 +467,14 @@ def main(argv: Optional[list[str]] = None) -> int:
         return 0
 
     try:
-        raw = fetch_csv_bytes(url)
+        raw_zip = fetch_zip_bytes(url)
+        raw_csv = extract_csv_from_zip(raw_zip)
     except RuntimeError as exc:
-        log.error("Failed to fetch Regionalstatistische-Daten CSV: %s", exc)
+        log.error("Failed to fetch/extract Regionalstatistische-Daten CSV: %s", exc)
         return 1
 
     try:
-        df = parse_stadtteil_csv(raw, years=years)
+        df = parse_stadtteil_csv(raw_csv, years=years)
     except RuntimeError as exc:
         log.error("Failed to parse CSV: %s", exc)
         return 1

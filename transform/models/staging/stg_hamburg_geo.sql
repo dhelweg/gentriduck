@@ -30,6 +30,25 @@
 -- Not reprojected at ingestion, matching stg_berlin_lor's
 -- convention (reprojection happens per-consumer).
 --
+-- Dedup note (found via real-data ingestion #125, 2026-07-01): the live
+-- statistische-Gebiete WFS (app:statistische_gebiete) publishes a small
+-- number of area_code values with 2 rows each (confirmed live: '73002',
+-- '105001' -- 2 of 945 features, distinct geometries under the same
+-- natural key -- likely a WFS-side ID-reassignment/split artifact, akin
+-- to the 943-vs-941 vintage-crosswalk open question ADR-0014 already
+-- flags for this layer). Deduplicated here with a deterministic
+-- QUALIFY ROW_NUMBER() tie-break (first by WKB byte length descending,
+-- i.e. prefer the larger/more-detailed polygon, then by row order) so
+-- downstream models get exactly one row per (city_code, area_level,
+-- area_code, area_vintage) -- mirrors the C3-dedup precedent
+-- (int_osm_poi_plr's PLR-boundary POI dedup) for the same class of
+-- source-side natural-key collision. This is PLUMBING dedup (arbitrary
+-- deterministic tie-break, not a methodology choice about which
+-- geometry is "correct") -- flagged as a #125 follow-up for the
+-- geo-data-scientist to investigate the root cause with Hamburg LGV
+-- (which polygon vintage each duplicate represents) before any spatial
+-- analysis relies on '73002'/'105001' specifically.
+--
 -- dbt_meta_owner: data-engineer
 {{
     config(
@@ -59,6 +78,12 @@
         source_attribution
     from read_parquet('{{ hh_geo_glob }}', union_by_name = true)
     where area_code is not null and city_code = 'HH'
+    qualify
+        row_number() over (
+            partition by city_code, area_level, area_code, area_vintage
+            order by octet_length(geometry_wkb) desc
+        )
+        = 1
 
 {% else %}
 

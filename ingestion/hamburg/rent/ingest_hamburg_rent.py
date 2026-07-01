@@ -1,15 +1,15 @@
 """
 ingestion/hamburg/rent/ingest_hamburg_rent.py
 ================================================
-H1 (#40) — Hamburg rent-equivalent data ingestion (ADR-0014 Pillar 5: the
-last unstaged raw-data pillar). Direct conceptual analogue of Berlin's D1
-Mietspiegel + Wohnlagenverzeichnis treatment (ingestion/berlin/mietspiegel/
+H1 (#40) / H2 (#125) — Hamburg rent-equivalent data ingestion (ADR-0014
+Pillar 5). Direct conceptual analogue of Berlin's D1 Mietspiegel +
+Wohnlagenverzeichnis treatment (ingestion/berlin/mietspiegel/
 ingest_mietspiegel.py, ingestion/berlin/price_rent/ingest_wohnlage.py).
 
 **Scope discipline (R-C1 — this slice is PLUMBING, not methodology):**
 Straight raw ingestion + staging of two related but independent datasets:
-  1. Wohnlagenverzeichnis — address/street -> Wohnlage (location-quality
-     tier) crosswalk, analogous to Berlin's Wohnlagen WFS.
+  1. Wohnlagenverzeichnis — address -> Wohnlage (location-quality tier)
+     crosswalk, analogous to Berlin's Wohnlagen WFS.
   2. Hamburger Mietenspiegel — the rent-table matrix itself (year-built x
      size x Wohnlage -> rent range), analogous to Berlin's Mietspiegeltabelle.
 This script does NOT compute any rent index, weighting, or normalization,
@@ -21,73 +21,109 @@ future use of Hamburg rent data as an index input is an explicitly
 separate, gated slice.
 
 Source (ADR-0014, Pillar 5): Hamburg Transparenzportal —
-  "Hamburger Mietenspiegel" (biennial since 1976; current 2025/2027 cycle)
+  "Hamburger Mietenspiegel" (biennial since 1976; current edition erhebungsstand
+  2025-04-01 confirmed live 2026-07-01)
   Portal listing: https://suche.transparenz.hamburg.de/dataset/hamburger-mietenspiegel31
   Licence: dl-de/by-2.0 — attribution: "Freie und Hansestadt Hamburg,
   Behoerde fuer Stadtentwicklung und Wohnen" (same BSW authority as the
   Sozialmonitoring and displacement-zone pillars).
-  Formats offered per ADR-0014: GML, CSV, GeoJSON, OGC API-Features, XML
-  for the Mietenspiegel dataset; PDF brochure for the human-readable table
-  (kept as a fallback re-tabulation path, mirroring Berlin's D1 Mietspiegel
-  PDF treatment, only if the machine-readable formats do not carry the
-  full rent matrix -- NOT attempted in this slice; the WFS/GeoJSON path is
-  tried first since ADR-0014 explicitly lists it as available, unlike
-  Berlin's Mietspiegeltabelle which required a PDF-only approach).
 
-  Wohnlagenverzeichnis (address -> Wohnlage crosswalk) is expected to be
-  published as a companion dataset via the same Transparenzportal /
-  geodienste.hamburg.de WFS family, following the geometry and
-  displacement-zone pillars' confirmed HH_WFS_* naming convention.
+Endpoints (CONFIRMED live via GetCapabilities + GetFeature probe, 2026-07-01; #125):
+  Wohnlagenverzeichnis:
+    Service:    https://geodienste.hamburg.de/HH_WFS_Wohnlagen
+                (NOT "HH_WFS_Wohnlagenverzeichnis" — this ingestor's
+                original guess 404'd; the live service uses the shorter
+                "Wohnlagen" slug)
+    typeNames:  app:wohnlagen
+    Grain:      address-point level (283,801 features confirmed live —
+                far larger than the original street-level assumption)
+    Attributes actually published (sample GetFeature probe):
+      strassenschluessel, strasse, hausnummer, hausnummer_zusatz, ort,
+      plz, stadtteil, bezeichnung (= the Wohnlage tier label, e.g. "Gute
+      Wohnlage" — NOT an attribute literally named "wohnlage")
+    Native CRS: EPSG:25832 (point geometry)
 
-NOTE on endpoint/schema verification (ADR-0014 open question #1 applies
-independently per pillar; this environment has no outbound network
-access, mirroring the caveat already flagged for the displacement-zone
-and EWR-stadtteil pillars' ingestors). Both WFS base URLs and attribute
-names below are UNCONFIRMED best-known guesses following the
-HH_WFS_* / app:<lowercase_noun> convention confirmed live for the
-geometry pillar (ingest_hamburg_geo.py) — a real ingestion run must
-re-probe GetCapabilities (Mietenspiegel) and the CKAN package_show API
-(Wohnlagenverzeichnis, if it turns out to be CKAN-hosted rather than WFS)
-before trusting typeNames/attribute mappings blindly, exactly as every
-prior Hamburg-pillar ingestor's docstring requires.
+  Mietenspiegel:
+    Service:    https://geodienste.hamburg.de/HH_WFS_Mietenspiegel
+                (this base URL was correctly guessed; the typeNames value
+                was wrong)
+    typeNames:  app:mietenspiegel_daten  (NOT "app:mietenspiegel" — the
+                real service also separately publishes
+                app:mietenspiegel_metadaten, a single-row edition/citation
+                record, fetched here only to derive edition_year)
+    Grain:      88 rent-matrix cells (no per-row edition_year — see below)
+    Attributes actually published (sample GetFeature probe):
+      mittelwert (rent_mid), spanne_min (rent_low), spanne_max (rent_high),
+      merkmale (a SINGLE pipe-delimited string encoding all three matrix
+      dimensions, e.g. "bis 31.12.1918|mit Bad und Sammelheizung|Normale
+      Wohnlage|bis unter 41m²" = year_built_bucket | ausstattung |
+      wohnlage | size_bucket). There is NO discrete edition_year,
+      year_built_bucket, size_bucket, or wohnlage column — this ingestor
+      splits `merkmale` on "|" (confirmed 4-part structure matching
+      mietenspiegel_metadaten's own `merkmaletext` field:
+      "Baualtersklasse/Bezugsfertigkeit|Ausstattung|Wohnlage|Wohnfläche").
+      edition_year is derived from the single `mietenspiegel_metadaten`
+      feature's `erhebungsstand` date (e.g. "2025-04-01" -> 2025), since
+      the live service publishes only the current edition (no historical
+      editions via this WFS).
+
+NOTE on prior UNCONFIRMED assumptions (superseded by this live probe,
+#125): the original ATTR_* names below this docstring (`adresse_id`,
+`wohnlage`, `erhebungsjahr`, `baujahr_gruppe`, `groessenklasse`,
+`miete_unten/mittel/oben`) did not match any live attribute and have been
+replaced. This corroborates the general lesson already noted by the
+displacement and EWR-stadtteil pillars: each Hamburg dataset requires an
+independent live GetCapabilities/GetFeature probe — no cross-pillar
+naming convention can be assumed a priori (ADR-0014 open question #1).
 
 Output parquet schemas:
 
-  data/raw/hamburg/rent/wohnlage.parquet (address/street -> Wohnlage tier):
+  data/raw/hamburg/rent/wohnlage.parquet (address -> Wohnlage tier):
     city_code           (string): 'HH' (ADR-0005)
-    address_id           (string): natural key / feature id for the address
-                                    or street segment (schema TBC at live probe)
-    street_name           (string, nullable): street name, if published at
-                                    street rather than address grain
-    wohnlage              (string): location-quality tier (Hamburg's own
-                                    label scheme -- NOT assumed identical to
-                                    Berlin's einfach/mittel/gut; preserved
-                                    as-published, mirrors the
-                                    Sozialmonitoring pillar's decision not
-                                    to invent a cross-city numeric mapping
-                                    in the staging layer)
-    geometry_wkb          (bytes, nullable): address/street geometry WKB,
-                                    native CRS EPSG:25832, if published
+    address_id           (string): WFS feature id (natural key)
+    street_name           (string, nullable): strasse + hausnummer
+                                    (concatenated, as-published)
+    stadtteil             (string, nullable): Stadtteil name, as published
+                                    on the address record (useful for a
+                                    coarse cross-check against
+                                    stg_hamburg_geo, not a substitute for
+                                    a spatial join)
+    wohnlage              (string): location-quality tier label
+                                    (bezeichnung, as-published, e.g. "Gute
+                                    Wohnlage" — Hamburg's own label scheme,
+                                    NOT assumed identical to Berlin's
+                                    einfach/mittel/gut)
+    geometry_wkb          (bytes, nullable): address point geometry WKB,
+                                    native CRS EPSG:25832
     source_attribution     (string): dl-de/by-2.0 attribution
 
   data/raw/hamburg/rent/mietenspiegel.parquet (rent-table matrix):
-    edition_year          (int32): Mietenspiegel edition year (biennial;
-                                    e.g. 2025)
-    year_built_bucket      (string): construction-period bucket, preserved
-                                    as-published (NOT remapped onto
-                                    Berlin's year_built_bucket keys in this
-                                    staging layer -- any cross-city
-                                    harmonisation is a downstream,
-                                    methodology-bearing decision)
-    size_bucket            (string): apartment-size bucket, preserved
+    edition_year          (int32): Mietenspiegel edition year, derived
+                                    from mietenspiegel_metadaten's
+                                    erhebungsstand (single current edition
+                                    only — this WFS does not publish
+                                    historical editions)
+    year_built_bucket      (string): construction-period bucket, split
+                                    from `merkmale` part 1, preserved
                                     as-published
-    wohnlage               (string): location tier, matching wohnlage.parquet's
+    ausstattung            (string): fitting/equipment level, split from
+                                    `merkmale` part 2 (e.g. "mit Bad und
+                                    Sammelheizung") — an extra matrix
+                                    dimension not anticipated by the
+                                    original 3-D (year x size x Wohnlage)
+                                    schema design; carried through rather
+                                    than dropped
+    wohnlage               (string): location tier, split from `merkmale`
+                                    part 3, matching wohnlage.parquet's
                                     label scheme
+    size_bucket            (string): apartment-size bucket, split from
+                                    `merkmale` part 4, preserved as-published
     rent_low               (double, nullable): lower rent-range bound
-                                    (EUR/sqm/month)
-    rent_mid               (double, nullable): Mittelwert (EUR/sqm/month)
+                                    (EUR/sqm/month, spanne_min)
+    rent_mid               (double, nullable): Mittelwert (EUR/sqm/month,
+                                    mittelwert)
     rent_high               (double, nullable): upper rent-range bound
-                                    (EUR/sqm/month)
+                                    (EUR/sqm/month, spanne_max)
     source_attribution      (string): dl-de/by-2.0 attribution
 
 Usage:
@@ -110,10 +146,8 @@ Attribution (mandatory -- dl-de/by-2.0, ADR-0014 Pillar 5):
   models (stg_hamburg_wohnlage, stg_hamburg_mietenspiegel) and the website
   attribution page (Epic G3) must surface this.
 
-Runtime: expected seconds to low-minutes depending on Wohnlage grain
-(address-level would mirror Berlin's ~397k-row-per-vintage WFS pull;
-street-level, if that is the actual published grain, would be far
-smaller -- confirm grain at live probe before assuming runtime).
+Runtime: ~20s for Wohnlagenverzeichnis (283,801 address points, confirmed
+live 2026-07-01); <5s for Mietenspiegel (88 matrix cells + 1 metadata row).
 """
 
 from __future__ import annotations
@@ -160,38 +194,37 @@ SOURCE_ATTRIBUTION = (
     "https://transparenz.hamburg.de/"
 )
 
-# UNCONFIRMED live (no outbound network access in this environment) —
-# best guess following ingest_hamburg_geo.py's confirmed HH_WFS_*
-# convention for another LGV/BSW-published layer. Re-probe GetCapabilities
-# against these base URLs before trusting typeNames blindly; see module
-# docstring "NOTE on endpoint/schema verification" above.
-WOHNLAGE_WFS_BASE_URL = "https://geodienste.hamburg.de/HH_WFS_Wohnlagenverzeichnis"
-WOHNLAGE_WFS_TYPE_NAMES = "app:wohnlagenverzeichnis"
+# CONFIRMED live 2026-07-01 (#125) via WFS GetCapabilities probe.
+WOHNLAGE_WFS_BASE_URL = "https://geodienste.hamburg.de/HH_WFS_Wohnlagen"
+WOHNLAGE_WFS_TYPE_NAMES = "app:wohnlagen"
 
 MIETENSPIEGEL_WFS_BASE_URL = "https://geodienste.hamburg.de/HH_WFS_Mietenspiegel"
-MIETENSPIEGEL_WFS_TYPE_NAMES = "app:mietenspiegel"
+MIETENSPIEGEL_WFS_TYPE_NAMES = "app:mietenspiegel_daten"
+MIETENSPIEGEL_METADATA_TYPE_NAMES = "app:mietenspiegel_metadaten"
 
-# Candidate attribute names — unconfirmed, following the geometry/
-# displacement pillars' lowercase-German-noun convention. parse functions
-# degrade gracefully (warn + keep None) if these don't match the live
-# schema; a real ingestion run must confirm via a sample GetFeature call.
-ATTR_ADDRESS_ID = "adresse_id"
-ATTR_STREET_NAME = "strasse"
-ATTR_WOHNLAGE = "wohnlage"
+# CONFIRMED attribute names via live GetFeature sample, 2026-07-01 (#125).
+ATTR_STRASSE = "strasse"
+ATTR_HAUSNUMMER = "hausnummer"
+ATTR_STADTTEIL = "stadtteil"
+ATTR_WOHNLAGE_LABEL = "bezeichnung"
 
-ATTR_EDITION_YEAR = "erhebungsjahr"
-ATTR_YEAR_BUILT_BUCKET = "baujahr_gruppe"
-ATTR_SIZE_BUCKET = "groessenklasse"
-ATTR_MS_WOHNLAGE = "wohnlage"
-ATTR_RENT_LOW = "miete_unten"
-ATTR_RENT_MID = "miete_mittel"
-ATTR_RENT_HIGH = "miete_oben"
+ATTR_MERKMALE = "merkmale"
+ATTR_RENT_LOW = "spanne_min"
+ATTR_RENT_MID = "mittelwert"
+ATTR_RENT_HIGH = "spanne_max"
+ATTR_ERHEBUNGSSTAND = "erhebungsstand"
+
+# Wohnlagenverzeichnis raw fetch page size — 283,801 features fits in one
+# WFS response (confirmed live, ~20s) but a defensive cap avoids an
+# unbounded single request if the source grows substantially.
+WOHNLAGE_MAX_FEATURES = 500_000
 
 WOHNLAGE_PARQUET_SCHEMA = pa.schema(
     [
         pa.field("city_code", pa.string()),
         pa.field("address_id", pa.string()),
         pa.field("street_name", pa.string()),
+        pa.field("stadtteil", pa.string()),
         pa.field("wohnlage", pa.string()),
         pa.field("geometry_wkb", pa.large_binary()),
         pa.field("source_attribution", pa.string()),
@@ -202,8 +235,9 @@ MIETENSPIEGEL_PARQUET_SCHEMA = pa.schema(
     [
         pa.field("edition_year", pa.int32()),
         pa.field("year_built_bucket", pa.string()),
-        pa.field("size_bucket", pa.string()),
+        pa.field("ausstattung", pa.string()),
         pa.field("wohnlage", pa.string()),
+        pa.field("size_bucket", pa.string()),
         pa.field("rent_low", pa.float64()),
         pa.field("rent_mid", pa.float64()),
         pa.field("rent_high", pa.float64()),
@@ -228,16 +262,12 @@ log = logging.getLogger("hamburg_rent_ingest")
 # ---------------------------------------------------------------------------
 
 
-def build_wfs_url(base_url: str, type_names: str) -> str:
+def build_wfs_url(base_url: str, type_names: str, count: Optional[int] = None) -> str:
     """Build the WFS 2.0.0 GetFeature URL.
 
     NOTE: outputFormat 'application/geo+json' matches the deegree quirk
-    confirmed live for the other Hamburg WFS pillars (geometry,
-    Sozialmonitoring, displacement-zones) — 'application/json' raised
-    InvalidParameterValue on those instances. Assumed (not yet
-    independently confirmed for these two datasets) to hold here too,
-    since Hamburg's Transparenzportal WFS instances share the same
-    deegree software stack.
+    confirmed live for all Hamburg WFS pillars — 'application/json' raises
+    InvalidParameterValue on these instances.
     """
     params = {
         "service": "WFS",
@@ -246,6 +276,8 @@ def build_wfs_url(base_url: str, type_names: str) -> str:
         "typeNames": type_names,
         "outputFormat": "application/geo+json",
     }
+    if count is not None:
+        params["count"] = str(count)
     return base_url + "?" + urllib.parse.urlencode(params)
 
 
@@ -271,6 +303,7 @@ def fetch_geojson(url: str, timeout: int = 120) -> dict:
             f"got type={data.get('type')!r}. Response excerpt: {str(raw[:200])}"
         )
 
+    data.setdefault("features", [])
     return data
 
 
@@ -287,31 +320,34 @@ def parse_wohnlage_features(geojson: dict) -> list[dict]:
     rows: list[dict] = []
     skipped = 0
 
-    for idx, feat in enumerate(features):
+    for feat in features:
         props = feat.get("properties") or {}
 
-        raw_wohnlage = props.get(ATTR_WOHNLAGE)
+        raw_wohnlage = props.get(ATTR_WOHNLAGE_LABEL)
         if raw_wohnlage is None:
             log.warning(
-                "Feature idx=%d missing %s attribute; skipping. Props: %s",
-                idx,
-                ATTR_WOHNLAGE,
+                "Feature id=%s missing %s attribute; skipping. Props: %s",
+                feat.get("id"),
+                ATTR_WOHNLAGE_LABEL,
                 list(props.keys())[:10],
             )
             skipped += 1
             continue
         wohnlage = str(raw_wohnlage).strip()
 
-        raw_id = props.get(ATTR_ADDRESS_ID)
-        address_id = str(raw_id).strip() if raw_id is not None else None
-        if address_id is None:
-            feature_id = feat.get("id", "")
-            address_id = (
-                str(feature_id).rsplit(".", 1)[-1] if "." in str(feature_id) else str(feature_id)
-            ) or None
+        address_id = str(feat.get("id") or "").strip() or None
 
-        raw_street = props.get(ATTR_STREET_NAME)
-        street_name = str(raw_street).strip() if raw_street is not None else None
+        strasse = props.get(ATTR_STRASSE)
+        hausnummer = props.get(ATTR_HAUSNUMMER)
+        if strasse is not None:
+            street_name = str(strasse).strip()
+            if hausnummer is not None and str(hausnummer).strip() != "":
+                street_name = f"{street_name} {hausnummer}".strip()
+        else:
+            street_name = None
+
+        raw_stadtteil = props.get(ATTR_STADTTEIL)
+        stadtteil = str(raw_stadtteil).strip() if raw_stadtteil is not None else None
 
         geom_raw = feat.get("geometry")
         wkb_bytes = None
@@ -331,6 +367,7 @@ def parse_wohnlage_features(geojson: dict) -> list[dict]:
                 "city_code": CITY_CODE,
                 "address_id": address_id,
                 "street_name": street_name,
+                "stadtteil": stadtteil,
                 "wohnlage": wohnlage,
                 "geometry_wkb": wkb_bytes,
                 "source_attribution": SOURCE_ATTRIBUTION,
@@ -350,6 +387,7 @@ def write_wohnlage_parquet(rows: list[dict], out_path: Path) -> None:
             "city_code": pa.array([r["city_code"] for r in rows], type=pa.string()),
             "address_id": pa.array([r["address_id"] for r in rows], type=pa.string()),
             "street_name": pa.array([r["street_name"] for r in rows], type=pa.string()),
+            "stadtteil": pa.array([r["stadtteil"] for r in rows], type=pa.string()),
             "wohnlage": pa.array([r["wohnlage"] for r in rows], type=pa.string()),
             "geometry_wkb": pa.array([r["geometry_wkb"] for r in rows], type=pa.large_binary()),
             "source_attribution": pa.array(
@@ -384,10 +422,48 @@ def _parse_float(v) -> Optional[float]:
         return None
 
 
-def parse_mietenspiegel_features(geojson: dict) -> list[dict]:
-    """Parse Mietenspiegel GeoJSON/feature-collection rows into row dicts.
+def fetch_edition_year(timeout: int = 60) -> Optional[int]:
+    """Fetch the single mietenspiegel_metadaten feature and derive
+    edition_year from its `erhebungsstand` date (e.g. "2025-04-01" -> 2025).
+    Returns None (with a warning logged) if unavailable, rather than
+    fabricating a year.
+    """
+    url = build_wfs_url(MIETENSPIEGEL_WFS_BASE_URL, MIETENSPIEGEL_METADATA_TYPE_NAMES)
+    try:
+        geojson = fetch_geojson(url, timeout=timeout)
+    except RuntimeError as exc:
+        log.warning("Failed to fetch Mietenspiegel metadata (edition year): %s", exc)
+        return None
 
-    Rows without a geometry component are expected here (Mietenspiegel is a
+    features = geojson.get("features", [])
+    if not features:
+        log.warning("mietenspiegel_metadaten returned no features; edition_year will be null.")
+        return None
+
+    raw_stand = (features[0].get("properties") or {}).get(ATTR_ERHEBUNGSSTAND)
+    if not raw_stand:
+        log.warning(
+            "mietenspiegel_metadaten feature missing %s; edition_year will be null.",
+            ATTR_ERHEBUNGSSTAND,
+        )
+        return None
+
+    try:
+        return int(str(raw_stand).strip()[:4])
+    except (ValueError, IndexError):
+        log.warning(
+            "Could not parse year from erhebungsstand=%r; edition_year will be null.", raw_stand
+        )
+        return None
+
+
+def parse_mietenspiegel_features(geojson: dict, edition_year: Optional[int]) -> list[dict]:
+    """Parse Mietenspiegel GeoJSON rows, splitting the pipe-delimited
+    `merkmale` field into its four matrix dimensions (confirmed structure,
+    2026-07-01: year_built_bucket|ausstattung|wohnlage|size_bucket,
+    matching mietenspiegel_metadaten's own merkmaletext field order).
+
+    Rows without a geometry component are expected (Mietenspiegel is a
     tabular matrix, not per-address like Wohnlagenverzeichnis) — geometry
     is intentionally not carried in the output schema.
     """
@@ -400,26 +476,19 @@ def parse_mietenspiegel_features(geojson: dict) -> list[dict]:
     for idx, feat in enumerate(features):
         props = feat.get("properties") or {}
 
-        raw_year = props.get(ATTR_EDITION_YEAR)
-        edition_year = None
-        if raw_year is not None:
-            try:
-                edition_year = int(raw_year)
-            except (TypeError, ValueError):
-                edition_year = None
-        if edition_year is None:
+        raw_merkmale = props.get(ATTR_MERKMALE)
+        parts = [p.strip() for p in str(raw_merkmale or "").split("|")]
+        if len(parts) != 4:
             log.warning(
-                "Feature idx=%d missing/invalid %s attribute; skipping. Props: %s",
+                "Feature idx=%d has unexpected merkmale structure (%d parts, "
+                "expected 4): %r; skipping.",
                 idx,
-                ATTR_EDITION_YEAR,
-                list(props.keys())[:10],
+                len(parts),
+                raw_merkmale,
             )
             skipped += 1
             continue
-
-        year_built_bucket = str(props.get(ATTR_YEAR_BUILT_BUCKET) or "").strip()
-        size_bucket = str(props.get(ATTR_SIZE_BUCKET) or "").strip()
-        wohnlage = str(props.get(ATTR_MS_WOHNLAGE) or "").strip()
+        year_built_bucket, ausstattung, wohnlage, size_bucket = parts
 
         rent_low = _parse_float(props.get(ATTR_RENT_LOW))
         rent_mid = _parse_float(props.get(ATTR_RENT_MID))
@@ -436,8 +505,9 @@ def parse_mietenspiegel_features(geojson: dict) -> list[dict]:
             {
                 "edition_year": edition_year,
                 "year_built_bucket": year_built_bucket,
-                "size_bucket": size_bucket,
+                "ausstattung": ausstattung,
                 "wohnlage": wohnlage,
+                "size_bucket": size_bucket,
                 "rent_low": rent_low,
                 "rent_mid": rent_mid,
                 "rent_high": rent_high,
@@ -446,7 +516,7 @@ def parse_mietenspiegel_features(geojson: dict) -> list[dict]:
         )
 
     if skipped:
-        log.warning("Skipped %d Mietenspiegel features (missing edition year)", skipped)
+        log.warning("Skipped %d Mietenspiegel features (unparseable merkmale)", skipped)
 
     log.info("Parsed %d valid Mietenspiegel rows", len(rows))
     return rows
@@ -457,8 +527,9 @@ def write_mietenspiegel_parquet(rows: list[dict], out_path: Path) -> None:
         {
             "edition_year": pa.array([r["edition_year"] for r in rows], type=pa.int32()),
             "year_built_bucket": pa.array([r["year_built_bucket"] for r in rows], type=pa.string()),
-            "size_bucket": pa.array([r["size_bucket"] for r in rows], type=pa.string()),
+            "ausstattung": pa.array([r["ausstattung"] for r in rows], type=pa.string()),
             "wohnlage": pa.array([r["wohnlage"] for r in rows], type=pa.string()),
+            "size_bucket": pa.array([r["size_bucket"] for r in rows], type=pa.string()),
             "rent_low": pa.array([r["rent_low"] for r in rows], type=pa.float64()),
             "rent_mid": pa.array([r["rent_mid"] for r in rows], type=pa.float64()),
             "rent_high": pa.array([r["rent_high"] for r in rows], type=pa.float64()),
@@ -480,7 +551,9 @@ def write_mietenspiegel_parquet(rows: list[dict], out_path: Path) -> None:
 
 def run_wohnlage(out_dir: Path, dry_run: bool = False) -> bool:
     out_path = out_dir / "wohnlage.parquet"
-    wfs_url = build_wfs_url(WOHNLAGE_WFS_BASE_URL, WOHNLAGE_WFS_TYPE_NAMES)
+    wfs_url = build_wfs_url(
+        WOHNLAGE_WFS_BASE_URL, WOHNLAGE_WFS_TYPE_NAMES, count=WOHNLAGE_MAX_FEATURES
+    )
 
     log.info("[Wohnlagenverzeichnis] Attribution: %s", SOURCE_ATTRIBUTION)
 
@@ -489,7 +562,7 @@ def run_wohnlage(out_dir: Path, dry_run: bool = False) -> bool:
         return True
 
     try:
-        geojson = fetch_geojson(wfs_url)
+        geojson = fetch_geojson(wfs_url, timeout=180)
     except RuntimeError as exc:
         log.error("Failed to fetch Wohnlagenverzeichnis WFS: %s", exc)
         return False
@@ -518,13 +591,15 @@ def run_mietenspiegel(out_dir: Path, dry_run: bool = False) -> bool:
         log.info("[dry-run] Would fetch %s -> %s", wfs_url, out_path)
         return True
 
+    edition_year = fetch_edition_year()
+
     try:
         geojson = fetch_geojson(wfs_url)
     except RuntimeError as exc:
         log.error("Failed to fetch Mietenspiegel WFS: %s", exc)
         return False
 
-    rows = parse_mietenspiegel_features(geojson)
+    rows = parse_mietenspiegel_features(geojson, edition_year)
     if not rows:
         log.error("No valid Mietenspiegel rows produced — not writing parquet.")
         return False
