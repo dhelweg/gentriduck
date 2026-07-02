@@ -1,10 +1,10 @@
 {
   "_schema": "gentriduck-session-state/v1",
-  "session": "2026-07-01-devmode-11",
-  "updated_at": "2026-07-01T21:35:00Z",
+  "session": "2026-07-02-devmode-12",
+  "updated_at": "2026-07-02T02:40:00Z",
   "build_status": {
     "result": "PASS",
-    "pass": 503,
+    "pass": 573,
     "warn": 2,
     "error": 0,
     "warn_detail": [
@@ -12,15 +12,15 @@
       "test_c5_poi_share_spike (expected by design)"
     ],
     "branch": "develop",
-    "note": "Full uv run poe build after merging the Hamburg geometry ingestion slice (#40). Both warnings pre-existing/unrelated."
+    "note": "Full uv run poe build after integrating #39 (docs-only, no model change)."
   },
   "open_prs": [
     {
       "number": 111,
-      "title": "Weekly release: Epic R/D wave — spatial inference, price/rent, A9 diffusion, Epic B complete, H0/ADR-0014/H1-geometry",
+      "title": "Weekly release: Epic R/D wave — spatial inference, price/rent dimension, A9 diffusion, plus H1/H2/O4/G2/G3",
       "base": "main",
       "head": "develop",
-      "note": "Open, refreshed (98 commits), description updated this cycle to include #124/ADR-0014/#40-partial. Mergeable. Awaiting maintainer merge in GitHub UI."
+      "note": "Open, refreshed this cycle to add #39 [G3] content. Mergeable. Awaiting maintainer merge in GitHub UI."
     }
   ],
   "pending_adr_branches": [
@@ -28,7 +28,7 @@
       "branch": "feat/33-adr-0012-serving-hosting",
       "issue": 33,
       "title": "ADR-0012 serving & hosting stack",
-      "note": "Evidence.dev + Cloudflare Pages. Blocked on maintainer sign-off."
+      "note": "Evidence.dev + Cloudflare Pages. Blocked on maintainer sign-off. Biggest blocker on the board -- gates F2/F3/G0-G3-site-wiring/O4-remainder."
     },
     {
       "branch": "feat/82-adr-0013-whitepaper-tool",
@@ -38,31 +38,32 @@
     }
   ],
   "completed_this_session": [
-    "#40 [H1] first ingestion slice — Hamburg geometry (statistische Gebiete/Stadtteile/Bezirke), ADR-0014 Pillar 4 'geometry first'. Real WFS endpoints probed and verified live (geodienste.hamburg.de; discovered the outputFormat=application/geo+json quirk vs Berlin's application/json). ingestion/hamburg/geo/ingest_hamburg_geo.py ingested 945+104+7 real features into data/raw/hamburg/geo/*.parquet. stg_hamburg_geo staging view + dim_area/dim_city wiring (dim_city gains native_crs_epsg: BER=25833, HH=25832). Not methodology-bearing (pure dimension/geometry plumbing) — no gate required. Full build green. Merged into develop at 0c2e453. Issue #40 stays OPEN / card stays In Progress — only 1 of 5 ADR-0014 pillars done; remaining pillars (Sozialmonitoring outcome, EWR-equivalent predictors, displacement zones, rent) documented as follow-up in a progress comment on #40 rather than split into sub-issues (avoiding backlog noise)."
+    "#39 [G3] Attribution/licensing + privacy/ethics content (site-wiring-independent, mirrors #38 G2 precedent). docs/epic-g/G3-attribution-licensing.md + docs/epic-g/G3-privacy-ethics.md. Non-methodology-bearing, no dual sign-off needed. Merged into develop at 433cf59. Issue closed, card Done."
   ],
   "integrated_into_develop": [
     {
-      "issue": 40,
-      "title": "[H1] Hamburg geometry ingestion (Pillar 4 of ADR-0014, partial)",
-      "merge_commit": "0c2e453",
-      "date": "2026-07-01",
-      "note": "ingestion/hamburg/geo/ingest_hamburg_geo.py, stg_hamburg_geo, dim_area union, seed_dim_city.native_crs_epsg, seed_dim_area_level district/subarea_l1/subarea_l2. Verified against live Hamburg WFS (not just desk research)."
+      "issue": 39,
+      "title": "[G3] Attribution & licensing + privacy/ethics pages (content-only slice)",
+      "merge_commit": "433cf59",
+      "date": "2026-07-02",
+      "note": "docs/epic-g/G3-attribution-licensing.md, docs/epic-g/G3-privacy-ethics.md. Site-live rendering still tracked under G1 (#37)."
     }
   ],
-  "in_progress": {
-    "issue": 40,
-    "title": "[H1] Onboard a second city via adapters",
-    "note": "ADR-0014 done. Geometry ingestion (Pillar 4) done and integrated. Next slices in order: (1) OSM POI reuse (Pillar 1, low risk, Epic C ohsome ingestion unchanged except polygons); (2) Sozialmonitoring outcome adapter (Pillar 2, ingestion/hamburg/sozialmonitoring/, PDF reconciliation gate mirrors ADR-0006); (3) EWR-equivalent predictors (Pillar 3, methodology-bearing two-grain reconciliation needs geo-DS+domain sign-off); (4) displacement+rent (Pillar 5). Progress tracked via comments on #40, not sub-issues."
-  },
+  "in_progress": null,
   "board_status": {
-    "note": "1 In Progress (#40 H1). 0 closed-but-not-Done drift (reconciliation pass clean at start and end of session). Todo top-of-queue is all blocked-on-maintainer (#33, #70, #82) plus O4-remainder (#83, gated on #33) and deferred #80.",
+    "note": "0 In Progress. 0 closed-but-not-Done drift, 0 issues missing from board (verified twice this cycle). All remaining open Todo tickets are blocked on a maintainer decision (ADR approval or Geofabrik login), except #125's SE-clustering tail (parked, not blocked, no ticket to attach to).",
     "open_issues_by_dependency": {
-      "in_progress": ["#40 [H1] second city — geometry slice done, next: OSM POI reuse or Sozialmonitoring adapter"],
+      "in_progress": [],
       "next_unblocked": [],
       "blocked_on_maintainer": [
-        "#33 [F1] ADR-0012 — blocks F2/F3/G0-G3/O4-remainder",
-        "#70 [B1] displacement data",
-        "#82 [O2] ADR-0013"
+        "#33 [F1] ADR-0012 -- blocks F2/F3/G0/G1-site-wiring/O4-remainder",
+        "#70 [B1] displacement data -- Milieuschutz ADR",
+        "#82 [O2] ADR-0013 whitepaper tool",
+        "#126 [H2b] Hamburg OSM POI -- Geofabrik login",
+        "#80 [A10] deferred/tracked, not actionable"
+      ],
+      "parked_not_blocked": [
+        "#125 [H2] tail item 3 (SE-clustering note) -- no ticket exists yet to attach it to"
       ]
     }
   },
@@ -70,7 +71,7 @@
     {
       "issue": 33,
       "blocked_by": ["Maintainer ADR-0012 approval"],
-      "title": "[F1] ADR-0012 — gates F2, F3, G0-G3, O4-remainder"
+      "title": "[F1] ADR-0012 -- gates F2, F3, G0, G1 site wiring, O4-remainder"
     },
     {
       "issue": 70,
@@ -84,23 +85,16 @@
     },
     {
       "issue": 83,
-      "blocked_by": ["#33 F1 for dataset export + tooling packaging"],
-      "title": "[O4] remainder (narrative done)"
+      "blocked_by": ["#33 F1 for dataset export + tooling packaging (AC1 only; AC2/AC3 done)"],
+      "title": "[O4] remainder"
+    },
+    {
+      "issue": 126,
+      "blocked_by": ["Maintainer's Geofabrik OSM-contributor login"],
+      "title": "[H2b] Hamburg OSM POI ingestion"
     }
   ],
-  "open_conditions_carried_forward": [
-    "#65 E1/E2: H3b divergence + H3c opposite direction deferred to G2 methodology page.",
-    "R-A8 PASS WITH CONDITIONS: conditions to spatial-methods.md and G2.",
-    "E3 geo-DS C2 (non-blocking): C5 note for D3 dynamism maps/narratives (before G2).",
-    "spatial-methods.md domain C1: Gi* = amenity-change hotspot label in G2.",
-    "R-A9 geo-DS: ewr_composite for lor_2021 when EWR join extended; LISA FDR note for G2.",
-    "R-A9 domain: HL LISA label nuance; diffusion causal limits; D5 missing (Epic D).",
-    "#115 EWR H2/H3: POI pseudo-replication caveat (35% PLRs share poi_count). p-values inflated. For G2.",
-    "#117 B7 geo-DS C-1..C-4 + domain D-1..D-5: MSS H3a/H3b = co-movement only; pre-2021 H3 single-pair caveat; ewr_composite not cross-vintage comparable; C5 attenuation note; migration 2017 break; uninhabited count per edition.",
-    "#119 B9 geo-DS C-1/C-2/C-3 + domain D-1/D-2/D-3: partial composite std ~10% higher; no foreigners/migration claims pre-2014; E1 must filter any_endpoint_partial=FALSE; public label required.",
-    "ADR-0014 open questions (Hamburg): exact WFS feature-type/CSV schemas — RESOLVED for geometry (app:statistische_gebiete, app:stadtteile, app:bezirke, all confirmed live); still open for Sozialmonitoring/EWR/displacement/rent pillars; 943→941 statistische-Gebiete crosswalk (ingested 'current' vintage only, 945 features, crosswalk deferred); Wohndauer fine-grain availability (hands-on probe, no paid fallback if absent); Soziale-Erhaltungsverordnung in-force-date attribute; two-grain social-pillar reconciliation is methodology-bearing — needs geo-DS+domain sign-off when H1's Pillar-3 models are built."
-  ],
-  "next_session_decision": "Continue #40 [H1]: next slice is either (a) OSM POI reuse for Hamburg (Pillar 1, lowest risk, reuses Epic C ohsome ingestion unchanged except for the new Hamburg polygons from stg_hamburg_geo) or (b) the Sozialmonitoring outcome adapter (Pillar 2, ingestion/hamburg/sozialmonitoring/, mirrors ingestion/berlin/mss/). Either is a coherent next increment. All other Todo items remain blocked on maintainer (#33/#70/#82) — H1 is the only unblocked substantive work until one of those clears.",
-  "last_updated": "2026-07-01",
-  "current_session": "devmode-11"
+  "next_session_decision": "All substantive backlog work now genuinely exhausted pending maintainer decisions: #33 (ADR-0012 serving/hosting -- the single biggest blocker, gates most of Epic F/G), #70 (Milieuschutz ADR), #82 (ADR-0013 whitepaper tool), #126 (Geofabrik login). Next cycle: re-check for any of those replies; otherwise look for another content-only slice in the vein of #38/#39 that doesn't require site wiring, or re-scan for genuinely new discovered work (bugs/gaps) before concluding idle. Weekly develop->main PR #111 is open, refreshed, and ready for maintainer merge.",
+  "last_updated": "2026-07-02",
+  "current_session": "devmode-12"
 }
