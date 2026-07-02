@@ -1,7 +1,7 @@
 {
   "_schema": "gentriduck-session-state/v1",
-  "session": "2026-07-02-devmode-13",
-  "updated_at": "2026-07-02T04:00:00Z",
+  "session": "2026-07-02-devmode-14",
+  "updated_at": "2026-07-02T07:30:00Z",
   "build_status": {
     "result": "PASS",
     "pass": 573,
@@ -12,7 +12,7 @@
       "test_c5_poi_share_spike (expected by design)"
     ],
     "branch": "develop",
-    "note": "No model change this cycle; last verified full build was devmode-12."
+    "note": "No model change this cycle; last verified full build was devmode-12. No new work to build."
   },
   "open_prs": [
     {
@@ -20,7 +20,7 @@
       "title": "Weekly release: Epic R/D wave — spatial inference, price/rent dimension, A9 diffusion, plus H1/H2/O4/G2/G3",
       "base": "main",
       "head": "develop",
-      "note": "Open, mergeable, no new develop commits since last refresh (2026-07-02T03:09Z). Not refreshed again this cycle. Awaiting maintainer merge in GitHub UI."
+      "note": "Open, mergeable. headRefOid matches current develop tip (75c3e29) -- fully up to date, nothing to refresh this cycle. Awaiting maintainer merge in GitHub UI."
     }
   ],
   "pending_adr_branches": [
@@ -28,7 +28,7 @@
       "branch": "feat/33-adr-0012-serving-hosting",
       "issue": 33,
       "title": "ADR-0012 serving & hosting stack",
-      "note": "Evidence.dev + Cloudflare Pages. Blocked on maintainer sign-off (confirmed not yet merged to develop). Biggest blocker on the board -- gates F2/F3/G0/G1-site-wiring/O4-remainder."
+      "note": "Evidence.dev + Cloudflare Pages. Blocked on maintainer sign-off (confirmed not yet merged to develop). Biggest blocker on the board -- gates F2/F3/G0/G1."
     },
     {
       "branch": "feat/82-adr-0013-whitepaper-tool",
@@ -41,17 +41,17 @@
   "integrated_into_develop": [],
   "in_progress": null,
   "board_status": {
-    "note": "Reconciliation pass clean: 0 In Progress, 0 closed-but-not-Done drift, all open issues present on board with correct status. No new work discovered this cycle (re-scanned all open issues + PROJECT_PLAN; no duplicate-checked new tickets filed).",
+    "note": "Reconciliation pass clean at start and end: 0 In Progress, 0 closed-but-not-Done drift, all open issues present on board with correct status. Re-scanned all open issues + PROJECT_PLAN + checked every blocked issue's comment thread for a maintainer reply -- none found. No new work discovered/filed this cycle.",
     "open_issues_by_dependency": {
       "in_progress": [],
       "next_unblocked": [],
       "blocked_on_maintainer": [
-        "#33 [F1] ADR-0012 -- blocks #34 F2, #35 F3, #36 G0, #37 G1-site-wiring, #83 O4-remainder",
+        "#33 [F1] ADR-0012 -- blocks #34 F2, #35 F3, #36 G0, #37 G1 (all explicitly list 'Depends on: F1' in issue body)",
         "#70 [B1] displacement data -- Milieuschutz ADR",
+        "#80 [A10] scoping question posted 2026-07-02, now labeled blocked pending maintainer answer",
         "#82 [O2] ADR-0013 whitepaper tool",
         "#126 [H2b] Hamburg OSM POI -- Geofabrik login (confirmed genuinely blocked: public mirror has no full-history .osh.pbf, per ADR-0002)",
-        "#125 [H2] transitively blocked on #126 (inner-join to POI data yields 0 Hamburg rows until #126 resolves)",
-        "#80 [A10] deferred/tracked, not actionable"
+        "#125 [H2] transitively blocked on #126"
       ],
       "parked_not_blocked": [
         "#129 [H2-SE] standing requirement, no Hamburg regression ticket exists yet to attach it to"
@@ -59,14 +59,14 @@
     }
   },
   "still_blocked": [
-    {"issue": 33, "blocked_by": ["Maintainer ADR-0012 approval"], "title": "[F1] ADR-0012 -- gates F2, F3, G0, G1 site wiring, O4-remainder"},
+    {"issue": 33, "blocked_by": ["Maintainer ADR-0012 approval"], "title": "[F1] ADR-0012 -- gates F2, F3, G0, G1 (all 4 explicitly depend on F1)"},
     {"issue": 70, "blocked_by": ["Maintainer ADR decision"], "title": "[B1] Displacement data"},
+    {"issue": 80, "blocked_by": ["Maintainer scoping answer"], "title": "[A10] Causal/early-warning design -- deferred, scoping question posted, awaiting reply"},
     {"issue": 82, "blocked_by": ["Maintainer ADR-0013 approval"], "title": "[O2] Whitepaper"},
-    {"issue": 83, "blocked_by": ["#33 F1 for dataset export + tooling packaging (AC1 only; AC2/AC3 done)"], "title": "[O4] remainder"},
     {"issue": 125, "blocked_by": ["#126 (transitively)"], "title": "[H2] Hamburg real-data ingestion remainder"},
     {"issue": 126, "blocked_by": ["Maintainer's Geofabrik OSM-contributor login"], "title": "[H2b] Hamburg OSM POI ingestion"}
   ],
-  "next_session_decision": "Backlog remains exhausted pending maintainer decisions on #33 (ADR-0012, the single biggest blocker), #70 (Milieuschutz ADR), #82 (ADR-0013), #126 (Geofabrik login). No new unblocked work found this cycle. Next cycle: re-check for maintainer replies first; otherwise re-scan for new content-only slices (no site wiring) or genuinely new discovered work before concluding idle again. Weekly develop->main PR #111 remains open and ready; no new develop commits to add since last refresh.",
+  "next_session_decision": "Backlog remains exhausted pending maintainer decisions on #33 (ADR-0012, the single biggest blocker -- gates F2/F3/G0/G1), #70 (Milieuschutz ADR), #80 (scoping answer), #82 (ADR-0013), #126 (Geofabrik login). No new unblocked work found this cycle (2nd consecutive cycle confirming exhaustion). Weekly develop->main PR #111 remains open, mergeable, and fully up to date with develop tip -- no refresh needed. Next cycle: re-check for maintainer replies on all 6 blocked issues first; if still none, re-scan PROJECT_PLAN once more for genuinely new content-only slices before concluding idle again.",
   "last_updated": "2026-07-02",
-  "current_session": "devmode-13"
+  "current_session": "devmode-14"
 }
