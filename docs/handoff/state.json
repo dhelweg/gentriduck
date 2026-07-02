@@ -1,7 +1,7 @@
 {
   "_schema": "gentriduck-session-state/v1",
-  "session": "2026-07-02-devmode-55",
-  "updated_at": "2026-07-02T20:00:00Z",
+  "session": "2026-07-02-devmode-56",
+  "updated_at": "2026-07-02T21:00:00Z",
   "build_status": {
     "result": "PASS",
     "pass": 573,
@@ -12,15 +12,15 @@
       "test_c5_poi_share_spike (expected by design)"
     ],
     "branch": "develop",
-    "note": "No model change this cycle; no develop-branch work at all. Last verified full build was devmode-12/19."
+    "note": "No model change this cycle; no develop-branch work at all."
   },
   "open_prs": [
     {
       "number": 111,
-      "title": "Weekly release: Epic R/D wave \u2014 spatial inference, price/rent dimension, A9 diffusion, plus H1/H2/O4/G2/G3",
+      "title": "Weekly release: Epic R/D wave -- spatial inference, price/rent dimension, A9 diffusion, plus H1/H2/O4/G2/G3",
       "base": "main",
       "head": "develop",
-      "note": "Open, state OPEN, mergeStateStatus CLEAN, mergeable MERGEABLE (recompute lag from devmode-53/54 resolved). head is the literal develop branch so headRefOid auto-tracks. 100 commits batched. Nothing new to batch this cycle. Still awaiting maintainer merge in GitHub UI."
+      "note": "Open, state OPEN, mergeStateStatus CLEAN, mergeable MERGEABLE. Nothing new to batch this cycle. Still awaiting maintainer merge in GitHub UI."
     }
   ],
   "pending_adr_branches": [
@@ -41,69 +41,33 @@
   "integrated_into_develop": [],
   "in_progress": null,
   "board_status": {
-    "note": "55th consecutive idle cycle: gh project item-list -> 86 Done, 12 Todo, 0 In Progress = 98 total, exact match with gh issue list --state open (12). Checked last comment on all 5 root-blocked issues (#33/#70/#80/#82/#126) -- all still PM-authored (no maintainer reply). PR #111 now MERGEABLE/CLEAN.",
+    "note": "56th consecutive idle cycle: gh project item-list -> 86 Done, 12 Todo, 0 In Progress = 98 total, exact match with gh issue list --state open (12). Checked last comment on all 5 root-blocked issues (#33/#70/#80/#82/#126) -- all still PM-authored/no reply (126 has none). PR #111 still MERGEABLE/CLEAN.",
     "open_issues_by_dependency": {
       "in_progress": [],
       "next_unblocked": [],
       "blocked_on_maintainer": [
-        "#33 [F1] ADR-0012 -- blocks #34 F2, #35 F3, #36 G0, #37 G1 (all explicitly list 'Depends on: F1' in issue body; #37 additionally depends on G0).",
+        "#33 [F1] ADR-0012 -- blocks #34 F2, #35 F3, #36 G0, #37 G1",
         "#70 [B1] displacement data -- Milieuschutz ADR",
-        "#80 [A10] scoping question posted 2026-07-02, awaiting maintainer answer",
+        "#80 [A10] scoping question posted, awaiting maintainer answer",
         "#82 [O2] ADR-0013 whitepaper tool",
-        "#126 [H2b] Hamburg OSM POI -- Geofabrik login (confirmed genuinely blocked: public mirror has no full-history .osh.pbf, per ADR-0002)",
+        "#126 [H2b] Hamburg OSM POI -- Geofabrik login",
         "#125 [H2] transitively blocked on #126/#33"
       ],
       "parked_not_blocked": [
         "#129 [H2-SE] standing requirement, no Hamburg regression ticket exists yet to attach it to",
-        "#83 [O4] remaining scope (dataset export) transitively needs #33's hosting decision; ticket itself correctly not blocked-labeled -- ingestion-tooling-reuse and milestone-artifact portions already shipped"
+        "#83 [O4] remaining scope (dataset export) transitively needs #33's hosting decision; two of three sub-scopes already shipped (ingestion tooling reuse + milestone artifact)"
       ]
     }
   },
   "still_blocked": [
-    {
-      "issue": 33,
-      "blocked_by": [
-        "Maintainer ADR-0012 approval"
-      ],
-      "title": "[F1] ADR-0012 -- gates F2, F3, G0, G1"
-    },
-    {
-      "issue": 70,
-      "blocked_by": [
-        "Maintainer ADR decision"
-      ],
-      "title": "[B1] Displacement data"
-    },
-    {
-      "issue": 80,
-      "blocked_by": [
-        "Maintainer scoping answer"
-      ],
-      "title": "[A10] Causal/early-warning design"
-    },
-    {
-      "issue": 82,
-      "blocked_by": [
-        "Maintainer ADR-0013 approval"
-      ],
-      "title": "[O2] Whitepaper"
-    },
-    {
-      "issue": 125,
-      "blocked_by": [
-        "#126/#33 (transitively)"
-      ],
-      "title": "[H2] Hamburg real-data ingestion remainder"
-    },
-    {
-      "issue": 126,
-      "blocked_by": [
-        "Maintainer's Geofabrik OSM-contributor login"
-      ],
-      "title": "[H2b] Hamburg OSM POI ingestion"
-    }
+    {"issue": 33, "blocked_by": ["Maintainer ADR-0012 approval"], "title": "[F1] ADR-0012 -- gates F2, F3, G0, G1"},
+    {"issue": 70, "blocked_by": ["Maintainer ADR decision"], "title": "[B1] Displacement data"},
+    {"issue": 80, "blocked_by": ["Maintainer scoping answer"], "title": "[A10] Causal/early-warning design"},
+    {"issue": 82, "blocked_by": ["Maintainer ADR-0013 approval"], "title": "[O2] Whitepaper"},
+    {"issue": 125, "blocked_by": ["#126/#33 (transitively)"], "title": "[H2] Hamburg real-data ingestion remainder"},
+    {"issue": 126, "blocked_by": ["Maintainer's Geofabrik OSM-contributor login"], "title": "[H2b] Hamburg OSM POI ingestion"}
   ],
-  "next_session_decision": "Backlog remains exhausted pending maintainer decisions on #33, #70, #80, #82, #126 -- re-verified this cycle (55th consecutive). No new unblocked work found. Weekly develop->main PR #111 remains open, now MERGEABLE/CLEAN -- ready for maintainer merge. Next cycle: re-check for maintainer replies on all 5 root-blocked issues first; re-scan PROJECT_PLAN.md again; do not repeat the consolidated nudge every cycle.",
+  "next_session_decision": "Backlog remains exhausted pending maintainer decisions on #33, #70, #80, #82, #126 -- re-verified this cycle (56th consecutive). No new unblocked work found. Weekly develop->main PR #111 remains open, MERGEABLE/CLEAN -- ready for maintainer merge. Next cycle: re-check for maintainer replies first; re-scan PROJECT_PLAN.md again; do not repeat the consolidated nudge every cycle.",
   "last_updated": "2026-07-02",
-  "current_session": "devmode-55"
+  "current_session": "devmode-56"
 }
