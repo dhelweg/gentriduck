@@ -153,7 +153,44 @@ but *fragile* — sensitive to which official social-status measure is used, the
 window available, and possibly the historical period. We report this plainly rather than picking the
 result that best confirms the original thesis.
 
-## 10. Known limitations (stated, not hidden)
+## 10. Comparing across cities (Hamburg)
+
+From Epic H, Gentriduck also tracks Hamburg using the same D1–D4 structure, but Hamburg's source
+data differs from Berlin's in ways that change what a like-numbered result means. These caveats are
+carried over verbatim from the H1 methodology sign-offs
+(`docs/epic-h/H1-geo-signoff.md`, `docs/epic-h/H1-domain-signoff.md`, both `Verdict: PASS WITH
+CONDITIONS`) — restated here, not re-derived, per the same restatement discipline as the rest of this
+page.
+
+1. **The Status/Dynamik observation window differs — and this is not just a magnitude caveat.**
+   Berlin's MSS reports its Dynamik (social-change) class over a **2-year** window; Hamburg's
+   Sozialmonitoring reports the equivalent over a **3-year** window. A Hamburg Gebiet coded
+   "improving" therefore reflects slower-moving change than a Berlin PLR coded "improving" — the same
+   numeric class code represents a different underlying velocity threshold in the two source
+   methodologies. **A Hamburg-coded typology stage (e.g. "active-gentrification") and a Berlin-coded
+   one are not directly equivalent**, even where the label is identical; any comparison between the
+   two cities must carry this disclosure.
+2. **Hamburg's D4 (socio-demographic baseline) composite is thinner than Berlin's.** Berlin's D4 uses
+   5 indicators (including migration-background share and residence-duration share); the ingested
+   Hamburg source only supports 3 (`age_under18_share`, `foreigners_share`, `unemployment_share`).
+   `unemployment_share` is a theoretically sound substitute — it is one of Hamburg's own official
+   Sozialmonitoring attention indicators — but the composite still **omits the migration-background
+   and residence-duration signal** present in Berlin's, which the invasion-succession framework (§3)
+   treats as a load-bearing proxy for "who is moving in/out." A Hamburg "vulnerable" classification
+   under this composite is systematically less sensitive to migration-driven succession than Berlin's.
+3. **Hamburg's D4 is capped at Stadtteil resolution, not Gebiet resolution.** Hamburg's population
+   register is only available at the coarser Stadtteil grain (~104-105 areas) and is inherited
+   uniformly down to the ~941-945 finer Gebiete Hamburg's outcome (D1/D2) and predictor (D3) data
+   actually use — the honest choice given no defensible population weight exists to split it further,
+   but it means the D4 covariate cannot detect sub-Stadtteil demographic shifts the way Berlin's
+   PLR-level D4 can, and any Hamburg regression using D4 must cluster standard errors at Stadtteil
+   grain (not Gebiet grain) to avoid understating uncertainty by roughly 3x.
+
+**Bottom line:** Hamburg numbers are computed with the same pipeline logic as Berlin's, but are
+**not a plug-in-comparable second sample** — read a Hamburg result alongside its own caveats, not as
+a Berlin-equivalent data point.
+
+## 11. Known limitations (stated, not hidden)
 
 1. **No displacement measurement (yet).** The index can observe socio-economic upgrading; it cannot
    observe that a specific household was involuntarily displaced. We use risk/signal language
@@ -176,7 +213,7 @@ result that best confirms the original thesis.
    requires attribution; Berlin's MSS data is published under Berlin's open-data licence. Full
    attribution is on the [Attribution & Licensing page](../adr/) *(G3, #39, pending)*.
 
-## 11. Sources
+## 12. Sources
 
 - `docs/methodology/index-definition.md` — the governed index definition (R-A1, #64; `Verdict: PASS`)
 - `docs/epic-c/C5-geo-signoff.md` — OSM completeness-bias correction (`Verdict: PASS`)
@@ -189,7 +226,7 @@ result that best confirms the original thesis.
 - Holm (2010); Holm & Schulz (2016) — MSS frame and Berlin ground-truth labels
 - Helweg (2018) — the original thesis this project revives
 - OECD/JRC (2008), *Handbook on Constructing Composite Indicators*
-- Smith (1979) — rent-gap theory (cited as an explicit current gap, §10.2)
+- Smith (1979) — rent-gap theory (cited as an explicit current gap, §11.2)
 
 ---
 
