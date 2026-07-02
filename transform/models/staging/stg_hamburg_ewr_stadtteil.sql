@@ -68,36 +68,52 @@
 
 {% if file_count > 0 %}
 
-    -- UNPIVOT wide parquet (one row per Stadtteil x year) to long format
-    -- (one row per Stadtteil x year x indicator).
-    select
-        city_code,
-        area_code,
-        area_vintage,
-        reference_year,
-        indicator,
-        indicator_value,
-        is_suppressed_any,
-        source_attribution
-    from
-        (
+    -- Long-format union (one row per Stadtteil x year x indicator).
+    -- NOTE: intentionally NOT `unpivot` -- DuckDB 1.5.3 round-trips a
+    -- CREATE VIEW containing UNPIVOT's `IN (col_a, col_b, ...)` column list
+    -- into quoted string literals on persistence, so the view raises
+    -- "UNPIVOT name count mismatch" the moment it's queried from a fresh
+    -- connection (i.e. always, outside the single dbt-build session that
+    -- created it) -- reproduced in this session once real Hamburg EWR data
+    -- existed to exercise the file_count > 0 branch for the
+    -- first time. A manual UNION ALL is semantically identical and
+    -- persists cleanly. See also stg_berlin_ewr.sql, which uses the same
+    -- UNPIVOT pattern and is presumed to carry the same latent bug
+    -- (tracked separately, not fixed here -- out of #125's Hamburg scope).
+    {% set hh_ewr_indicators = [
+        "residents_total",
+        "residents_male_share",
+        "residents_female_share",
+        "age_under18_share",
+        "age_65plus_share",
+        "foreigners_share",
+        "unemployment_share",
+    ] %}
+    with
+        source as (
             select *
             from
                 read_parquet(
                     '{{ hh_ewr_glob }}', hive_partitioning = false, union_by_name = true
                 )
             where area_code is not null and city_code = 'HH'
-        ) unpivot (
-            indicator_value for indicator in (
-                residents_total,
-                residents_male_share,
-                residents_female_share,
-                age_under18_share,
-                age_65plus_share,
-                foreigners_share,
-                unemployment_share
-            )
         )
+
+    {% for ind in hh_ewr_indicators %}
+        select
+            city_code,
+            area_code,
+            area_vintage,
+            reference_year,
+            '{{ ind }}' as indicator,
+            {{ ind }} as indicator_value,
+            is_suppressed_any,
+            source_attribution
+        from source
+        {% if not loop.last %}
+            union all
+        {% endif %}
+    {% endfor %}
 
 {% else %}
 
