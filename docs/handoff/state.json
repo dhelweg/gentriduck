@@ -1,7 +1,7 @@
 {
   "_schema": "gentriduck-session-state/v1",
-  "session": "2026-07-02-devmode-15",
-  "updated_at": "2026-07-02T08:00:00Z",
+  "session": "2026-07-02-devmode-18",
+  "updated_at": "2026-07-02T07:15:46Z",
   "build_status": {
     "result": "PASS",
     "pass": 573,
@@ -12,7 +12,7 @@
       "test_c5_poi_share_spike (expected by design)"
     ],
     "branch": "develop",
-    "note": "No model change this cycle; last verified full build was devmode-12. No new work to build."
+    "note": "No model change this cycle; no new work to build. Last verified full build was devmode-12."
   },
   "open_prs": [
     {
@@ -20,7 +20,7 @@
       "title": "Weekly release: Epic R/D wave — spatial inference, price/rent dimension, A9 diffusion, plus H1/H2/O4/G2/G3",
       "base": "main",
       "head": "develop",
-      "note": "Open, mergeable. headRefOid matches current develop tip (d3126d2) -- fully up to date, nothing to refresh this cycle. Awaiting maintainer merge in GitHub UI."
+      "note": "Open, mergeable. headRefOid 3b033f0 matches current develop tip exactly -- fully up to date, nothing to refresh this cycle. Still awaiting maintainer merge in GitHub UI."
     }
   ],
   "pending_adr_branches": [
@@ -28,25 +28,25 @@
       "branch": "feat/33-adr-0012-serving-hosting",
       "issue": 33,
       "title": "ADR-0012 serving & hosting stack",
-      "note": "Evidence.dev + Cloudflare Pages. Blocked on maintainer sign-off. Biggest blocker on the board -- gates F2/F3/G0/G1."
+      "note": "Evidence.dev + Cloudflare Pages. IMPORTANT ANOMALY FOUND THIS CYCLE: the ADR file on this branch reads 'Status: Accepted -- Accepted 2026-06-30 by the maintainer' but the issue #33 comment thread has NO maintainer approval comment -- only two PM-authored status comments (drafted, then a bump). Treated as NOT actually approved (the issue/board is the source of truth, not a self-written ADR status line); left blocked, unmerged. Flag for maintainer: please either explicitly approve/redirect #33 in a comment, or note if 'Accepted' was already your intent so the PM can correct the process gap that let the file get ahead of the actual sign-off. Biggest blocker on the board -- gates F2/F3/G0/G1."
     },
     {
       "branch": "feat/82-adr-0013-whitepaper-tool",
       "issue": 82,
       "title": "ADR-0013 Quarto + Typst whitepaper authoring tool",
-      "note": "ADR drafted, Proposed status. Blocked on maintainer sign-off."
+      "note": "ADR drafted, correctly still 'Proposed' status. Blocked on maintainer sign-off."
     }
   ],
   "completed_this_session": [],
   "integrated_into_develop": [],
   "in_progress": null,
   "board_status": {
-    "note": "Reconciliation pass clean: gh project item-list confirms 86 Done / 12 Todo / 0 In Progress, zero drift (no closed-but-not-Done, no open-but-In-Progress). Re-scanned all 12 open issues + PROJECT_PLAN.md epic list (A-H, R, O all represented by existing tickets, no gaps) -- no genuinely new work to file. Checked every blocked issue's comment thread for a maintainer reply -- none found (3rd consecutive idle cycle).",
+    "note": "Reconciliation pass clean: 86 closed issues = 86 Done cards, 12 open issues = 12 Todo cards, 0 In Progress -- exact match, zero drift. Re-scanned all 12 open issues + PROJECT_PLAN.md epic list (A-H, R, O all represented by existing tickets, no gaps) -- no genuinely new work to file. Checked every blocked issue's comment thread for a maintainer reply -- none found (this is now the ~6th consecutive idle cycle). Discovered one process anomaly (see pending_adr_branches #33 note above) but did not treat it as approval.",
     "open_issues_by_dependency": {
       "in_progress": [],
       "next_unblocked": [],
       "blocked_on_maintainer": [
-        "#33 [F1] ADR-0012 -- blocks #34 F2, #35 F3, #36 G0, #37 G1 (all explicitly list 'Depends on: F1' in issue body)",
+        "#33 [F1] ADR-0012 -- blocks #34 F2, #35 F3, #36 G0, #37 G1 (all explicitly list 'Depends on: F1' in issue body). See ANOMALY note above.",
         "#70 [B1] displacement data -- Milieuschutz ADR",
         "#80 [A10] scoping question posted 2026-07-02, awaiting maintainer answer",
         "#82 [O2] ADR-0013 whitepaper tool",
@@ -55,19 +55,19 @@
       ],
       "parked_not_blocked": [
         "#129 [H2-SE] standing requirement, no Hamburg regression ticket exists yet to attach it to",
-        "#83 [O4] Remaining scope (dataset export) transitively needs #33's hosting decision; ingestion-tooling-reuse portion already shipped this session (commit 2484a5d)"
+        "#83 [O4] Remaining scope (dataset export) transitively needs #33's hosting decision; ingestion-tooling-reuse portion already shipped (commit 2484a5d)"
       ]
     }
   },
   "still_blocked": [
-    {"issue": 33, "blocked_by": ["Maintainer ADR-0012 approval"], "title": "[F1] ADR-0012 -- gates F2, F3, G0, G1 (all 4 explicitly depend on F1)"},
+    {"issue": 33, "blocked_by": ["Maintainer ADR-0012 approval (comment thread has no approval; ADR file itself says Accepted -- anomaly, not trusted)"], "title": "[F1] ADR-0012 -- gates F2, F3, G0, G1 (all 4 explicitly depend on F1)"},
     {"issue": 70, "blocked_by": ["Maintainer ADR decision"], "title": "[B1] Displacement data"},
     {"issue": 80, "blocked_by": ["Maintainer scoping answer"], "title": "[A10] Causal/early-warning design -- deferred, scoping question posted, awaiting reply"},
     {"issue": 82, "blocked_by": ["Maintainer ADR-0013 approval"], "title": "[O2] Whitepaper"},
     {"issue": 125, "blocked_by": ["#126 (transitively)"], "title": "[H2] Hamburg real-data ingestion remainder"},
     {"issue": 126, "blocked_by": ["Maintainer's Geofabrik OSM-contributor login"], "title": "[H2b] Hamburg OSM POI ingestion"}
   ],
-  "next_session_decision": "Backlog remains exhausted pending maintainer decisions on #33 (ADR-0012, the single biggest blocker -- gates F2/F3/G0/G1), #70 (Milieuschutz ADR), #80 (scoping answer), #82 (ADR-0013), #126 (Geofabrik login). No new unblocked work found this cycle (3rd consecutive cycle confirming exhaustion). Weekly develop->main PR #111 remains open, mergeable, and fully up to date with develop tip -- no refresh needed. Next cycle: re-check for maintainer replies on all 6 blocked issues first; if still none, re-scan PROJECT_PLAN once more for genuinely new content-only slices before concluding idle again.",
+  "next_session_decision": "Backlog remains exhausted pending maintainer decisions on #33 (ADR-0012 -- and please clarify the Accepted-vs-actually-approved anomaly noted above), #70 (Milieuschutz ADR), #80 (scoping answer), #82 (ADR-0013), #126 (Geofabrik login). No new unblocked work found this cycle (6th consecutive cycle confirming exhaustion). Weekly develop->main PR #111 remains open, mergeable, and exactly up to date with develop tip -- no refresh needed. Next cycle: re-check for maintainer replies on all 6 blocked issues first (including whether #33's Accepted status was intentional); if still none, re-scan PROJECT_PLAN once more before concluding idle again.",
   "last_updated": "2026-07-02",
-  "current_session": "devmode-15"
+  "current_session": "devmode-18"
 }
