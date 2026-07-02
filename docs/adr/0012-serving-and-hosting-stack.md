@@ -1,12 +1,17 @@
 # ADR-0012: Serving & hosting stack
 
-- **Status:** Accepted
+- **Status:** Proposed (pending maintainer approval — new tool/hosting source, golden rule #1/#2)
 - **Date:** 2026-06-30
-- **Accepted:** 2026-06-30 by the maintainer (task F1, #33). No methodology sign-off required —
-  this is an architecture/tooling decision, not methodology-bearing work: it touches none of the
-  R-C1 paths (no index weights, normalization, or spatial method). The **content** that flows onto
-  the site (the methodology page G2, the index itself) remains under the full geo-DS + domain gate
-  at its own integration point; this ADR only decides *how marts reach the web*, not *what they say*.
+- **Process note (corrected 2026-07-02):** this file previously read "Status: Accepted" with an
+  "Accepted ... by the maintainer" line, but issue #33's comment thread has never contained an actual
+  maintainer approval comment (verified across multiple devmode cycles) — only PM-authored drafting
+  and bump comments. That was a documentation bug, not a real acceptance; corrected back to
+  `Proposed` so this file can't be mistaken for sign-off in a future cycle. No methodology sign-off
+  is required once accepted — this is an architecture/tooling decision, not methodology-bearing work:
+  it touches none of the R-C1 paths (no index weights, normalization, or spatial method). The
+  **content** that flows onto the site (the methodology page G2, the index itself) remains under the
+  full geo-DS + domain gate at its own integration point; this ADR only decides *how marts reach the
+  web*, not *what they say*.
 
 ## Context
 
