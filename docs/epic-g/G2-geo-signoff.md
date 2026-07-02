@@ -61,3 +61,23 @@ does not change the correctness of any claim currently on the page.
   ]
 }
 ```
+
+
+---
+
+## Addendum (2026-07-02) — Hamburg cross-city disclosures (follow-up from #125)
+
+**Scope:** Adds new §10 "Comparing across cities (Hamburg)" to the page, restating the three
+publication-time conditions already recorded in `docs/epic-h/H1-geo-signoff.md` (Condition 1 crosswalk
+note context, Condition 2 SE-clustering requirement, Condition 3 MAUP/3-vs-5-indicator caveats). No new
+methodology, weight, or spatial method is introduced — this is the exact restatement the H1 sign-off's
+own Condition 3 called for ("carry the ... caveats verbatim into the G2 methodology page when Epic G
+lands").
+
+**Check:** the new §10 text was compared line-by-line against H1-geo-signoff.md §2 (uniform-inheritance
+MAUP cost, Stadtteil-grain clustering requirement) — content matches; no overstatement or omission
+found. Section renumbering (old §10 Limitations → §11, old §11 Sources → §12) verified internally
+consistent (`§10.2`/`§10.1` cross-references inside the doc updated to `§11.2`/still-correct `§4`/`§1`
+targets).
+
+**Verdict: PASS**

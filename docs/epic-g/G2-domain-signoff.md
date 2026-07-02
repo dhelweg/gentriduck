@@ -65,3 +65,29 @@ guardrail language.
   ]
 }
 ```
+
+
+---
+
+## Addendum (2026-07-02) — Hamburg cross-city disclosures (follow-up from #125)
+
+**Scope:** Adds new §10 "Comparing across cities (Hamburg)" to the page, closing out all four
+publication-time conditions recorded in `docs/epic-h/H1-domain-signoff.md`:
+
+1. Dynamik window-length difference (2yr Berlin vs 3yr Hamburg) stated as both a magnitude AND
+   qualitative caveat — **present** (§10 item 1: "not just a magnitude caveat... not directly
+   equivalent").
+2. D4 composite's loss of migration-background/residence-duration signal disclosed — **present**
+   (§10 item 2).
+3. Stadtteil-grain ceiling on D4's spatial resolution disclosed — **present** (§10 item 3, includes
+   the SE-clustering consequence for future regressions).
+4. "Not directly equivalent — see methodology" one-line disclosure requirement for any future
+   Hamburg-vs-Berlin typology-stage comparison — **present** as the section's explicit bottom line,
+   and available as a citable anchor (`#38`/G2 §10) for any future O4-style narrative to link to.
+
+**Check:** no new theoretical claim is introduced; the section is a faithful restatement of the H1
+domain sign-off's own conditions, checked line-by-line against `docs/epic-h/H1-domain-signoff.md`
+§1–§3. Ethics framing (non-advocacy, no overstated cross-city equivalence) is consistent with this
+page's existing editorial stance.
+
+**Verdict: PASS**
