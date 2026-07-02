@@ -4,8 +4,7 @@
 --
 -- Selects from int_berlin_ewr_plr2021 (long-format, 13 indicators, city_code='BER').
 -- All rows carry area_vintage='lor_2021' (pre-2021 EWR data reapportioned via
--- crosswalk,
--- 2021+ data passed through). This matches the lor_2021 vintage used by
+-- crosswalk, 2021+ data passed through). This matches the lor_2021 vintage used by
 -- int_poi_status_dynamism (updated in #63) so that int_gentrification_ts can join on
 -- (area_code, area_vintage) without vintage mismatch for 2015-2020 years.
 -- Pivots to one row per (city_code, area_code, area_vintage, reference_year).
@@ -16,12 +15,36 @@
 -- - migration_background_share (thesis: mh / MH_E; available from 2015, break ~2017)
 -- - residence_duration_5y_share (thesis: d2 — Wohndauer)
 --
--- EWR composite score:
--- For each of the 5 key indicators, compute a z-score across all PLRs for that year.
--- Sum the z-scores to produce ewr_composite. Higher values indicate areas with
--- more socio-economically vulnerable populations (directional, not absolute).
+-- EWR composite score (full — 5 indicators, 2014+):
+-- Thesis §4.2: composite = mean z-score of the 5 key vulnerability indicators.
+-- For each indicator, compute a z-score across all PLRs for that year. Mean the
+-- z-scores to produce ewr_composite on the same unit-variance scale as status_score
+-- and dynamism_score in int_poi_status_dynamism, so the equal-weight 1/3 average
+-- in int_gentrification_ts is actually equal (summing 5 z-scores would inflate SD
+-- to ~√5 and silently dominate).
+-- Higher ewr_composite = more socio-economically vulnerable population.
+-- Sign convention: negated when entering gentrification_score in int_gentrification_ts.
+-- All five z-score inputs are vulnerability-positive (high z = more
+-- pre-gentrification/vulnerable).
 --
--- Methodology notes (geo-data-scientist sign-off pending):
+-- EWR composite score (partial — 3 indicators, pre-2014, B9b):
+-- Thesis §4.2 (partial): foreigners_share (E_A) and migration_background_share (MH_E)
+-- are absent from EWR editions before 2014 (E_A series starts 2014; MH_E = EWRMIGRA
+-- series also starts 2014). To extend the panel to 2010-2013, a reduced 3-indicator
+-- composite is computed from age_under18_share, mean_age_years, and
+-- residence_duration_5y_share. The partial composite is NOT cross-period comparable
+-- with the 5-indicator composite used from 2014 onward: it omits two vulnerability
+-- indicators that may carry systematic signal (foreigners_share in particular is a
+-- strong predictor in the thesis). Consumers MUST filter on is_partial_composite=FALSE
+-- for any cross-era pooled regression. See B9-geo-signoff.md / B9-domain-signoff.md.
+--
+-- is_partial_composite flag:
+-- TRUE  for reference_year <= 2013 (only 3 indicators available)
+-- FALSE for reference_year >= 2014 (full 5-indicator composite)
+-- NULL ewr_composite (5-indicator) is preserved for pre-2014 rows alongside the
+-- partial composite, making the distinction explicit.
+--
+-- Methodology notes:
 -- - NULLIF(stddev, 0) guards against degenerate years.
 -- - NULL indicator values (suppressed cells) are excluded from z-score computation.
 -- A PLR with any suppressed key indicator will have a NULL z-score for that
@@ -97,7 +120,9 @@ with
         group by city_code, area_code, area_vintage, reference_year
     ),
 
-    -- Compute z-scores for the 5 key indicators across PLRs per year.
+    -- Compute z-scores for the 5 key indicators (full composite, 2014+).
+    -- Also compute z-scores for the 3 partial-composite indicators (pre-2014).
+    -- Z-scores are computed across PLRs within each (city_code, reference_year).
     with_z as (
         select
             city_code,
@@ -112,7 +137,7 @@ with
             residents_total,
             residents_male_share,
             age_65plus_share,
-            -- Z-score: foreigners_share
+            -- Z-score: foreigners_share (absent pre-2014 → NULL)
             (
                 foreigners_share
                 - avg(foreigners_share) over (partition by city_code, reference_year)
@@ -120,7 +145,7 @@ with
                 stddev(foreigners_share) over (partition by city_code, reference_year),
                 0
             ) as z_foreigners_share,
-            -- Z-score: age_under18_share
+            -- Z-score: age_under18_share (present all years)
             (
                 age_under18_share
                 - avg(age_under18_share) over (partition by city_code, reference_year)
@@ -128,7 +153,10 @@ with
                 stddev(age_under18_share) over (partition by city_code, reference_year),
                 0
             ) as z_age_under18_share,
-            -- Z-score: migration_background_share (note: methodological break ~2017)
+            -- Z-score: migration_background_share (absent pre-2014; methodological
+            -- break ~2017: Mikrozensus reform. Pre-2017 values present but not
+            -- directly comparable. Use reference_year >= 2017 for migration
+            -- comparisons.
             (
                 migration_background_share - avg(migration_background_share) over (
                     partition by city_code, reference_year
@@ -139,19 +167,14 @@ with
                 ),
                 0
             ) as z_migration_background_share,
-            -- Z-score: mean_age_years (positive: older population = more
-            -- pre-gentrification/vulnerable → higher ewr_composite → lower
-            -- gentrification_score after the outer negation in int_gentrification_ts).
-            -- Thesis: no direct mean_age term; sign follows Döring-Ulbricht
-            -- vulnerability
-            -- polarity (all five composite inputs must be vulnerability-positive).
+            -- Z-score: mean_age_years (present all years)
             (
                 mean_age_years
                 - avg(mean_age_years) over (partition by city_code, reference_year)
             ) / nullif(
                 stddev(mean_age_years) over (partition by city_code, reference_year), 0
             ) as z_mean_age_years,
-            -- Z-score: residence_duration_5y_share
+            -- Z-score: residence_duration_5y_share (present all years)
             (
                 residence_duration_5y_share - avg(residence_duration_5y_share) over (
                     partition by city_code, reference_year
@@ -165,21 +188,20 @@ with
         from pivoted
     ),
 
-    -- EWR composite: mean of z-scores for the 5 key indicators (not sum).
-    -- Using mean keeps ewr_composite on the same unit-variance scale as
-    -- status_score and dynamism_score in int_poi_status_dynamism, so the
-    -- equal-weight 1/3 average in int_gentrification_ts is actually equal.
-    -- (Summing 5 z-scores would produce SD ~√5 and silently dominate.)
-    -- NULL if any z-score is NULL (i.e., any key indicator was suppressed or absent).
-    -- Higher ewr_composite = more socio-economically vulnerable population.
+    -- EWR composite: mean of z-scores.
+    -- Full composite (5 indicators, 2014+): ewr_composite.
+    -- NULL if any of the 5 z-scores is NULL (any key indicator suppressed or absent).
+    -- Partial composite (3 indicators, pre-2014, B9b):
+    -- ewr_composite_partial = mean(z_age_under18, z_mean_age, z_residence_5y).
+    -- Available for all years; cross-era pooling is NOT valid (see header comment).
+    -- is_partial_composite = TRUE when reference_year <= 2013.
+    -- Higher composite = more socio-economically vulnerable population.
     -- Sign convention: negated when entering gentrification_score in
     -- int_gentrification_ts.
-    -- All five z-score inputs are vulnerability-positive (high z = more
-    -- pre-gentrification/vulnerable): foreigners_share, age_under18_share,
-    -- migration_background_share, mean_age_years, residence_duration_5y_share.
     with_composite as (
         select
             *,
+            -- Full 5-indicator composite (Thesis §4.2, 2014+):
             (
                 z_foreigners_share
                 + z_age_under18_share
@@ -187,7 +209,18 @@ with
                 + z_mean_age_years
                 + z_residence_duration_5y_share
             )
-            / 5.0 as ewr_composite
+            / 5.0 as ewr_composite,
+            -- Partial 3-indicator composite (B9b, pre-2014 extension):
+            -- Thesis §4.2 partial: age_under18_share, mean_age_years,
+            -- residence_duration_5y_share only — excludes foreigners_share
+            -- and migration_background_share (not available pre-2014).
+            -- NOT comparable to ewr_composite; analysts must filter separately.
+            (z_age_under18_share + z_mean_age_years + z_residence_duration_5y_share)
+            / 3.0 as ewr_composite_partial,
+            -- Flag rows where only the partial composite is available.
+            -- Pre-2014: is_partial_composite = TRUE (ewr_composite will be NULL).
+            -- 2014+:    is_partial_composite = FALSE (ewr_composite is the full score).
+            (reference_year <= 2013) as is_partial_composite
         from with_z
     )
 

@@ -188,16 +188,19 @@ models:
     columns:
       - name: city_code
         description: >
-          City identifier; always 'berlin' for this adapter (ADR-0005).
-          Note: Epic B thesis models use 'BER'; this model uses lowercase 'berlin'
-          per the ingestion convention (normalized at the staging boundary).
+          City identifier. Berlin rows use lowercase 'berlin' (legacy
+          ingestion convention, predates ADR-0005 canonicalization; Epic B
+          thesis models use 'BER' instead -- see int_osm_poi_plr for the
+          Berlin-side reconciliation). Hamburg rows (#40 H1, ADR-0014) use
+          the canonical 'HH' (matches dim_city.city_code) since this is a
+          fresh adapter with no legacy convention to preserve.
         tests:
           - not_null:
               config:
                 where: "osm_id is not null"
           - accepted_values:
               arguments:
-                values: ["berlin"]
+                values: ["berlin", "HH"]
               config:
                 where: "osm_id is not null"
       - name: snapshot_year
@@ -285,6 +288,476 @@ models:
             min_rows: 400
           config:
             severity: warn
+
+  - name: stg_hamburg_geo
+    description: >
+      Staging view over Hamburg geometry parquets (statistische Gebiete,
+      Stadtteile, Bezirke) — first slice of H1 second-city onboarding (#40,
+      ADR-0014 Pillar 4). Source: LGV Hamburg WFS (geodienste.hamburg.de),
+      dl-de/by-2.0 (attribution required):
+        Statistische Gebiete: https://geodienste.hamburg.de/HH_WFS_Statistische_Gebiete
+          (app:statistische_gebiete, ~945 features, 'current' vintage)
+        Stadtteile + Bezirke: https://geodienste.hamburg.de/HH_WFS_Verwaltungsgrenzen
+          (app:stadtteile ~104, app:bezirke 7)
+      Ingestion adapter: ingestion/hamburg/geo/ingest_hamburg_geo.py.
+      Storage: data/raw/hamburg/geo/{statgebiet,stadtteil,bezirk}.parquet (gitignored).
+      Native CRS EPSG:25832 (NOT Berlin's 25833 — see dim_city.native_crs_epsg,
+      the first real exercise of the ADR-0005 per-city CRS parameter).
+      Returns zero rows (typed stub) when no parquets have been ingested.
+    meta:
+      dbt_meta_owner: data-engineer
+    # Data-presence gate (docs/lessons/local-first-data-presence.md):
+    tests:
+      - assert_not_empty:
+          config:
+            severity: error
+      - assert_min_rows:
+          arguments:
+            min_rows: 1000
+          config:
+            severity: warn
+    columns:
+      - name: city_code
+        description: Canonical city code 'HH' (ADR-0005; matches dim_city.city_code).
+        tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ["HH"]
+      - name: area_vintage
+        description: >
+          WFS edition tag. 'current' for this first slice (live edition at
+          ingestion time). A historical statistische-Gebiete vintage crosswalk
+          (943 vs 941, ADR-0014 open question #2) is deferred.
+        tests:
+          - not_null
+      - name: area_level
+        description: >
+          Generic dim_area level per ADR-0014's mapping table: 'district'
+          (Bezirk, 7), 'subarea_l1' (Stadtteil, ~104), 'subarea_l2'
+          (statistisches Gebiet, ~945 — Hamburg's PLR analogue).
+        tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ["district", "subarea_l1", "subarea_l2"]
+      - name: area_code
+        description: >
+          Natural key per layer: bezirk code (Bezirk), stadtteil_schluessel
+          (Stadtteil), statgebiet (statistisches Gebiet).
+        tests:
+          - not_null
+      - name: area_name
+        description: >
+          Human-readable name. Empty string for statistisches-Gebiet rows
+          (the source WFS does not publish a name field for this layer).
+      - name: parent_area_code
+        description: Bezirk code for Stadtteil rows; null for Bezirk/statistisches-Gebiet rows.
+      - name: geometry_wkb
+        description: Geometry in WKB, native CRS EPSG:25832 (not reprojected).
+        tests:
+          - not_null
+      - name: source_attribution
+        description: Mandatory dl-de/by-2.0 attribution string (ADR-0014).
+        tests:
+          - not_null
+
+  - name: stg_hamburg_sozialmonitoring
+    description: >
+      Staging view over the Hamburg Sozialmonitoring parquet — ADR-0014 Pillar 2,
+      direct conceptual analogue of stg_berlin_mss (ADR-0006). Source: LGV Hamburg
+      WFS (geodienste.hamburg.de/wfs_sozialmonitoring, feature type
+      de.hh.up:sozialmonitoring), dl-de/by-2.0 (attribution required). One row per
+      (edition, statistisches Gebiet); editions annual 2013-2025 (NOT biennial like
+      Berlin's MSS). This is the **outcome / ground-truth** variable for R-A1-style
+      re-grounding — never a predictor (mirrors ADR-0006 decision 6). Ingestion
+      adapter: ingestion/hamburg/sozialmonitoring/ingest_hamburg_sozialmonitoring.py.
+      Storage: data/raw/hamburg/sozialmonitoring/sozialmonitoring.parquet (gitignored).
+      status_index/dynamik_index are Hamburg's own text-coded ordinal labels
+      ('hoch'|'mittel'|'niedrig'|'sehr niedrig' / 'positiv'|'stabil'|'negativ'),
+      deliberately NOT remapped to Berlin's numeric 1-4/1-3 scale at this layer —
+      any ordinal-to-numeric cross-city encoding is a methodology decision (R-C1)
+      for a downstream int_*-equivalent model. Hamburg's Dynamik is a 3-year change
+      window vs Berlin's 2-year (ADR-0014 non-equivalence note) — Dynamik magnitude
+      is not directly comparable across cities without accounting for this.
+      Returns zero rows (typed stub) when no parquet has been ingested.
+    meta:
+      dbt_meta_owner: data-engineer
+    tests:
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns:
+              - city_code
+              - edition
+              - area_code
+          config:
+            where: "area_code is not null"
+      # Data-presence gate (docs/lessons/local-first-data-presence.md):
+      # status_index is the outcome variable for Hamburg's re-grounded index —
+      # an empty Sozialmonitoring source means the outcome is hollow.
+      - assert_not_empty:
+          config:
+            severity: error
+      - assert_min_rows:
+          arguments:
+            min_rows: 8000
+          config:
+            severity: warn
+    columns:
+      - name: city_code
+        description: Canonical city code 'HH' (ADR-0005; matches dim_city.city_code).
+        tests:
+          - not_null:
+              config:
+                where: "area_code is not null"
+          - accepted_values:
+              arguments:
+                values: ["HH"]
+              config:
+                where: "area_code is not null"
+      - name: edition
+        description: Sozialmonitoring publication year ('jahr'), annual 2013-2025.
+        tests:
+          - not_null:
+              config:
+                where: "area_code is not null"
+      - name: area_code
+        description: >
+          statistisches-Gebiet id ('statgeb'). Joins to stg_hamburg_geo.area_code
+          where area_level='subarea_l2'.
+        tests:
+          - not_null
+      - name: stadtteil_name
+        description: Informational Stadtteil name from the source; NOT a join key.
+      - name: population
+        description: >
+          'bevoelkerung' — residents in the statistisches Gebiet. The source's own
+          >300-residents scoring threshold is already applied upstream; gebiete
+          below it are absent for that year, not present-with-nulls.
+      - name: status_index
+        description: >
+          Sozialmonitoring Status-Index text label: 'hoch'|'mittel'|'niedrig'|
+          'sehr niedrig'. Source's own ordinal coding, not remapped to numbers here.
+        tests:
+          - not_null:
+              config:
+                where: "area_code is not null"
+          - accepted_values:
+              arguments:
+                values: ["hoch", "mittel", "niedrig", "sehr niedrig"]
+              config:
+                where: "status_index is not null"
+      - name: dynamik_index
+        description: >
+          Sozialmonitoring Dynamik-Index text label: 'positiv'|'stabil'|'negativ'.
+          Computed over a 3-year change window (vs Berlin MSS's 2-year).
+        tests:
+          - not_null:
+              config:
+                where: "area_code is not null"
+          - accepted_values:
+              arguments:
+                values: ["positiv", "stabil", "negativ"]
+              config:
+                where: "dynamik_index is not null"
+      - name: gesamtindex_label
+        description: >
+          Source's own free-text composite label, e.g. "Status mittel - Dynamik 0".
+          Hamburg does not publish Berlin's compact 2-digit numeric Gesamtindex code.
+      - name: source_attribution
+        description: Mandatory dl-de/by-2.0 attribution string (ADR-0014).
+        tests:
+          - not_null:
+              config:
+                where: "area_code is not null"
+
+  - name: stg_hamburg_displacement_zones
+    description: >
+      Staging view over Hamburg "Soziale Erhaltungsverordnungen — Gebiete in
+      Hamburg" (displacement-protection-zone polygons) — ADR-0014 Pillar 4,
+      direct legal analogue of Berlin's Milieuschutz areas (§172 BauGB soziale
+      Erhaltungssatzung). Berlin's own equivalent (#70 [B1]) remains `blocked`
+      pending an architect ADR + maintainer source approval for FIS-Broker;
+      this Hamburg pillar uses a different, already-ADR-0014-approved source
+      (Transparenzportal, dl-de/by-2.0) and does not depend on #70. PLUMBING,
+      not methodology (R-C1): straight polygon-attribute staging, no
+      weighting/scoring/index-construction logic. Source: LGV Hamburg WFS
+      (geodienste.hamburg.de) — endpoint/attribute names UNCONFIRMED live in
+      this environment (no outbound network access); see the ingestion
+      script's docstring for the endpoint-verification caveat. Ingestion
+      adapter: ingestion/hamburg/displacement/ingest_hamburg_displacement.py.
+      Storage: data/raw/hamburg/displacement/erhaltungsverordnung.parquet
+      (gitignored). ~17 designated areas expected per ADR-0014. Returns zero
+      rows (typed stub) when no parquet has been ingested.
+    meta:
+      dbt_meta_owner: data-engineer
+    # Data-presence gate (docs/lessons/local-first-data-presence.md):
+    tests:
+      - assert_not_empty:
+          config:
+            severity: warn
+      - assert_min_rows:
+          arguments:
+            min_rows: 10
+          config:
+            severity: warn
+    columns:
+      - name: city_code
+        description: Canonical city code 'HH' (ADR-0005; matches dim_city.city_code).
+        tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ["HH"]
+      - name: area_code
+        description: >
+          Natural key / feature id for the designated Erhaltungsverordnung
+          area. Does NOT join to stg_hamburg_geo.area_code (a bespoke
+          designation boundary, not a statistisches-Gebiet aggregate).
+        tests:
+          - not_null
+      - name: area_name
+        description: Human-readable designation name (e.g. "Sternschanze").
+      - name: bezirk_name
+        description: Informational Bezirk the area sits in; NOT a join key.
+      - name: in_force_date
+        description: >
+          ISO date string the Erhaltungsverordnung took effect, if published
+          (ADR-0014 open question #4). Null where the source omits it.
+      - name: geometry_wkb
+        description: Geometry in WKB, native CRS EPSG:25832 (not reprojected).
+        tests:
+          - not_null
+      - name: source_attribution
+        description: Mandatory dl-de/by-2.0 attribution string (ADR-0014).
+        tests:
+          - not_null
+  - name: stg_hamburg_ewr_stadtteil
+    description: >
+      Staging view over Hamburg "Regionalstatistische Daten der Stadtteile
+      Hamburgs" (Stadtteil-grain socio-economic predictors) — ADR-0014
+      Pillar 3, PRIMARY source only, direct conceptual analogue of
+      stg_berlin_ewr but at Stadtteil grain (~104-105 areas) rather than
+      statistisches-Gebiet grain. PLUMBING, not methodology (R-C1): raw
+      ingestion + long-format staging only, at the grain the source itself
+      publishes at. Does NOT join/reconcile down to statistisches-Gebiete
+      (the two-grain reconciliation is methodology-bearing per ADR-0014
+      open question #5, deferred to a dedicated geo-DS + domain-expert
+      sign-off slice) and does NOT compute any weighted index or
+      normalization. Source: Hamburg Transparenzportal CSV release,
+      dl-de/by-2.0 (attribution: "Statistisches Amt fuer Hamburg und
+      Schleswig-Holstein") — endpoint URL and column schema UNCONFIRMED
+      live in this environment (no outbound network access); see the
+      ingestion script's docstring for the verification caveat (mirrors
+      every prior Hamburg-pillar ingestor's disclosure). Ingestion
+      adapter: ingestion/hamburg/ewr/ingest_hamburg_ewr_stadtteil.py.
+      Storage: data/raw/hamburg/ewr_stadtteil/stadtteile.parquet
+      (gitignored). Indicator set (7, narrower than Berlin's 13):
+      residents_total, residents_male_share, residents_female_share,
+      age_under18_share, age_65plus_share, foreigners_share,
+      unemployment_share. Returns zero rows (typed stub) when no parquet
+      has been ingested.
+    meta:
+      dbt_meta_owner: data-engineer
+    tests:
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns:
+              - reference_year
+              - area_code
+              - indicator
+          config:
+            where: "area_code is not null"
+      # Data-presence gate (docs/lessons/local-first-data-presence.md):
+      - assert_not_empty:
+          config:
+            severity: warn
+      - assert_min_rows:
+          arguments:
+            min_rows: 500
+          config:
+            severity: warn
+    columns:
+      - name: city_code
+        description: Canonical city code 'HH' (ADR-0005; matches dim_city.city_code).
+        tests:
+          - not_null:
+              config:
+                where: "area_code is not null"
+          - accepted_values:
+              arguments:
+                values: ["HH"]
+              config:
+                where: "area_code is not null"
+      - name: area_code
+        description: >
+          Stadtteil Schluessel. Joins to stg_hamburg_geo.area_code where
+          area_level='subarea_l1'.
+        tests:
+          - not_null
+      - name: area_vintage
+        description: "'current' — single Stadtteil boundary edition (no vintage split needed)."
+      - name: reference_year
+        description: Calendar year of the annual Regionalstatistik release (2013 onward).
+        tests:
+          - not_null:
+              config:
+                where: "area_code is not null"
+      - name: indicator
+        description: >
+          One of the 7 indicator keys (see model description). UNCONFIRMED
+          against the real source column headers — re-verify at first live
+          ingestion (see ingest_hamburg_ewr_stadtteil.py docstring).
+        tests:
+          - not_null:
+              config:
+                where: "area_code is not null"
+          - accepted_values:
+              arguments:
+                values:
+                  - residents_total
+                  - residents_male_share
+                  - residents_female_share
+                  - age_under18_share
+                  - age_65plus_share
+                  - foreigners_share
+                  - unemployment_share
+              config:
+                where: "area_code is not null"
+      - name: indicator_value
+        description: Indicator value (NULL if privacy-suppressed in the source CSV).
+      - name: is_suppressed_any
+        description: >
+          True if any indicator cell was privacy-suppressed for this
+          Stadtteil x year (never coerced to 0).
+      - name: source_attribution
+        description: Mandatory dl-de/by-2.0 attribution string (ADR-0014).
+        tests:
+          - not_null:
+              config:
+                where: "area_code is not null"
+
+  - name: stg_hamburg_wohnlage
+    description: >
+      Staging view over Hamburg "Wohnlagenverzeichnis" (address/street ->
+      Wohnlage location-quality-tier crosswalk) — ADR-0014 Pillar 5,
+      direct analogue of Berlin's stg_berlin_wohnlage. Companion dataset
+      to stg_hamburg_mietenspiegel (the rent-table matrix itself).
+      PLUMBING, not methodology (R-C1): a straight address/street-attribute
+      staging pull, no weighting/scoring/index-construction logic and no
+      cross-grain join to statistische Gebiete/Stadtteile. Deliberately
+      preserves Hamburg's own Wohnlage label scheme as-published rather
+      than remapping onto Berlin's einfach/mittel/gut scale (mirrors
+      stg_hamburg_sozialmonitoring's decision not to invent a cross-city
+      mapping ahead of the methodology-gated integration slice). Source:
+      Hamburg Transparenzportal / geodienste.hamburg.de WFS, "Hamburger
+      Mietenspiegel" dataset family (dl-de/by-2.0) — endpoint/attribute
+      names UNCONFIRMED live in this environment (no outbound network
+      access); see the ingestion script's docstring for the
+      endpoint-verification caveat. Ingestion adapter:
+      ingestion/hamburg/rent/ingest_hamburg_rent.py. Storage:
+      data/raw/hamburg/rent/wohnlage.parquet (gitignored). Returns zero
+      rows (typed stub) when no parquet has been ingested.
+    meta:
+      dbt_meta_owner: data-engineer
+    # Data-presence gate (docs/lessons/local-first-data-presence.md):
+    tests:
+      - assert_not_empty:
+          config:
+            severity: warn
+    columns:
+      - name: city_code
+        description: Canonical city code 'HH' (ADR-0005; matches dim_city.city_code).
+        tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ["HH"]
+      - name: address_id
+        description: >
+          Natural key / feature id for the address or street segment
+          (schema TBC at live probe).
+      - name: street_name
+        description: Street name, if published at street rather than address grain.
+      - name: wohnlage
+        description: >
+          Hamburg's own location-quality tier label (NOT assumed identical
+          to Berlin's einfach/mittel/gut scheme). UNCONFIRMED against the
+          real source schema — re-verify at first live ingestion.
+        tests:
+          - not_null
+      - name: geometry_wkb
+        description: >
+          Address/street geometry in WKB, native CRS EPSG:25832 (not
+          reprojected), if published.
+      - name: source_attribution
+        description: Mandatory dl-de/by-2.0 attribution string (ADR-0014).
+        tests:
+          - not_null
+
+  - name: stg_hamburg_mietenspiegel
+    description: >
+      Staging view over the Hamburger Mietenspiegel (biennial rent-table
+      matrix: year-built x size x Wohnlage -> rent range) — ADR-0014
+      Pillar 5, direct analogue of Berlin's stg_berlin_mietspiegel.
+      Companion dataset to stg_hamburg_wohnlage (address/street ->
+      Wohnlage crosswalk). PLUMBING, not methodology (R-C1): a straight
+      rent-table staging pull, no weighting/scoring/index-construction
+      logic and no cross-grain join to statistische Gebiete/Stadtteile.
+      Deliberately preserves Hamburg's own year_built_bucket/size_bucket/
+      wohnlage labels as-published rather than remapping onto Berlin's
+      bucket keys (mirrors stg_hamburg_wohnlage's and
+      stg_hamburg_sozialmonitoring's decision not to invent a cross-city
+      mapping ahead of the methodology-gated integration slice). Source:
+      Hamburg Transparenzportal / geodienste.hamburg.de WFS, "Hamburger
+      Mietenspiegel" dataset (dl-de/by-2.0) — endpoint/attribute names
+      UNCONFIRMED live in this environment (no outbound network access);
+      see the ingestion script's docstring for the endpoint-verification
+      caveat. A PDF-fallback re-tabulation path (mirroring Berlin's D1
+      Mietspiegel treatment) is NOT attempted in this slice and remains
+      an open follow-up if the machine-readable WFS formats prove
+      incomplete at live ingestion. Ingestion adapter:
+      ingestion/hamburg/rent/ingest_hamburg_rent.py. Storage:
+      data/raw/hamburg/rent/mietenspiegel.parquet (gitignored). Returns
+      zero rows (typed stub) when no parquet has been ingested.
+    meta:
+      dbt_meta_owner: data-engineer
+    # Data-presence gate (docs/lessons/local-first-data-presence.md):
+    tests:
+      - assert_not_empty:
+          config:
+            severity: warn
+    columns:
+      - name: edition_year
+        description: Mietenspiegel edition year (biennial; e.g. 2025).
+        tests:
+          - not_null
+      - name: city_code
+        description: Canonical city code 'HH' (ADR-0005; matches dim_city.city_code).
+        tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ["HH"]
+      - name: year_built_bucket
+        description: >
+          Construction-period bucket, preserved as-published (NOT
+          remapped onto Berlin's year_built_bucket keys in this staging
+          layer).
+      - name: size_bucket
+        description: Apartment-size bucket, preserved as-published.
+      - name: wohnlage
+        description: Location tier, matching stg_hamburg_wohnlage's label scheme.
+      - name: rent_low
+        description: Lower rent-range bound (EUR/sqm/month).
+      - name: rent_mid
+        description: Mittelwert / central rent value (EUR/sqm/month).
+      - name: rent_high
+        description: Upper rent-range bound (EUR/sqm/month).
+      - name: source_attribution
+        description: Mandatory dl-de/by-2.0 attribution string (ADR-0014).
+        tests:
+          - not_null
 
   - name: stg_berlin_ewr
     description: >
@@ -439,18 +912,39 @@ models:
 
   - name: stg_berlin_bodenrichtwert
     description: >
-      D1 staging view over Bodenrichtwerte (land reference values) 2024 for Berlin.
-      Source: WFS GDI Berlin brw2024, feature type brw2024:brw_2024_vector,
-      CRS EPSG:25833. Licence: dl-de-zero-2.0.
+      D1a staging view over Bodenrichtwerte (land reference values) back-series 2017–2024
+      for Berlin. Source: WFS GDI Berlin brw{year}, feature type brw{year}:brw_{year}_vector,
+      CRS EPSG:25833. Licence: dl-de-zero-2.0. All years 2017–2024 confirmed live via
+      HTTP 200 probe on 2026-06-29.
       Populated by ingestion/berlin/price_rent/ingest_bodenrichtwerte.py.
-      Returns zero rows (typed stub) until data/raw/berlin/price_rent/bodenrichtwert_2024.parquet
-      exists. Each row is one BRW land value zone polygon with the EUR/m2 value
-      and land use code.
+      Returns zero rows (typed stub) until at least one bodenrichtwert_{year}.parquet
+      exists under data/raw/berlin/price_rent/. Each row is one BRW land value zone
+      polygon with the EUR/m2 value and land use code for the given reference year.
     meta:
       dbt_meta_owner: data-engineer
+    tests:
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns:
+              - reference_date
+              - brw_id
+          config:
+            where: "brw_id is not null"
+      - assert_not_empty:
+          config:
+            severity: warn
+      - assert_min_rows:
+          arguments:
+            min_rows: 1000
+          config:
+            severity: warn
     columns:
       - name: reference_date
-        description: Reference date for the BRW; always 2024-01-01.
+        description: Reference date for the BRW; YYYY-01-01 for the given data year (2017–2024).
+        tests:
+          - not_null:
+              config:
+                where: "brw_id is not null"
       - name: city_code
         description: City identifier; always 'berlin' (ADR-0005).
         tests:
@@ -489,19 +983,37 @@ models:
 
   - name: stg_berlin_wohnlage
     description: >
-      D1 staging view over Wohnlagen nach Adressen (Mietspiegel 2023) for Berlin.
-      Source: WFS GDI Berlin wohnlagenadr2023, feature type
-      wohnlagenadr2023:wohnlagenadr2023, CRS EPSG:25833. Licence: dl-de-zero-2.0.
-      ~397,542 address-level point features. Populated by
-      ingestion/berlin/price_rent/ingest_wohnlage.py (5-15 min download).
-      Returns zero rows (typed stub) until data/raw/berlin/price_rent/wohnlage_2023.parquet
-      exists. Each row is one address with its Wohnlage classification
-      (einfach/mittel/gut) from the 2023 Mietspiegel.
+      D1 staging view over Wohnlagen nach Adressen (Mietspiegel) back-series for Berlin.
+      Covers vintages 2017, 2019, 2021, 2023, 2026 — one parquet per edition year.
+      Source: WFS GDI Berlin wohnlagenadr{year}, feature type
+      wohnlagenadr{year}:wohnlagenadr{year}, CRS EPSG:25833. Licence: dl-de-zero-2.0.
+      ~397k address-level point features per vintage. All five vintages confirmed live
+      on GDI Berlin 2026-06-18. Populated by
+      ingestion/berlin/price_rent/ingest_wohnlage.py (5-15 min per vintage).
+      Returns zero rows (typed stub) until at least one wohnlage_{year}.parquet
+      exists under data/raw/berlin/price_rent/. Each row is one address with its
+      Wohnlage classification (einfach/mittel/gut) for the given Mietspiegel edition.
     meta:
       dbt_meta_owner: data-engineer
+    tests:
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns:
+              - vintage
+              - address_id
+          config:
+            where: "wohnlage is not null and address_id is not null"
+      - assert_not_empty:
+          config:
+            severity: warn
+      - assert_min_rows:
+          arguments:
+            min_rows: 100000
+          config:
+            severity: warn
     columns:
       - name: vintage
-        description: Mietspiegel edition year; always 2023 for this model.
+        description: WFS edition year (2017/2019/2021/2023/2026); NOT the Stichtag year.
         tests:
           - not_null:
               config:
@@ -541,17 +1053,19 @@ models:
 
   - name: stg_berlin_verkaufte_grundstuecke
     description: >
-      D1 STUB — Verkaufte Grundstücke (Kauffälle) 2024 per ADR-0003 item 10.
-      The WFS endpoint https://gdi.berlin.de/services/wfs/kauffaelle2024 returned
-      HTTP 404 during D1 implementation (2026-06-18). URL needs manual discovery
-      from daten.berlin.de. See issue D1b for resolution.
-      Always returns zero rows until the endpoint is found and ingestion is
-      implemented. Licence: dl-de-zero-2.0 (expected).
+      D1b — Verkaufte Grundstücke (Kauffälle) Berlin 2024 + 2025, GDI Berlin WFS,
+      dl-de-zero-2.0. Publisher: Gutachterausschuss für Grundstückswerte in Berlin.
+      WFS endpoint confirmed 2026-06-29: https://gdi.berlin.de/services/wfs/kauffaelle_{year}.
+      9 sub-market layers per year (a_teileigen … i_mehrfamhaus). IMPORTANT: only
+      2024 and 2025 are available via WFS; no endpoint exists for earlier years —
+      this historical coverage gap must be disclosed in D2 and on the G2 methodology page.
+      Graceful-degradation: returns zero rows when parquet files are not yet ingested.
+      Run ingestion/berlin/price_rent/ingest_kauffaelle.py to populate.
     meta:
       dbt_meta_owner: data-engineer
     columns:
       - name: reference_date
-        description: Reference date; expected 2024-01-01.
+        description: Reference date; YYYY-01-01 for the given data year.
       - name: city_code
         description: City identifier; always 'berlin' (ADR-0005).
         tests:
@@ -563,22 +1077,43 @@ models:
                 values: ["berlin"]
               config:
                 where: "transaction_id is not null"
-      - name: geometry_wkb
-        description: Geometry WKB, EPSG:25833.
-      - name: transaction_id
-        description: Feature identifier.
+      - name: teilmarkt
+        description: >
+          Sub-market layer code (e.g. 'c_eigentwhg' = Eigentumswohnungen,
+          'i_mehrfamhaus' = Mehrfamilienwohnhäuser). Primary layers for gentrification
+          analysis are c_eigentwhg and i_mehrfamhaus.
         tests:
           - not_null:
               config:
-                where: "city_code is not null"
-      - name: price_eur
-        description: Transaction price in EUR.
-      - name: area_m2
-        description: Plot area in m2.
-      - name: nutzung
-        description: Land use / property type.
+                where: "transaction_id is not null"
+      - name: geometry_wkb
+        description: Point/geometry WKB, EPSG:25833 (native CRS, not reprojected).
+      - name: transaction_id
+        description: >
+          Year-prefixed WFS feature ID (e.g. '2024_c_eigentwhg.1'). Year prefix
+          ensures global uniqueness across the UNION ALL of multiple year parquets.
+        tests:
+          - not_null:
+              config:
+                where: "transaction_id is not null"
+          - unique:
+              config:
+                where: "transaction_id is not null"
+      - name: kaufpreis_eur
+        description: >
+          Purchase price in EUR. Null if not exposed by WFS DescribeFeatureType
+          (actual feature properties inspected at ingestion time).
+      - name: flaeche_m2
+        description: Plot or floor area in m2. Null if not exposed by WFS.
+      - name: kauftyp
+        description: Sub-market type string from WFS (kauftyp attribute).
+      - name: raw_properties_json
+        description: >
+          Full JSON of all WFS feature properties, stored for audit and schema
+          discovery. Allows downstream models to extract additional attributes
+          once confirmed from live data.
       - name: source_attribution
-        description: dl-de-zero-2.0 attribution string.
+        description: DL-Zero-2.0 attribution string.
         tests:
           - not_null:
               config:

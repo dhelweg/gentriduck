@@ -326,6 +326,52 @@ class, compare to the report's published table. The cheap internal cross-check (
 reversed/permuted Dynamik code silently inverts the lead-lag sign** (R-A7 geo condition 3), so this
 gate is non-negotiable.
 
+
+### 3.5 Trajectory classification thresholds (R-A8; fct_gentrification_trajectory)
+
+[R-A8 #78; Dangschat 1988 double invasion-succession; index-definition.md §3.1]
+
+The `fct_gentrification_trajectory` mart classifies each PLR's D1 social-status trajectory
+across the available MSS panel (currently 3 editions: 2021, 2023, 2025). The classification
+uses rule-based thresholds on the ordinal `status_index`. The threshold rationale:
+
+**Trend direction threshold (±1 ordinal step):**
+The minimum meaningful change in a 4-level ordinal is a one-class step (e.g. sehr_niedrig → niedrig,
+or hoch → mittel). A zero delta (same class at first and last edition) is classified as the
+stable-end categories (stable-established or persistently-deprived) or mixed, never as improving or
+declining. A ±1 step change is a real reclassification of the PLR by the official MSS methodology —
+a meaningful social-status shift that required the Senate to move the area to a different class.
+
+- `status_delta >= +1` -> **declining** (worsened by >= 1 ordinal step over the panel)
+- `status_delta <= -1` -> **improving** (improved by >= 1 ordinal step over the panel)
+
+**Mean boundary (2.5) for stable/deprived endpoints:**
+The D1 scale midpoint is 2.5 (midpoint of the 1-4 range). A panel mean <= 2.0 (predominantly hoch
+or mittel) combined with limited volatility (status_range <= 1) classifies an area as
+**stable-established**. A panel mean >= 2.5 (predominantly mittel-to-niedrig or above) combined with
+limited volatility classifies an area as **persistently-deprived**.
+
+- `status_index_first <= 2 AND status_index_last <= 2 AND mean <= 2.5 AND range <= 1` -> **stable-established**
+- `status_index_first >= 3 AND status_index_last >= 3 AND mean >= 2.5 AND range <= 1` -> **persistently-deprived**
+
+**Range threshold (<=1) for stable endpoints:**
+A within-panel range of <= 1 ordinal step means the PLR never crossed more than one class boundary
+during the available editions. This prevents labelling as stable-established a PLR that was hoch in
+one edition and niedrig in another (range = 2).
+
+**Mixed:**
+All remaining patterns are classified as **mixed**. With 3 editions and an integer ordinal, the
+mixed category is structurally vacuous (all PLRs clear the thresholds), but it will capture
+V-shapes and N-shapes when the full 7-edition panel (2013-2025) becomes available.
+
+**Caveat — improving trajectory interpretation:**
+A trajectory classified as `improving` (D1 status numerically decreased = less deprived) does NOT
+unambiguously indicate positive social change. It may reflect completed gentrification with
+displacement (original low-income residents replaced by higher-income arrivals), genuine social
+mobility of incumbent residents, or early pioneer-stage succession. D5 displacement data
+(Milieuschutzgebiete, rent-burden, turnover from R-B1 #70) is required for mechanism disambiguation.
+The `improving` label should NOT be presented as unambiguously positive on the G2 methodology page.
+
 ---
 
 ## 4. D4 EWR baseline discipline
@@ -425,6 +471,9 @@ integrates both.
 | | `migration_background_share` | High = pre-gentrification pop | + | + | within baseline composite | **≥2017 only** (Mikrozensus break). |
 | | `age_under18_share` | High = families/social housing | + | + | within baseline composite | Vulnerability-positive. |
 | | `mean_age_years` | High = ageing settled pop | + | + (negation removed, PR #89) | within baseline composite | Now agrees in sign with `residence_duration_5y_share`. |
+| **D3-price** | `brw_weighted_avg_eur_m2` (`mart_price_rent_dimension`) | Higher = higher capitalised ground-rent level (land reference value, EUR/m²) | **AMBIGUOUS polarity** — high BRW is consistent with historic wealth, completed gentrification, or active pressure; the three states cannot be separated by the level alone (Smith 1979; domain D2) | If pooled into vulnerability composite: **FLIP required** (high BRW = consolidated = LOW residual headroom = low vulnerability). **But the honest role is a price-surface/consolidation CONTEXT COVARIATE, not a vulnerability score** — displacement-risk language attaches only to BRW CHANGE (`brw_trend`). Winsorized z-score + rank/percentile; rank is the headline (heavy-tailed). | **Structural-level baseline/context covariate** (D4-levels pattern, §4.6). NEVER blended into Status×Dynamik typology (ADR-0008 level-vs-change separation). | BRW LEVEL = one term of the Smith (1979) rent gap (capitalised potential ground rent). NOT "the rent gap" — the gap is a difference (potential minus actual), not a level. The rent-gap-realisation signal is BRW CHANGE (brw_trend, built separately as an explicit change indicator on the lead side). Source: `int_berlin_brw_plr` → `mart_price_rent_dimension`. |
+| **D3-price** | `wohnlage_score` (ordinal mean gut=high) / `pct_einfach` (`mart_price_rent_dimension`) | `wohnlage_score` = pct_einfach×1 + pct_mittel×2 + pct_gut×3; higher = more desirable; `pct_einfach` = share of addresses in the einfach tier | `pct_einfach`: **vulnerability-positive** (high share = more upgrading headroom = more exposed to gentrification; Milieuschutz target profile; Holm 2010). `wohnlage_score`: **desirability-positive** (high = more desirable = consolidated = LOW remaining vulnerability headroom) — opposite polarity to `pct_einfach` | `pct_einfach`: as published (positive). `wohnlage_score`: **FLIP required** for vulnerability composite (high score = low vulnerability). Winsorized z-score. | **Structural-level context covariate** (D4-levels pattern, §4.6). Wohnlage LEVEL (cross-sectional) = vulnerability/headroom PRECONDITION (Blasius & Dangschat 1990 Aufwertung). The Aufwertung OUTCOME is the DECLINING einfach share over vintages — a change signal, built separately if used as such, never as a level. Context-condition on locational desirability: peripheral low quality ≠ gentrification pressure without co-inciding demand. | `wohnlage_score` is an ORDINAL-MEAN APPROXIMATION — tiers are ordered but not equidistant; do not treat as interval-scaled in regression without flagging. Source: `int_berlin_wohnlage_plr` → `mart_price_rent_dimension`. |
+| **D3-price** | `est_rent_mid` / `est_rent_low` / `est_rent_high` (`mart_price_rent_dimension`) | Higher = higher modelled Mietspiegel reference rent per PLR (EUR/m²/month at fixed profile) | **Affordability-negative** — higher = less affordable = more cost pressure; relevant for displacement-susceptibility of existing residents (Holm 2010 ~84% rental Berlin) | As published (positive for affordability pressure). Winsorized z-score. | **Structural-level affordability context covariate** (D4-levels pattern, §4.6). NEVER blended into Status×Dynamik typology. | "modelled/estimated net cold rent at a fixed reference dwelling profile (60–90 m², 1950–1964 construction year) — NOT observed rent paid." Mietspiegel Bestandsmiete/ortsübliche Vergleichsmiete: **lagging, conservative** affordability level of the standing stock; understates leading-edge/new-letting pressure that drives displacement. Disclose on G2 (domain D7). Fixed profile is a modelling choice, not a measurement. Source: `mart_price_rent_dimension` (Wohnlage shares × Mietspiegel rent cells). |
 
 **Worked sign example — D1 end-to-end (thesis → current model):**
 A PLR with MSS `status_index = 4` (`sehr_niedrig`) is the **most deprived / most vulnerable**.

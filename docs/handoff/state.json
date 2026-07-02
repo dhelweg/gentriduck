@@ -1,46 +1,100 @@
 {
   "_schema": "gentriduck-session-state/v1",
-  "session": "2026-06-28-maintainer-reconcile",
-  "updated_at": "2026-06-28T13:00:00Z",
+  "session": "2026-07-02-devmode-12",
+  "updated_at": "2026-07-02T02:40:00Z",
   "build_status": {
     "result": "PASS",
-    "pass": 356,
-    "warn": 1,
+    "pass": 573,
+    "warn": 2,
     "error": 0,
-    "warn_detail": "test_c5_poi_share_spike (expected by design)",
-    "branch": "main",
-    "note": "Green WITH MSS data present on this machine. Data-presence guards (#94) make a data-less build RED."
+    "warn_detail": [
+      "brw_residential_coverage_frac (expected by design)",
+      "test_c5_poi_share_spike (expected by design)"
+    ],
+    "branch": "develop",
+    "note": "Full uv run poe build after integrating #39 (docs-only, no model change)."
   },
-  "open_prs": [],
-  "completed_this_session": [64, 94],
-  "decisions_this_session": [
-    {"item": "ADR-0010 (spatial tooling: DuckDB SQL weighting + PySAL/h3 analysis-only)", "outcome": "ACCEPTED", "pr": 96, "process": "system-architect ACCEPT WITH AMENDMENTS (4 required applied) + geo-DS PASS WITH CONDITIONS; domain sign-off waived (tooling-only). Unblocks #69 and #79."},
-    {"item": "MSS 2013 historical edition", "outcome": "DROPPED", "note": "WFS 404; thesis anchored on MSS 2017 (ref 31.12.2016) so 2013 not needed for fidelity. Open XLSX tables exist (bericht-2013) if ever revisited for longitudinal depth — new Excel adapter + ADR amendment + gate."}
+  "open_prs": [
+    {
+      "number": 111,
+      "title": "Weekly release: Epic R/D wave — spatial inference, price/rent dimension, A9 diffusion, plus H1/H2/O4/G2/G3",
+      "base": "main",
+      "head": "develop",
+      "note": "Open, refreshed this cycle to add #39 [G3] content. Mergeable. Awaiting maintainer merge in GitHub UI."
+    }
   ],
-  "merged_prs_this_session": [
-    {"number": 93, "issues": [64], "secondary": [53, 28, 69], "title": "feat(#64): R-A1 index re-grounding — MSS social outcome, POI predictor, lead-lag"},
-    {"number": 95, "issues": [94], "title": "feat(#94): data-presence guards — fail on no data, warn on mocked data"},
-    {"number": 96, "issues": [69], "title": "docs(#69): ADR-0010 spatial tooling — amended + geo-DS signed off → Accepted"}
+  "pending_adr_branches": [
+    {
+      "branch": "feat/33-adr-0012-serving-hosting",
+      "issue": 33,
+      "title": "ADR-0012 serving & hosting stack",
+      "note": "Evidence.dev + Cloudflare Pages. Blocked on maintainer sign-off. Biggest blocker on the board -- gates F2/F3/G0-G3-site-wiring/O4-remainder."
+    },
+    {
+      "branch": "feat/82-adr-0013-whitepaper-tool",
+      "issue": 82,
+      "title": "ADR-0013 Quarto + Typst whitepaper authoring tool",
+      "note": "ADR drafted, Proposed status. Blocked on maintainer sign-off."
+    }
   ],
-  "this_machine_data_state": {
-    "mss_status_editions": [2015, 2017, 2019, 2021, 2023, 2025],
-    "mss_indicator_editions": [2015, 2017, 2019, 2021, 2023, 2025],
-    "note": "MSS ingested on this laptop this session (status + SES indicators). POI/EWR/LOR already present. Keystone models populated; build green.",
-    "keystone_populated": true
+  "completed_this_session": [
+    "#39 [G3] Attribution/licensing + privacy/ethics content (site-wiring-independent, mirrors #38 G2 precedent). docs/epic-g/G3-attribution-licensing.md + docs/epic-g/G3-privacy-ethics.md. Non-methodology-bearing, no dual sign-off needed. Merged into develop at 433cf59. Issue closed, card Done."
+  ],
+  "integrated_into_develop": [
+    {
+      "issue": 39,
+      "title": "[G3] Attribution & licensing + privacy/ethics pages (content-only slice)",
+      "merge_commit": "433cf59",
+      "date": "2026-07-02",
+      "note": "docs/epic-g/G3-attribution-licensing.md, docs/epic-g/G3-privacy-ethics.md. Site-live rendering still tracked under G1 (#37)."
+    }
+  ],
+  "in_progress": null,
+  "board_status": {
+    "note": "0 In Progress. 0 closed-but-not-Done drift, 0 issues missing from board (verified twice this cycle). All remaining open Todo tickets are blocked on a maintainer decision (ADR approval or Geofabrik login), except #125's SE-clustering tail (parked, not blocked, no ticket to attach to).",
+    "open_issues_by_dependency": {
+      "in_progress": [],
+      "next_unblocked": [],
+      "blocked_on_maintainer": [
+        "#33 [F1] ADR-0012 -- blocks F2/F3/G0/G1-site-wiring/O4-remainder",
+        "#70 [B1] displacement data -- Milieuschutz ADR",
+        "#82 [O2] ADR-0013 whitepaper tool",
+        "#126 [H2b] Hamburg OSM POI -- Geofabrik login",
+        "#80 [A10] deferred/tracked, not actionable"
+      ],
+      "parked_not_blocked": [
+        "#125 [H2] tail item 3 (SE-clustering note) -- no ticket exists yet to attach it to"
+      ]
+    }
   },
-  "unblocked_ready": [
-    {"issue": 65, "title": "[A2] Fix & re-run E1/E2 thesis validation (lead-lag, POI→MSS)", "note": "RECOMMENDED next. Needs no new tooling; int_mss_lead_lag provides the correct panel. Core 'do the 2018 findings still hold' question."},
-    {"issue": 69, "title": "[A6] Distance-weighting + Gi* hotspots + MAUP", "note": "Unblocked by ADR-0010. SQL distance-weighting half needs NO new deps; PySAL only for Gi*/Moran. Methodology (bandwidth/kernel/contiguity) needs spatial-methods.md under geo-DS+domain gate first."},
-    {"issue": 79, "title": "[A9] Spatial-dynamic gentrification + spatial-econometric inference", "note": "Unblocked by ADR-0010; depends on #69 weights."},
-    {"issue": 71, "title": "[B2] Ground-truth back-test vs MSS classes & known hotspots"},
-    {"issue": 78, "title": "[A8] Longitudinal gentrification trajectory & stage model (2008–2024)"}
-  ],
   "still_blocked": [
-    {"issue": 70, "blocked_by": ["Epic D start"], "title": "[B1] Displacement & affordability dimension (Milieuschutz, rent-burden, turnover)"}
+    {
+      "issue": 33,
+      "blocked_by": ["Maintainer ADR-0012 approval"],
+      "title": "[F1] ADR-0012 -- gates F2, F3, G0, G1 site wiring, O4-remainder"
+    },
+    {
+      "issue": 70,
+      "blocked_by": ["Maintainer ADR decision"],
+      "title": "[B1] Displacement data"
+    },
+    {
+      "issue": 82,
+      "blocked_by": ["Maintainer ADR-0013 approval"],
+      "title": "[O2] Whitepaper"
+    },
+    {
+      "issue": 83,
+      "blocked_by": ["#33 F1 for dataset export + tooling packaging (AC1 only; AC2/AC3 done)"],
+      "title": "[O4] remainder"
+    },
+    {
+      "issue": 126,
+      "blocked_by": ["Maintainer's Geofabrik OSM-contributor login"],
+      "title": "[H2b] Hamburg OSM POI ingestion"
+    }
   ],
-  "open_conditions_carried_forward": [
-    "ADR-0010 geo-DS conditions C1–C8 (docs/methodology/ADR-0010-geo-signoff.md) → discharge in docs/methodology/spatial-methods.md under R-C1 before any R-A6/R-A9 model merges. Key: distance-weighting must COMPOSE WITH (not replace) the OSM completeness-bias correction (ADR-0008 §5).",
-    "Clean-architecture tidy: make analysis/ layer read via a CONFIGURABLE DuckDB connection (drop hard-coded data/gentriduck.duckdb at analysis/e1_regressions.py:48) so Layer 3 isn't local-only. Noted in ADR-0010 amendment 7; do when R-A6 lands."
-  ],
-  "next_session_decision": "Maintainer to pick the next BUILD task (deferred to next session). Standing recommendation: #65 (E1/E2 re-run). Alternatives: #69 R-A6 SQL distance-weighting (zero new deps), #71, #78."
+  "next_session_decision": "All substantive backlog work now genuinely exhausted pending maintainer decisions: #33 (ADR-0012 serving/hosting -- the single biggest blocker, gates most of Epic F/G), #70 (Milieuschutz ADR), #82 (ADR-0013 whitepaper tool), #126 (Geofabrik login). Next cycle: re-check for any of those replies; otherwise look for another content-only slice in the vein of #38/#39 that doesn't require site wiring, or re-scan for genuinely new discovered work (bugs/gaps) before concluding idle. Weekly develop->main PR #111 is open, refreshed, and ready for maintainer merge.",
+  "last_updated": "2026-07-02",
+  "current_session": "devmode-12"
 }

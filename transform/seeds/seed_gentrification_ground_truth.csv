@@ -1,0 +1,19 @@
+plr_id,plr_name,bezirk,label,source,notes
+08100207,Rollberg,Neukölln,hotspot,Döring & Ulbricht 2016,North Neukölln hotspot; persistent deprivation with improving dynamism (improving-vulnerable 2025); cited in Döring & Ulbricht 2016 as displacement-susceptible
+08100104,Wartheplatz,Neukölln,hotspot,Döring & Ulbricht 2016,North Neukölln; sehr_niedrig status (4) and stabil dynamism in 2025; high welfare dependency cited in Döring & Ulbricht 2016
+08100521,Schulenburgpark,Neukölln,hotspot,Holm & Schulz 2016,Southern Neukölln deprived area; sehr_niedrig status (4) pre-gentrification stage 2025; Holm & Schulz 2016 list south Neukölln as under pressure
+01300732,Soldiner Straße,Mitte,hotspot,Döring & Ulbricht 2016,Wedding PLR; very low social status (4) and improving dynamism 2025; identified in Döring & Ulbricht 2016 as high-vulnerability area
+01300731,Koloniestraße,Mitte,hotspot,Döring & Ulbricht 2016,Wedding PLR; sehr_niedrig status (4) and stabil dynamism 2025; Döring & Ulbricht 2016 Wedding hotspot
+02100105,Prinzenstraße,Friedrichshain-Kreuzberg,hotspot,MSS 2023 Status=4,Inner-city Kreuzberg; sehr_niedrig MSS status (4) with improving dynamism in 2025; MSS 2023 designates Kreuzberg south fringe as vulnerable
+02100106,Wassertorplatz,Friedrichshain-Kreuzberg,hotspot,MSS 2023 Status=4,Inner-city Kreuzberg; sehr_niedrig status (4) 2025; historically gentrification pressure from central Kreuzberg expansion
+08100105,Silbersteinstraße,Neukölln,hotspot,Holm & Schulz 2016,Neukölln; niedrig status (3) with positiv dynamism (pioneer-signal) 2025; signals early commercial succession pressure
+06400844,Dahlem,Steglitz-Zehlendorf,coldspot,MSS 2023 Status=1,Established affluent university area; hoch MSS status (1) and stable-established 2025; consistently low deprivation in MSS series
+06400735,Wannsee,Steglitz-Zehlendorf,coldspot,MSS 2023 Status=1,Outer affluent lakeside area; hoch status (1) stable-established 2025; low gentrification pressure by definition
+06400737,Nikolassee,Steglitz-Zehlendorf,coldspot,MSS 2023 Status=1,Outer affluent residential area; hoch status (1) stable-established 2025; villa quarter with stable demographics
+05400942,Alt-Gatow,Spandau,coldspot,MSS 2023 Status=1,Outer rural Spandau; hoch status (1) stable-established 2025; village character with stable population composition
+05400944,Kladower Damm,Spandau,coldspot,MSS 2023 Status=1,Outer rural western Spandau; hoch status (1) stable-established 2025; low-density residential fringe
+11100101,Dörfer Malchow-Wartenberg,Lichtenberg,coldspot,MSS 2023 Status=1,Rural-character Lichtenberg fringe; hoch status (1) stable-established 2025; low-density non-gentrifiable area
+03601347,Helmholtzplatz,Pankow,mixed,Helweg 2018 thesis §4.2,Prenzlauer Berg; completed gentrification process by ~2015 (now mittel status (2) stable-established); cited as classic Berlin gentrification case in 2018 thesis
+03701556,Kollwitzplatz,Pankow,mixed,Holm & Schulz 2016,Prenzlauer Berg; completed gentrification (now hoch status (1) stable-established 2025); Holm & Schulz 2016 describe as fully gentrified by 2015
+08100311,Reuterplatz,Neukölln,mixed,Döring & Ulbricht 2016,Reuterkiez (northern Neukölln); mittel status (2) stable-established 2025; transition from hotspot (~2011-2016) to stabilized mid-status
+02500833,Boxhagener Platz,Friedrichshain-Kreuzberg,mixed,Helweg 2018 thesis §4.3,Friedrichshain; completed gentrification cycle; mittel status (2) stable-established 2025; thesis documents process as concluded

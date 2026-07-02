@@ -8,7 +8,7 @@ license = "MIT"
 dependencies = [
     "dbt-duckdb>=1.9",
     "duckdb>=1.1",
-    "pandas>=2.2",
+    "pandas>=2.2,<3.0",
     "pyarrow>=14",
     "scikit-learn>=1.5",
     "scipy>=1.13",
@@ -16,6 +16,17 @@ dependencies = [
     "osmium>=4.0",
     "shapely>=2.0",
     "certifi>=2024.0",
+    # ADR-0010: PySAL spatial-statistics family (BSD-3).
+    # libpysal: spatial weights from shapely geometries (no geopandas).
+    # esda: Getis-Ord Gi*, Moran's I, LISA (R-A6, R-A9).
+    # spreg: spatial-lag/error regression (R-A9).
+    # h3: optional MAUP sensitivity layer, analysis-only (Apache-2.0).
+    # Excluded: geopandas, pyogrio, pyproj, fiona, tobler (ADR-0010 Amendment 1).
+    "libpysal>=4.10",
+    "esda>=2.5",
+    "spreg>=1.4",
+    "h3>=4.0",
+    "openpyxl>=3.1.5",
 ]
 
 # Dev tooling lives in an isolated group; installed via `uv sync`.
@@ -49,11 +60,51 @@ fmt      = { sequence = ["ruff format .", "sqlfmt transform"], default_item_type
 lint     = { sequence = ["ruff check .", "sqlfluff lint transform"], default_item_type = "cmd" }
 # R-C3: analysis scripts are deterministic (random_state=42) and require ingested data.
 # Run after `poe build` when dev.duckdb is populated.
-analysis = { sequence = ["python analysis/e1_regressions.py", "python analysis/e2_classification.py"], default_item_type = "cmd" }
-# Ingestion scripts — rebuild raw data from open sources (gitignored artefacts).
-# Run once before `poe build` on a fresh checkout.
-ingest = { sequence = [
-    "python ingestion/berlin/lor/ingest_lor_geometries.py --out-dir data/raw/berlin/lor",
-    "python ingestion/berlin/mss/ingest_mss.py --out-dir data/raw/berlin/mss",
-    "python ingestion/berlin/mss/ingest_mss_indicators.py --out-dir data/raw/berlin/mss",
+analysis = { sequence = [
+    "python analysis/e1_regressions.py",
+    "python analysis/e2_classification.py",
+    "python analysis/a6_hotspots.py",
+    "python analysis/a6_maup.py",
+    "python analysis/a9_spatial_dynamic.py",
 ], default_item_type = "cmd" }
+# B2: back-test harness — validates live index against MSS classes and known hotspot/coldspot PLRs.
+# Run after `poe build`. Results written to docs/methodology/backtest.md.
+backtest = "python analysis/backtest_index.py"
+# Ingestion scripts — rebuild raw data from open sources (gitignored artefacts).
+# Run once before `poe build` on a fresh checkout. See ingestion/README.md for the full
+# module-by-module reference (inputs/outputs, licensing, cross-platform notes).
+#
+# OSM history ingestion (`ingest-osm-*`, ADR-0002) is deliberately NOT in this sequence: it
+# requires a one-off, manually-downloaded `.osh.pbf` behind the maintainer's OSM contributor
+# login (Geofabrik internal server) — not something a fresh no-login checkout can run
+# unattended. Run it separately once the file is in place.
+ingest = { sequence = [
+    # Berlin — geographies (crosswalk depends on the geometries step's output)
+    "python ingestion/berlin/lor/ingest_lor_geometries.py --out-dir data/raw/berlin/lor",
+    "python ingestion/berlin/lor/ingest_lor_crosswalk.py --lor-dir data/raw/berlin/lor",
+    # Berlin — MSS (Monitoring Soziale Stadtentwicklung) outcome + indicator layers
+    "python ingestion/berlin/mss/ingest_mss.py --out-dir data/raw/berlin/mss",
+    "python ingestion/berlin/mss/ingest_mss_2013_excel.py --out-dir data/raw/berlin/mss",
+    "python ingestion/berlin/mss/ingest_mss_indicators.py --out-dir data/raw/berlin/mss",
+    # Berlin — EWR (Einwohnerregister) socio-economic time series
+    "python ingestion/berlin/ewr/ingest_ewr.py --out-dir data/raw/berlin/ewr",
+    # Berlin — price/rent dimension (D1/D1a/D1b/D1c)
+    "python ingestion/berlin/price_rent/ingest_bodenrichtwerte.py --out-dir data/raw/berlin/price_rent",
+    "python ingestion/berlin/price_rent/ingest_kauffaelle.py --out-dir data/raw/berlin/price_rent",
+    "python ingestion/berlin/price_rent/ingest_wohnlage.py --out-dir data/raw/berlin/price_rent",
+    # pdfplumber is deliberately NOT a core dependency (heavy, PDF-parsing-only) — use
+    # `uv run --with pdfplumber` for these two, per each script's own docstring.
+    "uv run --with pdfplumber python ingestion/berlin/mietspiegel/ingest_strassenverzeichnis.py --out-dir data/raw/berlin/mietspiegel",
+    "uv run --with pdfplumber python ingestion/berlin/mietspiegel/ingest_mietspiegel.py --out-dir data/raw/berlin/mietspiegel",
+    # Hamburg — second-city adapters (ADR-0014); OSM (Pillar 6) excluded, see ingest-osm-hamburg
+    "python ingestion/hamburg/geo/ingest_hamburg_geo.py --out-dir data/raw/hamburg/geo",
+    "python ingestion/hamburg/sozialmonitoring/ingest_hamburg_sozialmonitoring.py --out-dir data/raw/hamburg/sozialmonitoring",
+    "python ingestion/hamburg/displacement/ingest_hamburg_displacement.py --out-dir data/raw/hamburg/displacement",
+    "python ingestion/hamburg/ewr/ingest_hamburg_ewr_stadtteil.py --out-dir data/raw/hamburg/ewr_stadtteil",
+    "python ingestion/hamburg/rent/ingest_hamburg_rent.py --out-dir data/raw/hamburg/rent",
+], default_item_type = "cmd" }
+# OSM full-history ingestion (ADR-0002/C1, H1 Pillar 6) — run manually once the maintainer has
+# downloaded the Germany `.osh.pbf` from Geofabrik's internal (login-gated) server into
+# data/raw/osm/. Not part of `poe ingest` (see note above).
+ingest-osm-berlin = "python ingestion/berlin/osm/ingest_osm_history.py --osh-pbf data/raw/osm/germany-internal.osh.pbf --out-dir data/raw/osm/berlin"
+ingest-osm-hamburg = "python ingestion/hamburg/osm/ingest_hamburg_osm.py --osh-pbf data/raw/osm/germany-internal.osh.pbf --out-dir data/raw/osm/hamburg"

@@ -8,12 +8,16 @@
 -- Added in #52 (dim_area wiring). This is the source that makes OSM 8-digit
 -- PLR area_codes visible to dimension tests and to the int_ewr_series join.
 -- city_code is 'BER' (ADR-0005 canonical) from stg_berlin_lor.
+-- 3. stg_hamburg_geo — WFS Hamburg geometry staging (HH / district / subarea_l1 /
+-- subarea_l2). Added in #40 (H1 Hamburg onboarding, ADR-0014). This is the first
+-- second-city area source and exercises the ADR-0005 city-agnostic seam for real.
 --
 -- Deduplication strategy:
 -- - Area codes that appear in both sources get one row per (city_code, area_level,
--- area_code). WFS names (UTF-8, stg_berlin_lor) are preferred over thesis goldens
--- (which sometimes have latin-1 mojibake). ROW_NUMBER() QUALIFY keeps the first
--- row when ordered by name (WFS rows sort before '?' placeholders alphabetically).
+-- area_code). WFS names (UTF-8, stg_berlin_lor / stg_hamburg_geo) are preferred over
+-- thesis goldens (which sometimes have latin-1 mojibake). ROW_NUMBER() QUALIFY keeps
+-- the first row when ordered by name (WFS rows sort before '?' placeholders
+-- alphabetically).
 -- - stg_berlin_lor has two vintages (lor_pre2021, lor_2021) sharing some area_codes;
 -- DISTINCT on the lor_areas CTE collapses these to one row per code.
 --
@@ -41,10 +45,21 @@ with
         where area_code is not null
     ),
 
+    -- WFS Hamburg areas (statistisches Gebiet / Stadtteil / Bezirk, city_code='HH',
+    -- issue #40 H1, ADR-0014). Single 'current' vintage for this first slice.
+    hamburg_areas as (
+        select distinct city_code, area_level, area_code, area_name
+        from {{ ref("stg_hamburg_geo") }}
+        where area_code is not null
+    ),
+
     -- Union all sources; keep all columns to allow dedup in next step.
     combined as (
         select *, 1 as source_priority
         from lor_areas
+        union all
+        select *, 1 as source_priority
+        from hamburg_areas
         union all
         select *, 2 as source_priority
         from thesis_areas

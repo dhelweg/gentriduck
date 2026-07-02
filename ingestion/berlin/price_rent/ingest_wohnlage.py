@@ -3,12 +3,11 @@ ingestion/berlin/price_rent/ingest_wohnlage.py
 ===============================================
 D1 — Wohnlagen nach Adressen (Mietspiegel) ingestion for Berlin.
 
-Supports historical vintages via the --year flag:
+Supports historical vintages via the --years flag (multiple years at once):
   wohnlagenadr2017  (Stichtag 01.09.2016, confirmed available 2026-06-18)
   wohnlagenadr2019  (Stichtag 01.09.2018, confirmed available 2026-06-18)
   wohnlagenadr2021  (Stichtag 01.09.2020, confirmed available 2026-06-18)
   wohnlagenadr2023  (Stichtag 01.09.2022, confirmed available 2026-06-18)
-  wohnlagenadr2024  (Stichtag 01.09.2023, confirmed available 2026-06-18)
   wohnlagenadr2026  (Stichtag 01.09.2025, confirmed available 2026-06-18)
 
 Source: GDI Berlin OGC WFS, dl-de-zero-2.0
@@ -40,18 +39,20 @@ Partial-data safety: if the download takes > 15 minutes or is interrupted,
 
 Output parquet schema (data/raw/berlin/price_rent/wohnlage_{year}.parquet):
   vintage            (int32):  {year}
+  city_code          (string): 'berlin' (ADR-0005)
   geometry_wkb       (bytes):  MultiPoint WKB, EPSG:25833
   wohnlage           (string): Wohnlage classification (wol attribute)
   address_id         (string, nullable): schluessel attribute
   source_attribution (string): dl-de-zero-2.0 attribution
 
 Usage:
+  # Ingest all available years (default):
   uv run python ingestion/berlin/price_rent/ingest_wohnlage.py \\
       --out-dir data/raw/berlin/price_rent
 
-  # Specific vintage:
+  # Specific vintages:
   uv run python ingestion/berlin/price_rent/ingest_wohnlage.py \\
-      --out-dir data/raw/berlin/price_rent --year 2019
+      --out-dir data/raw/berlin/price_rent --years 2017 2021
 
   # Dry run (no HTTP calls):
   uv run python ingestion/berlin/price_rent/ingest_wohnlage.py \\
@@ -65,6 +66,7 @@ Usage:
 from __future__ import annotations
 
 import argparse
+import datetime
 import logging
 import ssl
 import sys
@@ -99,8 +101,19 @@ except ImportError as exc:
 # Per-year configuration
 # ---------------------------------------------------------------------------
 
-SUPPORTED_YEARS = {2017, 2019, 2021, 2023, 2024, 2026}
-DEFAULT_YEAR = 2026
+# Only these specific Mietspiegel edition years are available via WFS.
+# Confirmed live on GDI Berlin (2026-06-18).
+AVAILABLE_YEARS = [2017, 2019, 2021, 2023, 2026]
+
+# Stichtag (reference date) per vintage year. NOT Jan 1; each Mietspiegel uses
+# the survey cutoff date from the prior September.
+_REFERENCE_DATES = {
+    2017: datetime.date(2016, 9, 1),  # Stichtag 01.09.2016
+    2019: datetime.date(2018, 9, 1),  # Stichtag 01.09.2018
+    2021: datetime.date(2020, 9, 1),  # Stichtag 01.09.2020
+    2023: datetime.date(2022, 9, 1),  # Stichtag 01.09.2022
+    2026: datetime.date(2025, 9, 1),  # Stichtag 01.09.2025
+}
 
 # Attribution text template per year.
 _ATTRIBUTION_TEMPLATE = (
@@ -126,24 +139,10 @@ _ATTRIBUTION_OVERRIDES = {
     ),
 }
 
-
-def _build_year_config(year: int) -> dict:
-    """Return the WFS constants for a given vintage year."""
-    if year not in SUPPORTED_YEARS:
-        raise ValueError(f"Year {year} not supported. Choose from: {sorted(SUPPORTED_YEARS)}")
-    layer = f"wohnlagenadr{year}"
-    attribution = _ATTRIBUTION_OVERRIDES.get(year, _ATTRIBUTION_TEMPLATE.format(year=year))
-    return {
-        "wfs_base_url": f"https://gdi.berlin.de/services/wfs/{layer}",
-        "wfs_type_names": f"{layer}:{layer}",
-        "vintage": year,
-        "output_filename": f"wohnlage_{year}.parquet",
-        "source_attribution": attribution,
-    }
-
+WFS_BASE_URL_TEMPLATE = "https://gdi.berlin.de/services/wfs/wohnlagenadr{year}"
 
 # ---------------------------------------------------------------------------
-# Constants (set at runtime via main())
+# Constants
 # ---------------------------------------------------------------------------
 
 WFS_PAGE_SIZE = 500
@@ -157,10 +156,11 @@ MAX_RUNTIME_SECONDS = 15 * 60
 ATTR_WOHNLAGE = "wol"
 ATTR_ADDRESS_ID = "schluessel"
 
-# Parquet schema
+# Parquet schema — includes city_code (ADR-0005)
 WOHNLAGE_PARQUET_SCHEMA = pa.schema(
     [
         pa.field("vintage", pa.int32()),
+        pa.field("city_code", pa.string()),
         pa.field("geometry_wkb", pa.large_binary()),
         pa.field("wohnlage", pa.string()),
         pa.field("address_id", pa.string()),
@@ -350,6 +350,7 @@ def parse_feature(feat: dict, idx: int, vintage: int, source_attribution: str) -
 
     return {
         "vintage": vintage,
+        "city_code": "berlin",
         "geometry_wkb": wkb_bytes,
         "wohnlage": wohnlage,
         "address_id": address_id,
@@ -392,6 +393,7 @@ def write_parquet(rows: list[dict], out_path: Path, is_complete: bool) -> None:
     table = pa.table(
         {
             "vintage": pa.array([r["vintage"] for r in rows], type=pa.int32()),
+            "city_code": pa.array([r["city_code"] for r in rows], type=pa.string()),
             "geometry_wkb": pa.array([r["geometry_wkb"] for r in rows], type=pa.large_binary()),
             "wohnlage": pa.array([r["wohnlage"] for r in rows], type=pa.string()),
             "address_id": pa.array([r["address_id"] for r in rows], type=pa.string()),
@@ -402,9 +404,17 @@ def write_parquet(rows: list[dict], out_path: Path, is_complete: bool) -> None:
         schema=WOHNLAGE_PARQUET_SCHEMA,
     )
     out_path.parent.mkdir(parents=True, exist_ok=True)
-    pq.write_table(table, tmp_path, compression="snappy")
+    try:
+        pq.write_table(table, tmp_path, compression="snappy")
+    except Exception:
+        tmp_path.unlink(missing_ok=True)
+        raise
     if is_complete:
-        tmp_path.rename(out_path)
+        try:
+            tmp_path.rename(out_path)
+        except Exception:
+            tmp_path.unlink(missing_ok=True)
+            raise
         log.info("Wrote %d rows to %s", len(rows), out_path)
     else:
         log.warning(
@@ -417,6 +427,85 @@ def write_parquet(rows: list[dict], out_path: Path, is_complete: bool) -> None:
 
 
 # ---------------------------------------------------------------------------
+# Per-year ingestion
+# ---------------------------------------------------------------------------
+
+
+def ingest_year(year: int, out_dir: Path, max_pages: Optional[int] = None) -> int:
+    """Ingest Wohnlage for one vintage year. Returns row count written (0 on failure)."""
+    if year not in AVAILABLE_YEARS:
+        raise ValueError(f"Year {year} not in AVAILABLE_YEARS={AVAILABLE_YEARS}")
+
+    wfs_base_url = WFS_BASE_URL_TEMPLATE.format(year=year)
+    wfs_type_names = f"wohnlagenadr{year}:wohnlagenadr{year}"
+    source_attribution = _ATTRIBUTION_OVERRIDES.get(year, _ATTRIBUTION_TEMPLATE.format(year=year))
+    out_path = out_dir / f"wohnlage_{year}.parquet"
+
+    log.info("=== Wohnlagen Mietspiegel %d ingestion started ===", year)
+    log.info("WFS endpoint: %s", wfs_base_url)
+    log.info("Feature type: %s", wfs_type_names)
+    log.info("Reference date (Stichtag): %s", _REFERENCE_DATES[year])
+    log.info("Output: %s", out_path)
+    log.info(
+        "WFS attribute mapping confirmed (2026-06-18): "
+        "wohnlage=wol, address_id=schluessel, "
+        "geometry=MultiPoint EPSG:25833"
+    )
+    log.info("Total features: ~397k. Expected pages: ~796. ETA: 5-15 min.")
+
+    try:
+        features, is_complete = fetch_all_features(
+            wfs_base_url, wfs_type_names, max_pages=max_pages
+        )
+    except RuntimeError as exc:
+        log.error("Failed to fetch Wohnlage WFS for year=%d: %s", year, exc)
+        return 0
+
+    if not features:
+        log.error("No features returned from WFS for year=%d -- not writing parquet.", year)
+        return 0
+
+    rows = parse_features(features, year, source_attribution)
+
+    if not rows:
+        log.error("No valid rows parsed for year=%d -- not writing parquet.", year)
+        return 0
+
+    if not is_complete:
+        log.warning(
+            "PARTIAL DATA WARNING: Only %d features were downloaded for year=%d. "
+            "Re-run without --max-pages (or within the 15-min budget) for full data.",
+            len(rows),
+            year,
+        )
+
+    try:
+        write_parquet(rows, out_path, is_complete=is_complete)
+    except Exception as exc:
+        log.error("Failed to write parquet for year=%d: %s", year, exc)
+        return 0
+
+    if not is_complete:
+        # .tmp.parquet was kept for manual inspection but out_path was not written.
+        # Return 0 so main() does not count this year as a successful output.
+        log.warning(
+            "Year %d partial — no canonical parquet written to %s. "
+            "Re-run without --max-pages for full data.",
+            year,
+            out_path,
+        )
+        return 0
+
+    log.info(
+        "=== Wohnlagen %d complete: %d rows -> %s ===",
+        year,
+        len(rows),
+        out_path,
+    )
+    return len(rows)
+
+
+# ---------------------------------------------------------------------------
 # CLI
 # ---------------------------------------------------------------------------
 
@@ -426,24 +515,25 @@ def build_parser() -> argparse.ArgumentParser:
         description=(
             "Download Berlin Wohnlagen Mietspiegel from GDI Berlin WFS "
             "and write Parquet (data/raw/berlin/price_rent/wohnlage_{year}.parquet). "
-            "WARNING: ~397k features per vintage -- expect 5-15 minutes download time."
+            "WARNING: ~397k features per vintage -- expect 5-15 minutes download time per year."
         )
     )
     p.add_argument(
-        "--year",
+        "--years",
+        nargs="+",
         type=int,
-        default=DEFAULT_YEAR,
-        choices=sorted(SUPPORTED_YEARS),
+        default=AVAILABLE_YEARS,
+        choices=AVAILABLE_YEARS,
         help=(
-            f"Mietspiegel vintage year to ingest (default: {DEFAULT_YEAR}). "
-            f"Supported: {sorted(SUPPORTED_YEARS)}."
+            f"Mietspiegel vintage years to ingest (default: all {AVAILABLE_YEARS}). "
+            "Supported: 2017, 2019, 2021, 2023, 2026."
         ),
     )
     p.add_argument(
         "--out-dir",
         default="data/raw/berlin/price_rent",
         type=Path,
-        help="Output directory for the parquet file (default: data/raw/berlin/price_rent).",
+        help="Output directory for the parquet files (default: data/raw/berlin/price_rent).",
     )
     p.add_argument(
         "--dry-run",
@@ -454,7 +544,7 @@ def build_parser() -> argparse.ArgumentParser:
         "--max-pages",
         type=int,
         default=None,
-        help="Limit download to N pages (for smoke-testing; e.g. --max-pages 5).",
+        help="Limit download to N pages per year (for smoke-testing; e.g. --max-pages 5).",
     )
     p.add_argument(
         "--verbose",
@@ -471,70 +561,29 @@ def main(argv: Optional[list[str]] = None) -> int:
     if args.verbose:
         logging.getLogger().setLevel(logging.DEBUG)
 
-    cfg = _build_year_config(args.year)
-    wfs_base_url = cfg["wfs_base_url"]
-    wfs_type_names = cfg["wfs_type_names"]
-    vintage = cfg["vintage"]
-    output_filename = cfg["output_filename"]
-    source_attribution = cfg["source_attribution"]
-
     out_dir = args.out_dir.resolve()
-    out_path = out_dir / output_filename
-
-    log.info("Wohnlagen Mietspiegel %d ingestion started.", vintage)
-    log.info("WFS endpoint: %s", wfs_base_url)
-    log.info("Attribution: %s", source_attribution)
-    log.info(
-        "WFS attribute mapping confirmed (2026-06-18): "
-        "wohnlage=wol, address_id=schluessel, "
-        "geometry=MultiPoint EPSG:25833"
-    )
-    log.info("Total features: ~397k. Expected pages: ~796. ETA: 5-15 min.")
 
     if args.dry_run:
-        log.info("[dry-run] Would paginate %s -> %s", wfs_base_url, out_path)
+        for year in args.years:
+            wfs_base_url = WFS_BASE_URL_TEMPLATE.format(year=year)
+            wfs_type_names = f"wohnlagenadr{year}:wohnlagenadr{year}"
+            out_path = out_dir / f"wohnlage_{year}.parquet"
+            log.info(
+                "[dry-run] Would paginate %s (type=%s) -> %s",
+                wfs_base_url,
+                wfs_type_names,
+                out_path,
+            )
         log.info("[dry-run] Page size: %d features per request", WFS_PAGE_SIZE)
+        log.info("[dry-run] Available years: %s", AVAILABLE_YEARS)
         return 0
 
-    try:
-        features, is_complete = fetch_all_features(
-            wfs_base_url, wfs_type_names, max_pages=args.max_pages
-        )
-    except RuntimeError as exc:
-        log.error("Failed to fetch Wohnlage WFS: %s", exc)
-        return 1
+    total = 0
+    for year in args.years:
+        total += ingest_year(year, out_dir, max_pages=args.max_pages)
 
-    if not features:
-        log.error("No features returned from WFS -- not writing parquet.")
-        return 1
-
-    rows = parse_features(features, vintage, source_attribution)
-
-    if not rows:
-        log.error("No valid rows parsed -- not writing parquet.")
-        return 1
-
-    if not is_complete:
-        log.warning(
-            "PARTIAL DATA WARNING: Only %d features were downloaded. "
-            "Re-run without --max-pages (or within the 15-min budget) for full data.",
-            len(rows),
-        )
-
-    try:
-        write_parquet(rows, out_path, is_complete=is_complete)
-    except Exception as exc:
-        log.error("Failed to write parquet: %s", exc)
-        return 1
-
-    log.info(
-        "Wohnlagen %d ingestion complete: %d rows -> %s (complete=%s)",
-        vintage,
-        len(rows),
-        out_path,
-        is_complete,
-    )
-    return 0
+    log.info("All years complete. Grand total: %d rows.", total)
+    return 0 if total > 0 else 1
 
 
 if __name__ == "__main__":

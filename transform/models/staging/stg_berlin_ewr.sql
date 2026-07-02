@@ -82,22 +82,36 @@
 
 {% if file_count > 0 %}
 
-    -- UNPIVOT wide parquet (one row per PLR) to long format (one row per PLR x
-    -- indicator).
+    -- Long-format union (one row per PLR x indicator).
+    -- NOTE: intentionally NOT `unpivot` -- DuckDB 1.5.3 round-trips a
+    -- CREATE VIEW containing UNPIVOT's `IN (col_a, col_b, ...)` column list
+    -- into quoted string literals on persistence, so the view raises
+    -- "UNPIVOT name count mismatch" the moment it's queried from a fresh
+    -- connection (i.e. always, outside the single dbt-build session that
+    -- created it). A manual UNION ALL is semantically identical and persists
+    -- cleanly. Confirmed reproduced here for #128 (same latent pattern
+    -- flagged from stg_hamburg_ewr_stadtteil.sql's #125 fix) once real
+    -- Berlin EWR parquet existed to exercise this branch from a fresh
+    -- connection.
     -- city_code is normalized from parquet value ('berlin') to canonical 'BER'
     -- (ADR-0005) so it matches dim_city and dim_area (fix for #52 / int_ewr_series).
-    select
-        'BER' as city_code,
-        area_code,
-        area_vintage,
-        reference_year,
-        reference_date,
-        indicator,
-        indicator_value,
-        is_suppressed_any,
-        source_attribution
-    from
-        (
+    {% set berlin_ewr_indicators = [
+        "residents_total",
+        "residents_male_share",
+        "residents_female_share",
+        "age_under18_share",
+        "age_18_27_share",
+        "age_27_45_share",
+        "age_45_65_share",
+        "age_65plus_share",
+        "mean_age_years",
+        "foreigners_share",
+        "migration_background_share",
+        "residence_duration_5y_share",
+        "residence_duration_10y_share",
+    ] %}
+    with
+        source as (
             select *
             from
                 read_parquet(
@@ -105,23 +119,24 @@
                     hive_partitioning = false,
                     union_by_name = true
                 )
-        ) unpivot (
-            indicator_value for indicator in (
-                residents_total,
-                residents_male_share,
-                residents_female_share,
-                age_under18_share,
-                age_18_27_share,
-                age_27_45_share,
-                age_45_65_share,
-                age_65plus_share,
-                mean_age_years,
-                foreigners_share,
-                migration_background_share,
-                residence_duration_5y_share,
-                residence_duration_10y_share
-            )
         )
+
+    {% for ind in berlin_ewr_indicators %}
+        select
+            'BER' as city_code,
+            area_code,
+            area_vintage,
+            reference_year,
+            reference_date,
+            '{{ ind }}' as indicator,
+            {{ ind }} as indicator_value,
+            is_suppressed_any,
+            source_attribution
+        from source
+        {% if not loop.last %}
+            union all
+        {% endif %}
+    {% endfor %}
 
 {% else %}
 

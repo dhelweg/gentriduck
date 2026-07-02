@@ -27,21 +27,33 @@ seeds:
   - name: seed_dim_city
     description: >
       City dimension seed (ADR-0005 city-agnostic seam). One row per city.
-      Currently Berlin only (BER). Multi-city expansion (Epic H) adds a new row.
+      Berlin (BER) + Hamburg (HH, ADR-0014, #40 H1). Multi-city expansion
+      (Epic H) adds a new row per additional city.
     meta:
       dbt_meta_owner: data-engineer
     columns:
       - name: city_code
-        description: Short city identifier (e.g. 'BER'). Natural key.
+        description: Short city identifier (e.g. 'BER', 'HH'). Natural key.
         tests:
           - not_null
           - unique
       - name: city_name
-        description: Human-readable city name (e.g. 'Berlin').
+        description: Human-readable city name (e.g. 'Berlin', 'Hamburg').
         tests:
           - not_null
       - name: country_code
         description: ISO 3166-1 alpha-2 country code (e.g. 'DE').
+        tests:
+          - not_null
+      - name: native_crs_epsg
+        description: >
+          EPSG code of the city's native projected CRS used for spatial
+          distance/area computations (ADR-0005 per-city CRS parameter,
+          first exercised by Hamburg in ADR-0014: Berlin=25833 ETRS89/UTM33N,
+          Hamburg=25832 ETRS89/UTM32N). Geometries are stored in this native
+          CRS in staging (not reprojected at ingestion); ST_Transform to
+          WGS84 happens per-consumer (e.g. the ohsome join), matching the
+          existing Berlin int_osm_poi_plr_weighted.sql convention.
         tests:
           - not_null
 
@@ -314,6 +326,62 @@ seeds:
           - accepted_values:
               arguments:
                 values: ["lor_pre2021", "lor_2021"]
+
+  - name: seed_gentrification_ground_truth
+    description: >
+      B2 back-test harness ground-truth seed. Curated list of ~20 Berlin PLRs
+      (LOR 2021 vintage) with literature-based gentrification labels used to
+      validate the live gentrification index against known hotspots and coldspots.
+
+      Labels:
+        'hotspot' — areas under active gentrification pressure or with known
+          high vulnerability; expected to appear in the top decile (highest
+          status_index = most deprived) of the live index.
+        'coldspot' — stable, affluent outer-city areas; expected to appear in
+          the bottom decile (lowest status_index = least deprived).
+        'mixed' — areas that have completed gentrification or are in
+          transition; not expected to appear cleanly in either decile.
+
+      Sources: Döring & Ulbricht (2016), Holm & Schulz (2016), Helweg 2018
+      thesis, and MSS 2023/2025 direct class assignments.
+      Approved PLR IDs verified against stg_berlin_lor lor_2021 vintage.
+    meta:
+      dbt_meta_owner: data-engineer
+    columns:
+      - name: plr_id
+        description: >
+          8-character PLR area code (LOR 2021 vintage). Natural key.
+          Verified against stg_berlin_lor (area_vintage='lor_2021').
+        tests:
+          - not_null
+          - unique
+      - name: plr_name
+        description: Human-readable PLR name (German proper noun; Berlin place names).
+        tests:
+          - not_null
+      - name: bezirk
+        description: Berlin district (Bezirk) name (e.g. 'Neukölln', 'Pankow').
+        tests:
+          - not_null
+      - name: label
+        description: >
+          Ground-truth gentrification label: 'hotspot' (under pressure / vulnerable),
+          'coldspot' (stable / low deprivation), or 'mixed' (transitional / completed).
+        tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: [hotspot, coldspot, mixed]
+      - name: source
+        description: >
+          Short citation for the label assignment (e.g. 'Döring & Ulbricht 2016',
+          'MSS 2023 Status=4', 'Helweg 2018 thesis §4.2').
+        tests:
+          - not_null
+      - name: notes
+        description: >
+          Optional context: current MSS status/class, literature reference,
+          or caveats about the mapping accuracy.
 
   - name: berlin_mietspiegel
     description: >
