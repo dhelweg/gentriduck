@@ -2,12 +2,21 @@
 title: Area detail — per-PLR drill-down
 ---
 
+<script>
+  // $page and `browser` are already provided by Evidence's markdown preprocessing
+  // ($app/stores, $app/environment). Accessing url.searchParams is disallowed during static
+  // prerendering, so gate on `browser`: pre-select the area clicked on the /maps page
+  // (?area=<area_code>) once running client-side (#133 G1d click-through); falls back to the
+  // Dropdown's own default when absent/unmatched/prerendering.
+  $: initialArea = browser ? ($page.url.searchParams.get('area') ?? undefined) : undefined;
+</script>
+
 # Area detail — per-PLR drill-down
 
 Full indicator breakdown for a single Berlin Planungsraum (PLR): index trajectory across all
 available MSS editions, POI development, and the Bodenrichtwert/Mietspiegel-derived price & rent
-dimension. Pick an area below (or arrive here from the [maps page](/maps) once its click-through
-is wired — see [#133](https://github.com/dhelweg/gentriduck/issues/133)).
+dimension. Pick an area below, or arrive here pre-selected by clicking a Planungsraum on the
+[maps page](/maps).
 
 <Alert status="info">
   Label polarity note: <b>status_index</b> is ordinal (higher = <b>more deprived</b>);
@@ -31,7 +40,7 @@ where c.city_code = 'BER'
 order by label
 ```
 
-<Dropdown name="area" data={areas} value=value label=label title="Area (PLR)"/>
+<Dropdown name="area" data={areas} value=value label=label title="Area (PLR)" defaultValue={initialArea}/>
 
 ## {inputs.area.label} — index trajectory
 

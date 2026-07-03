@@ -37,7 +37,11 @@ select
     area_name,
     status_index,
     dynamism_index,
-    period_yyyymm
+    period_yyyymm,
+    -- Drill-down click-through target (#133 G1d); area-detail only covers PLR-level areas
+    -- (fct_gentrification_change has no area_level split), so only the PLR branch below
+    -- actually wires this up as a link.
+    '/area-detail?area=' || area_code as link
 from gentriduck_marts.gentrification_index
 where variant = 'standard'
   and area_level = '${inputs.area_level.value}'
@@ -62,7 +66,10 @@ where variant = 'standard'
     startingLat={52.52}
     startingLong={13.405}
     startingZoom={9}
+    link="link"
 />
+
+Click a Planungsraum on the map to open its [drill-down page](/area-detail).
 
 {:else}
 
@@ -102,7 +109,7 @@ order by dynamism_index desc
 
 <DataTable data={area_table} rows=10/>
 
-Per-area trajectories are on the [time-series page](/time-series); a per-area
-[detail/drill-down view](/area-detail) is now available too (pick the area there for now —
-click-through directly from this map is the remaining G1d follow-up, see
-[#133](https://github.com/dhelweg/gentriduck/issues/133)).
+Per-area trajectories are on the [time-series page](/time-series). Clicking a Planungsraum (PLR)
+on the map above opens its [detail/drill-down view](/area-detail) pre-selected on that area
+([#133](https://github.com/dhelweg/gentriduck/issues/133)); the drill-down page is PLR-only (it
+has no Bezirksregion-level data), so the BZR map above is view-only for now.
