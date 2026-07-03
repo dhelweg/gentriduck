@@ -3,8 +3,13 @@
 -- ingestion/berlin/lor/ingest_lor_geometries.py (ADR-0003, WFS GDI Berlin,
 -- CC BY 3.0 DE).
 --
--- Storage path: data/raw/berlin/lor/{pre2021,lor_2021}.parquet
--- (ratified as the canonical path — see ADR-0003 implementation note).
+-- PLR grain only -- see stg_berlin_lor_bzr.sql for the Bezirksregion-level
+-- sibling (added in #134 to source correctly-encoded BZR names from the same
+-- WFS, replacing the mojibake-corrupted 2018-thesis-golden BZR names).
+--
+-- Storage path: data/raw/berlin/lor/{pre2021,lor_2021}_plr.parquet
+-- (ratified as the canonical path — see ADR-0003 implementation note; file
+-- names gained a _plr/_bzr suffix in #134 when the BZR layer was added).
 --
 -- Graceful-degradation: returns zero rows with the target schema when no
 -- parquet files have been ingested, so downstream models and uv run poe build
@@ -25,7 +30,7 @@
     )
 }}
 
-{% set lor_glob = var("project_root") ~ "/data/raw/berlin/lor/*.parquet" %}
+{% set lor_glob = var("project_root") ~ "/data/raw/berlin/lor/*_plr.parquet" %}
 
 {% if execute %}
     {%- set file_count_result = run_query("SELECT count(*) FROM glob('" ~ lor_glob ~ "')") -%}
@@ -49,7 +54,7 @@
 
 {% else %}
 
-    -- Zero-row typed stub: no LOR parquet files found.
+    -- Zero-row typed stub: no LOR PLR parquet files found.
     -- Run ingestion/berlin/lor/ingest_lor_geometries.py to populate
     -- data/raw/berlin/lor/
     select
