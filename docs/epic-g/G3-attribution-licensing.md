@@ -111,10 +111,12 @@ zones, Wohnlagen/Mietenspiegel)
 - **We do not redistribute source PDFs** we don't have an explicit machine-readable licence for
   (Mietspiegeltabelle, pre-2024 Wohnungsmarktbericht editions) — only the numeric values we
   re-tabulate ourselves, cited back to the original document.
-- Gentriduck's own governed marts, models, and documentation are original work; this page does not
-  currently assert a separate licence for that layer (a future site-wide licence choice, e.g.
-  CC BY 4.0 for our own text/marts, is an open item for F1/G1 site wiring — not settled here to avoid
-  scope creep into hosting decisions still pending maintainer sign-off on #33).
+- Gentriduck's own governed marts (the joined/derived dataset) are released under the **Open
+  Database Licence (ODbL) v1.0** — see `DATA_LICENSE.md` at the repo root for the full rationale
+  (chosen to satisfy the OSM-derived component's share-alike condition without fragmenting a single
+  joined mart across incompatible per-column licences) and the reproducible regeneration path
+  (`uv run poe refresh`). This closes the open item previously deferred here pending the F1/#33
+  hosting decision, now resolved (ADR-0012 accepted 2026-07-03). Repo *code* remains MIT (`LICENSE`).
 
 ## 5. Software / tooling attribution (informational, not a data-licence obligation)
 
