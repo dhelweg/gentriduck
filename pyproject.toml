@@ -56,6 +56,9 @@ deps  = "dbt deps --project-dir transform"
 build = "dbt build --project-dir transform --profiles-dir transform"
 test  = "dbt test --project-dir transform --profiles-dir transform"
 docs  = "dbt docs generate --project-dir transform --profiles-dir transform"
+# F2 (#34) / ADR-0012: export the published marts to parquet (data/serving/, gitignored).
+# Run after `poe build`. Future web build (G0/G1) consumes this parquet snapshot.
+export-serving = "python transform/export_serving_parquet.py"
 fmt      = { sequence = ["ruff format .", "sqlfmt transform"], default_item_type = "cmd" }
 lint     = { sequence = ["ruff check .", "sqlfluff lint transform"], default_item_type = "cmd" }
 # R-C3: analysis scripts are deterministic (random_state=42) and require ingested data.
