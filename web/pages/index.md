@@ -76,5 +76,6 @@ limit 10
 
 ## More on the way
 
-This is the site's first page — a governed-index overview. Time-series trends, a choropleth map,
-and per-area drill-down pages are being built next (see the project board).
+See the [time-series page](/time-series) for per-area gentrification trajectories across the
+available MSS editions. A choropleth map and per-area drill-down pages are being built next
+(see the project board).
