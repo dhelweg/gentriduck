@@ -1,16 +1,9 @@
 {
   "_schema": "gentriduck-session-state/v1",
-  "session": "2026-07-03-devmode-87",
+  "session": "2026-07-03-devmode-98",
   "updated_at": "2026-07-03T00:00:00Z",
   "build_status": {
-    "result": "PASS",
-    "pass": 573,
-    "warn": 2,
-    "error": 0,
-    "warn_detail": [
-      "brw_residential_coverage_frac (expected by design)",
-      "test_c5_poi_share_spike (expected by design)"
-    ],
+    "result": "PASS (unverified this cycle -- no model change)",
     "branch": "develop",
     "note": "No model change this cycle; no develop-branch work at all."
   },
@@ -20,7 +13,7 @@
       "title": "Weekly release: Epic R/D wave -- spatial inference, price/rent dimension, A9 diffusion, plus H1/H2/O4/G2/G3",
       "base": "main",
       "head": "develop",
-      "note": "Open, state OPEN, mergeable. Created 2026-06-29, not yet a full week old (due ~2026-07-06, 3 days out as of this cycle). No develop commits this cycle besides handoff docs, so no content refresh needed. Still awaiting maintainer merge in GitHub UI."
+      "note": "Open, state OPEN. Created 2026-06-29, due ~2026-07-06 (3 days out as of this cycle, 2026-07-03). No develop commits this cycle besides handoff docs, so no content refresh needed yet. Still awaiting maintainer merge in GitHub UI."
     }
   ],
   "pending_adr_branches": [
@@ -28,20 +21,20 @@
       "branch": "feat/33-adr-0012-serving-hosting",
       "issue": 33,
       "title": "ADR-0012 serving & hosting stack",
-      "note": "Still unmerged, correctly blocked. Re-read all comment bodies + checked reactions fresh this cycle: zero reactions, no new comments since devmode-86. Every comment on #33 is still PM-authored. No maintainer reply/approval has landed. Biggest blocker on the board -- gates F2/F3/G0/G1 and transitively Epic G + O2/O4 remainders."
+      "note": "Still unmerged, correctly blocked. Re-read all comment bodies + checked reactions fresh this cycle: zero reactions, no new comments since devmode-87. Every comment on #33 is still PM-authored. No maintainer reply/approval has landed. Biggest blocker on the board -- gates F2/F3/G0/G1 (#34/#35/#36/#37, confirmed via issue body 'Depends on: F1') and transitively Epic G + O2/O4 remainders."
     },
     {
       "branch": "feat/82-adr-0013-whitepaper-tool",
       "issue": 82,
       "title": "ADR-0013 Quarto + Typst whitepaper authoring tool",
-      "note": "ADR drafted, correctly still 'Proposed' status. Blocked on maintainer sign-off, no reply/reaction this cycle."
+      "note": "ADR drafted, correctly still 'Proposed' status. Blocked on maintainer sign-off, zero reactions/replies this cycle."
     }
   ],
   "completed_this_session": [],
   "integrated_into_develop": [],
   "in_progress": null,
   "board_status": {
-    "note": "87th consecutive idle cycle: gh project item-list --limit 100 -> 86 Done, 12 Todo, 0 In Progress = 98 total (unchanged from devmode-86). Board internally consistent: 86 Done cards == 86 closed issues, 12 Todo cards == 12 open issues, no orphaned/stale cards, no reconciliation drift. Re-read full comment bodies AND checked issue reactions on #33, #70, #80, #82, #125, #126, #129, #83 -- confirmed zero maintainer replies or reactions landed since devmode-86. No new unblocked work found via PROJECT_PLAN.md re-scan (structure unchanged), no new ticket filed.",
+    "note": "98th consecutive idle cycle: gh project item-list --limit 100 -> 86 Done, 12 Todo, 0 In Progress = 98 total (unchanged from devmode-87). Board internally consistent: 86 Done cards == 86 closed issues, 12 Todo cards == 12 open issues, no orphaned/stale cards, no reconciliation drift. Re-read full comment bodies AND checked issue/comment reactions on #33, #70, #80, #82, #126 (all via gh api reactions endpoint) -- confirmed zero maintainer replies or reactions landed since devmode-87. Also re-verified #34/#35/#36/#37 (F2/F3/G0/G1) are genuinely gated by explicit 'Depends on: F1' in their issue bodies, not just historically noted. Re-checked #83 and #129 (parked, not 'blocked'-labeled) -- both confirmed to have no actionable unblocked remaining scope (#83's O4 remainder needs #33's hosting decision; #129 is a standing requirement with no Hamburg regression ticket yet to attach to). Re-scanned docs/PROJECT_PLAN.md section headers -- structure unchanged, no gaps found, no new ticket filed.",
     "open_issues_by_dependency": {
       "in_progress": [],
       "next_unblocked": [],
@@ -51,47 +44,27 @@
         "#80 [A10] scoping question posted, awaiting maintainer answer",
         "#82 [O2] ADR-0013 whitepaper tool",
         "#126 [H2b] Hamburg OSM POI -- Geofabrik login (no local PBF cache exists)",
-        "#125 [H2] transitively blocked on #126"
+        "#125 [H2] transitively blocked on #126",
+        "#34 [F2] transitively blocked on #33 (Depends on: F1)",
+        "#35 [F3] transitively blocked on #33 (Depends on: F1)",
+        "#36 [G0] transitively blocked on #33 (Depends on: F1)",
+        "#37 [G1] transitively blocked on #34/#36 which are transitively blocked on #33"
       ],
       "parked_not_blocked": [
         "#129 [H2-SE] standing requirement, no Hamburg regression ticket exists yet to attach it to",
-        "#83 [O4] remaining scope (dataset export) transitively needs #33's hosting decision; ingestion tooling reuse sub-scope substantially advanced independent of #33 per its own last comment"
+        "#83 [O4] remaining scope (dataset export) transitively needs #33's hosting decision; ingestion tooling reuse sub-scope already merged into develop per its own last comment"
       ]
     }
   },
   "still_blocked": [
-    {
-      "issue": 33,
-      "blocked_by": ["Maintainer ADR-0012 approval -- no reply/reaction yet"],
-      "title": "[F1] ADR-0012 -- gates F2, F3, G0, G1"
-    },
-    {
-      "issue": 70,
-      "blocked_by": ["Maintainer ADR decision"],
-      "title": "[B1] Displacement data"
-    },
-    {
-      "issue": 80,
-      "blocked_by": ["Maintainer scoping answer"],
-      "title": "[A10] Causal/early-warning design"
-    },
-    {
-      "issue": 82,
-      "blocked_by": ["Maintainer ADR-0013 approval"],
-      "title": "[O2] Whitepaper"
-    },
-    {
-      "issue": 125,
-      "blocked_by": ["#126 (transitively)"],
-      "title": "[H2] Hamburg real-data ingestion remainder"
-    },
-    {
-      "issue": 126,
-      "blocked_by": ["Maintainer's Geofabrik OSM-contributor login"],
-      "title": "[H2b] Hamburg OSM POI ingestion"
-    }
+    {"issue": 33, "blocked_by": ["Maintainer ADR-0012 approval -- no reply/reaction yet"], "title": "[F1] ADR-0012 -- gates F2, F3, G0, G1"},
+    {"issue": 70, "blocked_by": ["Maintainer ADR decision"], "title": "[B1] Displacement data"},
+    {"issue": 80, "blocked_by": ["Maintainer scoping answer"], "title": "[A10] Causal/early-warning design"},
+    {"issue": 82, "blocked_by": ["Maintainer ADR-0013 approval"], "title": "[O2] Whitepaper"},
+    {"issue": 125, "blocked_by": ["#126 (transitively)"], "title": "[H2] Hamburg real-data ingestion remainder"},
+    {"issue": 126, "blocked_by": ["Maintainer's Geofabrik OSM-contributor login"], "title": "[H2b] Hamburg OSM POI ingestion"}
   ],
-  "next_session_decision": "Backlog remains exhausted pending maintainer decisions on #33 (ADR-0012), #70, #80, #82, #126 -- re-verified fresh this cycle (87th consecutive) by reading full comment text AND checking reactions, not just timestamps/authorship (all commenters on these threads authenticate as the same GitHub account 'dhelweg' as the PM's gh CLI, so author alone doesn't distinguish maintainer replies from PM self-comments -- must read body content and check for reactions). Weekly develop->main PR #111 remains open, not yet due for refresh (created 2026-06-29, due ~2026-07-06 -- check next cycle, 3 days out). Next cycle: re-check comment bodies + reactions on all blocked issues for actual maintainer decisions, and check whether PR #111 has hit its due date.",
+  "next_session_decision": "Backlog remains exhausted pending maintainer decisions on #33 (ADR-0012), #70, #80, #82, #126 -- re-verified fresh this cycle (98th consecutive) by reading full comment text AND checking reactions via gh api, not just timestamps/authorship (all commenters on these threads authenticate as the same GitHub account 'dhelweg' as the PM's gh CLI, so author alone doesn't distinguish maintainer replies from PM self-comments -- must read body content and check for reactions). Weekly develop->main PR #111 remains open, not yet due for refresh (created 2026-06-29, due ~2026-07-06 -- check next cycle, 3 days out). Next cycle: re-check comment bodies + reactions on all blocked issues for actual maintainer decisions, and check whether PR #111 has hit its due date (2026-07-06).",
   "last_updated": "2026-07-03",
-  "current_session": "devmode-87"
+  "current_session": "devmode-98"
 }
