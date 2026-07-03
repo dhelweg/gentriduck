@@ -115,3 +115,11 @@ ingest = { sequence = [
 # data/raw/osm/. Not part of `poe ingest` (see note above).
 ingest-osm-berlin = "python ingestion/berlin/osm/ingest_osm_history.py --osh-pbf data/raw/osm/germany-internal.osh.pbf --out-dir data/raw/osm/berlin"
 ingest-osm-hamburg = "python ingestion/hamburg/osm/ingest_hamburg_osm.py --osh-pbf data/raw/osm/germany-internal.osh.pbf --out-dir data/raw/osm/hamburg"
+# F3 (#35) / ADR-0015: one-command end-to-end data refresh — raw sources through servable
+# artefacts. Chains existing tasks in dependency order via poe task refs (not duplicated shell
+# commands): dbt deps -> all fresh-checkout-safe ingestion -> dbt build -> export marts -> export
+# geo bundle. Deliberately excludes ingest-osm-* (login-gated, ADR-0002), the web build (Node
+# toolchain, owned by web-engineer/G0-G1), and analysis/backtest (one-off validation, not
+# site-serving artefacts). See ADR-0015 for the full rationale, including the deferred
+# GitHub-Actions-schedule path for a future automated cadence.
+refresh = { sequence = ["deps", "ingest", "build", "export-serving", "export-area-geojson"], default_item_type = "ref" }
