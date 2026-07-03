@@ -1,10 +1,10 @@
 {
   "_schema": "gentriduck-session-state/v1",
-  "session": "2026-07-03-devmode-118",
-  "updated_at": "2026-07-03T20:20:00Z",
+  "session": "2026-07-03-devmode-119",
+  "updated_at": "2026-07-03T19:50:00Z",
   "build_status": {
     "result": "PASS",
-    "pass": 573,
+    "pass": 576,
     "warn": 2,
     "error": 0,
     "warn_detail": [
@@ -12,15 +12,15 @@
       "test_c5_poi_share_spike (expected by design)"
     ],
     "branch": "develop",
-    "note": "dbt side unchanged by G1a (web/ only). Node.js now installed user-locally in this environment (~/.local/node, symlinked to ~/.local/bin) -- needed for any future web-engineer work here."
+    "note": "PASS count rose 573->576 after #134's stg_berlin_lor_bzr (new tests: assert_not_empty + assert_min_rows)."
   },
   "open_prs": [
     {
       "number": 111,
-      "title": "Weekly release: Epic R/D wave -- spatial inference, price/rent dimension, A9 diffusion, plus H1/H2/O4/G2/G3",
+      "title": "Weekly release: Epic R/D wave -- spatial inference, price/rent dimension, A9 diffusion, plus H1/H2/O4/G2/G3/F1/F2/G0/G1a/G1b/bugfix-134",
       "base": "main",
       "head": "develop",
-      "note": "Open, due ~2026-07-06 (3 days out). develop has moved 5 commits since PR opened (b50fcf5 #33, 30dacfe #34, 18af85e #36, 74a3128 docs, b696f5f #130) -- PR body needs a refresh before the maintainer merges. Getting close to due -- refresh next cycle regardless of what else is picked up."
+      "note": "Refreshed this cycle (body was accidentally fully-replaced by a `gh pr edit --body-file` call, then restored + appended -- lesson: --body-file REPLACES, does not append). Due ~2026-07-06 (~3 days out). Ready to merge in the GitHub UI."
     }
   ],
   "pending_adr_branches": [
@@ -31,26 +31,29 @@
       "note": "ADR drafted, still 'Proposed'. Blocked on maintainer sign-off."
     }
   ],
-  "completed_this_session": [130],
+  "completed_this_session": [131, 134],
   "integrated_into_develop": [
     {
-      "commit": "b696f5f",
-      "issue": 130,
-      "title": "feat(#130): integrate G1a (Evidence.dev scaffold + index page) into develop"
+      "commit": "f740ae6",
+      "issue": 131,
+      "title": "feat(#131): integrate G1b (time-series page) into develop"
+    },
+    {
+      "commit": "183589f",
+      "issue": 134,
+      "title": "fix(#134): integrate area_name mojibake fix into develop"
     }
   ],
   "in_progress": null,
   "board_status": {
-    "note": "#37 [G1] split into #130-133 (G1a/b/c/d) -- too large for one PR. #130 (scaffold + index page) implemented, reviewed, merged this cycle. Filed #134 (pre-existing latin-1 mojibake bug in area_name, discovered during G1a, out of scope for it). Board: 90 Done, 10 Todo, 0 In Progress = 100 total (was 89/9).",
+    "note": "92 Done, 11 Todo, 0 In Progress = 103 total (was 90/10 at devmode-118). Reconciliation clean at both start and end of cycle.",
     "open_issues_by_dependency": {
       "in_progress": [],
       "next_unblocked": [
-        "#131 [G1b] time-series page -- depends on G1a (#130, done). Reuses the scaffold/source pattern directly -- likely the lowest-setup-cost next pick.",
-        "#132 [G1c] maps page -- depends on G1a (#130, done). May need area geometries not yet in the parquet export -- check F2's export coverage first.",
-        "#133 [G1d] area drill-down -- depends on G1a + G1c (map click-through wiring).",
+        "#132 [G1c] maps page -- depends on G1a (#130, done). NEEDS a data-engineer prep step first: no marts model currently exposes area geometry (geometry_wkb lives only in stg_berlin_lor/stg_berlin_lor_bzr, upstream of the exported marts layer). Scope a small dim_area_geometry-style marts model before the web-engineer can build the choropleth.",
+        "#133 [G1d] area drill-down -- depends on #132's map click-through wiring, parked until #132 lands.",
         "#35 [F3] ADR-0007 data refresh/orchestration -- depends only on F1 (#33, done), independent of G1.",
-        "#134 [bug] latin-1 mojibake in area_name -- independent, small, contained fix.",
-        "#83 [O4] remaining scope (dataset export + open license) -- unblocked since #33/#34 landed, not yet re-triaged."
+        "#83 [O4] remaining scope (dataset export + open license) -- unblocked since #33/#34 landed, not yet re-triaged this cycle."
       ],
       "blocked_on_maintainer": [
         "#70 [B1] displacement data -- Milieuschutz ADR",
@@ -91,7 +94,7 @@
       "title": "[H2b] Hamburg OSM POI ingestion"
     }
   ],
-  "next_session_decision": "Refresh PR #111 (due ~2026-07-06, 3 days out) to summarize #33/#34/#36/#130 before the maintainer merges. Then continue G1 slices -- #131 [G1b] time-series page is the natural next pick (reuses G1a's scaffold/source pattern). #134 (mojibake bug) is a good small independent filler task. Re-triage #83 [O4]'s remaining dataset-export scope, now unblocked.",
+  "next_session_decision": "Watch/refresh PR #111 (due ~2026-07-06). #132 [G1c] maps page needs a data-engineer geometry-export prep step before the web-engineer slice -- scope that first, or pick #35 [F3] / #83 [O4] remainder as independent unblocked work in the meantime.",
   "last_updated": "2026-07-03",
-  "current_session": "devmode-118"
+  "current_session": "devmode-119"
 }
