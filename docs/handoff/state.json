@@ -1,7 +1,7 @@
 {
   "_schema": "gentriduck-session-state/v1",
-  "session": "2026-07-03-devmode-109",
-  "updated_at": "2026-07-03T00:00:00Z",
+  "session": "2026-07-03-devmode-110",
+  "updated_at": "2026-07-03T13:20:00Z",
   "build_status": {
     "result": "PASS (unverified this cycle -- no model change)",
     "branch": "develop",
@@ -34,7 +34,7 @@
   "integrated_into_develop": [],
   "in_progress": null,
   "board_status": {
-    "note": "109th consecutive idle cycle: gh project item-list --limit 100 -> 86 Done, 12 Todo, 0 In Progress = 98 total (unchanged from devmode-108). Board internally consistent: 86 Done cards == 86 closed issues, 12 Todo cards == 12 open issues, no orphaned/stale cards, no reconciliation drift. Re-read full comment bodies AND checked issue/comment reactions on #33, #70, #80, #82, #126 (all via gh api reactions endpoint) -- confirmed zero maintainer replies or reactions landed since devmode-108. Re-checked #83 and #129 (parked, not 'blocked'-labeled) -- both confirmed to have no actionable unblocked remaining scope. Re-scanned docs/PROJECT_PLAN.md section headers -- structure unchanged, no gaps found, no new ticket filed.",
+    "note": "110th consecutive idle cycle: gh project item-list --limit 100 -> 86 Done, 12 Todo, 0 In Progress = 98 total (unchanged from devmode-109). Board internally consistent: 86 Done cards == 86 closed issues, 12 Todo cards == 12 open issues, no orphaned/stale cards, no reconciliation drift. Re-read full comment bodies AND checked issue/comment reactions on #33, #70, #80, #82, #126 (all via gh api reactions endpoint) -- confirmed zero maintainer replies or reactions landed since devmode-109. Re-checked #83 and #129 (parked, not 'blocked'-labeled) -- both confirmed to have no actionable unblocked remaining scope. Re-scanned docs/PROJECT_PLAN.md section headers -- structure unchanged, no gaps found, no new ticket filed.",
     "open_issues_by_dependency": {
       "in_progress": [],
       "next_unblocked": [],
@@ -57,12 +57,48 @@
     }
   },
   "still_blocked": [
-    {"issue": 33, "blocked_by": ["Maintainer ADR-0012 approval -- no reply/reaction yet"], "title": "[F1] ADR-0012 -- gates F2, F3, G0, G1"},
-    {"issue": 70, "blocked_by": ["Maintainer ADR decision"], "title": "[B1] Displacement data"},
-    {"issue": 80, "blocked_by": ["Maintainer scoping answer"], "title": "[A10] Causal/early-warning design"},
-    {"issue": 82, "blocked_by": ["Maintainer ADR-0013 approval"], "title": "[O2] Whitepaper"},
-    {"issue": 125, "blocked_by": ["#126 (transitively)"], "title": "[H2] Hamburg real-data ingestion remainder"},
-    {"issue": 126, "blocked_by": ["Maintainer's Geofabrik OSM-contributor login"], "title": "[H2b] Hamburg OSM POI ingestion"}
+    {
+      "issue": 33,
+      "blocked_by": [
+        "Maintainer ADR-0012 approval -- no reply/reaction yet"
+      ],
+      "title": "[F1] ADR-0012 -- gates F2, F3, G0, G1"
+    },
+    {
+      "issue": 70,
+      "blocked_by": [
+        "Maintainer ADR decision"
+      ],
+      "title": "[B1] Displacement data"
+    },
+    {
+      "issue": 80,
+      "blocked_by": [
+        "Maintainer scoping answer"
+      ],
+      "title": "[A10] Causal/early-warning design"
+    },
+    {
+      "issue": 82,
+      "blocked_by": [
+        "Maintainer ADR-0013 approval"
+      ],
+      "title": "[O2] Whitepaper"
+    },
+    {
+      "issue": 125,
+      "blocked_by": [
+        "#126 (transitively)"
+      ],
+      "title": "[H2] Hamburg real-data ingestion remainder"
+    },
+    {
+      "issue": 126,
+      "blocked_by": [
+        "Maintainer's Geofabrik OSM-contributor login"
+      ],
+      "title": "[H2b] Hamburg OSM POI ingestion"
+    }
   ],
   "next_session_decision": "Backlog remains exhausted pending maintainer decisions on #33 (ADR-0012), #70, #80, #82, #126 -- re-verified fresh this cycle (109th consecutive) by reading full comment text AND checking reactions via gh api, not just timestamps/authorship (all commenters on these threads authenticate as the same GitHub account 'dhelweg' as the PM's gh CLI, so author alone doesn't distinguish maintainer replies from PM self-comments -- must read body content and check for reactions). Weekly develop->main PR #111 remains open, not yet due for refresh (created 2026-06-29, due ~2026-07-06 -- getting close, check next 1-2 cycles). Next cycle: re-check comment bodies + reactions on all blocked issues for actual maintainer decisions, and check whether PR #111 has hit its due date (2026-07-06).",
   "last_updated": "2026-07-03",
