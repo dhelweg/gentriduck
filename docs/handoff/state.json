@@ -1,7 +1,7 @@
 {
   "_schema": "gentriduck-session-state/v1",
-  "session": "2026-07-03-devmode-80",
-  "updated_at": "2026-07-03T03:20:00Z",
+  "session": "2026-07-03-devmode-84",
+  "updated_at": "2026-07-03T00:00:00Z",
   "build_status": {
     "result": "PASS",
     "pass": 573,
@@ -20,7 +20,7 @@
       "title": "Weekly release: Epic R/D wave -- spatial inference, price/rent dimension, A9 diffusion, plus H1/H2/O4/G2/G3",
       "base": "main",
       "head": "develop",
-      "note": "Open, state OPEN, mergeStateStatus UNKNOWN (GitHub recomputing, not a conflict signal). No develop commits since devmode-74 besides handoff docs, so no refresh needed this cycle. Still awaiting maintainer merge in GitHub UI."
+      "note": "Open, state OPEN, mergeStateStatus CLEAN. No develop commits this cycle besides handoff docs, so no refresh needed. Still awaiting maintainer merge in GitHub UI."
     }
   ],
   "pending_adr_branches": [
@@ -28,7 +28,7 @@
       "branch": "feat/33-adr-0012-serving-hosting",
       "issue": 33,
       "title": "ADR-0012 serving & hosting stack",
-      "note": "Still unmerged, correctly blocked -- no maintainer reply this cycle either. Biggest blocker on the board -- gates F2/F3/G0/G1 and transitively Epic G + O2/O4 remainders. This cycle fixed a stale issue title: #33's title said 'ADR-0006' but ADR-0006 is already taken (Berlin MSS data source, docs/adr/0006-berlin-mss-data-source.md) and the actual branch/ADR file is ADR-0012 (docs/adr/0012-serving-and-hosting-stack.md). Retitled #33 to '[F1] ADR-0012 serving & hosting stack (static vs MotherDuck; free hosting)' to match reality."
+      "note": "Still unmerged, correctly blocked -- no maintainer reply this cycle either. Biggest blocker on the board -- gates F2/F3/G0/G1 and transitively Epic G + O2/O4 remainders."
     },
     {
       "branch": "feat/82-adr-0013-whitepaper-tool",
@@ -41,12 +41,12 @@
   "integrated_into_develop": [],
   "in_progress": null,
   "board_status": {
-    "note": "80th consecutive idle cycle: gh project item-list --limit 100 -> 86 Done, 12 Todo, 0 In Progress = 98 total (unchanged from devmode-79). Re-checked latest comment on #33/#70/#80/#82 and #126's body -- no maintainer reply found on any. No new unblocked work found, no new ticket filed.",
+    "note": "84th consecutive idle cycle: gh project item-list --limit 100 -> 86 Done, 12 Todo, 0 In Progress = 98 total (unchanged from devmode-83). Re-checked latest comment on #33/#70/#80/#82/#125 and #126's body -- no maintainer reply found on any. Swept all non-develop/main remote branches for unmerged commits -- none found (all stale, fully merged). No new unblocked work found, no new ticket filed.",
     "open_issues_by_dependency": {
       "in_progress": [],
       "next_unblocked": [],
       "blocked_on_maintainer": [
-        "#33 [F1] ADR-0012 hosting (title corrected this cycle) -- blocks #34 F2, #35 F3, #36 G0, #37 G1",
+        "#33 [F1] ADR-0012 hosting -- blocks #34 F2, #35 F3, #36 G0, #37 G1",
         "#70 [B1] displacement data -- Milieuschutz ADR",
         "#80 [A10] scoping question posted, awaiting maintainer answer",
         "#82 [O2] ADR-0013 whitepaper tool",
@@ -55,55 +55,43 @@
       ],
       "parked_not_blocked": [
         "#129 [H2-SE] standing requirement, no Hamburg regression ticket exists yet to attach it to",
-        "#83 [O4] remaining scope (dataset export) transitively needs #33's hosting decision; two of three sub-scopes already shipped (ingestion tooling reuse + milestone artifact)"
+        "#83 [O4] remaining scope (dataset export) transitively needs #33's hosting decision; ingestion tooling reuse + milestone artifact sub-scopes already shipped"
       ]
     }
   },
   "still_blocked": [
     {
       "issue": 33,
-      "blocked_by": [
-        "Maintainer ADR-0012 approval"
-      ],
+      "blocked_by": ["Maintainer ADR-0012 approval"],
       "title": "[F1] ADR-0012 -- gates F2, F3, G0, G1"
     },
     {
       "issue": 70,
-      "blocked_by": [
-        "Maintainer ADR decision"
-      ],
+      "blocked_by": ["Maintainer ADR decision"],
       "title": "[B1] Displacement data"
     },
     {
       "issue": 80,
-      "blocked_by": [
-        "Maintainer scoping answer"
-      ],
+      "blocked_by": ["Maintainer scoping answer"],
       "title": "[A10] Causal/early-warning design"
     },
     {
       "issue": 82,
-      "blocked_by": [
-        "Maintainer ADR-0013 approval"
-      ],
+      "blocked_by": ["Maintainer ADR-0013 approval"],
       "title": "[O2] Whitepaper"
     },
     {
       "issue": 125,
-      "blocked_by": [
-        "#126 (transitively)"
-      ],
+      "blocked_by": ["#126 (transitively)"],
       "title": "[H2] Hamburg real-data ingestion remainder"
     },
     {
       "issue": 126,
-      "blocked_by": [
-        "Maintainer's Geofabrik OSM-contributor login"
-      ],
+      "blocked_by": ["Maintainer's Geofabrik OSM-contributor login"],
       "title": "[H2b] Hamburg OSM POI ingestion"
     }
   ],
-  "next_session_decision": "Backlog remains exhausted pending maintainer decisions on #33 (ADR-0012), #70, #80, #82, #126 -- re-verified fresh this cycle (80th consecutive), via a full board pull, comment-thread re-checks on all blocked issues, and a PR state check. No new unblocked work found, no new ticket filed. Weekly develop->main PR #111 remains open, awaiting maintainer merge. Next cycle: re-check for maintainer replies first, then reconciliation, then PROJECT_PLAN re-scan before concluding still exhausted.",
+  "next_session_decision": "Backlog remains exhausted pending maintainer decisions on #33 (ADR-0012), #70, #80, #82, #126 -- re-verified fresh this cycle (84th consecutive), via a full board pull, comment-thread re-checks on all blocked issues, a remote-branch sweep, and a PR state check. No new unblocked work found, no new ticket filed. Weekly develop->main PR #111 remains open, awaiting maintainer merge. Next cycle: re-check for maintainer replies first, then reconciliation, then PROJECT_PLAN re-scan before concluding still exhausted.",
   "last_updated": "2026-07-03",
-  "current_session": "devmode-80"
+  "current_session": "devmode-84"
 }
