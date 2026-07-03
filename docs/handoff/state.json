@@ -1,11 +1,18 @@
 {
   "_schema": "gentriduck-session-state/v1",
-  "session": "2026-07-03-devmode-116",
-  "updated_at": "2026-07-03T16:00:00Z",
+  "session": "2026-07-03-devmode-117",
+  "updated_at": "2026-07-03T18:15:00Z",
   "build_status": {
-    "result": "PASS (unverified this cycle -- no model change)",
+    "result": "PASS",
+    "pass": 573,
+    "warn": 2,
+    "error": 0,
+    "warn_detail": [
+      "brw_residential_coverage_frac (expected by design)",
+      "test_c5_poi_share_spike (expected by design)"
+    ],
     "branch": "develop",
-    "note": "No model change this cycle; no develop-branch work at all."
+    "note": "Green after F2 (#34) merge (no dbt model changes in F2/G0, just profiles.yml + new export script + agent docs)."
   },
   "open_prs": [
     {
@@ -13,55 +20,58 @@
       "title": "Weekly release: Epic R/D wave -- spatial inference, price/rent dimension, A9 diffusion, plus H1/H2/O4/G2/G3",
       "base": "main",
       "head": "develop",
-      "note": "Open, state OPEN/MERGEABLE (re-confirmed via gh pr view). Created 2026-06-29T15:03:32Z, due ~2026-07-06 (not yet due). No develop commits since devmode-114 (top of origin/develop still a074aeb prior to this cycle's handoff commit), so no content refresh needed yet. Still awaiting maintainer merge in GitHub UI."
+      "note": "Open, due ~2026-07-06. develop has moved 3 commits since PR opened (b50fcf5 #33, 30dacfe #34, 18af85e #36) -- PR body needs a refresh to summarize the newly batched tickets before the maintainer merges."
     }
   ],
   "pending_adr_branches": [
     {
-      "branch": "feat/33-adr-0012-serving-hosting",
-      "issue": 33,
-      "title": "ADR-0012 serving & hosting stack",
-      "note": "Still unmerged, correctly blocked. Re-read all 3 comment bodies fresh this cycle: zero maintainer reply/reaction. Biggest blocker on the board -- gates F2/F3/G0/G1 (#34/#35/#36/#37, confirmed via issue body 'Depends on: F1') and transitively Epic G + O2/O4 remainders."
-    },
-    {
       "branch": "feat/82-adr-0013-whitepaper-tool",
       "issue": 82,
       "title": "ADR-0013 Quarto + Typst whitepaper authoring tool",
-      "note": "ADR drafted, correctly still 'Proposed' status. Blocked on maintainer sign-off, zero reactions/replies this cycle."
+      "note": "ADR drafted, still 'Proposed'. Blocked on maintainer sign-off."
     }
   ],
-  "completed_this_session": [],
-  "integrated_into_develop": [],
+  "completed_this_session": [33, 34, 36],
+  "integrated_into_develop": [
+    {
+      "commit": "b50fcf5",
+      "issue": 33,
+      "title": "feat(#33): integrate ADR-0012 serving & hosting stack into develop"
+    },
+    {
+      "commit": "30dacfe",
+      "issue": 34,
+      "title": "feat(#34): integrate F2 (MotherDuck target + serving parquet export) into develop"
+    },
+    {
+      "commit": "18af85e",
+      "issue": 36,
+      "title": "feat(#36): integrate G0 (web-engineer + web-engineer-reviewer agents) into develop"
+    }
+  ],
   "in_progress": null,
   "board_status": {
-    "note": "116th consecutive idle cycle: gh project item-list --limit 100 -> 86 Done, 12 Todo, 0 In Progress = 98 total (unchanged from devmode-115). Re-verified via live gh calls (not just re-reading prior handoff): last comments on #33/#70/#80/#82 unchanged timestamps/authors (all PM-authored, 0 maintainer replies, #33 reactionGroups still []), #126 still 0 comments (genuine Geofabrik login constraint), git log develop shows no new data-engineering commits since devmode-115's own handoff commit.",
+    "note": "First real unblock in 117 cycles: maintainer approved ADR-0012 in-session (confirmed Evidence.dev is the MIT open-source npm framework, not the commercial Evidence Cloud product). 3 tickets implemented/reviewed/merged this cycle. Board: 89 Done, 9 Todo, 0 In Progress = 98 total (was 86/12).",
     "open_issues_by_dependency": {
       "in_progress": [],
-      "next_unblocked": [],
+      "next_unblocked": [
+        "#37 [G1] Build Berlin stats website -- depends on F2 (#34, done) + G0 (#36, done). Large (index/time-series/maps/drill-down) -- consider scoping/splitting before implementing as one pass.",
+        "#35 [F3] ADR-0007 data refresh/orchestration -- depends only on F1 (#33, done), independent of G1."
+      ],
       "blocked_on_maintainer": [
-        "#33 [F1] ADR-0012 hosting -- blocks #34 F2, #35 F3, #36 G0, #37 G1 -- still awaiting an actual maintainer decision",
         "#70 [B1] displacement data -- Milieuschutz ADR",
         "#80 [A10] scoping question posted, awaiting maintainer answer",
         "#82 [O2] ADR-0013 whitepaper tool",
         "#126 [H2b] Hamburg OSM POI -- Geofabrik login (no local PBF cache exists)",
-        "#125 [H2] transitively blocked on #126",
-        "#34 [F2] transitively blocked on #33 (Depends on: F1)",
-        "#35 [F3] transitively blocked on #33 (Depends on: F1)",
-        "#36 [G0] transitively blocked on #33 (Depends on: F1)",
-        "#37 [G1] transitively blocked on #34/#36 which are transitively blocked on #33"
+        "#125 [H2] transitively blocked on #126"
       ],
       "parked_not_blocked": [
         "#129 [H2-SE] standing requirement, no Hamburg regression ticket exists yet to attach it to",
-        "#83 [O4] remaining scope (dataset export) transitively needs #33's hosting decision; ingestion tooling reuse sub-scope already merged into develop per its own last comment"
+        "#83 [O4] remaining scope (dataset export) transitively needs the F1 hosting decision, now resolved -- re-check if #83 is now actionable next cycle"
       ]
     }
   },
   "still_blocked": [
-    {
-      "issue": 33,
-      "blocked_by": ["Maintainer ADR-0012 approval -- no reply/reaction yet"],
-      "title": "[F1] ADR-0012 -- gates F2, F3, G0, G1"
-    },
     {
       "issue": 70,
       "blocked_by": ["Maintainer ADR decision"],
@@ -88,7 +98,7 @@
       "title": "[H2b] Hamburg OSM POI ingestion"
     }
   ],
-  "next_session_decision": "Backlog remains exhausted pending maintainer decisions on #33 (ADR-0012), #70, #80, #82, #126 -- re-verified fresh this cycle (116th consecutive) via live gh calls. Weekly develop->main PR #111 remains open, not yet due for refresh (created 2026-06-29, due ~2026-07-06 -- getting close). Next cycle: re-check comment bodies on all blocked issues for actual maintainer decisions, and check whether PR #111 has hit its due date (2026-07-06) -- refresh/re-ping the maintainer if so.",
+  "next_session_decision": "#37 [G1] is the top unblocked ticket and the flagship Epic G deliverable -- scope/split it (index, time-series, maps, area drill-down are 4 distinct page types) before implementing as one pass to keep the coder<->reviewer loop bounded. #35 [F3] is also unblocked and independent. Re-check #83 [O4] -- its remaining scope was blocked transitively on the F1 hosting decision, now resolved. Refresh PR #111 before its 2026-07-06 due date to summarize #33/#34/#36.",
   "last_updated": "2026-07-03",
-  "current_session": "devmode-116"
+  "current_session": "devmode-117"
 }
