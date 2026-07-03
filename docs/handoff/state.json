@@ -1,7 +1,7 @@
 {
   "_schema": "gentriduck-session-state/v1",
-  "session": "2026-07-03-devmode-117",
-  "updated_at": "2026-07-03T18:15:00Z",
+  "session": "2026-07-03-devmode-118",
+  "updated_at": "2026-07-03T20:20:00Z",
   "build_status": {
     "result": "PASS",
     "pass": 573,
@@ -12,7 +12,7 @@
       "test_c5_poi_share_spike (expected by design)"
     ],
     "branch": "develop",
-    "note": "Green after F2 (#34) merge (no dbt model changes in F2/G0, just profiles.yml + new export script + agent docs)."
+    "note": "dbt side unchanged by G1a (web/ only). Node.js now installed user-locally in this environment (~/.local/node, symlinked to ~/.local/bin) -- needed for any future web-engineer work here."
   },
   "open_prs": [
     {
@@ -20,7 +20,7 @@
       "title": "Weekly release: Epic R/D wave -- spatial inference, price/rent dimension, A9 diffusion, plus H1/H2/O4/G2/G3",
       "base": "main",
       "head": "develop",
-      "note": "Open, due ~2026-07-06. develop has moved 3 commits since PR opened (b50fcf5 #33, 30dacfe #34, 18af85e #36) -- PR body needs a refresh to summarize the newly batched tickets before the maintainer merges."
+      "note": "Open, due ~2026-07-06 (3 days out). develop has moved 5 commits since PR opened (b50fcf5 #33, 30dacfe #34, 18af85e #36, 74a3128 docs, b696f5f #130) -- PR body needs a refresh before the maintainer merges. Getting close to due -- refresh next cycle regardless of what else is picked up."
     }
   ],
   "pending_adr_branches": [
@@ -31,32 +31,26 @@
       "note": "ADR drafted, still 'Proposed'. Blocked on maintainer sign-off."
     }
   ],
-  "completed_this_session": [33, 34, 36],
+  "completed_this_session": [130],
   "integrated_into_develop": [
     {
-      "commit": "b50fcf5",
-      "issue": 33,
-      "title": "feat(#33): integrate ADR-0012 serving & hosting stack into develop"
-    },
-    {
-      "commit": "30dacfe",
-      "issue": 34,
-      "title": "feat(#34): integrate F2 (MotherDuck target + serving parquet export) into develop"
-    },
-    {
-      "commit": "18af85e",
-      "issue": 36,
-      "title": "feat(#36): integrate G0 (web-engineer + web-engineer-reviewer agents) into develop"
+      "commit": "b696f5f",
+      "issue": 130,
+      "title": "feat(#130): integrate G1a (Evidence.dev scaffold + index page) into develop"
     }
   ],
   "in_progress": null,
   "board_status": {
-    "note": "First real unblock in 117 cycles: maintainer approved ADR-0012 in-session (confirmed Evidence.dev is the MIT open-source npm framework, not the commercial Evidence Cloud product). 3 tickets implemented/reviewed/merged this cycle. Board: 89 Done, 9 Todo, 0 In Progress = 98 total (was 86/12).",
+    "note": "#37 [G1] split into #130-133 (G1a/b/c/d) -- too large for one PR. #130 (scaffold + index page) implemented, reviewed, merged this cycle. Filed #134 (pre-existing latin-1 mojibake bug in area_name, discovered during G1a, out of scope for it). Board: 90 Done, 10 Todo, 0 In Progress = 100 total (was 89/9).",
     "open_issues_by_dependency": {
       "in_progress": [],
       "next_unblocked": [
-        "#37 [G1] Build Berlin stats website -- depends on F2 (#34, done) + G0 (#36, done). Large (index/time-series/maps/drill-down) -- consider scoping/splitting before implementing as one pass.",
-        "#35 [F3] ADR-0007 data refresh/orchestration -- depends only on F1 (#33, done), independent of G1."
+        "#131 [G1b] time-series page -- depends on G1a (#130, done). Reuses the scaffold/source pattern directly -- likely the lowest-setup-cost next pick.",
+        "#132 [G1c] maps page -- depends on G1a (#130, done). May need area geometries not yet in the parquet export -- check F2's export coverage first.",
+        "#133 [G1d] area drill-down -- depends on G1a + G1c (map click-through wiring).",
+        "#35 [F3] ADR-0007 data refresh/orchestration -- depends only on F1 (#33, done), independent of G1.",
+        "#134 [bug] latin-1 mojibake in area_name -- independent, small, contained fix.",
+        "#83 [O4] remaining scope (dataset export + open license) -- unblocked since #33/#34 landed, not yet re-triaged."
       ],
       "blocked_on_maintainer": [
         "#70 [B1] displacement data -- Milieuschutz ADR",
@@ -66,8 +60,7 @@
         "#125 [H2] transitively blocked on #126"
       ],
       "parked_not_blocked": [
-        "#129 [H2-SE] standing requirement, no Hamburg regression ticket exists yet to attach it to",
-        "#83 [O4] remaining scope (dataset export) transitively needs the F1 hosting decision, now resolved -- re-check if #83 is now actionable next cycle"
+        "#129 [H2-SE] standing requirement, no Hamburg regression ticket exists yet to attach it to"
       ]
     }
   },
@@ -98,7 +91,7 @@
       "title": "[H2b] Hamburg OSM POI ingestion"
     }
   ],
-  "next_session_decision": "#37 [G1] is the top unblocked ticket and the flagship Epic G deliverable -- scope/split it (index, time-series, maps, area drill-down are 4 distinct page types) before implementing as one pass to keep the coder<->reviewer loop bounded. #35 [F3] is also unblocked and independent. Re-check #83 [O4] -- its remaining scope was blocked transitively on the F1 hosting decision, now resolved. Refresh PR #111 before its 2026-07-06 due date to summarize #33/#34/#36.",
+  "next_session_decision": "Refresh PR #111 (due ~2026-07-06, 3 days out) to summarize #33/#34/#36/#130 before the maintainer merges. Then continue G1 slices -- #131 [G1b] time-series page is the natural next pick (reuses G1a's scaffold/source pattern). #134 (mojibake bug) is a good small independent filler task. Re-triage #83 [O4]'s remaining dataset-export scope, now unblocked.",
   "last_updated": "2026-07-03",
-  "current_session": "devmode-117"
+  "current_session": "devmode-118"
 }
