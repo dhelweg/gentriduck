@@ -117,14 +117,14 @@ order by snapshot_year
 
 ## Price & rent dimension
 
-<Alert status="warning">
-  <code>mart_price_rent_dimension</code> is only published for the <code>lor_2021</code> PLR
-  scheme, which uses different area codes/boundaries than the <code>lor_pre2021</code> scheme
-  the governed index (period 201612) and this area picker use — so this section is usually
-  empty for now. This is a documented, permanent-for-now limitation
-  (<a href="https://github.com/dhelweg/gentriduck/issues/135">#135</a>): a technically-correct
-  reverse (2021→pre-2021) crosswalk needs new spatial derivation work and its own methodology
-  sign-off, so it isn't done as a quick fix — see the mart's model header for the full rationale.
+<Alert status="info">
+  Figures below are re-keyed from the native <code>lor_2021</code> PLR scheme onto this
+  <code>lor_pre2021</code> area (mart_price_rent_dimension_pre2021, #136) via an area-weighted
+  average across the 2021 PLR(s) overlapping it — a re-projection, not a new measurement.
+  <code>*_coverage_frac</code> (not shown) reports how much of this PLR's crosswalk weight mass
+  had a non-NULL source value; a thin footprint (mostly non-residential/low-n 2021 PLRs) makes the
+  estimate less reliable. See the mart's model header for the full methodology and
+  <a href="https://github.com/dhelweg/gentriduck/blob/main/docs/epic-d/D1d-followup-geo-signoff.md">geo-DS sign-off</a>.
 </Alert>
 
 ```sql price_rent
@@ -133,15 +133,14 @@ select
     brw_weighted_avg_eur_m2,
     est_rent_mid,
     est_rent_low,
-    est_rent_high,
-    brw_percentile
-from gentriduck_marts.mart_price_rent_dimension
+    est_rent_high
+from gentriduck_marts.mart_price_rent_dimension_pre2021
 where city_code = 'BER'
   and area_code = '${inputs.area.value}'
 order by snapshot_year
 ```
 
-<DataTable data={price_rent} rows=10 emptySet="warn" emptyMessage="No price/rent row for this area under the lor_2021 scheme (vintage mismatch, see note above)."/>
+<DataTable data={price_rent} rows=10 emptySet="warn" emptyMessage="No re-keyed price/rent row for this area (no lor_2021 PLR overlaps its footprint)."/>
 
 <LineChart
     data={price_rent}
@@ -150,5 +149,5 @@ order by snapshot_year
     title="Estimated mid-range rent (EUR/m²), {inputs.area.label}"
     yAxisTitle="EUR/m²"
     emptySet="warn"
-    emptyMessage="No price/rent row for this area under the lor_2021 scheme (vintage mismatch, see note above)."
+    emptyMessage="No re-keyed price/rent row for this area (no lor_2021 PLR overlaps its footprint)."
 />

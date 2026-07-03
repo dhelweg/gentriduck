@@ -687,6 +687,110 @@ models:
           NULL PLRs sorted last.
           (geo condition 13)
 
+  - name: mart_price_rent_dimension_pre2021
+    description: >
+      D1d-followup (#136): re-keys mart_price_rent_dimension's intensive covariates from
+      the lor_2021 PLR scheme onto lor_pre2021 area codes, using seed_lor_crosswalk_
+      2006_to_2021's existing forward `weight` column (which already sums to 1.0 per
+      plr_id_pre2021 -- the correct areal-weighted-average operator for this direction;
+      no new spatial derivation needed, see model header). Joinable to the governed
+      gentrification_index / area-detail page (lor_pre2021, period 201612).
+
+      NULL-aware weighted average (index-definition §7): numerator/denominator both
+      restricted to 2021 PLRs where the covariate is non-NULL, so partially
+      non-residential/low-n footprints discount rather than zero-fill the estimate.
+      *_coverage_frac reports the retained weight mass (0-1); low coverage flags a
+      thin/uncertain re-keyed estimate.
+
+      SCOPE: covariate LEVELS only (BRW, Wohnlage composition/score, modelled rent).
+      Winsorized z-scores/ranks are NOT recomputed at this grain (out of scope; see
+      model header). Same polarity/framing caveats as mart_price_rent_dimension apply
+      (structural LEVEL, not dynamic signal; ecological fallacy guardrail; Milieuschutz
+      counter-misuse framing) -- this mart is a re-projection, not a new signal.
+
+      Sign-off: docs/epic-d/D1d-followup-geo-signoff.md (Verdict: PASS).
+      Graceful degradation: zero rows when mart_price_rent_dimension or the crosswalk
+      seed return zero rows.
+    meta:
+      dbt_meta_owner: data-engineer
+    tests:
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns:
+              - city_code
+              - snapshot_year
+              - area_code
+              - area_vintage
+    columns:
+      - name: city_code
+        description: City identifier (ADR-0005). Always 'BER'.
+        tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ["BER"]
+      - name: snapshot_year
+        description: Price/rent dimension vintage year (integer), carried through from mart_price_rent_dimension.
+        tests:
+          - not_null
+      - name: area_code
+        description: PLR area code (8-digit, zero-padded) in the lor_pre2021 scheme.
+        tests:
+          - not_null
+      - name: area_vintage
+        description: Always 'lor_pre2021' -- the re-keyed output grain.
+        tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ["lor_pre2021"]
+      - name: brw_weighted_avg_eur_m2
+        description: >
+          NULL-aware weighted average of mart_price_rent_dimension.brw_weighted_avg_eur_m2
+          across contributing lor_2021 PLRs, using the crosswalk `weight` column.
+          Same polarity caveat as the source mart (ambiguous context covariate; sign-flip
+          for vulnerability composites).
+      - name: brw_coverage_frac
+        description: >
+          Fraction of this pre2021 PLR's crosswalk weight mass for which a non-NULL
+          brw_weighted_avg_eur_m2 was available (0-1). Low values flag a thin re-keyed
+          estimate (footprint mostly on non-residential lor_2021 PLRs).
+      - name: pct_einfach
+        description: NULL-aware weighted average of pct_einfach across contributing lor_2021 PLRs.
+      - name: pct_mittel
+        description: NULL-aware weighted average of pct_mittel across contributing lor_2021 PLRs.
+      - name: pct_gut
+        description: NULL-aware weighted average of pct_gut across contributing lor_2021 PLRs.
+      - name: wohnlage_n_addresses_apportioned
+        description: >
+          Weight-apportioned Wohnlage address count (extensive-style apportionment:
+          SUM(weight * total_n_addresses)). Used only to derive wohnlage_low_n at this grain.
+      - name: wohnlage_low_n
+        description: >
+          TRUE when the weight-apportioned address count is below 10, or every
+          contributing lor_2021 PLR was itself low_n. Mirrors mart_price_rent_dimension
+          geo condition 7 at the re-keyed grain.
+      - name: wohnlage_score
+        description: >
+          NULL-aware weighted average of wohnlage_score across contributing lor_2021
+          PLRs. Same ordinal-mean-approximation caveat as the source mart.
+      - name: wohnlage_coverage_frac
+        description: Fraction of crosswalk weight mass for which a non-NULL wohnlage_score was available (0-1).
+      - name: est_rent_mid
+        description: >
+          NULL-aware weighted average of mart_price_rent_dimension.est_rent_mid across
+          contributing lor_2021 PLRs. Same modelled/estimated-rent caveats as the source mart.
+      - name: est_rent_low
+        description: NULL-aware weighted average of est_rent_low across contributing lor_2021 PLRs.
+      - name: est_rent_high
+        description: NULL-aware weighted average of est_rent_high across contributing lor_2021 PLRs.
+      - name: est_rent_coverage_frac
+        description: Fraction of crosswalk weight mass for which a non-NULL est_rent_mid was available (0-1).
+      - name: mietspiegel_vintage_used
+        description: Mietspiegel edition year used, carried through (MAX across contributing lor_2021 PLRs; typically uniform per snapshot_year).
+      - name: wohnlage_vintage_matched
+        description: Wohnlage vintage matched, carried through (MAX across contributing lor_2021 PLRs; typically uniform per snapshot_year).
+
   - name: dim_area_geometry
     description: >
       G1c (#132) prep: area polygon geometries for the conformed area dimension
