@@ -61,7 +61,9 @@ with
             bzr.own_idx_class_bi,
             'standard' as variant
         from {{ ref("stg_thesis_2018_result_bzr") }} as bzr
-        left join lor_bzr_names as wfs_names on lpad(bzr.raum_id, 6, '0') = wfs_names.area_code
+        left join
+            lor_bzr_names as wfs_names
+            on lpad(bzr.raum_id, 6, '0') = wfs_names.area_code
     ),
 
     -- PLR level -- standard variant
@@ -83,7 +85,9 @@ with
             plr.own_idx_class_bi,
             'standard' as variant
         from {{ ref("stg_thesis_2018_result_plr") }} as plr
-        left join lor_plr_names as wfs_names on lpad(plr.raum_id, 8, '0') = wfs_names.area_code
+        left join
+            lor_plr_names as wfs_names
+            on lpad(plr.raum_id, 8, '0') = wfs_names.area_code
     ),
 
     -- PLR level -- distance-weighted variant (Java UDF replacement; ref Epic B3/C)
@@ -105,7 +109,9 @@ with
             plr.own_idx_class_bi,
             'distance_weighted' as variant
         from {{ ref("stg_thesis_2018_result_plr_distcalc") }} as plr
-        left join lor_plr_names as wfs_names on lpad(plr.raum_id, 8, '0') = wfs_names.area_code
+        left join
+            lor_plr_names as wfs_names
+            on lpad(plr.raum_id, 8, '0') = wfs_names.area_code
     )
 
 select *
