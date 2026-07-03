@@ -30,6 +30,8 @@ logs/
 web/node_modules/
 web/.svelte-kit/
 web/build/
+# generated GeoJSON export (G1c #132), rebuilt via web/scripts/export_area_geojson.py
+web/static/geo/
 
 # --- local session transcripts (kept on-machine for continuity; never published) ---
 .sessions/

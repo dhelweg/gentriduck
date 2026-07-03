@@ -59,6 +59,10 @@ docs  = "dbt docs generate --project-dir transform --profiles-dir transform"
 # F2 (#34) / ADR-0012: export the published marts to parquet (data/serving/, gitignored).
 # Run after `poe build`. Future web build (G0/G1) consumes this parquet snapshot.
 export-serving = "python transform/export_serving_parquet.py"
+# G1c (#132): join dim_area_geometry + gentrification_index into static per-area_level
+# GeoJSON FeatureCollections for Evidence's AreaMap (web/static/geo/, gitignored).
+# Run after `poe export-serving`.
+export-area-geojson = "python web/scripts/export_area_geojson.py"
 fmt      = { sequence = ["ruff format .", "sqlfmt transform"], default_item_type = "cmd" }
 lint     = { sequence = ["ruff check .", "sqlfluff lint transform"], default_item_type = "cmd" }
 # R-C3: analysis scripts are deterministic (random_state=42) and require ingested data.

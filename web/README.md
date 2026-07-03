@@ -14,6 +14,7 @@ warehouse.
 # from the repo root: build the warehouse and publish the marts this site reads
 uv run poe build
 uv run poe export-serving        # -> data/serving/*.parquet (gitignored, F2/#34)
+uv run poe export-area-geojson   # -> web/static/geo/*.geojson (gitignored, G1c #132; needed by /maps)
 
 # then, from web/:
 npm install
@@ -29,6 +30,12 @@ reads only the local `data/serving/*.parquet` snapshot.
 - `sources/gentriduck_marts/` — DuckDB source (`:memory:`, reads `../data/serving/*.parquet`
   directly via `read_parquet`); one `.sql` file per published mart.
 - `pages/` — markdown + SQL pages (data-analyst-authored content; web-engineer owns structure).
+- `scripts/export_area_geojson.py` — G1c (#132): joins `dim_area_geometry` + `gentrification_index`
+  from the F2 parquet snapshot into static per-`area_level` GeoJSON `FeatureCollection`s under
+  `static/geo/` (gitignored), which Evidence's `AreaMap` component needs as a bundled asset URL
+  (its `geoJsonUrl` prop, unlike other charts, isn't a live query).
+- `static/geo/` — generated GeoJSON export (gitignored, rebuilt via the script above); served at
+  `/geo/<area_level>.geojson` in the built site.
 - `evidence.config.yaml` — theme + plugin config; **DuckDB-only** by design (ADR-0012) — adding
   another datasource connector needs an ADR amendment.
 
