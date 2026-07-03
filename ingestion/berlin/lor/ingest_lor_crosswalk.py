@@ -3,7 +3,7 @@ ingestion/berlin/lor/ingest_lor_crosswalk.py
 =============================================
 C3-crosswalk — areal-weighted PLR pre-2021 to LOR 2021 crosswalk.
 
-Reads the two LOR geometry parquets (pre2021.parquet and lor_2021.parquet)
+Reads the two LOR geometry parquets (pre2021_plr.parquet and lor_2021_plr.parquet)
 from data/raw/berlin/lor/, computes the geometric intersection of all
 (pre-2021 PLR, 2021 PLR) pairs, and writes a crosswalk parquet with
 areal-weighting coefficients.
@@ -328,7 +328,7 @@ def build_parser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(
         description=(
             "Compute areal-weighted PLR pre-2021 to LOR 2021 crosswalk. "
-            "Reads pre2021.parquet and lor_2021.parquet from --lor-dir; "
+            "Reads pre2021_plr.parquet and lor_2021_plr.parquet from --lor-dir; "
             "writes lor_crosswalk.parquet to the same directory."
         )
     )
@@ -336,7 +336,7 @@ def build_parser() -> argparse.ArgumentParser:
         "--lor-dir",
         default="data/raw/berlin/lor",
         type=Path,
-        help="Directory containing pre2021.parquet and lor_2021.parquet (default: data/raw/berlin/lor).",
+        help="Directory containing pre2021_plr.parquet and lor_2021_plr.parquet (default: data/raw/berlin/lor).",
     )
     p.add_argument(
         "--dry-run",
@@ -359,8 +359,8 @@ def main(argv: Optional[list[str]] = None) -> int:
         logging.getLogger().setLevel(logging.DEBUG)
 
     lor_dir = args.lor_dir.resolve()
-    pre2021_path = lor_dir / "pre2021.parquet"
-    lor2021_path = lor_dir / "lor_2021.parquet"
+    pre2021_path = lor_dir / "pre2021_plr.parquet"
+    lor2021_path = lor_dir / "lor_2021_plr.parquet"
     out_path = lor_dir / "lor_crosswalk.parquet"
 
     # Validate inputs

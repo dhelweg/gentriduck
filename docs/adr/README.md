@@ -19,7 +19,7 @@ ADR before adopting a new tool, library, or data source** (no "first tool that w
 | [0012](0012-serving-and-hosting-stack.md) | Serving & hosting stack | Accepted |
 | [0013](0013-whitepaper-authoring-tool.md) | Quarto + Typst whitepaper authoring tool | Proposed (task O2, blocked on maintainer sign-off) |
 | [0014](0014-hamburg-data-sources.md) | Hamburg data sources (second city) | Accepted |
-| — | Data refresh / orchestration | Deferred (task F3) |
+| [0015](0015-data-refresh-orchestration.md) | Data refresh / orchestration (`uv run poe refresh`) | Accepted |
 
 Format: each ADR has **Status**, **Context**, **Decision**, **Consequences**. Supersede rather
 than edit accepted ADRs.
