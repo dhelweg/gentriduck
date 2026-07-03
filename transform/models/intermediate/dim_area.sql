@@ -4,22 +4,27 @@
 --
 -- Sources (UNIONed):
 -- 1. int_thesis_2018_area_index — 2018 thesis goldens (BER / bezirk / bzr / plr codes).
--- 2. stg_berlin_lor — WFS LOR geometry staging (BER / plr, both vintages).
+-- 2. stg_berlin_lor — WFS LOR PLR geometry staging (BER / plr, both vintages).
 -- Added in #52 (dim_area wiring). This is the source that makes OSM 8-digit
 -- PLR area_codes visible to dimension tests and to the int_ewr_series join.
 -- city_code is 'BER' (ADR-0005 canonical) from stg_berlin_lor.
--- 3. stg_hamburg_geo — WFS Hamburg geometry staging (HH / district / subarea_l1 /
+-- 3. stg_berlin_lor_bzr — WFS LOR BZR geometry staging (BER / bzr, both vintages).
+-- Added in #134 (bug fix): sources correctly-encoded (UTF-8) BZR names from the
+-- same WFS as stg_berlin_lor, replacing the latin-1-mojibake-corrupted
+-- thesis-golden BZR area_name via the same dedup pattern used for PLR.
+-- 4. stg_hamburg_geo — WFS Hamburg geometry staging (HH / district / subarea_l1 /
 -- subarea_l2). Added in #40 (H1 Hamburg onboarding, ADR-0014). This is the first
 -- second-city area source and exercises the ADR-0005 city-agnostic seam for real.
 --
 -- Deduplication strategy:
 -- - Area codes that appear in both sources get one row per (city_code, area_level,
--- area_code). WFS names (UTF-8, stg_berlin_lor / stg_hamburg_geo) are preferred over
--- thesis goldens (which sometimes have latin-1 mojibake). ROW_NUMBER() QUALIFY keeps
--- the first row when ordered by name (WFS rows sort before '?' placeholders
--- alphabetically).
--- - stg_berlin_lor has two vintages (lor_pre2021, lor_2021) sharing some area_codes;
--- DISTINCT on the lor_areas CTE collapses these to one row per code.
+-- area_code). WFS names (UTF-8, stg_berlin_lor / stg_berlin_lor_bzr / stg_hamburg_geo)
+-- are preferred over thesis goldens (which sometimes have latin-1 mojibake).
+-- ROW_NUMBER() QUALIFY keeps the first row when ordered by name (WFS rows sort
+-- before '?' placeholders alphabetically).
+-- - stg_berlin_lor / stg_berlin_lor_bzr each have two vintages (lor_pre2021,
+-- lor_2021) sharing some area_codes; DISTINCT on the lor_areas / lor_bzr_areas
+-- CTEs collapses these to one row per code.
 --
 -- NOTE — parent_area_code is intentionally omitted at this stage.
 {{
@@ -45,6 +50,14 @@ with
         where area_code is not null
     ),
 
+    -- WFS LOR BZR areas (both vintages collapsed, city_code='BER', issue #134).
+    -- Same collapsing rationale as lor_areas above, at the Bezirksregion grain.
+    lor_bzr_areas as (
+        select distinct city_code, 'bzr' as area_level, area_code, area_name
+        from {{ ref("stg_berlin_lor_bzr") }}
+        where area_code is not null
+    ),
+
     -- WFS Hamburg areas (statistisches Gebiet / Stadtteil / Bezirk, city_code='HH',
     -- issue #40 H1, ADR-0014). Single 'current' vintage for this first slice.
     hamburg_areas as (
@@ -57,6 +70,9 @@ with
     combined as (
         select *, 1 as source_priority
         from lor_areas
+        union all
+        select *, 1 as source_priority
+        from lor_bzr_areas
         union all
         select *, 1 as source_priority
         from hamburg_areas
