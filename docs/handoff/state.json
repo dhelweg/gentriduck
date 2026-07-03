@@ -1,6 +1,6 @@
 {
   "_schema": "gentriduck-session-state/v1",
-  "session": "2026-07-03-devmode-84",
+  "session": "2026-07-03-devmode-85",
   "updated_at": "2026-07-03T00:00:00Z",
   "build_status": {
     "result": "PASS",
@@ -20,7 +20,7 @@
       "title": "Weekly release: Epic R/D wave -- spatial inference, price/rent dimension, A9 diffusion, plus H1/H2/O4/G2/G3",
       "base": "main",
       "head": "develop",
-      "note": "Open, state OPEN, mergeStateStatus CLEAN. No develop commits this cycle besides handoff docs, so no refresh needed. Still awaiting maintainer merge in GitHub UI."
+      "note": "Open, state OPEN, mergeable MERGEABLE. No develop commits this cycle besides handoff docs, so no refresh needed. Still awaiting maintainer merge in GitHub UI."
     }
   ],
   "pending_adr_branches": [
@@ -28,7 +28,7 @@
       "branch": "feat/33-adr-0012-serving-hosting",
       "issue": 33,
       "title": "ADR-0012 serving & hosting stack",
-      "note": "Still unmerged, correctly blocked -- no maintainer reply this cycle either. Biggest blocker on the board -- gates F2/F3/G0/G1 and transitively Epic G + O2/O4 remainders."
+      "note": "Still unmerged, correctly blocked. Actively under LIVE maintainer review this cycle (cost-tradeoff discussion) -- PM intentionally left this thread untouched, no bump/nudge comment added. Biggest blocker on the board -- gates F2/F3/G0/G1 and transitively Epic G + O2/O4 remainders."
     },
     {
       "branch": "feat/82-adr-0013-whitepaper-tool",
@@ -41,12 +41,12 @@
   "integrated_into_develop": [],
   "in_progress": null,
   "board_status": {
-    "note": "84th consecutive idle cycle: gh project item-list --limit 100 -> 86 Done, 12 Todo, 0 In Progress = 98 total (unchanged from devmode-83). Re-checked latest comment on #33/#70/#80/#82/#125 and #126's body -- no maintainer reply found on any. Swept all non-develop/main remote branches for unmerged commits -- none found (all stale, fully merged). No new unblocked work found, no new ticket filed.",
+    "note": "85th consecutive idle cycle: gh project item-list --limit 100 -> 86 Done, 12 Todo, 0 In Progress = 98 total (unchanged from devmode-84). Re-checked latest comment on #70/#80/#82/#125 and #126's body -- no maintainer reply found on any. #33 intentionally NOT re-checked/touched this cycle (live maintainer review in progress, per explicit instruction). Swept all non-develop/main remote branches for unmerged commits -- none found beyond the two pending ADR branches (unchanged). No new unblocked work found, no new ticket filed.",
     "open_issues_by_dependency": {
       "in_progress": [],
       "next_unblocked": [],
       "blocked_on_maintainer": [
-        "#33 [F1] ADR-0012 hosting -- blocks #34 F2, #35 F3, #36 G0, #37 G1",
+        "#33 [F1] ADR-0012 hosting -- blocks #34 F2, #35 F3, #36 G0, #37 G1 -- ACTIVELY under live maintainer review this cycle",
         "#70 [B1] displacement data -- Milieuschutz ADR",
         "#80 [A10] scoping question posted, awaiting maintainer answer",
         "#82 [O2] ADR-0013 whitepaper tool",
@@ -62,7 +62,7 @@
   "still_blocked": [
     {
       "issue": 33,
-      "blocked_by": ["Maintainer ADR-0012 approval"],
+      "blocked_by": ["Maintainer ADR-0012 approval -- live review in progress this cycle"],
       "title": "[F1] ADR-0012 -- gates F2, F3, G0, G1"
     },
     {
@@ -91,7 +91,7 @@
       "title": "[H2b] Hamburg OSM POI ingestion"
     }
   ],
-  "next_session_decision": "Backlog remains exhausted pending maintainer decisions on #33 (ADR-0012), #70, #80, #82, #126 -- re-verified fresh this cycle (84th consecutive), via a full board pull, comment-thread re-checks on all blocked issues, a remote-branch sweep, and a PR state check. No new unblocked work found, no new ticket filed. Weekly develop->main PR #111 remains open, awaiting maintainer merge. Next cycle: re-check for maintainer replies first, then reconciliation, then PROJECT_PLAN re-scan before concluding still exhausted.",
+  "next_session_decision": "Backlog remains exhausted pending maintainer decisions on #33 (ADR-0012 -- now under live review), #70, #80, #82, #126 -- re-verified fresh this cycle (85th consecutive). No new unblocked work found, no new ticket filed. Weekly develop->main PR #111 remains open, awaiting maintainer merge. Next cycle: check whether #33's live review concluded with a decision first -- if so, immediately unblock #34/#35/#36/#37; otherwise repeat reconciliation + re-scan.",
   "last_updated": "2026-07-03",
-  "current_session": "devmode-84"
+  "current_session": "devmode-85"
 }
