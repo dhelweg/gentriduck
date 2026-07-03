@@ -686,3 +686,64 @@ models:
           ascending. Range [0, 1]; 0 = lowest, 1 = highest land value.
           NULL PLRs sorted last.
           (geo condition 13)
+
+  - name: dim_area_geometry
+    description: >
+      G1c (#132) prep: area polygon geometries for the conformed area dimension
+      (ADR-0005), reprojected to WGS84 GeoJSON for client-side web mapping.
+      PLUMBING model -- exposes staging-layer WKB geometry (previously not
+      reachable from the marts layer that F2/#34 exports to parquet) in a
+      web-consumable projection. No new spatial method or aggregation;
+      not on the R-C1 methodology-bearing model list.
+
+      Grain: one row per (city_code, area_level, area_code, area_vintage).
+      Sources: stg_berlin_lor (plr), stg_berlin_lor_bzr (bzr), stg_hamburg_geo
+      (district/subarea_l1/subarea_l2).
+    meta:
+      dbt_meta_owner: data-engineer
+    tests:
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns:
+              - city_code
+              - area_level
+              - area_code
+              - area_vintage
+    columns:
+      - name: city_code
+        description: City identifier (FK -> dim_city). ADR-0005 seam.
+        data_type: varchar
+        tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_city')
+                field: city_code
+      - name: area_level
+        description: Area level identifier from the conformed taxonomy.
+        data_type: varchar
+        tests:
+          - not_null
+      - name: area_code
+        description: Area code. Part of the natural key.
+        data_type: varchar
+        tests:
+          - not_null
+      - name: area_name
+        description: Area name (WFS UTF-8 source; see dim_area's dedup pattern).
+        data_type: varchar
+      - name: area_vintage
+        description: >
+          Geometry vintage discriminator (e.g. 'lor_pre2021', 'lor_2021',
+          'current' for Hamburg). Kept ungrouped -- consumers pick the
+          vintage matching the period they display.
+        data_type: varchar
+        tests:
+          - not_null
+      - name: geometry_geojson
+        description: >
+          GeoJSON `geometry` object (not a full Feature) in WGS84 (EPSG:4326),
+          reprojected from the native CRS per dim_city.native_crs_epsg via
+          ST_Transform(..., always_xy := true), mirroring int_osm_poi_plr's
+          native-CRS<->WGS84 convention. Text (JSON-encoded), not parsed.
+        data_type: varchar
