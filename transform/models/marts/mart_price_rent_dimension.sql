@@ -118,6 +118,24 @@
 -- with a
 -- vulnerable population is a FLAG FOR PROTECTION, not an invitation. Prominent on G2.
 --
+-- Known limitation (#135, discovered from G1d/#133):
+-- This mart is published ONLY on the lor_2021 (542-PLR, post-2021) area_vintage --
+-- int_berlin_brw_plr deliberately always uses lor_2021 PLR geometries (see its header)
+-- for a consistent single-vintage spatial grain, and Wohnlage/Mietspiegel are joined
+-- against that same scheme. The governed gentrification_index (currently only period
+-- 201612) reports on the lor_pre2021 (447/448-PLR) scheme instead -- a DIFFERENT set of
+-- area codes/boundaries, not just a renumbering -- so a naive join on area_code between
+-- this mart and the governed index/area-detail page returns (correctly) almost nothing.
+-- Resolved as a documented, permanent-for-now limitation (#135 option 3) rather than a
+-- silent crosswalk: a technically-correct 2021->pre2021 reverse crosswalk needs NEW
+-- intersection-area weights in the pre2021 direction (the existing
+-- seed_lor_crosswalk_2006_to_2021 only carries pre2021->2021 weights, normalized by the
+-- pre2021-PLR area -- not invertible without re-deriving areas from source geometry).
+-- That is a new spatial derivation requiring its own geo-DS sign-off under R-C1, not a
+-- mechanical reuse of the already-approved C3-crosswalk (#63). Tracked as a scoped
+-- follow-up if/when it's worth doing; see #135's closing comment for the decision
+-- record.
+--
 -- Graceful degradation:
 -- When intermediate models return zero rows, this mart returns zero rows. Build passes.
 --
