@@ -1,10 +1,10 @@
 {
   "_schema": "gentriduck-session-state/v1",
-  "session": "2026-07-03-devmode-121",
-  "updated_at": "2026-07-03T22:40:00Z",
+  "session": "2026-07-03-devmode-122",
+  "updated_at": "2026-07-03T23:10:00Z",
   "build_status": {
     "result": "PASS",
-    "pass": 585,
+    "pass": 583,
     "warn": 2,
     "error": 0,
     "warn_detail": [
@@ -12,15 +12,15 @@
       "test_c5_poi_share_spike (expected by design)"
     ],
     "branch": "develop",
-    "note": "dbt build unchanged this cycle (no transform/ models touched). web build (npm run build) verified clean from a fresh .evidence/build state for both #132 and #133 slices."
+    "note": "dbt build re-run this cycle (comment-only change to mart_price_rent_dimension.sql for #135): 583/2/0, matches baseline. web build (npm run build) verified clean from a fresh .evidence/build state for both #133's click-through wiring and #135's doc-only change: 0 errors, same 5 pre-existing 'Dataset is empty' warnings."
   },
   "open_prs": [
     {
       "number": 111,
-      "title": "Weekly release: Epic R/D wave -- spatial inference, price/rent dimension, A9 diffusion, plus H1/H2/O4/G2/G3/F1/F2/G0/G1a/G1b/bugfix-134",
+      "title": "Weekly release: Epic R/D wave -- spatial inference, price/rent dimension, A9 diffusion, plus H1/H2/O4/G2/G3/F1/F2/G0/G1a-d/bugfix-134/#135/#37-closeout",
       "base": "main",
       "head": "develop",
-      "note": "Left untouched this cycle (already refreshed twice, maintainer notified twice). Needs a refresh next cycle to include #132/#133's commits. Still ready to merge in the GitHub UI."
+      "note": "Refreshed this cycle to include #132/#133/#135's commits and the #37 epic closeout. Still open, not merged (PM never uses gh pr merge). Ready for the maintainer to merge in the GitHub UI."
     }
   ],
   "pending_adr_branches": [
@@ -31,30 +31,30 @@
       "note": "ADR drafted, still 'Proposed'. Blocked on maintainer sign-off."
     }
   ],
-  "completed_this_session": [132],
-  "filed_this_session": [135],
+  "completed_this_session": [133, 135, 37],
+  "filed_this_session": [136],
   "integrated_into_develop": [
     {
-      "commit": "e4e0f6c",
-      "issue": 132,
-      "title": "feat(#132): integrate G1c (maps page) into develop"
+      "commit": "fe31087",
+      "issue": 133,
+      "title": "feat(#133): integrate G1d click-through wiring (maps -> area-detail) into develop"
     },
     {
-      "commit": "e741c98",
-      "issue": 133,
-      "title": "feat(#133): integrate G1d prep (area drill-down page) into develop"
+      "commit": "0fa1f51",
+      "issue": 135,
+      "title": "docs(#135): integrate price/rent vintage-gap documentation into develop"
     }
   ],
-  "in_progress": 133,
+  "in_progress": 35,
   "board_status": {
-    "note": "93 Done, 10 Todo, 1 In Progress (#133) = 104 total (was 92/10/1 at devmode-120). Reconciliation clean at both start and end of cycle.",
+    "note": "96 Done, 8 Todo, 1 In Progress (#35) = 105 total (was 93/10/1=104 at devmode-121). Reconciliation clean at both start and end of cycle -- 0 closed-but-not-Done drift, 0 issues missing from the board.",
     "open_issues_by_dependency": {
-      "in_progress": ["#133 [G1d] area drill-down -- first slice (index/trajectory/POI/price-rent) landed; map click-through wiring is the remaining scope."],
+      "in_progress": ["#35 [F3] ADR (renumber to ~0015, not 0007) + uv run poe refresh orchestration task -- picked up, not yet implemented."],
       "next_unblocked": [
-        "#133 [G1d] click-through wiring -- AreaMap on:click -> /area-detail navigation. Natural next pick.",
-        "#135 [D1d] price/rent lor_pre2021/lor_2021 vintage gap -- discovered this cycle, independent of #133's remaining scope.",
-        "#35 [F3] ADR-0007 data refresh/orchestration -- depends only on F1 (#33, done), independent.",
-        "#83 [O4] remaining scope (dataset export + open license) -- unblocked since #33/#34 landed."
+        "#35 [F3] data refresh/orchestration ADR + poe refresh task -- in progress, pick up implementation next cycle.",
+        "#83 [O4] remaining scope (dataset export + open license) -- unblocked since #33/#34 landed.",
+        "#136 [D1d-followup] reverse PLR crosswalk for price/rent -- low priority, geo-DS gated, only worth doing if the price/rent dimension needs to render against the pre2021 governed index.",
+        "#129 [H2-SE] standing requirement, parked (no Hamburg regression ticket exists yet to attach it to)."
       ],
       "blocked_on_maintainer": [
         "#70 [B1] displacement data -- Milieuschutz ADR",
@@ -95,7 +95,7 @@
       "title": "[H2b] Hamburg OSM POI ingestion"
     }
   ],
-  "next_session_decision": "Pick up #133 [G1d]'s remaining scope (AreaMap click-through -> /area-detail navigation) or #135 [D1d] (price/rent vintage gap) next. Refresh PR #111 to include #132/#133's commits.",
+  "next_session_decision": "Implement #35 [F3]: a new ADR (renumber to ~0015 -- PROJECT_PLAN.md's F3 line stale-references ADR-0007, already taken by Berlin SES indicators) for data-refresh/orchestration, plus `uv run poe refresh` end-to-end rebuild task. Refresh PR #111 again if a week has passed since the last maintainer ping.",
   "last_updated": "2026-07-03",
-  "current_session": "devmode-121"
+  "current_session": "devmode-122"
 }
