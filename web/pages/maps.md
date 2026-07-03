@@ -102,5 +102,7 @@ order by dynamism_index desc
 
 <DataTable data={area_table} rows=10/>
 
-Per-area trajectories are on the [time-series page](/time-series); a per-area detail/drill-down
-view is being built next (see the project board).
+Per-area trajectories are on the [time-series page](/time-series); a per-area
+[detail/drill-down view](/area-detail) is now available too (pick the area there for now —
+click-through directly from this map is the remaining G1d follow-up, see
+[#133](https://github.com/dhelweg/gentriduck/issues/133)).
