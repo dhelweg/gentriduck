@@ -1,10 +1,10 @@
 {
   "_schema": "gentriduck-session-state/v1",
-  "session": "2026-07-03-devmode-119",
-  "updated_at": "2026-07-03T19:50:00Z",
+  "session": "2026-07-03-devmode-121",
+  "updated_at": "2026-07-03T22:40:00Z",
   "build_status": {
     "result": "PASS",
-    "pass": 576,
+    "pass": 585,
     "warn": 2,
     "error": 0,
     "warn_detail": [
@@ -12,7 +12,7 @@
       "test_c5_poi_share_spike (expected by design)"
     ],
     "branch": "develop",
-    "note": "PASS count rose 573->576 after #134's stg_berlin_lor_bzr (new tests: assert_not_empty + assert_min_rows)."
+    "note": "dbt build unchanged this cycle (no transform/ models touched). web build (npm run build) verified clean from a fresh .evidence/build state for both #132 and #133 slices."
   },
   "open_prs": [
     {
@@ -20,7 +20,7 @@
       "title": "Weekly release: Epic R/D wave -- spatial inference, price/rent dimension, A9 diffusion, plus H1/H2/O4/G2/G3/F1/F2/G0/G1a/G1b/bugfix-134",
       "base": "main",
       "head": "develop",
-      "note": "Refreshed this cycle (body was accidentally fully-replaced by a `gh pr edit --body-file` call, then restored + appended -- lesson: --body-file REPLACES, does not append). Due ~2026-07-06 (~3 days out). Ready to merge in the GitHub UI."
+      "note": "Left untouched this cycle (already refreshed twice, maintainer notified twice). Needs a refresh next cycle to include #132/#133's commits. Still ready to merge in the GitHub UI."
     }
   ],
   "pending_adr_branches": [
@@ -31,29 +31,30 @@
       "note": "ADR drafted, still 'Proposed'. Blocked on maintainer sign-off."
     }
   ],
-  "completed_this_session": [131, 134],
+  "completed_this_session": [132],
+  "filed_this_session": [135],
   "integrated_into_develop": [
     {
-      "commit": "f740ae6",
-      "issue": 131,
-      "title": "feat(#131): integrate G1b (time-series page) into develop"
+      "commit": "e4e0f6c",
+      "issue": 132,
+      "title": "feat(#132): integrate G1c (maps page) into develop"
     },
     {
-      "commit": "183589f",
-      "issue": 134,
-      "title": "fix(#134): integrate area_name mojibake fix into develop"
+      "commit": "e741c98",
+      "issue": 133,
+      "title": "feat(#133): integrate G1d prep (area drill-down page) into develop"
     }
   ],
-  "in_progress": null,
+  "in_progress": 133,
   "board_status": {
-    "note": "92 Done, 11 Todo, 0 In Progress = 103 total (was 90/10 at devmode-118). Reconciliation clean at both start and end of cycle.",
+    "note": "93 Done, 10 Todo, 1 In Progress (#133) = 104 total (was 92/10/1 at devmode-120). Reconciliation clean at both start and end of cycle.",
     "open_issues_by_dependency": {
-      "in_progress": [],
+      "in_progress": ["#133 [G1d] area drill-down -- first slice (index/trajectory/POI/price-rent) landed; map click-through wiring is the remaining scope."],
       "next_unblocked": [
-        "#132 [G1c] maps page -- depends on G1a (#130, done). NEEDS a data-engineer prep step first: no marts model currently exposes area geometry (geometry_wkb lives only in stg_berlin_lor/stg_berlin_lor_bzr, upstream of the exported marts layer). Scope a small dim_area_geometry-style marts model before the web-engineer can build the choropleth.",
-        "#133 [G1d] area drill-down -- depends on #132's map click-through wiring, parked until #132 lands.",
-        "#35 [F3] ADR-0007 data refresh/orchestration -- depends only on F1 (#33, done), independent of G1.",
-        "#83 [O4] remaining scope (dataset export + open license) -- unblocked since #33/#34 landed, not yet re-triaged this cycle."
+        "#133 [G1d] click-through wiring -- AreaMap on:click -> /area-detail navigation. Natural next pick.",
+        "#135 [D1d] price/rent lor_pre2021/lor_2021 vintage gap -- discovered this cycle, independent of #133's remaining scope.",
+        "#35 [F3] ADR-0007 data refresh/orchestration -- depends only on F1 (#33, done), independent.",
+        "#83 [O4] remaining scope (dataset export + open license) -- unblocked since #33/#34 landed."
       ],
       "blocked_on_maintainer": [
         "#70 [B1] displacement data -- Milieuschutz ADR",
@@ -94,7 +95,7 @@
       "title": "[H2b] Hamburg OSM POI ingestion"
     }
   ],
-  "next_session_decision": "Watch/refresh PR #111 (due ~2026-07-06). #132 [G1c] maps page needs a data-engineer geometry-export prep step before the web-engineer slice -- scope that first, or pick #35 [F3] / #83 [O4] remainder as independent unblocked work in the meantime.",
+  "next_session_decision": "Pick up #133 [G1d]'s remaining scope (AreaMap click-through -> /area-detail navigation) or #135 [D1d] (price/rent vintage gap) next. Refresh PR #111 to include #132/#133's commits.",
   "last_updated": "2026-07-03",
-  "current_session": "devmode-119"
+  "current_session": "devmode-121"
 }
