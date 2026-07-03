@@ -121,8 +121,10 @@ order by snapshot_year
   <code>mart_price_rent_dimension</code> is only published for the <code>lor_2021</code> PLR
   scheme, which uses different area codes/boundaries than the <code>lor_pre2021</code> scheme
   the governed index (period 201612) and this area picker use — so this section is usually
-  empty for now. Aligning the two vintages (or re-deriving price/rent on the pre-2021 scheme)
-  is tracked as follow-up work, not solved in this ticket.
+  empty for now. This is a documented, permanent-for-now limitation
+  (<a href="https://github.com/dhelweg/gentriduck/issues/135">#135</a>): a technically-correct
+  reverse (2021→pre-2021) crosswalk needs new spatial derivation work and its own methodology
+  sign-off, so it isn't done as a quick fix — see the mart's model header for the full rationale.
 </Alert>
 
 ```sql price_rent
