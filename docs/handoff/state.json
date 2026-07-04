@@ -1,7 +1,7 @@
 {
   "_schema": "gentriduck-session-state/v1",
-  "session": "2026-07-04-devmode-127",
-  "updated_at": "2026-07-04T07:20:00Z",
+  "session": "2026-07-04-devmode-132",
+  "updated_at": "2026-07-04T11:00:00Z",
   "build_status": {
     "result": "PASS",
     "pass": 593,
@@ -12,7 +12,7 @@
       "test_c5_poi_share_spike (expected by design)"
     ],
     "branch": "develop",
-    "note": "#138 (G4 live_data binary classification backfill) integrated this cycle -- same baseline pass/warn/error counts as before."
+    "note": "No code changes this cycle -- reconciliation + re-scan only. Baseline unchanged since devmode-138 integration."
   },
   "open_prs": [
     {
@@ -20,7 +20,7 @@
       "title": "Weekly release: G4/G5 site work + handoff sync",
       "base": "main",
       "head": "develop",
-      "note": "Refreshed this cycle -- body was stale (claimed nothing landed since #111); now correctly batches #139 (G5) + #138 (G4) + docs-only handoff commits. Not yet merged by the maintainer."
+      "note": "Branch-tracking PR (head=develop), auto-picks up new develop commits. OPEN, MERGEABLE, zero reviews/comments/checks. 5th consecutive cycle (devmode-128..132) with no maintainer action. Fresh PushNotification nudge sent this cycle."
     }
   ],
   "pending_adr_branches": [
@@ -31,21 +31,14 @@
       "note": "ADR drafted, still 'Proposed'. Blocked on maintainer sign-off. No reply yet."
     }
   ],
-  "completed_this_session": [
-    {"issue": 138, "title": "[G4] live_data binary classification backfill + homepage/maps default", "commit": "dda64d6"}
-  ],
+  "completed_this_session": [],
   "filed_this_session": [],
-  "integrated_into_develop": [138],
+  "integrated_into_develop": [],
   "in_progress": null,
   "board_status": {
-    "note": "101 Done, 10 Todo, 0 In Progress = 111 total. Reconciliation clean at start and end of cycle.",
+    "note": "105 Done, 6 Todo, 0 In Progress = 111 total. Reconciliation clean at start and end of cycle.",
     "open_issues_by_dependency": {
-      "next_unblocked": [
-        "#140 [C-bug] city_code normalization -- small DE cleanup",
-        "#141 [G6] storytelling refinement",
-        "#142 [G7] in-site methodology page",
-        "#143 [G8] about-this-project page"
-      ],
+      "next_unblocked": [],
       "blocked_on_maintainer": [
         "#70 [B1] displacement data -- Milieuschutz ADR + scope questions",
         "#80 [A10] scoping question posted, awaiting maintainer answer",
@@ -65,7 +58,7 @@
     {"issue": 125, "blocked_by": ["#126 (transitively)"], "title": "[H2] Hamburg real-data ingestion remainder"},
     {"issue": 126, "blocked_by": ["Maintainer's Geofabrik OSM-contributor login"], "title": "[H2b] Hamburg OSM POI ingestion"}
   ],
-  "next_session_decision": "Backlog has real unblocked work: #140 (small city_code cleanup) and #141/#142/#143 (G6/G7/G8 site-content pages, filed at maintainer's request). Pick #140 or #141 next; re-check for a maintainer reply on #70/#80/#82/#126 first each cycle.",
+  "next_session_decision": "Backlog is genuinely, correctly empty of unblocked work -- confirmed via full re-scan of docs/PROJECT_PLAN.md against the open-issue list (nothing new to file). Re-check for a maintainer reply on #70/#80/#82/#126 each cycle and resume immediately on any reply. PR #137 (develop->main) is ready and waiting for the maintainer to merge in the GitHub UI.",
   "last_updated": "2026-07-04",
-  "current_session": "devmode-127"
+  "current_session": "devmode-132"
 }
