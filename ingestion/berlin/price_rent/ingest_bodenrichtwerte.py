@@ -1,12 +1,14 @@
 """
 ingestion/berlin/price_rent/ingest_bodenrichtwerte.py
 =====================================================
-D1 — Bodenrichtwerte (land reference values) 2024 ingestion for Berlin.
+D1a — Bodenrichtwerte (land reference values) back-series 2017–2024 ingestion for Berlin.
 
 Source: GDI Berlin OGC WFS, dl-de-zero-2.0
-  https://gdi.berlin.de/services/wfs/brw2024
-  Feature type: brw2024:brw_2024_vector
+  Base URL: https://gdi.berlin.de/services/wfs/brw{year}
+  Feature type: brw{year}:brw_{year}_vector
   Native CRS: EPSG:25833 (ETRS89 / UTM zone 33N). NOT reprojected.
+
+Available years: 2017–2024 (all confirmed live 2026-06-29 via HTTP 200 probe).
 
 Confirmed attribute names (from live WFS probe, 2026-06-18):
   brwid        -- BRW zone identifier (string, e.g. '1002')
@@ -19,12 +21,15 @@ Confirmed attribute names (from live WFS probe, 2026-06-18):
   gfz          -- Floor area ratio (float, nullable)
   beitragszustand -- Contribution status
   lumnum       -- LUM number (nullable)
-  Feature ID format: brw_2024_vector.<brwid>
+  Feature ID format: brw_{year}_vector.<brwid>
 
 Paginated WFS GeoJSON: count=1000 + startIndex until empty page.
 
-Output parquet schema (data/raw/berlin/price_rent/bodenrichtwert_2024.parquet):
-  reference_date     (date32): 2024-01-01
+Output: one parquet per year:
+  data/raw/berlin/price_rent/bodenrichtwert_{year}.parquet
+
+Output parquet schema:
+  reference_date     (date32): YYYY-01-01
   geometry_wkb       (bytes):  MultiPolygon WKB, EPSG:25833
   brw_id             (string): zone identifier (brwid attribute)
   value_eur_per_m2   (float64): Bodenrichtwert in EUR/m2 (brw attribute)
@@ -32,8 +37,13 @@ Output parquet schema (data/raw/berlin/price_rent/bodenrichtwert_2024.parquet):
   source_attribution (string): dl-de-zero-2.0 attribution
 
 Usage:
+  # Ingest all years 2017–2024 (default):
   uv run python ingestion/berlin/price_rent/ingest_bodenrichtwerte.py \\
       --out-dir data/raw/berlin/price_rent
+
+  # Specific year only:
+  uv run python ingestion/berlin/price_rent/ingest_bodenrichtwerte.py \\
+      --out-dir data/raw/berlin/price_rent --years 2024
 
   # Dry run (no HTTP calls):
   uv run python ingestion/berlin/price_rent/ingest_bodenrichtwerte.py \\
@@ -78,18 +88,19 @@ except ImportError as exc:
 # Constants
 # ---------------------------------------------------------------------------
 
-SOURCE_ATTRIBUTION = (
+# All years confirmed live at https://gdi.berlin.de/services/wfs/brw{year}
+# via HTTP 200 probe on 2026-06-29.
+AVAILABLE_YEARS = list(range(2017, 2025))
+
+WFS_BASE_URL_TEMPLATE = "https://gdi.berlin.de/services/wfs/brw{year}"
+WFS_PAGE_SIZE = 1000
+
+SOURCE_ATTRIBUTION_TEMPLATE = (
     "Senatsverwaltung fuer Stadtentwicklung, Bauen und Wohnen Berlin / "
     "Gutachterausschuss fuer Grundstueckswerte in Berlin, "
-    "Bodenrichtwerte Berlin 2024, dl-de-zero-2.0 -- "
-    "https://daten.berlin.de/datensaetze/bodenrichtwerte-01-01-2024-wfs-c2092cb3"
+    "Bodenrichtwerte Berlin {year}, dl-de-zero-2.0 -- "
+    "https://www.stadtentwicklung.berlin.de/geoinformation/fachthemen/boris/"
 )
-
-WFS_BASE_URL = "https://gdi.berlin.de/services/wfs/brw2024"
-WFS_TYPE_NAMES = "brw2024:brw_2024_vector"
-WFS_PAGE_SIZE = 1000
-REFERENCE_DATE = datetime.date(2024, 1, 1)
-OUTPUT_FILENAME = "bodenrichtwert_2024.parquet"
 
 # Confirmed attribute names from live WFS probe on 2026-06-18.
 # Primary: brwid (feature ID), brw (BRW value EUR/m2), nutzung (land use).
@@ -101,6 +112,7 @@ ATTR_NUTZUNG = "nutzung"
 BRW_PARQUET_SCHEMA = pa.schema(
     [
         pa.field("reference_date", pa.date32()),
+        pa.field("city_code", pa.string()),
         pa.field("geometry_wkb", pa.large_binary()),
         pa.field("brw_id", pa.string()),
         pa.field("value_eur_per_m2", pa.float64()),
@@ -126,23 +138,23 @@ log = logging.getLogger("brw_ingest")
 # ---------------------------------------------------------------------------
 
 
-def build_wfs_url(offset: int) -> str:
+def build_wfs_url(base_url: str, type_name: str, offset: int) -> str:
     """Build the WFS 2.0.0 GetFeature URL for a given startIndex."""
     params = {
         "service": "WFS",
         "version": "2.0.0",
         "request": "GetFeature",
-        "typeNames": WFS_TYPE_NAMES,
+        "typeNames": type_name,
         "outputFormat": "application/json",
         "count": str(WFS_PAGE_SIZE),
         "startIndex": str(offset),
     }
-    return WFS_BASE_URL + "?" + urllib.parse.urlencode(params)
+    return base_url + "?" + urllib.parse.urlencode(params)
 
 
-def fetch_page(offset: int, timeout: int = 120) -> dict:
+def fetch_page(base_url: str, type_name: str, offset: int, timeout: int = 120) -> dict:
     """Fetch one WFS page as a parsed GeoJSON dict."""
-    url = build_wfs_url(offset)
+    url = build_wfs_url(base_url, type_name, offset)
     log.info("Fetching BRW WFS page: startIndex=%d  url=%s", offset, url)
     try:
         with urllib.request.urlopen(url, timeout=timeout, context=_SSL_CONTEXT) as resp:  # noqa: S310
@@ -165,12 +177,12 @@ def fetch_page(offset: int, timeout: int = 120) -> dict:
     return data
 
 
-def fetch_all_features() -> list[dict]:
+def fetch_all_features(base_url: str, type_name: str) -> list[dict]:
     """Paginate through the WFS endpoint and return all raw GeoJSON features."""
     all_features: list[dict] = []
     offset = 0
     while True:
-        page = fetch_page(offset)
+        page = fetch_page(base_url, type_name, offset)
         page_features = page.get("features", [])
         n = len(page_features)
         log.info(
@@ -197,7 +209,12 @@ def fetch_all_features() -> list[dict]:
 # ---------------------------------------------------------------------------
 
 
-def parse_feature(feat: dict, idx: int) -> Optional[dict]:
+def parse_feature(
+    feat: dict,
+    idx: int,
+    reference_date: datetime.date,
+    source_attribution: str,
+) -> Optional[dict]:
     """Parse one GeoJSON feature into a row dict. Returns None on failure."""
     props = feat.get("properties") or {}
     feature_id = feat.get("id", "")
@@ -255,21 +272,26 @@ def parse_feature(feat: dict, idx: int) -> Optional[dict]:
         return None
 
     return {
-        "reference_date": REFERENCE_DATE,
+        "reference_date": reference_date,
+        "city_code": "berlin",
         "geometry_wkb": wkb_bytes,
         "brw_id": brw_id,
         "value_eur_per_m2": value_eur_per_m2,
         "nutzung": nutzung,
-        "source_attribution": SOURCE_ATTRIBUTION,
+        "source_attribution": source_attribution,
     }
 
 
-def parse_features(features: list[dict]) -> list[dict]:
+def parse_features(
+    features: list[dict],
+    reference_date: datetime.date,
+    source_attribution: str,
+) -> list[dict]:
     """Parse all raw GeoJSON features, skipping invalid ones."""
     rows: list[dict] = []
     skipped = 0
     for idx, feat in enumerate(features):
-        row = parse_feature(feat, idx)
+        row = parse_feature(feat, idx, reference_date, source_attribution)
         if row is not None:
             rows.append(row)
         else:
@@ -290,6 +312,7 @@ def write_parquet(rows: list[dict], out_path: Path) -> None:
     table = pa.table(
         {
             "reference_date": pa.array([r["reference_date"] for r in rows], type=pa.date32()),
+            "city_code": pa.array([r["city_code"] for r in rows], type=pa.string()),
             "geometry_wkb": pa.array([r["geometry_wkb"] for r in rows], type=pa.large_binary()),
             "brw_id": pa.array([r["brw_id"] for r in rows], type=pa.string()),
             "value_eur_per_m2": pa.array([r["value_eur_per_m2"] for r in rows], type=pa.float64()),
@@ -302,9 +325,62 @@ def write_parquet(rows: list[dict], out_path: Path) -> None:
     )
     tmp_path = out_path.with_suffix(".tmp.parquet")
     out_path.parent.mkdir(parents=True, exist_ok=True)
-    pq.write_table(table, tmp_path, compression="snappy")
-    tmp_path.rename(out_path)
+    try:
+        pq.write_table(table, tmp_path, compression="snappy")
+        tmp_path.rename(out_path)
+    except Exception:
+        tmp_path.unlink(missing_ok=True)
+        raise
     log.info("Wrote %d rows to %s", len(rows), out_path)
+
+
+# ---------------------------------------------------------------------------
+# Per-year ingestion
+# ---------------------------------------------------------------------------
+
+
+def ingest_year(year: int, out_dir: Path) -> int:
+    """Ingest Bodenrichtwerte for one year. Returns row count written."""
+    base_url = WFS_BASE_URL_TEMPLATE.format(year=year)
+    type_name = f"brw{year}:brw_{year}_vector"
+    source_attribution = SOURCE_ATTRIBUTION_TEMPLATE.format(year=year)
+    reference_date = datetime.date(year, 1, 1)
+    out_path = out_dir / f"bodenrichtwert_{year}.parquet"
+
+    log.info("=== Bodenrichtwerte %d ingestion started ===", year)
+    log.info("WFS base URL: %s", base_url)
+    log.info("Feature type: %s", type_name)
+    log.info("Output: %s", out_path)
+    log.info(
+        "WFS attribute mapping confirmed (2026-06-18): "
+        "brw_id=brwid, value=brw, nutzung=nutzung, "
+        "geometry=MultiPolygon EPSG:25833"
+    )
+
+    try:
+        features = fetch_all_features(base_url, type_name)
+    except RuntimeError as exc:
+        log.error("Failed to fetch BRW WFS for year=%d: %s", year, exc)
+        return 0
+
+    if not features:
+        log.error("No features returned from WFS for year=%d -- not writing parquet.", year)
+        return 0
+
+    rows = parse_features(features, reference_date, source_attribution)
+
+    if not rows:
+        log.error("No valid rows parsed for year=%d -- not writing parquet.", year)
+        return 0
+
+    try:
+        write_parquet(rows, out_path)
+    except Exception as exc:
+        log.error("Failed to write parquet for year=%d: %s", year, exc)
+        return 0
+
+    log.info("=== Bodenrichtwerte %d complete: %d rows -> %s ===", year, len(rows), out_path)
+    return len(rows)
 
 
 # ---------------------------------------------------------------------------
@@ -315,15 +391,24 @@ def write_parquet(rows: list[dict], out_path: Path) -> None:
 def build_parser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(
         description=(
-            "Download Berlin Bodenrichtwerte 2024 from GDI Berlin WFS "
-            "and write Parquet (data/raw/berlin/price_rent/bodenrichtwert_2024.parquet)."
+            "Download Berlin Bodenrichtwerte (2017–2024) from GDI Berlin WFS "
+            "and write Parquet to data/raw/berlin/price_rent/bodenrichtwert_{year}.parquet."
         )
     )
     p.add_argument(
         "--out-dir",
         default="data/raw/berlin/price_rent",
         type=Path,
-        help="Output directory for the parquet file (default: data/raw/berlin/price_rent).",
+        help="Output directory for the parquet files (default: data/raw/berlin/price_rent).",
+    )
+    p.add_argument(
+        "--years",
+        nargs="+",
+        type=int,
+        default=AVAILABLE_YEARS,
+        choices=AVAILABLE_YEARS,
+        help=f"Years to ingest (default: all {AVAILABLE_YEARS}). "
+        "All years 2017–2024 confirmed live via HTTP 200 probe on 2026-06-29.",
     )
     p.add_argument(
         "--dry-run",
@@ -346,45 +431,28 @@ def main(argv: Optional[list[str]] = None) -> int:
         logging.getLogger().setLevel(logging.DEBUG)
 
     out_dir = args.out_dir.resolve()
-    out_path = out_dir / OUTPUT_FILENAME
-
-    log.info("Bodenrichtwerte 2024 ingestion started.")
-    log.info("Attribution: %s", SOURCE_ATTRIBUTION)
-    log.info(
-        "WFS attribute mapping confirmed (2026-06-18): "
-        "brw_id=brwid, value=brw, nutzung=nutzung, "
-        "geometry=MultiPolygon EPSG:25833"
-    )
 
     if args.dry_run:
-        log.info("[dry-run] Would paginate %s -> %s", WFS_BASE_URL, out_path)
+        for year in args.years:
+            base_url = WFS_BASE_URL_TEMPLATE.format(year=year)
+            type_name = f"brw{year}:brw_{year}_vector"
+            out_path = out_dir / f"bodenrichtwert_{year}.parquet"
+            log.info(
+                "[dry-run] Would paginate %s (type=%s) -> %s",
+                base_url,
+                type_name,
+                out_path,
+            )
         log.info("[dry-run] Page size: %d features per request", WFS_PAGE_SIZE)
+        log.info("[dry-run] Available years: %s", AVAILABLE_YEARS)
         return 0
 
-    try:
-        features = fetch_all_features()
-    except RuntimeError as exc:
-        log.error("Failed to fetch BRW WFS: %s", exc)
-        return 1
+    total = 0
+    for year in args.years:
+        total += ingest_year(year, out_dir)
 
-    if not features:
-        log.error("No features returned from WFS -- not writing parquet.")
-        return 1
-
-    rows = parse_features(features)
-
-    if not rows:
-        log.error("No valid rows parsed -- not writing parquet.")
-        return 1
-
-    try:
-        write_parquet(rows, out_path)
-    except Exception as exc:
-        log.error("Failed to write parquet: %s", exc)
-        return 1
-
-    log.info("Bodenrichtwerte 2024 ingestion complete: %d rows -> %s", len(rows), out_path)
-    return 0
+    log.info("All years complete. Grand total: %d rows.", total)
+    return 0 if total > 0 else 1
 
 
 if __name__ == "__main__":

@@ -399,15 +399,32 @@ WFS layers on `gdi.berlin.de`. Three submarkets (*Teilmärkte*) per layer:
 
 Both must be cleared before the ingestion adapter / dbt models for this source are built:
 
-1. **Price-attribute verification.** Confirm whether the **public** WFS carries per-block features
-   with usable €-**price** attributes, or only symbolised / count features without €-values (the
-   detailed fee-based *Kaufpreissammlung* sits behind the Gutachterausschuss). This determines
-   whether D1b yields a **price** signal or only a **transaction-count / dynamism** signal. If only
-   counts are available, fall back to the already-accepted **Bodenrichtwerte (P-A)** as the
-   structural price proxy and use Kauffälle purely as a transaction-count dynamism layer.
-2. **Geo-DS sign-off on block→PLR interpolation.** The block-level → PLR areal-interpolation method
-   is methodology-bearing and requires `geo-data-scientist` sign-off (and, as a methodology-bearing
-   index input, the dual gate per `CLAUDE.md` §Methodology gate) before adoption.
+1. **Price-attribute verification.** ~~Confirm whether the **public** WFS carries per-block features
+   with usable €-**price** attributes, or only symbolised / count features without €-values.~~
+   **CLEARED (2026-06-29, #53 D1b).** Live WFS probe confirmed: all 9 sub-market layers expose
+   only `id` (string) and `kauftyp` (string) plus a Point geometry — no €-price or area attributes
+   are present in the public WFS. The detailed pricing data sits behind the fee-based
+   *Kaufpreissammlung* (Gutachterausschuss). Consequence: **Kauffälle is a transaction-count /
+   market-churn dynamism layer only.** The ingestion stores `kaufpreis_eur` and `flaeche_m2` as
+   null columns (future-proofing); Bodenrichtwerte (P-A) remains the structural price proxy per
+   the fallback clause above. The `raw_properties_json` column enables re-inspection if the WFS
+   ever adds price attributes.
+
+2. **Geo-DS sign-off on block→PLR aggregation.** The block-level → PLR point-in-polygon
+   spatial join and count aggregation is methodology-bearing and requires `geo-data-scientist`
+   sign-off (and, as a methodology-bearing index input, the dual gate per `CLAUDE.md`
+   §Methodology gate) before adoption.
+   **CLEARED (geo-DS, 2026-06-29, #53 D1b): PASS WITH CONDITIONS.** Method: `ST_Within`
+   point-in-polygon join in native EPSG:25833, per-(PLR, year, teilmarkt) count, left-join
+   to zero out empty PLRs, deterministic boundary dedup. 8 conditions for the downstream
+   aggregation model (D3) — see `docs/epic-d/d1b-kauffaelle-geo-signoff.md`.
+   **CLEARED (domain-expert, 2026-06-29, #53 D1b): PASS WITH CONDITIONS.** Theory
+   framing (Smith rent-gap + Dangschat invasion-succession; predictor-not-outcome
+   distinction) is faithful and correctly drawn. 7 conditions for downstream labelling,
+   segment legibility, temporal disclosure, and causal framing — see
+   `docs/epic-d/d1b-kauffaelle-domain-signoff.md`. PM may integrate D1b into `develop`;
+   conditions C1–C6 bind on D3/G2/O2; C7 returns at the `gentrification_index.sql` PR.
+   **R-C1 dual gate COMPLETE for D1b staging/ingestion.**
 
 ### References (P-D amendment)
 

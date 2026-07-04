@@ -15,7 +15,7 @@ website of **gentrification & social-development statistics** for Berlin (and, l
 | `transform/` | dbt project (staging → intermediate → marts) |
 | `ingestion/` | Python data ingestion (OSM history, Berlin open data) |
 | `web/` | public website (added later) |
-| `docs/` | project plan + architecture decision records (`docs/adr/`) |
+| `docs/` | project plan (`docs/PROJECT_PLAN.md`), architecture decision records (`docs/adr/`), and AI-assisted operating model + engineering retrospective (`docs/method/`) |
 | `reference/` | original thesis SQL + golden output CSVs (read-only reference) |
 | `data/` | local data artefacts — **gitignored**, rebuilt from open sources |
 | `.claude/` | agent + skill definitions for the agent team |
@@ -82,32 +82,34 @@ in `reference/` and are committed for reproducibility / reconciliation.
 |---|---|---|
 | `data/raw/` | **no** (gitignored) | Run the ingestion scripts below (downloads from open sources). |
 | `data/gentriduck.duckdb` | **no** (gitignored) | `uv run poe build` (re-materialises dbt models from `data/raw/`). |
+| `data/serving/*.parquet` | **no** (gitignored) | `uv run poe export-serving` (published marts, ODbL-licensed — see `DATA_LICENSE.md`). |
 | `reference/` (SQL, golden CSVs, `poi_mapping`) | **yes** | Committed; treat as read-only reference. |
 | `transform/seeds/` (small dim seeds) | **yes** | Committed; loaded by `dbt seed` / `uv run poe build`. |
 
-### Steps (stub — wired up across Epics B–D)
+### Steps
 
 ```bash
 # 1. Set up the env (one-off, per machine — see Setup section above)
 uv sync
 
-# 2. Pull open-data inputs into data/raw/ (gitignored).
-#    Implemented incrementally across the Epic B / C / D ingestion tasks:
-#      uv run python -m ingestion.osm_poi_snapshot   # B0/B1, then C1 for the time series
-#      uv run python -m ingestion.berlin_lor         # B0/B1: LOR/PLR/BZR geometries (ADR-0003)
-#      uv run python -m ingestion.berlin_ewr         # B0/B1, then C3b for multi-year
-#      uv run python -m ingestion.berlin_prices_rents  # D1: open price/rent sources
+# 2. One command, end-to-end (ADR-0015): ingest every open source, build the warehouse,
+#    and export the published marts + GeoJSON to data/serving/ and web/static/geo/.
+uv run poe refresh
 
-# 3. Rebuild the warehouse from the raw inputs.
-uv run poe build       # dbt build (staging -> intermediate -> marts) + tests
-uv run poe test        # dbt tests only
+#    Or step by step:
+uv run poe ingest          # every ingestion script (see ingestion/README.md for module details)
+uv run poe build           # dbt build (staging -> intermediate -> marts) + tests
+uv run poe export-serving  # publish marts to data/serving/*.parquet (DATA_LICENSE.md)
+uv run poe test            # dbt tests only
 ```
 
-The ingestion modules above are **stubs until the matching Epic ticket lands** — see the
-GitHub Project board. The contract is that re-running `uv run poe build` on a fresh clone
-(after `data/raw/` is populated) is sufficient to materialise every mart end-to-end. No
-proprietary or paid sources are involved — see the data ADRs (`docs/adr/`) for the source
-list and licences.
+`uv run poe refresh` deliberately excludes the two OSM full-history tasks
+(`poe ingest-osm-berlin` / `poe ingest-osm-hamburg`), which need a login-gated Geofabrik
+OSM-contributor session (ADR-0002) — everything else runs with no manual precondition and is
+graceful-degradation-safe if a source is temporarily unreachable. See `ingestion/README.md` for
+the full module layout, CLI flags, and the reuse design contract, and `DATA_LICENSE.md` for the
+published dataset's licence + regeneration path. No proprietary or paid sources are involved — see
+the data ADRs (`docs/adr/`) for the source list and licences.
 
 > **Why the split.** Raw OSM history + Berlin EWR can run to many GB; the public repo would
 > bloat and the data is freely re-downloadable. Goldens and SQL references are tiny and are
@@ -115,4 +117,4 @@ list and licences.
 
 ## Licence
 
-Code: [MIT](LICENSE). Data: under the respective source licences (OSM = ODbL, with attribution).
+Code: [MIT](LICENSE). Published derived dataset (`data/serving/*.parquet`): [ODbL v1.0](https://opendatacommons.org/licenses/odbl/1-0/) — see `DATA_LICENSE.md` for the full rationale, reuse terms, and regeneration path; per-source attribution strings are in `docs/epic-g/G3-attribution-licensing.md`.

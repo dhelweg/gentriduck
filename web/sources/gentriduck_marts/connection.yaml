@@ -1,0 +1,6 @@
+# G1a (#130) / ADR-0012: in-memory DuckDB reading the published parquet marts directly
+# (uv run poe export-serving, F2/#34) — no .duckdb file bundled, no live database.
+name: gentriduck_marts
+type: duckdb
+options:
+  filename: ":memory:"

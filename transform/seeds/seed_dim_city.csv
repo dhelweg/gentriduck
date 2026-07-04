@@ -1,2 +1,3 @@
-city_code,city_name,country_code
-BER,Berlin,DE
+city_code,city_name,country_code,native_crs_epsg
+BER,Berlin,DE,25833
+HH,Hamburg,DE,25832

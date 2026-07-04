@@ -1,0 +1,38 @@
+cff-version: 1.2.0
+message: "If you use Gentriduck's methodology, data pipeline, or derived dataset, please cite this work."
+title: "Gentriduck: a multi-agent, open-data gentrification analysis pipeline for Berlin"
+type: software
+version: "0.1.0-dev"
+date-released: "2026-06-30"
+url: "https://github.com/dhelweg/gentriduck"
+license: MIT
+abstract: >
+  Gentriduck revives a 2018 Berlin gentrification thesis on a modern, free, local-first stack
+  (dbt + DuckDB + Python) and extends it into a public multi-city statistics product. The pipeline
+  ingests open data sources (OSM POI history, MSS social monitoring, EWR socio-economic indicators,
+  Mietspiegel rent data, Bodenrichtwerte land values), builds a multi-dimensional, methodology-gated
+  gentrification index at PLR level across multiple years (2013–2025), and applies spatial inference
+  methods (Moran's I, LISA, spatial lag regression). All tools, data sources, and decisions are
+  open and documented in Architecture Decision Records. Work is executed by a team of specialised
+  AI agents under a structured coder ↔ reviewer ↔ methodology-gate workflow.
+authors:
+  - family-names: Helweg
+    given-names: David
+    alias: dhelweg
+keywords:
+  - gentrification
+  - urban-analytics
+  - dbt
+  - duckdb
+  - berlin
+  - spatial-analysis
+  - open-data
+  - ai-assisted-research
+references:
+  - type: thesis
+    title: "Gentrification in Berlin: a spatial analysis of socio-economic change"
+    authors:
+      - family-names: Helweg
+        given-names: David
+    year: 2018
+    notes: "Original 2018 thesis that Gentriduck revives and extends."

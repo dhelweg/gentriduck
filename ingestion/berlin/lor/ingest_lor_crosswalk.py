@@ -1,26 +1,39 @@
 """
 ingestion/berlin/lor/ingest_lor_crosswalk.py
 =============================================
-C3-crosswalk — areal-weighted PLR pre-2021 to LOR 2021 crosswalk.
+C3-crosswalk — areal-weighted PLR pre-2021 to LOR 2021 crosswalk (+ reverse direction).
 
-Reads the two LOR geometry parquets (pre2021.parquet and lor_2021.parquet)
+Reads the two LOR geometry parquets (pre2021_plr.parquet and lor_2021_plr.parquet)
 from data/raw/berlin/lor/, computes the geometric intersection of all
 (pre-2021 PLR, 2021 PLR) pairs, and writes a crosswalk parquet with
-areal-weighting coefficients.
+areal-weighting coefficients in BOTH directions.
 
-## Methodology (geo-DS approved 2026-06-19, C3-crosswalk-geo-signoff.md)
+## Methodology (geo-DS approved 2026-06-19, C3-crosswalk-geo-signoff.md;
+## reverse direction approved 2026-07-04, docs/epic-d/D1d-followup-geo-signoff.md, #136)
 
-For each pre-2021 PLR:
-  weight_i = Area(intersection(pre2021_plr, lor2021_plr_i)) / Area(pre2021_plr)
+Forward direction (pre2021 -> 2021), used by int_berlin_ewr_plr2021:
+  weight = Area(intersection(pre2021_plr, lor2021_plr_i)) / Area(pre2021_plr)
 
-Weights sum to 1.0 per pre-2021 PLR (validated at runtime; see WEIGHT_SUM_TOLERANCE).
-EWR indicator values can then be reapportioned as:
+Reverse direction (2021 -> pre2021), used by #136 to re-key mart_price_rent_dimension
+(published on lor_2021) back onto the governed index's lor_pre2021 area codes:
+  reverse_weight = Area(intersection(pre2021_plr_i, lor2021_plr)) / Area(lor2021_plr)
+
+Both weights are derived from the SAME intersection geometry — only the normalizing
+denominator (source-side vs target-side polygon area) differs. Weights sum to 1.0 per
+pre-2021 PLR for `weight`, and to 1.0 per 2021 PLR for `reverse_weight` (both validated
+at runtime; see WEIGHT_SUM_TOLERANCE).
+
+EWR indicator values can be reapportioned pre2021 -> 2021 as:
   indicator_2021_plr = SUM(indicator_pre2021_plr * weight_i)
+
+And intensive price/rent covariates can be reapportioned 2021 -> pre2021 as:
+  indicator_pre2021_plr = SUM(indicator_2021_plr * reverse_weight_i)
 
 For extensive indicators (counts): this is exact apportionment.
 For intensive indicators (rates/shares): this approximates a population-weighted
 average under the uniform-population-within-PLR assumption (standard practice at
-this spatial scale; documented limitation in int_berlin_ewr_plr2021.sql).
+this spatial scale; documented limitation in int_berlin_ewr_plr2021.sql /
+mart_price_rent_dimension_pre2021.sql).
 
 ## Source geometries
 
@@ -33,11 +46,13 @@ Geometry is stored as WKB in the parquet files (large_binary column).
   plr_id_pre2021  (string)  -- pre-2021 PLR area_code (8-digit)
   plr_id_2021     (string)  -- 2021 PLR area_code (8-digit)
   weight          (float64) -- intersection_area / pre2021_plr_area
+  reverse_weight  (float64) -- intersection_area / lor2021_plr_area
   mapping_type    (string)  -- always 'areal_weighted' for geometric crosswalks
   note            (string)  -- diagnostics (weight deviation, etc.)
 
 Rows with zero-area intersection are omitted.
-Weight-sum tolerance: each pre-2021 PLR's weights must sum to 1.0 +/- 0.01.
+Weight-sum tolerance: each pre-2021 PLR's `weight` values must sum to 1.0 +/- 0.01;
+each 2021 PLR's `reverse_weight` values must sum to 1.0 +/- 0.01.
 
 ## Usage
 
@@ -75,7 +90,7 @@ except ImportError as exc:
 # Constants
 # ---------------------------------------------------------------------------
 
-WEIGHT_SUM_TOLERANCE = 0.01  # maximum allowed deviation from 1.0 per pre-2021 PLR
+WEIGHT_SUM_TOLERANCE = 0.01  # maximum allowed deviation from 1.0 per PLR (either direction)
 WEIGHT_SUM_WARN_FRACTION = 0.01  # warn if > 1% of PLRs exceed tolerance
 
 CROSSWALK_SCHEMA = pa.schema(
@@ -83,6 +98,7 @@ CROSSWALK_SCHEMA = pa.schema(
         pa.field("plr_id_pre2021", pa.string()),
         pa.field("plr_id_2021", pa.string()),
         pa.field("weight", pa.float64()),
+        pa.field("reverse_weight", pa.float64()),
         pa.field("mapping_type", pa.string()),
         pa.field("note", pa.string()),
     ]
@@ -145,18 +161,28 @@ def load_geometries(parquet_path: Path) -> list[tuple[str, object]]:
 def compute_crosswalk(
     pre2021: list[tuple[str, object]],
     lor2021: list[tuple[str, object]],
-) -> list[dict]:
+) -> tuple[list[dict], dict[str, float], dict[str, float]]:
     """
-    Compute areal-weighted crosswalk from pre-2021 PLRs to 2021 PLRs.
+    Compute areal-weighted crosswalk between pre-2021 PLRs and 2021 PLRs, in BOTH
+    directions, from the same intersection geometry.
 
     For each pre-2021 PLR, finds all 2021 PLRs whose geometry intersects it,
-    computes intersection area, and derives weight = intersection_area / pre2021_area.
+    computes intersection area, and derives:
+      weight         = intersection_area / pre2021_area   (forward: pre2021 -> 2021)
+      reverse_weight = intersection_area / lor2021_area    (reverse: 2021 -> pre2021)
 
-    Returns a list of dicts with keys:
-      plr_id_pre2021, plr_id_2021, weight, mapping_type, note
+    Returns (rows, weight_sums, reverse_weight_sums) where:
+      rows: list of dicts with keys plr_id_pre2021, plr_id_2021, weight,
+            reverse_weight, mapping_type, note
+      weight_sums: {plr_id_pre2021: sum(weight)} — should be ~1.0 each
+      reverse_weight_sums: {plr_id_2021: sum(reverse_weight)} — should be ~1.0 each
     """
+    # 2021 PLR areas, computed once and reused as the reverse-weight denominator.
+    lor2021_areas: dict[str, float] = {code: geom.area for code, geom in lor2021}
+
     rows: list[dict] = []
     weight_sums: dict[str, float] = {}
+    reverse_weight_sums: dict[str, float] = {}
     total = len(pre2021)
 
     for i, (pre_code, pre_geom) in enumerate(pre2021):
@@ -192,12 +218,15 @@ def compute_crosswalk(
             if inter_area <= 0:
                 continue
 
+            new_area = lor2021_areas.get(new_code, 0.0)
             weight = inter_area / pre_area
+            reverse_weight = inter_area / new_area if new_area > 0 else 0.0
             plr_rows.append(
                 {
                     "plr_id_pre2021": pre_code,
                     "plr_id_2021": new_code,
                     "weight": weight,
+                    "reverse_weight": reverse_weight,
                     "mapping_type": "areal_weighted",
                     "note": "",
                 }
@@ -207,7 +236,7 @@ def compute_crosswalk(
             log.warning("pre-2021 PLR %s: no intersecting 2021 PLRs found", pre_code)
             continue
 
-        # Compute weight sum for this pre-2021 PLR
+        # Compute forward weight sum for this pre-2021 PLR
         ws = sum(r["weight"] for r in plr_rows)
         weight_sums[pre_code] = ws
 
@@ -226,29 +255,41 @@ def compute_crosswalk(
 
         rows.extend(plr_rows)
 
-    return rows, weight_sums
+    # Reverse weight sums are accumulated per 2021 PLR across ALL pre-2021 PLRs that
+    # intersect it (unlike the forward sum, which is scoped per pre-2021 PLR loop
+    # iteration above), so aggregate over the full row set.
+    for r in rows:
+        code = r["plr_id_2021"]
+        reverse_weight_sums[code] = reverse_weight_sums.get(code, 0.0) + r["reverse_weight"]
+
+    return rows, weight_sums, reverse_weight_sums
 
 
 def validate_weight_sums(
     weight_sums: dict[str, float],
-    n_pre2021: int,
+    n_expected: int,
+    direction_label: str,
 ) -> bool:
     """
-    Validate that weights sum to 1.0 +/- WEIGHT_SUM_TOLERANCE per pre-2021 PLR.
+    Validate that weights sum to 1.0 +/- WEIGHT_SUM_TOLERANCE per source PLR.
     Returns True if validation passes (warning-only), logs details.
+
+    direction_label: human-readable label for log messages (e.g. "forward (pre2021)"
+    or "reverse (2021)").
     """
     if not weight_sums:
-        log.error("No weight sums computed — crosswalk is empty")
+        log.error("[%s] No weight sums computed — crosswalk is empty", direction_label)
         return False
 
     violations = {
         code: ws for code, ws in weight_sums.items() if abs(ws - 1.0) > WEIGHT_SUM_TOLERANCE
     }
-    missing = n_pre2021 - len(weight_sums)
+    missing = n_expected - len(weight_sums)
 
     log.info(
-        "Weight sum validation: %d pre-2021 PLRs processed, %d missing (no intersections), "
+        "[%s] Weight sum validation: %d PLRs processed, %d missing (no intersections), "
         "%d exceed +/-%.3f tolerance",
+        direction_label,
         len(weight_sums),
         missing,
         len(violations),
@@ -258,11 +299,18 @@ def validate_weight_sums(
     if violations:
         violation_rate = len(violations) / len(weight_sums)
         for code, ws in sorted(violations.items())[:10]:
-            log.warning("  PLR %s: weight_sum=%.4f (deviation %.4f)", code, ws, abs(ws - 1.0))
+            log.warning(
+                "  [%s] PLR %s: weight_sum=%.4f (deviation %.4f)",
+                direction_label,
+                code,
+                ws,
+                abs(ws - 1.0),
+            )
         if len(violations) > 10:
             log.warning("  ... and %d more violations", len(violations) - 10)
         log.warning(
-            "Weight sum violation rate: %d/%d = %.1f%% (tolerance <= %.1f%%)",
+            "[%s] Weight sum violation rate: %d/%d = %.1f%% (tolerance <= %.1f%%)",
+            direction_label,
             len(violations),
             len(weight_sums),
             violation_rate * 100,
@@ -270,14 +318,19 @@ def validate_weight_sums(
         )
         if violation_rate > WEIGHT_SUM_WARN_FRACTION:
             log.error(
-                "Weight sum violation rate %.1f%% exceeds threshold %.1f%% — "
+                "[%s] Weight sum violation rate %.1f%% exceeds threshold %.1f%% — "
                 "check LOR geometry topology",
+                direction_label,
                 violation_rate * 100,
                 WEIGHT_SUM_WARN_FRACTION * 100,
             )
             return False
     else:
-        log.info("All processed PLRs: weight sums within +/-%.3f tolerance", WEIGHT_SUM_TOLERANCE)
+        log.info(
+            "[%s] All processed PLRs: weight sums within +/-%.3f tolerance",
+            direction_label,
+            WEIGHT_SUM_TOLERANCE,
+        )
 
     # Summarise weight sum distribution
     all_sums = list(weight_sums.values())
@@ -285,7 +338,8 @@ def validate_weight_sums(
     min_ws = min(all_sums)
     max_ws = max(all_sums)
     log.info(
-        "Weight sum distribution: mean=%.4f min=%.4f max=%.4f",
+        "[%s] Weight sum distribution: mean=%.4f min=%.4f max=%.4f",
+        direction_label,
         mean_ws,
         min_ws,
         max_ws,
@@ -308,6 +362,7 @@ def write_crosswalk(rows: list[dict], out_path: Path) -> None:
             "plr_id_pre2021": pa.array([r["plr_id_pre2021"] for r in rows], type=pa.string()),
             "plr_id_2021": pa.array([r["plr_id_2021"] for r in rows], type=pa.string()),
             "weight": pa.array([r["weight"] for r in rows], type=pa.float64()),
+            "reverse_weight": pa.array([r["reverse_weight"] for r in rows], type=pa.float64()),
             "mapping_type": pa.array([r["mapping_type"] for r in rows], type=pa.string()),
             "note": pa.array([r["note"] for r in rows], type=pa.string()),
         },
@@ -327,8 +382,8 @@ def write_crosswalk(rows: list[dict], out_path: Path) -> None:
 def build_parser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(
         description=(
-            "Compute areal-weighted PLR pre-2021 to LOR 2021 crosswalk. "
-            "Reads pre2021.parquet and lor_2021.parquet from --lor-dir; "
+            "Compute areal-weighted PLR pre-2021 <-> LOR 2021 crosswalk (both directions). "
+            "Reads pre2021_plr.parquet and lor_2021_plr.parquet from --lor-dir; "
             "writes lor_crosswalk.parquet to the same directory."
         )
     )
@@ -336,7 +391,7 @@ def build_parser() -> argparse.ArgumentParser:
         "--lor-dir",
         default="data/raw/berlin/lor",
         type=Path,
-        help="Directory containing pre2021.parquet and lor_2021.parquet (default: data/raw/berlin/lor).",
+        help="Directory containing pre2021_plr.parquet and lor_2021_plr.parquet (default: data/raw/berlin/lor).",
     )
     p.add_argument(
         "--dry-run",
@@ -359,8 +414,8 @@ def main(argv: Optional[list[str]] = None) -> int:
         logging.getLogger().setLevel(logging.DEBUG)
 
     lor_dir = args.lor_dir.resolve()
-    pre2021_path = lor_dir / "pre2021.parquet"
-    lor2021_path = lor_dir / "lor_2021.parquet"
+    pre2021_path = lor_dir / "pre2021_plr.parquet"
+    lor2021_path = lor_dir / "lor_2021_plr.parquet"
     out_path = lor_dir / "lor_crosswalk.parquet"
 
     # Validate inputs
@@ -370,7 +425,7 @@ def main(argv: Optional[list[str]] = None) -> int:
             log.error("Run ingest_lor_geometries.py first to populate %s", lor_dir)
             return 1
 
-    log.info("LOR crosswalk computation")
+    log.info("LOR crosswalk computation (forward + reverse)")
     log.info("  pre-2021 PLRs: %s", pre2021_path)
     log.info("  LOR 2021 PLRs: %s", lor2021_path)
     log.info("  output:        %s", out_path)
@@ -390,8 +445,8 @@ def main(argv: Optional[list[str]] = None) -> int:
         len(pre2021) * len(lor2021),
     )
 
-    # Compute crosswalk
-    rows, weight_sums = compute_crosswalk(pre2021, lor2021)
+    # Compute crosswalk (both directions, from the same intersection geometry)
+    rows, weight_sums, reverse_weight_sums = compute_crosswalk(pre2021, lor2021)
 
     if not rows:
         log.error("No crosswalk rows computed — check geometry overlap")
@@ -399,9 +454,14 @@ def main(argv: Optional[list[str]] = None) -> int:
 
     log.info("Computed %d crosswalk rows", len(rows))
 
-    # Validate weight sums
-    valid = validate_weight_sums(weight_sums, n_pre2021=len(pre2021))
-    if not valid:
+    # Validate weight sums, both directions
+    valid_fwd = validate_weight_sums(
+        weight_sums, n_expected=len(pre2021), direction_label="forward (pre2021)"
+    )
+    valid_rev = validate_weight_sums(
+        reverse_weight_sums, n_expected=len(lor2021), direction_label="reverse (2021)"
+    )
+    if not (valid_fwd and valid_rev):
         log.error("Weight sum validation failed — check geometry topology")
         return 1
 

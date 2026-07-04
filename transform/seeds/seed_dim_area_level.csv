@@ -1,3 +1,6 @@
 level_code,level_name,description
 bzr,Bezirksregion,~138 sub-districts within Bezirke
 plr,Planungsraum,~447 smallest LOR planning areas
+district,District,"Generic city-agnostic district level (e.g. Hamburg Bezirk, 7)"
+subarea_l1,Subarea (level 1),"Generic city-agnostic mid-level subarea (e.g. Hamburg Stadtteil, ~104)"
+subarea_l2,Subarea (level 2),"Generic city-agnostic finest subarea (e.g. Hamburg statistisches Gebiet, ~945)"
