@@ -1,7 +1,7 @@
 {
   "_schema": "gentriduck-session-state/v1",
-  "session": "2026-07-04-devmode-133",
-  "updated_at": "2026-07-04T11:10:00Z",
+  "session": "2026-07-04-devmode-134",
+  "updated_at": "2026-07-04T12:00:00Z",
   "build_status": {
     "result": "PASS",
     "pass": 593,
@@ -12,7 +12,7 @@
       "test_c5_poi_share_spike (expected by design)"
     ],
     "branch": "develop",
-    "note": "No code changes this cycle -- reconciliation + re-scan only. Baseline unchanged since devmode-138 integration."
+    "note": "Only change this cycle: web/static/robots.txt + web/static/_headers (non-methodology config, verified via clean npm run build). No dbt model changes."
   },
   "open_prs": [
     {
@@ -20,7 +20,7 @@
       "title": "Weekly release: G4/G5 site work + handoff sync",
       "base": "main",
       "head": "develop",
-      "note": "Branch-tracking PR (head=develop), auto-picks up new develop commits. OPEN, mergeable UNKNOWN (no conflicts), zero reviews/comments/checks. 6th consecutive cycle (devmode-128..133) with no maintainer action."
+      "note": "Branch-tracking PR (head=develop), auto-picks up new develop commits (now includes the noindex commit). OPEN, mergeable MERGEABLE, zero reviews/comments/checks. Idle since devmode-128; no fresh nudge this cycle since maintainer is actively in-session."
     }
   ],
   "pending_adr_branches": [
@@ -32,11 +32,11 @@
     }
   ],
   "completed_this_session": [],
-  "filed_this_session": [],
-  "integrated_into_develop": [],
+  "filed_this_session": [144],
+  "integrated_into_develop": ["web/static/robots.txt + _headers (soft-launch noindex)"],
   "in_progress": null,
   "board_status": {
-    "note": "105 Done, 6 Todo, 0 In Progress = 111 total. Reconciliation clean at start and end of cycle.",
+    "note": "105 Done, 7 Todo, 0 In Progress = 112 total. Reconciliation clean at end of cycle.",
     "open_issues_by_dependency": {
       "next_unblocked": [],
       "blocked_on_maintainer": [
@@ -44,7 +44,8 @@
         "#80 [A10] scoping question posted, awaiting maintainer answer",
         "#82 [O2] ADR-0013 whitepaper tool (Quarto) approval",
         "#126 [H2b] Hamburg OSM POI -- Geofabrik OSM-contributor login",
-        "#125 [H2] transitively blocked on #126"
+        "#125 [H2] transitively blocked on #126",
+        "#144 [F3] Cloudflare Pages deploy -- maintainer needs to finish dashboard build settings + trigger deploy"
       ],
       "parked_not_blocked": [
         "#129 [H2-SE] standing requirement, no Hamburg regression ticket exists yet to attach it to"
@@ -56,9 +57,10 @@
     {"issue": 80, "blocked_by": ["Maintainer scoping answer"], "title": "[A10] Causal/early-warning design"},
     {"issue": 82, "blocked_by": ["Maintainer ADR-0013 approval"], "title": "[O2] Whitepaper"},
     {"issue": 125, "blocked_by": ["#126 (transitively)"], "title": "[H2] Hamburg real-data ingestion remainder"},
-    {"issue": 126, "blocked_by": ["Maintainer's Geofabrik OSM-contributor login"], "title": "[H2b] Hamburg OSM POI ingestion"}
+    {"issue": 126, "blocked_by": ["Maintainer's Geofabrik OSM-contributor login"], "title": "[H2b] Hamburg OSM POI ingestion"},
+    {"issue": 144, "blocked_by": ["Maintainer's Cloudflare Pages dashboard build settings + deploy trigger"], "title": "[F3] Cloudflare Pages deploy"}
   ],
-  "next_session_decision": "Backlog is genuinely, correctly empty of unblocked work -- confirmed via re-scan of docs/PROJECT_PLAN.md against the open-issue list (nothing new to file). Re-check for a maintainer reply on #70/#80/#82/#126 each cycle and resume immediately on any reply. PR #137 (develop->main) is ready and waiting for the maintainer to merge in the GitHub UI -- now 6 cycles idle.",
+  "next_session_decision": "Backlog is fully blocked/parked (7/7 open issues). #144 is the freshest and actively being worked with the maintainer in-session -- watch for a *.pages.dev URL or build log and verify (curl -I for noindex headers, check pages render) the moment it's posted. Otherwise re-check #70/#80/#82/#126 for replies each cycle. PR #137 (develop->main) is MERGEABLE and waiting.",
   "last_updated": "2026-07-04",
-  "current_session": "devmode-133"
+  "current_session": "devmode-134"
 }
