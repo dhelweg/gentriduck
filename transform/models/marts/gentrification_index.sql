@@ -74,9 +74,19 @@ union all
 -- status_class now carries the typology stage name (ADR-0008 D1xD2 matrix).
 -- Joins int_gentrification_ts to dim_area for area_name and area_level.
 -- period_yyyymm is constructed as YYYY12 (31-Dec snapshot convention).
--- status_class_bi, dynamism_class_bi, own_idx_class, own_idx_class_bi: NULL for
--- live_data
--- (binary classification and EWR-class not yet implemented; follow-up issue).
+-- G4 (#138) backfill: status_class_bi / dynamism_class_bi are now derived
+-- deterministically for live_data (no new threshold rule invented):
+-- * dynamism_class_bi is a direct relabel of the existing D2 Dynamik ordinal
+-- (1=positiv/2=stabil/3=negativ -> positive/neutral/negative), matching the
+-- thesis-variant domain exactly (ADR-0008 D2 binding; index-definition.md D2).
+-- * status_class_bi is a 4-class-to-3-bucket grouping of the D1 Status ordinal
+-- (1=hoch->high, 2=mittel->medium, 3=niedrig & 4=sehr_niedrig->low), grounded
+-- in index-definition-domain-draft.md's D1xD2 stage table, which already
+-- treats niedrig/sehr_niedrig as a single "-deprived" band (ADR-0008 D1
+-- binding: ordinal class grouping only, never averaging codes as metric).
+-- own_idx_class / own_idx_class_bi remain NULL for live_data -- out of scope for
+-- G4 (they are the EWR/D4 own-index, not covered by this ticket's acceptance
+-- criteria); a future D4-facing ticket may populate them.
 -- PLR-level aggregate; not an individual- or building-level statement (G-2; §1.2).
 select
     ts.city_code,
@@ -92,11 +102,45 @@ select
     -- typology stage from D1×D2 matrix (ADR-0008; index-definition.md §1.5).
     -- NULL for uninhabited PLRs (is_uninhabited=true; §7.1).
     cast(ts.typology_stage as varchar) as status_class,
-    cast(null as varchar) as status_class_bi,
+    -- G4 (#138): D1 4-class -> 3-bucket grouping (hoch=high, mittel=medium,
+    -- niedrig/sehr_niedrig=low). NULL propagates for uninhabited PLRs.
+    case
+        when ts.status_index is null
+        then null
+        when ts.status_index = 1
+        then 'high'
+        when ts.status_index = 2
+        then 'medium'
+        when ts.status_index in (3, 4)
+        then 'low'
+    end as status_class_bi,
     -- D2: MSS Dynamik ordinal (1=positiv/improving … 3=negativ/worsening).
     cast(ts.dynamik_index as double) as dynamism_index,
-    cast(null as varchar) as dynamism_class,
-    cast(null as varchar) as dynamism_class_bi,
+    -- G4 (#138): direct relabel of the D2 ordinal, same domain as the thesis
+    -- variant (positive/neutral/negative). No new threshold; dynamism_class and
+    -- dynamism_class_bi carry the identical relabel for live_data (there is no
+    -- second MSS Dynamik projection to distinguish them, unlike the 2018 thesis'
+    -- two distinct classification passes).
+    case
+        when ts.dynamik_index is null
+        then null
+        when ts.dynamik_index = 1
+        then 'positive'
+        when ts.dynamik_index = 2
+        then 'neutral'
+        when ts.dynamik_index = 3
+        then 'negative'
+    end as dynamism_class,
+    case
+        when ts.dynamik_index is null
+        then null
+        when ts.dynamik_index = 1
+        then 'positive'
+        when ts.dynamik_index = 2
+        then 'neutral'
+        when ts.dynamik_index = 3
+        then 'negative'
+    end as dynamism_class_bi,
     cast(null as varchar) as own_idx_class,
     cast(null as varchar) as own_idx_class_bi
 from {{ ref("int_gentrification_ts") }} as ts

@@ -20,10 +20,23 @@ now.
   left blank.
 </Alert>
 
-<Dropdown name="area_level" title="Area level" defaultValue="bzr">
-  <DropdownOption value="bzr" valueLabel="Bezirksregion (BZR)"/>
+<Dropdown name="variant" title="Data" defaultValue="live_data">
+  <DropdownOption value="live_data" valueLabel="Live data (latest MSS editions, 2013–2025)"/>
+  <DropdownOption value="standard" valueLabel="2018 thesis reproduction (Dec 2016 snapshot)"/>
+</Dropdown>
+
+<Dropdown name="area_level" title="Area level" defaultValue="plr">
+  <DropdownOption value="bzr" valueLabel="Bezirksregion (BZR) — 2018 thesis reproduction only"/>
   <DropdownOption value="plr" valueLabel="Planungsraum (PLR)"/>
 </Dropdown>
+
+{#if inputs.variant.value === 'live_data' && inputs.area_level.value === 'bzr'}
+<Alert status="warning">
+  The <code>live_data</code> variant (#138 G4) is PLR-grain only — there is no Bezirksregion
+  aggregate for it. Switch "Area level" to Planungsraum, or "Data" to the 2018 thesis reproduction,
+  to see a Bezirksregion map.
+</Alert>
+{/if}
 
 <Dropdown name="indicator" title="Indicator" defaultValue="status_index">
   <DropdownOption value="status_index" valueLabel="Social status (status_index)"/>
@@ -43,13 +56,13 @@ select
     -- actually wires this up as a link.
     '/area-detail?area=' || area_code as link
 from gentriduck_marts.gentrification_index
-where variant = 'standard'
+where variant = '${inputs.variant.value}'
   and area_level = '${inputs.area_level.value}'
   and city_code = 'BER'
   and period_yyyymm = (
       select max(period_yyyymm)
       from gentriduck_marts.gentrification_index
-      where variant = 'standard' and area_level = '${inputs.area_level.value}'
+      where variant = '${inputs.variant.value}' and area_level = '${inputs.area_level.value}'
   )
 ```
 
@@ -96,13 +109,13 @@ select
     status_index,
     dynamism_index
 from gentriduck_marts.gentrification_index
-where variant = 'standard'
+where variant = '${inputs.variant.value}'
   and area_level = '${inputs.area_level.value}'
   and city_code = 'BER'
   and period_yyyymm = (
       select max(period_yyyymm)
       from gentriduck_marts.gentrification_index
-      where variant = 'standard' and area_level = '${inputs.area_level.value}'
+      where variant = '${inputs.variant.value}' and area_level = '${inputs.area_level.value}'
   )
 order by dynamism_index desc
 ```
