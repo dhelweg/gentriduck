@@ -2,22 +2,22 @@
 title: Citywide POI & price/rent overview
 ---
 
-# Citywide POI & price/rent overview
+# Berlin, citywide: shops & amenities, land value & rent
 
-`fct_poi_development` (amenity/commerce counts, ADR-0008 D3 predictor pillar) and
-`mart_price_rent_dimension` (Bodenrichtwert land value + Mietspiegel-derived estimated rent, D pillar)
-are fully built but were previously visible only per-area on the [area detail page](/area-detail).
-This page aggregates both **citywide**, so the trend is visible without already knowing a specific
-Planungsraum to look up.
+Two data sources Gentriduck tracks, added up across the whole city — one feeds the governed index,
+one is contextual: how the mix of mapped shops, cafés, and other amenities ("points of interest,"
+or POIs) has grown, and how land value and estimated rent have moved. Looking at the whole city
+lets you see the citywide trend without already knowing which neighbourhood to check — for a
+single-neighbourhood breakdown, see the [area detail page](/area-detail).
 
 <Alert status="info">
-  These are descriptive aggregates of the same governed marts used elsewhere on the site — no new
-  indicator, weight, or normalization is introduced here, so no methodology sign-off applies (see
-  the <a href="https://github.com/dhelweg/gentriduck/blob/main/docs/epic-g/G2-public-methodology-page.md">methodology write-up</a>
-  for how the underlying marts are built).
+  These are simple citywide averages/totals of the same governed data used elsewhere on the site —
+  no new indicator, weight, or method is introduced here, so no separate methodology sign-off
+  applies. See the [methodology & data sources](/methodology) page for how the underlying figures
+  are built.
 </Alert>
 
-## POI development, citywide
+## Shops, cafés & amenities, citywide
 
 ```sql poi_citywide
 select
@@ -30,23 +30,24 @@ order by snapshot_year
 ```
 
 <Alert status="info">
-  <code>fct_poi_development</code> spans two non-overlapping LOR vintages —
-  <code>lor_pre2021</code> (2008–2020) and <code>lor_2021</code> (2021–2026) — unioned here into one
-  continuous citywide series. Counts are OSM-derived and subject to OSM mapping-completeness bias
-  (growing OSM contributor coverage inflates early-year counts; see C5 completeness-bias controls
-  in the <a href="https://github.com/dhelweg/gentriduck/blob/main/docs/epic-c/C5-geo-signoff.md">C5 completeness-bias write-up</a>) — read the early-2010s ramp partly as
-  OSM-adoption growth, not only real-world POI growth.
+  Because Berlin's official neighbourhood boundaries changed in 2021, this line stitches together
+  counts from two boundary systems (pre-2021 and 2021+) into one continuous citywide series — read
+  it as one trend, not two. It's also worth reading the early years cautiously: since these are
+  OpenStreetMap-derived counts, growing map-contributor coverage over time inflates early-year
+  counts on its own, independent of real-world change (see the
+  <a href="https://github.com/dhelweg/gentriduck/blob/main/docs/epic-c/C5-geo-signoff.md">completeness-bias correction write-up</a>
+  for how the index itself corrects for this).
 </Alert>
 
 <LineChart
     data={poi_citywide}
     x=snapshot_year
     y=poi_count
-    title="Total mapped POIs, city of Berlin"
-    yAxisTitle="POI count (all harmonized categories)"
+    title="Total mapped shops, cafés & amenities, city of Berlin"
+    yAxisTitle="Number of mapped places"
 />
 
-### POI mix by harmonized category (latest year)
+### What kinds of places make up that total? (latest year)
 
 ```sql poi_latest_year
 select max(snapshot_year) as year
@@ -70,12 +71,12 @@ limit 15
     data={poi_mix_latest}
     x=poi_category_h
     y=poi_count
-    title="Top 15 POI categories, {poi_latest_year[0].year}"
-    yAxisTitle="POI count"
+    title="Top 15 categories of mapped places, {poi_latest_year[0].year}"
+    yAxisTitle="Number of mapped places"
     swapXY=true
 />
 
-## Price & rent dimension, citywide
+## Land value & estimated rent, citywide
 
 ```sql price_rent_citywide
 select
@@ -92,20 +93,20 @@ order by snapshot_year
 ```
 
 <Alert status="info">
-  Bodenrichtwert (land-value) coverage is uneven across snapshot years — some years have no
-  residential BRW zones matched (see <code>n_areas_with_brw</code> in the underlying data); the
-  chart below only plots years with a non-null citywide average. Mietspiegel-derived estimated rent
-  (<code>est_rent_mid/low/high</code>) has broader year coverage. Figures are city-average Mietspiegel
-  Wohnlage-tier estimates, not individual observed rents — see the
-  <a href="/area-detail">area detail page</a>'s price & rent section for the full per-area
-  methodology caveats (Bestandsmiete bias, low-n Wohnlage suppression).
+  These are citywide averages of official reference values, not observed transaction prices — see
+  the [area detail page](/area-detail)'s price & rent section, or the
+  [methodology page](/methodology), for what "land value" (Bodenrichtwert) and "estimated rent"
+  (Mietspiegel-derived) actually measure and their caveats. Land-value coverage is uneven across
+  years (some years have no residential zones matched — see <code>n_areas_with_brw</code> in the
+  underlying data); the chart below only plots years with a usable citywide average. Estimated-rent
+  coverage is broader.
 </Alert>
 
 <LineChart
     data={price_rent_citywide}
     x=snapshot_year
     y={['avg_est_rent_low', 'avg_est_rent_mid', 'avg_est_rent_high']}
-    title="Citywide estimated rent range (EUR/m²), by snapshot year"
+    title="Citywide estimated rent range (EUR/m²), by year"
     yAxisTitle="EUR/m²"
 />
 
@@ -113,14 +114,14 @@ order by snapshot_year
     data={price_rent_citywide}
     x=snapshot_year
     y=avg_brw_eur_m2
-    title="Citywide average Bodenrichtwert (EUR/m², residential zones)"
+    title="Citywide average land value (Bodenrichtwert), residential zones (EUR/m²)"
     yAxisTitle="EUR/m²"
     emptySet="warn"
-    emptyMessage="No residential BRW zones matched for any snapshot year."
+    emptyMessage="No residential land-value zones matched for any year."
 />
 
 ## Drill down further
 
-For a per-Planungsraum breakdown of these same two dimensions alongside the governed
-status/dynamism index, see the [area detail page](/area-detail). For the citywide index headline
-and choropleth map, see the [homepage](/) and the [maps page](/maps).
+For a single-neighbourhood breakdown of these same two signals alongside the governed
+gentrification index, see the [area detail page](/area-detail). For the citywide index headline
+and map, see the [home page](/) and the [maps page](/maps).

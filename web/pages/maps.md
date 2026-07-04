@@ -4,19 +4,23 @@ title: Maps — gentrification pressure by area
 
 # Maps — gentrification pressure by area
 
-A choropleth view of the governed gentrification index (ADR-0004) over Berlin's planning areas.
-Pick a level (Bezirksregion or Planungsraum) and an indicator below. Per ADR-0005 this page is
-already parameterized by `city_code` — Hamburg's boundaries are already exported to
-`dim_area_geometry`, but the governed index doesn't have real Hamburg data yet
-([#125](https://github.com/dhelweg/gentriduck/issues/125)), so the area picker is Berlin-only for
-now.
+This map colours each of Berlin's neighbourhoods by its current gentrification-pressure signal, so
+you can see at a glance which parts of the city show the strongest or weakest pressure. Pick a map
+level and an indicator below.
+
+Right now this map covers Berlin only — Hamburg's boundaries are ready behind the scenes, but the
+underlying index doesn't have real Hamburg numbers yet
+([#125](https://github.com/dhelweg/gentriduck/issues/125)), so the area picker stays Berlin-only
+for now.
 
 <Alert status="info">
-  Label polarity note: <b>status_index</b> is ordinal (higher = <b>more deprived</b>);
-  <b>dynamism_index</b> — higher means <b>faster upward</b> change. A <b>negative</b>
-  <code>dynamism_class_bi</code> means <b>higher</b> gentrification pressure. See the
+  <b>How to read the map:</b> "Social status" is ordinal — higher shading means <b>more deprived</b>,
+  not more prosperous. "Dynamism" — higher means the area's status is improving <b>faster</b>. A
+  <b>negative</b> pressure trend (see the table below the map) means <b>higher</b> gentrification
+  pressure. See the
   <a href="https://github.com/dhelweg/gentriduck/blob/main/docs/adr/0004-data-governance-and-index-definition.md">index definition</a>
-  for the full methodology. Areas without a governed value (e.g. uninhabited PLRs) are drawn but
+  for the full methodology, or the <a href="/methodology">methodology & data sources</a> page for a
+  plain-language walkthrough. Areas without a value (e.g. uninhabited planning areas) are drawn but
   left blank.
 </Alert>
 
@@ -32,15 +36,15 @@ now.
 
 {#if inputs.variant.value === 'live_data' && inputs.area_level.value === 'bzr'}
 <Alert status="warning">
-  The <code>live_data</code> variant (#138 G4) is PLR-grain only — there is no Bezirksregion
-  aggregate for it. Switch "Area level" to Planungsraum, or "Data" to the 2018 thesis reproduction,
-  to see a Bezirksregion map.
+  The "Live data" option only has neighbourhood-level (Planungsraum) detail — there's no wider
+  Bezirksregion view for it yet. Switch "Area level" to Planungsraum, or "Data" to the 2018 thesis
+  reproduction, to see a Bezirksregion map.
 </Alert>
 {/if}
 
 <Dropdown name="indicator" title="Indicator" defaultValue="status_index">
-  <DropdownOption value="status_index" valueLabel="Social status (status_index)"/>
-  <DropdownOption value="dynamism_index" valueLabel="Dynamism (dynamism_index)"/>
+  <DropdownOption value="status_index" valueLabel="Social status — how deprived or affluent (current snapshot)"/>
+  <DropdownOption value="dynamism_index" valueLabel="Dynamism — how fast that status is changing"/>
 </Dropdown>
 
 ```sql areas
@@ -82,7 +86,7 @@ where variant = '${inputs.variant.value}'
     link="link"
 />
 
-Click a Planungsraum on the map to open its [drill-down page](/area-detail).
+Click a Planungsraum on the map to open its [detailed breakdown](/area-detail).
 
 {:else}
 
@@ -101,7 +105,7 @@ Click a Planungsraum on the map to open its [drill-down page](/area-detail).
 
 {/if}
 
-## Underlying data
+## The numbers behind the map
 
 ```sql area_table
 select
@@ -120,9 +124,14 @@ where variant = '${inputs.variant.value}'
 order by dynamism_index desc
 ```
 
-<DataTable data={area_table} rows=10/>
+<DataTable data={area_table} rows=10>
+    <Column id=area_name title="Area"/>
+    <Column id=status_index title="Social status (1=least deprived … 4=most deprived)"/>
+    <Column id=dynamism_index title="Speed of change (higher = faster upward change)"/>
+</DataTable>
 
-Per-area trajectories are on the [time-series page](/time-series). Clicking a Planungsraum (PLR)
-on the map above opens its [detail/drill-down view](/area-detail) pre-selected on that area
-([#133](https://github.com/dhelweg/gentriduck/issues/133)); the drill-down page is PLR-only (it
-has no Bezirksregion-level data), so the BZR map above is view-only for now.
+Want to see how one specific area has changed over the years? Use the
+[time series page](/time-series). Clicking a Planungsraum (PLR) on the map above opens its
+[detailed breakdown](/area-detail) pre-selected on that area
+([#133](https://github.com/dhelweg/gentriduck/issues/133)); that detail page only covers
+Planungsräume, so the Bezirksregion map above is view-only for now.

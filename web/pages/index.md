@@ -2,16 +2,23 @@
 title: Gentriduck — Berlin Gentrification Index
 ---
 
-Gentriduck tracks socio-economic status and neighbourhood change (a proxy for gentrification
-pressure) across Berlin's planning areas, using open data. This overview shows the governed
-index's headline numbers for the latest available period.
+Which Berlin neighbourhoods are showing the clearest signs of gentrification pressure right now —
+and which aren't? Gentriduck answers that using only free, official, open data: Berlin's own
+social-monitoring reports, the population register, OpenStreetMap, and official land-value/rent
+references. Below are the headline numbers for the latest available period.
+
+Every figure on this site describes a small area of a few thousand residents (a *Planungsraum*),
+never an individual, household, or building — see the [methodology & data sources](/methodology)
+page for what that means and where the caveats are.
 
 <Alert status="info">
-  Label polarity note: a <b>negative</b> dynamism class means <b>higher</b> gentrification
-  pressure (faster upward change); a <b>low</b> status class means lower deprivation (a wealthier
-  area). See the <a href="/methodology">methodology & data sources</a> page for a plain-language
-  explanation of what these numbers mean, or the
-  <a href="https://github.com/dhelweg/gentriduck/blob/main/docs/adr/0004-data-governance-and-index-definition.md">governed index definition (ADR-0004)</a> for the full technical spec.
+  <b>How to read the numbers below:</b> a <b>negative</b> trend means an area's official
+  classification is moving in a direction this project reads as <b>higher</b> gentrification
+  pressure (fast upward change); a <b>positive</b> trend means <b>lower</b> pressure. Separately, a
+  <b>low</b> status class means <b>lower</b> deprivation (a wealthier area) — so "low" is not the
+  same as "bad" here. See the <a href="/methodology">methodology & data sources</a> page for a full
+  plain-language walkthrough, or the
+  <a href="https://github.com/dhelweg/gentriduck/blob/main/docs/adr/0004-data-governance-and-index-definition.md">governed index definition (ADR-0004)</a> for the technical spec.
 </Alert>
 
 <Dropdown name="variant" title="Data" defaultValue="live_data">
@@ -43,9 +50,9 @@ where variant = '${inputs.variant.value}'
 <BigValue data={headline} value=high_pressure_areas title="High gentrification pressure" fmt="0"/>
 <BigValue data={headline} value=low_pressure_areas title="Low gentrification pressure" fmt="0"/>
 
-Latest period: **{latest_period[0].period}**
+Numbers above reflect the most recent available reporting period: **{latest_period[0].period}**.
 
-## Dynamism class distribution
+## Areas by pressure trend
 
 ```sql dynamism_distribution
 select
@@ -61,12 +68,17 @@ order by area_count desc
 
 <BarChart
     data={dynamism_distribution}
-    title="Areas by dynamism class, {latest_period[0].period}"
+    title="Areas by gentrification-pressure trend, {latest_period[0].period}"
     x=dynamism_class
     y=area_count
+    xAxisTitle="Pressure trend"
+    yAxisTitle="Number of areas"
 />
 
-## Highest-pressure areas
+## Top 10 highest-pressure areas
+
+These are the ten Berlin planning areas currently showing the strongest gentrification-pressure
+signal (a "negative" trend, in the terms above) for the latest period.
 
 ```sql top_pressure
 select
@@ -82,13 +94,16 @@ order by dynamism_index desc
 limit 10
 ```
 
-<DataTable data={top_pressure} rows=10/>
+<DataTable data={top_pressure} rows=10>
+    <Column id=area_name title="Area"/>
+    <Column id=status_class title="Current classification"/>
+    <Column id=dynamism_class title="Pressure trend"/>
+</DataTable>
 
 ## Explore further
 
-See the [methodology & data sources](/methodology) page for what these numbers mean and where they
-come from, the [time-series page](/time-series) for per-area gentrification trajectories across the
-available MSS editions, the [maps page](/maps) for a choropleth view over Berlin's planning
-areas, the [citywide POI & price/rent overview](/poi-price-overview) for aggregate amenity and
-rent/land-value trends across the whole city, or the [area detail page](/area-detail) for a full
-per-PLR breakdown (index, POI development, price/rent).
+See [methodology & data sources](/methodology) for what these numbers mean and where they come
+from, [time series](/time-series) for how a single area has changed over the years,
+[maps](/maps) for a citywide map, the [citywide POI & price/rent overview](/poi-price-overview)
+for shop/amenity and rent/land-value trends across all of Berlin, or [area detail](/area-detail)
+for a full breakdown of any one neighbourhood.
