@@ -2,18 +2,22 @@
 title: Time series — gentrification trajectory
 ---
 
-# Time series — gentrification trajectory
+# Time series — how a neighbourhood has changed
 
-Track how a single planning area (PLR) changes across the available MSS editions. Pick a city
-and area below. Per ADR-0005 the page is parameterized by `city_code`/`area_code` — nothing here
-is Berlin-specific, even though Berlin is currently the only city with a real MSS panel.
+See how a single Berlin planning area has changed across every official social-monitoring report
+since the data begins. Pick a city and an area below.
 
 <Alert status="info">
-  Label polarity note: <b>status_index</b> is ordinal, 1 (least deprived) to 4 (most deprived) —
-  a <b>rising</b> line means the area is becoming <b>more</b> deprived. <b>gentrification_score</b>
-  is the legacy (pre-R-A1) composite kept for continuity with the 2018 baseline; see the
+  <b>How to read the chart:</b> a <b>falling</b> line means the area's official status
+  classification is improving (getting less deprived); a <b>rising</b> line means it's becoming
+  <b>more</b> deprived (the scale runs 1 = least deprived to 4 = most deprived). The second chart,
+  "Legacy score," is the single blended number the original 2018 study used — kept only for
+  comparison with that study, not as the current definition. See the
+  <a href="/methodology">methodology & data sources</a> page for what these mean in plain language,
+  or the
   <a href="https://github.com/dhelweg/gentriduck/blob/main/docs/adr/0004-data-governance-and-index-definition.md">index definition</a>
-  for the governed methodology. Uninhabited PLRs have no status_index/rank for the affected years.
+  for the governed methodology. Uninhabited planning areas have no status/rank for the affected
+  years.
 </Alert>
 
 ```sql cities
@@ -41,7 +45,7 @@ order by label
 
 <Dropdown name="area" data={areas} value=value label=label title="Area (PLR)"/>
 
-## {inputs.area.label} — trend
+## {inputs.area.label} — how it has changed
 
 ```sql area_trend
 select
@@ -60,21 +64,27 @@ order by snapshot_year
     data={area_trend}
     x=snapshot_year
     y=status_index
-    title="Social status (D1), {inputs.area.label}"
-    yAxisTitle="status_index (1=least deprived … 4=most deprived)"
+    title="Social status over time, {inputs.area.label}"
+    yAxisTitle="Status class (1=least deprived … 4=most deprived)"
 />
 
 <LineChart
     data={area_trend}
     x=snapshot_year
     y=gentrification_score
-    title="Legacy gentrification score, {inputs.area.label}"
-    yAxisTitle="gentrification_score (legacy, pre-R-A1)"
+    title="Legacy score (2018 methodology), {inputs.area.label}"
+    yAxisTitle="Legacy score — not comparable to the chart above"
 />
 
-<DataTable data={area_trend} rows=10/>
+<DataTable data={area_trend} rows=10>
+    <Column id=snapshot_year title="Year"/>
+    <Column id=status_index title="Social status (1=least deprived … 4=most deprived)"/>
+    <Column id=dynamik_index title="Direction of change (1=improving … 3=worsening)"/>
+    <Column id=gentrification_score title="Legacy score (2018 methodology)"/>
+    <Column id=rank_current title="Legacy rank"/>
+</DataTable>
 
-## City-wide context
+## How does this compare to the rest of the city?
 
 ```sql citywide_trend
 select
@@ -92,6 +102,6 @@ order by snapshot_year
     data={citywide_trend}
     x=snapshot_year
     y=median_status_index
-    title="City-wide median social status (D1), {inputs.city.label}"
-    yAxisTitle="median status_index"
+    title="City-wide median social status, {inputs.city.label}"
+    yAxisTitle="Median status class (1=least deprived … 4=most deprived)"
 />

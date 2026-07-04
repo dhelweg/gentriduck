@@ -1,7 +1,7 @@
 {
   "_schema": "gentriduck-session-state/v1",
-  "session": "2026-07-04-devmode-123",
-  "updated_at": "2026-07-04T00:00:00Z",
+  "session": "2026-07-04-devmode-134",
+  "updated_at": "2026-07-04T12:00:00Z",
   "build_status": {
     "result": "PASS",
     "pass": 593,
@@ -12,15 +12,15 @@
       "test_c5_poi_share_spike (expected by design)"
     ],
     "branch": "develop",
-    "note": "No code changes this cycle -- backlog re-verified exhausted (all open tickets blocked or non-actionable). Build status carried over from #136 (last integrated ticket, devmode-122)."
+    "note": "Only change this cycle: web/static/robots.txt + web/static/_headers (non-methodology config, verified via clean npm run build). No dbt model changes."
   },
   "open_prs": [
     {
-      "number": 111,
-      "title": "Weekly release: Epic R/D wave -- spatial inference, price/rent dimension, A9 diffusion, plus H1/H2/O4/G2/G3/F1/F2/G0/G1a-d/F3/O4-license/D1d-followup",
+      "number": 137,
+      "title": "Weekly release: G4/G5 site work + handoff sync",
       "base": "main",
       "head": "develop",
-      "note": "Body already current as of #136 (devmode-122); verified no new develop commits need folding in. Open 6 days (since 2026-06-29) without a maintainer merge -- re-pinged this cycle."
+      "note": "Branch-tracking PR (head=develop), auto-picks up new develop commits (now includes the noindex commit). OPEN, mergeable MERGEABLE, zero reviews/comments/checks. Idle since devmode-128; no fresh nudge this cycle since maintainer is actively in-session."
     }
   ],
   "pending_adr_branches": [
@@ -32,11 +32,11 @@
     }
   ],
   "completed_this_session": [],
-  "filed_this_session": [],
-  "integrated_into_develop": [],
+  "filed_this_session": [144],
+  "integrated_into_develop": ["web/static/robots.txt + _headers (soft-launch noindex)"],
   "in_progress": null,
   "board_status": {
-    "note": "99 Done, 6 Todo, 0 In Progress = 105 total (unchanged from end of devmode-122). Reconciliation clean at start and end of cycle -- 0 closed-but-not-Done drift, 0 issues missing from the board, 0/1 In Progress (correctly none, since nothing is actionable).",
+    "note": "105 Done, 7 Todo, 0 In Progress = 112 total. Reconciliation clean at end of cycle.",
     "open_issues_by_dependency": {
       "next_unblocked": [],
       "blocked_on_maintainer": [
@@ -44,7 +44,8 @@
         "#80 [A10] scoping question posted, awaiting maintainer answer",
         "#82 [O2] ADR-0013 whitepaper tool (Quarto) approval",
         "#126 [H2b] Hamburg OSM POI -- Geofabrik OSM-contributor login",
-        "#125 [H2] transitively blocked on #126"
+        "#125 [H2] transitively blocked on #126",
+        "#144 [F3] Cloudflare Pages deploy -- maintainer needs to finish dashboard build settings + trigger deploy"
       ],
       "parked_not_blocked": [
         "#129 [H2-SE] standing requirement, no Hamburg regression ticket exists yet to attach it to"
@@ -56,9 +57,10 @@
     {"issue": 80, "blocked_by": ["Maintainer scoping answer"], "title": "[A10] Causal/early-warning design"},
     {"issue": 82, "blocked_by": ["Maintainer ADR-0013 approval"], "title": "[O2] Whitepaper"},
     {"issue": 125, "blocked_by": ["#126 (transitively)"], "title": "[H2] Hamburg real-data ingestion remainder"},
-    {"issue": 126, "blocked_by": ["Maintainer's Geofabrik OSM-contributor login"], "title": "[H2b] Hamburg OSM POI ingestion"}
+    {"issue": 126, "blocked_by": ["Maintainer's Geofabrik OSM-contributor login"], "title": "[H2b] Hamburg OSM POI ingestion"},
+    {"issue": 144, "blocked_by": ["Maintainer's Cloudflare Pages dashboard build settings + deploy trigger"], "title": "[F3] Cloudflare Pages deploy"}
   ],
-  "next_session_decision": "Backlog is fully exhausted -- every open Todo item is either genuinely blocked on a maintainer decision (#70, #80, #82, #125, #126) or a standing non-actionable placeholder (#129). Next cycle: re-check for a maintainer reply on any of the 4 open questions (#70, #80, #82, #126) first; if still silent, re-verify no new unblocked work surfaced and re-ping only if the weekly cadence is due again.",
+  "next_session_decision": "Backlog is fully blocked/parked (7/7 open issues). #144 is the freshest and actively being worked with the maintainer in-session -- watch for a *.pages.dev URL or build log and verify (curl -I for noindex headers, check pages render) the moment it's posted. Otherwise re-check #70/#80/#82/#126 for replies each cycle. PR #137 (develop->main) is MERGEABLE and waiting.",
   "last_updated": "2026-07-04",
-  "current_session": "devmode-123"
+  "current_session": "devmode-134"
 }

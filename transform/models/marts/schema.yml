@@ -96,8 +96,12 @@ models:
           ecological-inference disclaimer: index-definition.md §1.2).
         data_type: varchar
       - name: status_class_bi
-        description: Binary projected status class (high/medium/low English labels).
-          NULL for live_data variant rows (classification not yet implemented).
+        description: >
+          Binary projected status class (high/medium/low English labels). For thesis variants:
+          original projected status class (unchanged). For live_data (G4 #138): a deterministic
+          4-class-to-3-bucket grouping of the D1 Status ordinal (1=hoch->high, 2=mittel->medium,
+          3=niedrig & 4=sehr_niedrig->low; ADR-0008 D1 binding, index-definition-domain-draft.md
+          D1xD2 stage table). NULL for uninhabited PLRs.
         data_type: varchar
         tests:
           - accepted_values:
@@ -115,13 +119,19 @@ models:
       - name: dynamism_class
         description: >
           Projected dynamism class (three values; positive/neutral/negative).
-          Polarity note: 'negative' = high gentrification pressure / above-average POI churn.
-          'positive' = low gentrification pressure / below-average POI churn.
-          See B5-findings-check.md for full explanation.
+          Polarity note: 'negative' = high gentrification pressure / above-average POI churn
+          (thesis variants) or MSS Dynamik worsening (live_data). 'positive' = low gentrification
+          pressure / below-average POI churn (thesis) or MSS Dynamik improving (live_data).
+          For live_data (G4 #138): direct relabel of the D2 Dynamik ordinal
+          (1=positiv->positive, 2=stabil->neutral, 3=negativ->negative; ADR-0008 D2 binding).
+          See B5-findings-check.md for the thesis-variant explanation.
         data_type: varchar
       - name: dynamism_class_bi
-        description: Binary projected dynamism class (positive/neutral/negative English labels).
-          NULL for live_data variant rows (classification not yet implemented).
+        description: >
+          Binary projected dynamism class (positive/neutral/negative English labels). For
+          live_data (G4 #138): identical relabel of the D2 Dynamik ordinal as dynamism_class
+          (no second MSS Dynamik projection exists to distinguish them, unlike the thesis
+          variants' two distinct classification passes). NULL for uninhabited PLRs.
         data_type: varchar
         tests:
           - accepted_values:
@@ -283,9 +293,15 @@ models:
       dbt_meta_owner: data-engineer
     columns:
       - name: city_code
-        description: City identifier (ADR-0005).
+        description: >
+          Canonical city identifier (ADR-0005; matches dim_city.city_code). Berlin's
+          legacy lowercase 'berlin' OSM-ingestion convention (#140) is normalised to
+          'BER' at aggregation time in this model.
         tests:
           - not_null
+          - accepted_values:
+              arguments:
+                values: ["BER", "HH"]
       - name: snapshot_year
         description: Calendar year of the OSM snapshot.
         tests:
