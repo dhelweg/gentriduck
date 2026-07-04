@@ -98,7 +98,11 @@ select
     poi_category_h,
     sum(poi_count) as poi_count
 from gentriduck_marts.fct_poi_development
-where city_code = 'BER'
+-- bug-fix (discovered alongside #139): fct_poi_development's Berlin rows carry the OSM-staging
+-- lowercase 'berlin' city_code, not the canonical dim_area/'BER' code used everywhere else on
+-- this page -- filtering on 'BER' silently returned zero rows. See the known-limitation note in
+-- transform/models/marts/fct_poi_development.sql for the upstream normalization this papers over.
+where city_code in ('berlin', 'BER')
   and area_code = '${inputs.area.value}'
   and area_vintage = 'lor_pre2021'
 group by all

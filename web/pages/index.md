@@ -74,9 +74,10 @@ limit 10
 
 <DataTable data={top_pressure} rows=10/>
 
-## More on the way
+## Explore further
 
 See the [time-series page](/time-series) for per-area gentrification trajectories across the
 available MSS editions, the [maps page](/maps) for a choropleth view over Berlin's planning
-areas, or the [area detail page](/area-detail) for a full per-PLR breakdown (index, POI
-development, price/rent).
+areas, the [citywide POI & price/rent overview](/poi-price-overview) for aggregate amenity and
+rent/land-value trends across the whole city, or the [area detail page](/area-detail) for a full
+per-PLR breakdown (index, POI development, price/rent).
