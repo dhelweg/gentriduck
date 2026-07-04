@@ -106,4 +106,5 @@ See [methodology & data sources](/methodology) for what these numbers mean and w
 from, [time series](/time-series) for how a single area has changed over the years,
 [maps](/maps) for a citywide map, the [citywide POI & price/rent overview](/poi-price-overview)
 for shop/amenity and rent/land-value trends across all of Berlin, or [area detail](/area-detail)
-for a full breakdown of any one neighbourhood.
+for a full breakdown of any one neighbourhood. Curious who or what builds this site? See
+[about this project](/about).
