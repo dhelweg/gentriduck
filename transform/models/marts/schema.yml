@@ -293,9 +293,15 @@ models:
       dbt_meta_owner: data-engineer
     columns:
       - name: city_code
-        description: City identifier (ADR-0005).
+        description: >
+          Canonical city identifier (ADR-0005; matches dim_city.city_code). Berlin's
+          legacy lowercase 'berlin' OSM-ingestion convention (#140) is normalised to
+          'BER' at aggregation time in this model.
         tests:
           - not_null
+          - accepted_values:
+              arguments:
+                values: ["BER", "HH"]
       - name: snapshot_year
         description: Calendar year of the OSM snapshot.
         tests:

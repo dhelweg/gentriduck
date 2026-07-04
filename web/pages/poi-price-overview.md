@@ -24,7 +24,7 @@ select
     snapshot_year,
     sum(poi_count) as poi_count
 from gentriduck_marts.fct_poi_development
-where city_code in ('berlin', 'BER')
+where city_code = 'BER'
 group by all
 order by snapshot_year
 ```
@@ -51,7 +51,7 @@ order by snapshot_year
 ```sql poi_latest_year
 select max(snapshot_year) as year
 from gentriduck_marts.fct_poi_development
-where city_code in ('berlin', 'BER')
+where city_code = 'BER'
 ```
 
 ```sql poi_mix_latest
@@ -59,7 +59,7 @@ select
     poi_category_h,
     sum(poi_count) as poi_count
 from gentriduck_marts.fct_poi_development
-where city_code in ('berlin', 'BER')
+where city_code = 'BER'
   and snapshot_year = ${poi_latest_year[0].year}
 group by all
 order by poi_count desc
