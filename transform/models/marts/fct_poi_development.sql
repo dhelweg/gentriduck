@@ -22,12 +22,15 @@
 -- Berlin-specific filtering, so Hamburg rows flow through those models
 -- unmodified once they appear here (verified #40 integration slice).
 --
--- Known: city_code='berlin' (lowercase, from C1 OSM ingestion) diverges from
--- dim_city where city_code='BER' (from 2018 thesis golden seed). This is a
--- pre-existing convention mismatch that will be resolved when the OSM staging
--- layer is normalised to use 'BER'. Hamburg's OSM ingestion (H1) uses the
--- canonical 'HH' code from the start (no legacy convention to preserve; see
--- ingest_hamburg_osm.py docstring, ADR-0014 Pillar 6).
+-- Normalization (#140): Berlin's OSM ingestion (C1) predates ADR-0005
+-- canonicalization and writes city_code='berlin' (lowercase) into the raw
+-- parquet files (gitignored, upstream of stg_osm_poi/int_osm_poi_plr). Rather
+-- than re-running the OSM history ingestion, this mart normalises
+-- 'berlin' -> 'BER' (dim_city's canonical code) at aggregation time, so every
+-- downstream consumer of this fact table sees the single canonical value.
+-- Hamburg's OSM ingestion (H1) already uses the canonical 'HH' code from the
+-- start (no legacy convention to preserve; see ingest_hamburg_osm.py
+-- docstring, ADR-0014 Pillar 6) and passes through unchanged.
 --
 -- dbt_meta_owner: data-engineer
 -- depends_on: {{ ref('int_osm_poi_plr') }}
@@ -37,7 +40,9 @@
 with
     berlin_source as (
         select
-            city_code,
+            -- #140: normalise legacy lowercase 'berlin' to canonical 'BER'
+            -- (dim_city.city_code) at the source of this fact table.
+            'BER' as city_code,
             snapshot_year,
             area_code,
             area_vintage,

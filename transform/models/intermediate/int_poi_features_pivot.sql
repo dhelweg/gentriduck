@@ -5,9 +5,9 @@
 --
 -- Source: fct_poi_development (C3-fact). Uses poi_category_h which is the
 -- harmonised category key from the taxonomy (C2 harmonization).
--- Note: fct_poi_development uses city_code='berlin' (ingestion convention).
--- This model passes city_code through as-is; normalization happens in
--- int_gentrification_ts before joining with EWR data (city_code='BER').
+-- Note (#140): fct_poi_development normalises Berlin's city_code to the
+-- canonical 'BER' at aggregation time (fixed at the source); this model just
+-- passes city_code through as-is.
 --
 -- Graceful degradation: returns zero rows when fct_poi_development has no rows
 -- (OSM ingestion not yet run). Downstream models must handle zero rows.
