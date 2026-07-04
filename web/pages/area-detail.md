@@ -11,22 +11,23 @@ title: Area detail — per-PLR drill-down
   $: initialArea = browser ? ($page.url.searchParams.get('area') ?? undefined) : undefined;
 </script>
 
-# Area detail — per-PLR drill-down
+# Area detail — one neighbourhood, full picture
 
-Full indicator breakdown for a single Berlin Planungsraum (PLR): index trajectory across all
-available MSS editions, POI development, and the Bodenrichtwert/Mietspiegel-derived price & rent
-dimension. Pick an area below, or arrive here pre-selected by clicking a Planungsraum on the
-[maps page](/maps).
+Pick a single Berlin planning area below to see everything the site knows about it: how its social
+status has changed over time, how its mix of shops/cafés/services has developed, and how land
+value and estimated rent compare over the years. Arrive here pre-selected by clicking a
+Planungsraum on the [maps page](/maps), or choose one directly.
 
 <Alert status="info">
-  Label polarity note: <b>status_index</b> is ordinal (higher = <b>more deprived</b>);
-  <b>dynamism_index</b> — higher means <b>faster upward</b> change. See the
+  <b>How to read the charts below:</b> "Social status" is ordinal — higher means <b>more
+  deprived</b>; "dynamism" — higher means the status is improving <b>faster</b>. See the
   <a href="/methodology">methodology & data sources</a> page for a plain-language walkthrough of
   what these fields mean, or the
   <a href="https://github.com/dhelweg/gentriduck/blob/main/docs/adr/0004-data-governance-and-index-definition.md">governed index definition (ADR-0004)</a>
-  for the full technical spec. Vintage note: trajectory/POI/price-rent are joined on
-  <code>area_vintage = 'lor_pre2021'</code> to match the only MSS period currently governed
-  (201612) — see <code>web/scripts/export_area_geojson.py</code> for the same convention.
+  for the full technical spec. Data note: the trajectory, POI, and price/rent sections below are all
+  matched to the same (older, pre-2021) neighbourhood boundaries, to line up with the one period
+  currently governed by the index (Dec 2016) — see
+  <code>web/scripts/export_area_geojson.py</code> for the same convention.
 </Alert>
 
 ```sql areas
@@ -44,7 +45,7 @@ order by label
 
 <Dropdown name="area" data={areas} value=value label=label title="Area (PLR)" defaultValue={initialArea}/>
 
-## {inputs.area.label} — index trajectory
+## {inputs.area.label} — how its social status has changed
 
 ```sql area_trend
 select
@@ -63,8 +64,8 @@ order by snapshot_year
     data={area_trend}
     x=snapshot_year
     y=status_index
-    title="Social status (D1), {inputs.area.label}"
-    yAxisTitle="status_index (1=least deprived … 4=most deprived)"
+    title="Social status over time, {inputs.area.label}"
+    yAxisTitle="Status class (1=least deprived … 4=most deprived)"
 />
 
 ```sql trajectory_summary
@@ -86,13 +87,35 @@ where city_code = 'BER'
   and area_vintage = 'lor_pre2021'
 ```
 
-<BigValue data={trajectory_summary} value=trajectory_type title="Trajectory type" emptySet="warn"/>
-<BigValue data={trajectory_summary} value=status_delta title="Status delta (first→last edition)" fmt="0.00" emptySet="warn"/>
-<BigValue data={trajectory_summary} value=trajectory_confidence title="Confidence" emptySet="warn"/>
+<BigValue data={trajectory_summary} value=trajectory_type title="Overall trajectory" emptySet="warn"/>
+<BigValue data={trajectory_summary} value=status_delta title="Status change (first→last edition)" fmt="0.00" emptySet="warn"/>
+<BigValue data={trajectory_summary} value=trajectory_confidence title="Confidence in this trajectory" emptySet="warn"/>
 
-<DataTable data={trajectory_summary} rows=1 emptySet="warn"/>
+Trajectory labels (e.g. "improving," "persistently-deprived") are explained on the
+[methodology page](/methodology) — an "improving" label does not by itself mean the change was
+purely positive for existing residents (it could reflect displacement as easily as incumbent
+social mobility). Full detail behind the summary above:
 
-## POI development
+<DataTable data={trajectory_summary} rows=1 emptySet="warn">
+    <Column id=n_editions title="Editions available"/>
+    <Column id=first_edition title="First edition"/>
+    <Column id=last_edition title="Latest edition"/>
+    <Column id=status_index_first title="Status at first edition"/>
+    <Column id=status_index_last title="Status at latest edition"/>
+    <Column id=status_delta title="Status change"/>
+    <Column id=trajectory_type title="Trajectory type"/>
+    <Column id=dominant_stage title="Most common stage"/>
+    <Column id=trajectory_confidence title="Confidence"/>
+    <Column id=is_persistently_vulnerable title="Persistently vulnerable?"/>
+    <Column id=is_persistently_affluent title="Persistently affluent?"/>
+</DataTable>
+
+## How its commercial mix has developed
+
+Shops, cafés, and other businesses tend to follow — not lead — social change (see
+[methodology](/methodology) for the theory behind this). This chart shows how the mix of mapped
+places here has evolved; treat the earliest years cautiously, since OpenStreetMap's own coverage
+was still growing then, independent of any real neighbourhood change.
 
 ```sql poi_trend
 select
@@ -112,21 +135,20 @@ order by snapshot_year
     x=snapshot_year
     y=poi_count
     series=poi_category_h
-    title="POI counts by harmonized category, {inputs.area.label}"
-    yAxisTitle="POI count"
+    title="Mapped places by category, {inputs.area.label}"
+    yAxisTitle="Number of mapped places"
     emptySet="warn"
 />
 
-## Price & rent dimension
+## Land value & estimated rent
 
 <Alert status="info">
-  Figures below are re-keyed from the native <code>lor_2021</code> PLR scheme onto this
-  <code>lor_pre2021</code> area (mart_price_rent_dimension_pre2021, #136) via an area-weighted
-  average across the 2021 PLR(s) overlapping it — a re-projection, not a new measurement.
-  <code>*_coverage_frac</code> (not shown) reports how much of this PLR's crosswalk weight mass
-  had a non-NULL source value; a thin footprint (mostly non-residential/low-n 2021 PLRs) makes the
-  estimate less reliable. See the mart's model header for the full methodology and
-  <a href="https://github.com/dhelweg/gentriduck/blob/main/docs/epic-d/D1d-followup-geo-signoff.md">geo-DS sign-off</a>.
+  So what: this shows how land value and estimated rent have moved here. Because Berlin's official
+  neighbourhood boundaries were redrawn in 2021, these figures are re-mapped (area-weighted) from
+  the current boundary scheme onto the older one used elsewhere on this page — treat them as a
+  close approximation, not an exact measurement. A thin overlap between old and new boundaries
+  (mostly non-residential areas) makes an estimate less reliable; see the mart's model header and
+  the <a href="https://github.com/dhelweg/gentriduck/blob/main/docs/epic-d/D1d-followup-geo-signoff.md">geo-DS sign-off</a> for the full method.
 </Alert>
 
 ```sql price_rent
@@ -142,7 +164,13 @@ where city_code = 'BER'
 order by snapshot_year
 ```
 
-<DataTable data={price_rent} rows=10 emptySet="warn" emptyMessage="No re-keyed price/rent row for this area (no lor_2021 PLR overlaps its footprint)."/>
+<DataTable data={price_rent} rows=10 emptySet="warn" emptyMessage="No price/rent estimate for this area (no current-boundary planning area overlaps its footprint).">
+    <Column id=snapshot_year title="Year"/>
+    <Column id=brw_weighted_avg_eur_m2 title="Land value, EUR/m² (Bodenrichtwert)"/>
+    <Column id=est_rent_mid title="Estimated rent, typical (EUR/m²)"/>
+    <Column id=est_rent_low title="Estimated rent, low end (EUR/m²)"/>
+    <Column id=est_rent_high title="Estimated rent, high end (EUR/m²)"/>
+</DataTable>
 
 <LineChart
     data={price_rent}
@@ -151,11 +179,11 @@ order by snapshot_year
     title="Estimated mid-range rent (EUR/m²), {inputs.area.label}"
     yAxisTitle="EUR/m²"
     emptySet="warn"
-    emptyMessage="No re-keyed price/rent row for this area (no lor_2021 PLR overlaps its footprint)."
+    emptyMessage="No price/rent estimate for this area (no current-boundary planning area overlaps its footprint)."
 />
 
 ## Further reading
 
-See the [methodology & data sources](/methodology) page for what the index means and where the data
-comes from, or the [citywide POI & price/rent overview](/poi-price-overview) for the same signals
+See [methodology & data sources](/methodology) for what the index means and where the data comes
+from, or the [citywide POI & price/rent overview](/poi-price-overview) for the same two signals
 aggregated across all of Berlin.
