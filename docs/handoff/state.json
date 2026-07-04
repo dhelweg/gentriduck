@@ -1,7 +1,7 @@
 {
   "_schema": "gentriduck-session-state/v1",
-  "session": "2026-07-04-devmode-134",
-  "updated_at": "2026-07-04T12:00:00Z",
+  "session": "2026-07-04-devmode-136",
+  "updated_at": "2026-07-04T12:50:00Z",
   "build_status": {
     "result": "PASS",
     "pass": 593,
@@ -16,11 +16,21 @@
   },
   "open_prs": [
     {
+      "number": 145,
+      "title": "Release: wrangler.toml for Cloudflare Pages build config",
+      "base": "main",
+      "head": "develop",
+      "note": "Small, out-of-cadence, non-blocking. OPEN, MERGEABLE, not yet merged. Adds wrangler.toml (pages_build_output_dir) + devmode-135 handoff doc."
+    }
+  ],
+  "merged_this_session": [
+    {
       "number": 137,
       "title": "Weekly release: G4/G5 site work + handoff sync",
       "base": "main",
       "head": "develop",
-      "note": "Branch-tracking PR (head=develop), auto-picks up new develop commits (now includes the noindex commit). OPEN, mergeable MERGEABLE, zero reviews/comments/checks. Idle since devmode-128; no fresh nudge this cycle since maintainer is actively in-session."
+      "mergedAt": "2026-07-04T12:16:21Z",
+      "note": "Maintainer merged in the GitHub UI, mid-session. main now has the full web/ Evidence site (including the noindex robots.txt/_headers) for the first time -- required for Cloudflare Pages (production branch = main) to build a real deploy for #144."
     }
   ],
   "pending_adr_branches": [
@@ -60,7 +70,7 @@
     {"issue": 126, "blocked_by": ["Maintainer's Geofabrik OSM-contributor login"], "title": "[H2b] Hamburg OSM POI ingestion"},
     {"issue": 144, "blocked_by": ["Maintainer's Cloudflare Pages dashboard build settings + deploy trigger"], "title": "[F3] Cloudflare Pages deploy"}
   ],
-  "next_session_decision": "Backlog is fully blocked/parked (7/7 open issues). #144 is the freshest and actively being worked with the maintainer in-session -- watch for a *.pages.dev URL or build log and verify (curl -I for noindex headers, check pages render) the moment it's posted. Otherwise re-check #70/#80/#82/#126 for replies each cycle. PR #137 (develop->main) is MERGEABLE and waiting.",
+  "next_session_decision": "Backlog is fully blocked/parked (7/7 open issues). #144: maintainer is troubleshooting a Cloudflare Pages dashboard UI issue (can't find build-settings fields) directly with the PM in chat -- tried sharing 4 screenshots but they didn't come through; PM asked for a resend. Not resolvable by the autonomous loop; resume the moment screenshots/description arrive. PR #145 (develop->main, wrangler.toml) is open and mergeable, small and non-blocking. Otherwise re-check #70/#80/#82/#126 for replies each cycle.",
   "last_updated": "2026-07-04",
-  "current_session": "devmode-134"
+  "current_session": "devmode-136"
 }
