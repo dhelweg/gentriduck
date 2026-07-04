@@ -1,10 +1,10 @@
 {
   "_schema": "gentriduck-session-state/v1",
-  "session": "2026-07-03-devmode-122",
-  "updated_at": "2026-07-03T23:10:00Z",
+  "session": "2026-07-04-devmode-123",
+  "updated_at": "2026-07-04T00:00:00Z",
   "build_status": {
     "result": "PASS",
-    "pass": 583,
+    "pass": 593,
     "warn": 2,
     "error": 0,
     "warn_detail": [
@@ -12,15 +12,15 @@
       "test_c5_poi_share_spike (expected by design)"
     ],
     "branch": "develop",
-    "note": "dbt build re-run this cycle (comment-only change to mart_price_rent_dimension.sql for #135): 583/2/0, matches baseline. web build (npm run build) verified clean from a fresh .evidence/build state for both #133's click-through wiring and #135's doc-only change: 0 errors, same 5 pre-existing 'Dataset is empty' warnings."
+    "note": "No code changes this cycle -- backlog re-verified exhausted (all open tickets blocked or non-actionable). Build status carried over from #136 (last integrated ticket, devmode-122)."
   },
   "open_prs": [
     {
       "number": 111,
-      "title": "Weekly release: Epic R/D wave -- spatial inference, price/rent dimension, A9 diffusion, plus H1/H2/O4/G2/G3/F1/F2/G0/G1a-d/bugfix-134/#135/#37-closeout",
+      "title": "Weekly release: Epic R/D wave -- spatial inference, price/rent dimension, A9 diffusion, plus H1/H2/O4/G2/G3/F1/F2/G0/G1a-d/F3/O4-license/D1d-followup",
       "base": "main",
       "head": "develop",
-      "note": "Refreshed this cycle to include #132/#133/#135's commits and the #37 epic closeout. Still open, not merged (PM never uses gh pr merge). Ready for the maintainer to merge in the GitHub UI."
+      "note": "Body already current as of #136 (devmode-122); verified no new develop commits need folding in. Open 6 days (since 2026-06-29) without a maintainer merge -- re-pinged this cycle."
     }
   ],
   "pending_adr_branches": [
@@ -28,39 +28,22 @@
       "branch": "feat/82-adr-0013-whitepaper-tool",
       "issue": 82,
       "title": "ADR-0013 Quarto + Typst whitepaper authoring tool",
-      "note": "ADR drafted, still 'Proposed'. Blocked on maintainer sign-off."
+      "note": "ADR drafted, still 'Proposed'. Blocked on maintainer sign-off. No reply yet."
     }
   ],
-  "completed_this_session": [133, 135, 37],
-  "filed_this_session": [136],
-  "integrated_into_develop": [
-    {
-      "commit": "fe31087",
-      "issue": 133,
-      "title": "feat(#133): integrate G1d click-through wiring (maps -> area-detail) into develop"
-    },
-    {
-      "commit": "0fa1f51",
-      "issue": 135,
-      "title": "docs(#135): integrate price/rent vintage-gap documentation into develop"
-    }
-  ],
-  "in_progress": 35,
+  "completed_this_session": [],
+  "filed_this_session": [],
+  "integrated_into_develop": [],
+  "in_progress": null,
   "board_status": {
-    "note": "96 Done, 8 Todo, 1 In Progress (#35) = 105 total (was 93/10/1=104 at devmode-121). Reconciliation clean at both start and end of cycle -- 0 closed-but-not-Done drift, 0 issues missing from the board.",
+    "note": "99 Done, 6 Todo, 0 In Progress = 105 total (unchanged from end of devmode-122). Reconciliation clean at start and end of cycle -- 0 closed-but-not-Done drift, 0 issues missing from the board, 0/1 In Progress (correctly none, since nothing is actionable).",
     "open_issues_by_dependency": {
-      "in_progress": ["#35 [F3] ADR (renumber to ~0015, not 0007) + uv run poe refresh orchestration task -- picked up, not yet implemented."],
-      "next_unblocked": [
-        "#35 [F3] data refresh/orchestration ADR + poe refresh task -- in progress, pick up implementation next cycle.",
-        "#83 [O4] remaining scope (dataset export + open license) -- unblocked since #33/#34 landed.",
-        "#136 [D1d-followup] reverse PLR crosswalk for price/rent -- low priority, geo-DS gated, only worth doing if the price/rent dimension needs to render against the pre2021 governed index.",
-        "#129 [H2-SE] standing requirement, parked (no Hamburg regression ticket exists yet to attach it to)."
-      ],
+      "next_unblocked": [],
       "blocked_on_maintainer": [
-        "#70 [B1] displacement data -- Milieuschutz ADR",
+        "#70 [B1] displacement data -- Milieuschutz ADR + scope questions",
         "#80 [A10] scoping question posted, awaiting maintainer answer",
-        "#82 [O2] ADR-0013 whitepaper tool",
-        "#126 [H2b] Hamburg OSM POI -- Geofabrik login (no local PBF cache exists)",
+        "#82 [O2] ADR-0013 whitepaper tool (Quarto) approval",
+        "#126 [H2b] Hamburg OSM POI -- Geofabrik OSM-contributor login",
         "#125 [H2] transitively blocked on #126"
       ],
       "parked_not_blocked": [
@@ -69,33 +52,13 @@
     }
   },
   "still_blocked": [
-    {
-      "issue": 70,
-      "blocked_by": ["Maintainer ADR decision"],
-      "title": "[B1] Displacement data"
-    },
-    {
-      "issue": 80,
-      "blocked_by": ["Maintainer scoping answer"],
-      "title": "[A10] Causal/early-warning design"
-    },
-    {
-      "issue": 82,
-      "blocked_by": ["Maintainer ADR-0013 approval"],
-      "title": "[O2] Whitepaper"
-    },
-    {
-      "issue": 125,
-      "blocked_by": ["#126 (transitively)"],
-      "title": "[H2] Hamburg real-data ingestion remainder"
-    },
-    {
-      "issue": 126,
-      "blocked_by": ["Maintainer's Geofabrik OSM-contributor login"],
-      "title": "[H2b] Hamburg OSM POI ingestion"
-    }
+    {"issue": 70, "blocked_by": ["Maintainer ADR decision + scope questions"], "title": "[B1] Displacement data"},
+    {"issue": 80, "blocked_by": ["Maintainer scoping answer"], "title": "[A10] Causal/early-warning design"},
+    {"issue": 82, "blocked_by": ["Maintainer ADR-0013 approval"], "title": "[O2] Whitepaper"},
+    {"issue": 125, "blocked_by": ["#126 (transitively)"], "title": "[H2] Hamburg real-data ingestion remainder"},
+    {"issue": 126, "blocked_by": ["Maintainer's Geofabrik OSM-contributor login"], "title": "[H2b] Hamburg OSM POI ingestion"}
   ],
-  "next_session_decision": "Implement #35 [F3]: a new ADR (renumber to ~0015 -- PROJECT_PLAN.md's F3 line stale-references ADR-0007, already taken by Berlin SES indicators) for data-refresh/orchestration, plus `uv run poe refresh` end-to-end rebuild task. Refresh PR #111 again if a week has passed since the last maintainer ping.",
-  "last_updated": "2026-07-03",
-  "current_session": "devmode-122"
+  "next_session_decision": "Backlog is fully exhausted -- every open Todo item is either genuinely blocked on a maintainer decision (#70, #80, #82, #125, #126) or a standing non-actionable placeholder (#129). Next cycle: re-check for a maintainer reply on any of the 4 open questions (#70, #80, #82, #126) first; if still silent, re-verify no new unblocked work surfaced and re-ping only if the weekly cadence is due again.",
+  "last_updated": "2026-07-04",
+  "current_session": "devmode-123"
 }
