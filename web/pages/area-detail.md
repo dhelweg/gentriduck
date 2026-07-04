@@ -21,8 +21,10 @@ dimension. Pick an area below, or arrive here pre-selected by clicking a Planung
 <Alert status="info">
   Label polarity note: <b>status_index</b> is ordinal (higher = <b>more deprived</b>);
   <b>dynamism_index</b> — higher means <b>faster upward</b> change. See the
-  <a href="https://github.com/dhelweg/gentriduck/blob/main/docs/adr/0004-data-governance-and-index-definition.md">index definition</a>
-  for the full methodology. Vintage note: trajectory/POI/price-rent are joined on
+  <a href="/methodology">methodology & data sources</a> page for a plain-language walkthrough of
+  what these fields mean, or the
+  <a href="https://github.com/dhelweg/gentriduck/blob/main/docs/adr/0004-data-governance-and-index-definition.md">governed index definition (ADR-0004)</a>
+  for the full technical spec. Vintage note: trajectory/POI/price-rent are joined on
   <code>area_vintage = 'lor_pre2021'</code> to match the only MSS period currently governed
   (201612) — see <code>web/scripts/export_area_geojson.py</code> for the same convention.
 </Alert>
@@ -151,3 +153,9 @@ order by snapshot_year
     emptySet="warn"
     emptyMessage="No re-keyed price/rent row for this area (no lor_2021 PLR overlaps its footprint)."
 />
+
+## Further reading
+
+See the [methodology & data sources](/methodology) page for what the index means and where the data
+comes from, or the [citywide POI & price/rent overview](/poi-price-overview) for the same signals
+aggregated across all of Berlin.

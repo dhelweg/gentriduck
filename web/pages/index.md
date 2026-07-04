@@ -9,7 +9,9 @@ index's headline numbers for the latest available period.
 <Alert status="info">
   Label polarity note: a <b>negative</b> dynamism class means <b>higher</b> gentrification
   pressure (faster upward change); a <b>low</b> status class means lower deprivation (a wealthier
-  area). See the <a href="https://github.com/dhelweg/gentriduck/blob/main/docs/adr/0004-data-governance-and-index-definition.md">index definition</a> for the full methodology.
+  area). See the <a href="/methodology">methodology & data sources</a> page for a plain-language
+  explanation of what these numbers mean, or the
+  <a href="https://github.com/dhelweg/gentriduck/blob/main/docs/adr/0004-data-governance-and-index-definition.md">governed index definition (ADR-0004)</a> for the full technical spec.
 </Alert>
 
 <Dropdown name="variant" title="Data" defaultValue="live_data">
@@ -84,7 +86,8 @@ limit 10
 
 ## Explore further
 
-See the [time-series page](/time-series) for per-area gentrification trajectories across the
+See the [methodology & data sources](/methodology) page for what these numbers mean and where they
+come from, the [time-series page](/time-series) for per-area gentrification trajectories across the
 available MSS editions, the [maps page](/maps) for a choropleth view over Berlin's planning
 areas, the [citywide POI & price/rent overview](/poi-price-overview) for aggregate amenity and
 rent/land-value trends across the whole city, or the [area detail page](/area-detail) for a full
