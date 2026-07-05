@@ -39,12 +39,17 @@ cp -a "$BUILD_DIR/." "$tmp/"
 # (leading underscore) and breaks the site.
 touch "$tmp/.nojekyll"
 
+author_name="${GIT_AUTHOR_NAME:-$(git config user.name || true)}"
+author_email="${GIT_AUTHOR_EMAIL:-$(git config user.email || true)}"
+if [ -z "$author_name" ] || [ -z "$author_email" ]; then
+  echo "error: no git author identity. Set git config user.name/user.email (or GIT_AUTHOR_NAME/EMAIL)." >&2
+  exit 1
+fi
+
 git -C "$tmp" init -q
 git -C "$tmp" checkout -q -b gh-pages
 git -C "$tmp" add -A
-git -C "$tmp" \
-  -c user.name="${GIT_AUTHOR_NAME:-$(git config user.name)}" \
-  -c user.email="${GIT_AUTHOR_EMAIL:-$(git config user.email)}" \
+git -C "$tmp" -c user.name="$author_name" -c user.email="$author_email" \
   commit -q -m "deploy: gh-pages $(date -u +%FT%TZ) (source $(git rev-parse --short HEAD))"
 git -C "$tmp" push --force "$origin" gh-pages
 
