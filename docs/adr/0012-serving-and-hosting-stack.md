@@ -191,3 +191,45 @@ a ~1 GB / 100 GB-bandwidth-month soft envelope and base-path quirks for project 
   Observable Framework (MIT — static, DuckDB-WASM; fallback), DuckDB-WASM (in-browser parquet via
   Filesystem/HTTP), Cloudflare Pages free-tier limits (25 MiB/file, 20,000 files, unlimited
   bandwidth), GitHub Pages (fallback host).
+
+## Amendment A — GitHub Pages hosts the public soft-launch site, tracking `main` (2026-07-05, #144/#146)
+
+**What changed:** GitHub Pages hosts the **public soft-launch site, tracking `main`** — the noindex
+build of the human-gated published branch (ADR-0011). It is **redeployed by the maintainer right after
+each weekly `develop → main` merge**, by running `ops/deploy-gh-pages.sh` from a fresh local build.
+This realizes decision 4 on GitHub Pages (its documented fallback host) rather than Cloudflare Pages,
+because Cloudflare cannot host the build as-is (wasm constraint below). GitHub Pages is the **standing
+host** until a stronger production host (Cloudflare-with-wasm-fix, or another free host) with better
+edge caching / bandwidth is adopted — tracked as an *upgrade* in **#146**. Decision 4's
+framework/static-export choices otherwise stand.
+
+**Deploy cadence:** redeploy on every `develop → main` merge that changed `web/**` or a published
+mart, plus whenever a new data vintage is ingested (`poe refresh` first). The dataset is slow-moving
+(mostly annual/biennial open-data releases), so in practice this is infrequent, event-driven, and
+piggybacks on the existing weekly `main` gate rather than a separate schedule.
+
+**Why (constraint discovered on the first real deploy, #144):** Evidence self-hosts the DuckDB-WASM
+runtime as two fingerprinted assets — `duckdb-mvp` (~37.5 MiB) and `duckdb-eh` (~32.6 MiB). Both
+exceed Cloudflare Pages' **25-MiB/file** limit (already noted in References), which rejects the whole
+deployment regardless of deploy method (Git build or `wrangler pages deploy` direct upload).
+Compression does not help — the cap is on the *stored/uncompressed* file size — and neither wasm file
+can be brought under 25 MiB while self-hosted. The only Cloudflare-compatible fix is externalizing the
+wasm to a CDN (e.g. jsDelivr); that is genuine Evidence-version research, deferred to **#146**.
+GitHub Pages has no comparable per-file limit, needs no separate account, and its soft ~100 GB/month
+bandwidth cap is a non-issue at noindex soft-launch traffic.
+
+**Implementation consequences (GitHub Pages project site at `<user>.github.io/gentriduck/`):**
+- `web/evidence.config.yaml` sets `deployment.basePath: /gentriduck` (project-page subpath).
+- `.nojekyll` is written at deploy time (else Jekyll strips Evidence's `_app/` directory).
+- **noindex** for the soft-launch relies on a per-page `<meta name="robots" content="noindex, …">`
+  injected at post-build: on GitHub Pages the `_headers` `X-Robots-Tag` backstop is inert (Cloudflare
+  only) and a project-page `robots.txt` at `/gentriduck/robots.txt` is ignored by crawlers (they read
+  only the domain root).
+- Deploy is a **manual local** `web/build` → `gh-pages` publish (`ops/deploy-gh-pages.sh`), run by the
+  maintainer after each `develop → main` merge; the raw data and built site are gitignored and rebuilt
+  from source (ADR-0001), so there is no CI build. A fully-automated path (GitHub Actions on `main`,
+  which would require committing the small serving snapshot as an ADR-0001 exception) was considered
+  and **deferred** — revisit alongside the host upgrade in #146 if manual redeploys become a chore.
+
+**Gate:** hosting/architecture change, **not methodology-bearing** (consistent with this ADR's own
+Status/Process note), so no geo-DS/domain sign-off is required.

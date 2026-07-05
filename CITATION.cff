@@ -17,7 +17,7 @@ abstract: >
   AI agents under a structured coder ↔ reviewer ↔ methodology-gate workflow.
 authors:
   - family-names: Helweg
-    given-names: David
+    given-names: Dennis
     alias: dhelweg
 keywords:
   - gentrification
@@ -33,6 +33,6 @@ references:
     title: "Gentrification in Berlin: a spatial analysis of socio-economic change"
     authors:
       - family-names: Helweg
-        given-names: David
+        given-names: Dennis
     year: 2018
     notes: "Original 2018 thesis that Gentriduck revives and extends."
