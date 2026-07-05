@@ -2,6 +2,14 @@
 title: Maps — gentrification pressure by area
 ---
 
+<script>
+  // basePath-aware asset URL (#144): AreaMap fetches `geoJsonUrl` verbatim — unlike Evidence's
+  // nav/data links it does NOT prepend the base path — so on the GitHub Pages project site
+  // (served under /gentriduck) a bare "/geo/..." would 404 and the map renders empty. Prepend
+  // SvelteKit's `base` (= deployment.basePath in the build; "" when served at root in dev).
+  import { base } from '$app/paths';
+</script>
+
 # Maps — gentrification pressure by area
 
 This map colours each of Berlin's neighbourhoods by its current gentrification-pressure signal, so
@@ -74,7 +82,7 @@ where variant = '${inputs.variant.value}'
 
 <AreaMap
     data={areas}
-    geoJsonUrl="/geo/plr.geojson"
+    geoJsonUrl={`${base}/geo/plr.geojson`}
     geoId="area_code"
     areaCol="area_code"
     value={inputs.indicator.value}
@@ -92,7 +100,7 @@ Click a Planungsraum on the map to open its [detailed breakdown](/area-detail).
 
 <AreaMap
     data={areas}
-    geoJsonUrl="/geo/bzr.geojson"
+    geoJsonUrl={`${base}/geo/bzr.geojson`}
     geoId="area_code"
     areaCol="area_code"
     value={inputs.indicator.value}

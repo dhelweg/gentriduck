@@ -1,3 +1,11 @@
+# ADR-0012 / #144: public site soft-launches on GitHub Pages (documented fallback host) because
+# the self-hosted duckdb-wasm assets exceed Cloudflare Pages' 25-MiB/file limit. Cloudflare
+# re-assessment tracked in #146. GitHub Pages serves a *project* site at
+# https://<user>.github.io/gentriduck/, so the app must be built under that subpath.
+# CHANGE this (or remove it) if you switch to a custom domain / user-root site served at "/".
+deployment:
+  basePath: /gentriduck
+
 appearance:
   default: system
   switcher: true
