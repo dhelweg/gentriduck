@@ -4,9 +4,9 @@ Reviving a 2018 master thesis — *"Measurement of Gentrification in Berlin via 
 Analytics"* — on a modern, local-first, open-source data stack, and growing it into a public
 website of **gentrification & social-development statistics** for Berlin (and, later, other cities).
 
-- **Stack:** [dbt](https://www.getdbt.com/) + [DuckDB](https://duckdb.org/) (local) → MotherDuck (later) · Python ([uv](https://docs.astral.sh/uv/))
-- **Data:** OpenStreetMap (© OpenStreetMap contributors, ODbL) + Berlin open data — **free & open only**
-- **Status:** bootstrapping (Epic A). See the roadmap below.
+- **Stack:** [dbt](https://www.getdbt.com/) + [DuckDB](https://duckdb.org/) (local) · Python ([uv](https://docs.astral.sh/uv/)), analysis in scipy / scikit-learn · [Evidence.dev](https://evidence.dev/) static site reading published marts via in-browser DuckDB-WASM, hosted free on GitHub / Cloudflare Pages ([ADR-0012](docs/adr/0012-serving-and-hosting-stack.md))
+- **Data:** OpenStreetMap history (© OpenStreetMap contributors, ODbL) + Berlin open data — LOR geographies, EWR population register, Bodenrichtwerte / Mietspiegel price & rent — **free & open only**
+- **Status:** Epics **A–F** substantially complete; the Berlin statistics **website (Epic G) is built and soft-launched** (noindex) on GitHub Pages while the Cloudflare Pages primary host is finalised; multi-city (**Epic H**, Hamburg) in progress. ~105 of 112 tracked issues done (as of 2026-07). See the roadmap below.
 
 ## Repository layout (monorepo)
 
@@ -14,7 +14,7 @@ website of **gentrification & social-development statistics** for Berlin (and, l
 |---|---|
 | `transform/` | dbt project (staging → intermediate → marts) |
 | `ingestion/` | Python data ingestion (OSM history, Berlin open data) |
-| `web/` | public website (added later) |
+| `web/` | public [Evidence.dev](https://evidence.dev/) statistics website (landing, thesis re-check, time-series, maps, area drill-down, methodology) — see [`web/README.md`](web/README.md) |
 | `docs/` | project plan (`docs/PROJECT_PLAN.md`), architecture decision records (`docs/adr/`), and AI-assisted operating model + engineering retrospective (`docs/method/`) |
 | `reference/` | original thesis SQL + golden output CSVs (read-only reference) |
 | `data/` | local data artefacts — **gitignored**, rebuilt from open sources |
@@ -24,10 +24,11 @@ website of **gentrification & social-development statistics** for Berlin (and, l
 ## Roadmap
 
 The full plan lives in [`docs/PROJECT_PLAN.md`](docs/PROJECT_PLAN.md); architecture decisions are
-recorded in [`docs/adr/`](docs/adr/README.md); the live backlog is the **Gentriduck** GitHub
-Project board. Epics: **A** foundations · **B** revive the 2018 concept · **C** longitudinal OSM POI
-history · **D** price/rent dimension · **E** analysis & ML · **F** serving + MotherDuck ·
-**G** public website · **H** multi-city.
+recorded in [`docs/adr/`](docs/adr/README.md) (ADR-0001 … ADR-0015); the live backlog is the
+**Gentriduck** GitHub Project board. Epics (✓ = substantially complete): **A** foundations ✓ ·
+**B** revive the 2018 concept ✓ · **C** longitudinal OSM POI history ✓ · **D** price/rent dimension ✓ ·
+**E** analysis & ML ✓ · **F** serving layer ✓ · **G** public website ✓ (built, soft-launched) ·
+**H** multi-city (Hamburg, in progress).
 
 ## Setup on macOS / Windows / Linux
 
@@ -61,10 +62,12 @@ uv run pre-commit install --hook-type pre-push  # installs push-stage hook (dbt 
 
 ```bash
 uv run poe debug   # dbt debug — confirms DuckDB + spatial extension load
-uv run poe build   # dbt build (currently a no-op until Epic B models land)
+uv run poe build   # dbt build — materialises staging → intermediate → marts + runs tests
 ```
 
-If `poe debug` reports a successful connection, the toolchain is set up correctly. The same
+`poe build` needs the ingested raw data first (see *Rebuilding the data* below); on a clean
+clone run `uv run poe refresh` for the full end-to-end path. If `poe debug` reports a successful
+connection, the toolchain is set up correctly. The same
 commands run identically on every OS — line endings are normalised by `.gitattributes`
 (`* text=auto eol=lf`).
 
