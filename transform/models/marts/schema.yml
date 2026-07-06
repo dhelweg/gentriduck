@@ -19,6 +19,11 @@ models:
       dynamism_class 'negative' = high gentrification pressure. See B5-findings-check.md.
 
       Index definition reference: docs/adr/0004-data-governance-and-index-definition.md
+
+      Berlin-only scope (#125): city_code accepted_values is ["BER"] -- Hamburg rows
+      exist upstream in int_gentrification_ts (H1 #40, ADR-0014) but are explicitly
+      filtered out of this published mart pending the gate decision described in the
+      SQL header (H1 sign-offs scoped their PASS to pipeline wiring only).
     meta:
       dbt_meta_owner: data-engineer
       governed_definition: ADR-0004
@@ -173,6 +178,10 @@ models:
 
       C5 update (2026-06-19): dynamism_score is z-score of share_yoy_change (PLR POI share
       delta; C5 OSM completeness-bias correction). See docs/epic-c/C5-geo-signoff.md.
+
+      Berlin-only scope (#125): explicitly filtered to city_code='BER' in the SQL
+      (see model header) -- Hamburg rows exist upstream in int_gentrification_ts
+      (H1 #40, ADR-0014) but are staged out of this mart pending the gate decision.
     meta:
       dbt_meta_owner: data-engineer
     tests:
@@ -185,7 +194,7 @@ models:
               - snapshot_year
     columns:
       - name: city_code
-        description: City identifier (ADR-0005). Always 'BER'.
+        description: City identifier (ADR-0005). Always 'BER' (#125 staging filter; see model header).
         tests:
           - not_null
       - name: snapshot_year
@@ -372,6 +381,12 @@ models:
 
       Method citation: Dangschat (1988) double invasion-succession cycle;
       thesis §3.2 (Gentrifizierung als Prozess); ADR-0008 (R-A7 #77) D1 outcome.
+
+      Berlin-only scope (#125): explicitly filtered to city_code='BER' in the SQL
+      (see model header) -- Hamburg rows exist upstream in int_gentrification_ts
+      (H1 #40, ADR-0014) but are staged out of this mart pending the gate decision
+      (Berlin-calibrated trajectory thresholds not yet reviewed against Hamburg's
+      annual cadence).
     meta:
       dbt_meta_owner: data-engineer
     tests:
@@ -383,7 +398,7 @@ models:
               - area_vintage
     columns:
       - name: city_code
-        description: City identifier (ADR-0005). Always 'BER'.
+        description: City identifier (ADR-0005). Always 'BER' (#125 staging filter; see model header).
         data_type: varchar
         tests:
           - not_null

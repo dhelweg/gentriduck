@@ -35,6 +35,15 @@
 --
 -- Contract: see marts/schema.yml for the governed column spec.
 --
+-- BERLIN-ONLY SCOPE (#125, staging decision -- not a methodology change): as of the
+-- H1 (#40) integration, int_gentrification_ts also carries Hamburg rows
+-- (city_code='HH', ADR-0014). This mart stays Berlin-only for now, consistent with
+-- gentrification_index and fct_gentrification_trajectory (#125) -- the H1 sign-offs
+-- (docs/epic-h/H1-geo-signoff.md, H1-domain-signoff.md) scoped their PASS to
+-- int_gentrification_ts pipeline wiring only ("no dashboard/report is published
+-- from it yet"). METHODOLOGY QUESTION flagged for the gate (#125): should Hamburg
+-- be admitted to this per-year change mart now? Not decided here.
+--
 -- dbt_meta_owner: data-engineer
 -- depends_on: {{ ref('int_gentrification_ts') }}
 {{
@@ -45,7 +54,8 @@
 }}
 
 with
-    ts as (select * from {{ ref("int_gentrification_ts") }}),
+    -- Berlin-only staging filter (#125) -- see header note.
+    ts as (select * from {{ ref("int_gentrification_ts") }} where city_code = 'BER'),
 
     with_rank as (
         select
