@@ -7,11 +7,19 @@
 -- = (total_poi_count - mean(total_poi_count over year)) / stddev(... over year)
 -- Captures how POI-rich an area is relative to other Berlin PLRs.
 -- Mirrors the 2018 thesis status_index (reference/system/71_oa.sql).
--- - plr_poi_share: each PLR's fraction of total Berlin POI count for that year
+-- - plr_poi_share: each PLR's fraction of total city-wide POI count for that year
 -- (pre-computed in int_poi_share_base to avoid DuckDB nested window limitation).
 -- - share_yoy_change: YoY change in plr_poi_share.
--- Computed within the same area_code after remapping all rows to the lor_2021 scheme
--- via int_poi_share_base_2021. The 2020->2021 delta is now computable (issue #63).
+-- Computed within the same (city_code, area_code, area_vintage). For Berlin, all
+-- rows are remapped to the lor_2021 scheme via int_poi_share_base_2021 first, so
+-- the 2020->2021 delta is computable (issue #63). For other cities with a single
+-- vintage across their whole series (e.g. Hamburg's 'current', ADR-0014, #125),
+-- int_poi_share_base_2021 passes rows through unchanged -- there is no vintage
+-- boundary to bridge.
+--
+-- City-agnostic (#125): this model is shared across cities -- filtered by
+-- city_code (e.g. 'HH') in int_gentrification_ts Branch C for Hamburg. See that
+-- model's header for the Hamburg wiring (ADR-0014; H1 #40 sign-offs).
 -- - dynamism_score: z-score of share_yoy_change across all PLRs for that year.
 -- Captures how fast an area's share of total POIs is changing relative to others.
 -- Mirrors the 2018 thesis dynamism_index.

@@ -42,6 +42,11 @@ Usage:
       --osh-pbf data/raw/osm/germany-internal.osh.pbf \\
       --out-dir data/raw/osm/hamburg --years 2008-2024
 
+  For an in-progress calendar year (parity with Berlin's --partial-years, #125):
+  uv run python ingestion/hamburg/osm/ingest_hamburg_osm.py \\
+      --osh-pbf data/raw/osm/germany-internal.osh.pbf \\
+      --out-dir data/raw/osm/hamburg --years 2025-2026 --partial-years 2026
+
 Bounding box source: OpenStreetMap Nominatim — Hamburg, Germany (administrative
 boundary bbox), same convention as Berlin's ingest_osm_history.py.
 
@@ -162,6 +167,13 @@ def main(argv: list[str] | None = None) -> int:
         default=1,
         help="Number of parallel worker processes (default: 1).",
     )
+    parser.add_argument(
+        "--partial-years",
+        default="",
+        help="Comma-separated years whose output file is named '{year}-partial.parquet' "
+        "instead of '{year}.parquet' (e.g. '2026' for an in-progress year). Parity with "
+        "ingestion/berlin/osm/ingest_osm_history.py's --partial-years (#125).",
+    )
     args = parser.parse_args(argv)
 
     osh_pbf: Path = args.osh_pbf
@@ -178,6 +190,11 @@ def main(argv: list[str] | None = None) -> int:
         return 1
 
     years = _berlin_osm.parse_years(args.years)
+    partial_years: set[int] = (
+        {int(y.strip()) for y in args.partial_years.split(",") if y.strip()}
+        if args.partial_years
+        else set()
+    )
     out_dir: Path = args.out_dir
     skip_existing = args.skip_existing and not args.force
 
@@ -203,14 +220,17 @@ def main(argv: list[str] | None = None) -> int:
         HAMBURG_MAX_LAT,
     )
 
+    def _stem(year: int) -> str:
+        return f"{year}-partial" if year in partial_years else str(year)
+
     years_to_run = [
         y
         for y in sorted(years, reverse=True)
-        if not (skip_existing and (out_dir / f"{y}.parquet").exists())
+        if not (skip_existing and (out_dir / f"{_stem(y)}.parquet").exists())
     ]
     for y in sorted(years):
         if y not in years_to_run:
-            _berlin_osm.log.info("Skipping year=%d (output exists: %s.parquet)", y, y)
+            _berlin_osm.log.info("Skipping year=%d (output exists: %s.parquet)", y, _stem(y))
 
     if not years_to_run:
         _berlin_osm.log.info("All years already exist. Done.")
@@ -223,7 +243,7 @@ def main(argv: list[str] | None = None) -> int:
 
     def _run_year(year: int) -> None:
         df = _berlin_osm.extract_snapshot(osh_pbf, year, poi_mapping)
-        _berlin_osm.write_parquet(df, out_dir / f"{year}.parquet")
+        _berlin_osm.write_parquet(df, out_dir / f"{_stem(year)}.parquet")
 
     if workers == 1:
         for year in years_to_run:
@@ -234,18 +254,25 @@ def main(argv: list[str] | None = None) -> int:
         with multiprocessing.Pool(processes=workers) as pool:
             pool.starmap(
                 _run_year_worker,
-                [(osh_pbf, y, poi_mapping, out_dir) for y in years_to_run],
+                [(osh_pbf, y, poi_mapping, out_dir, partial_years) for y in years_to_run],
             )
 
     _berlin_osm.log.info("Done. Output directory: %s", out_dir)
     return 0
 
 
-def _run_year_worker(osh_pbf: Path, year: int, poi_mapping: dict, out_dir: Path) -> None:
+def _run_year_worker(
+    osh_pbf: Path,
+    year: int,
+    poi_mapping: dict,
+    out_dir: Path,
+    partial_years: set[int] | None = None,
+) -> None:
     """Top-level worker function for multiprocessing (must be picklable)."""
     _patch_for_hamburg()
+    stem = f"{year}-partial" if (partial_years and year in partial_years) else str(year)
     df = _berlin_osm.extract_snapshot(osh_pbf, year, poi_mapping)
-    _berlin_osm.write_parquet(df, out_dir / f"{year}.parquet")
+    _berlin_osm.write_parquet(df, out_dir / f"{stem}.parquet")
 
 
 if __name__ == "__main__":

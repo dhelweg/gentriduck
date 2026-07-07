@@ -63,6 +63,20 @@
 -- Known hotspot PLRs (persistently deprived) and coldspot PLRs (stable-established)
 -- validated in analysis/backtest_index.py.
 --
+-- BERLIN-ONLY SCOPE (#125, staging decision -- not a methodology change): as of the
+-- H1 (#40) integration, int_gentrification_ts also carries Hamburg rows
+-- (city_code='HH', ADR-0014). This mart stays Berlin-only for now: the trajectory
+-- thresholds (status_delta >= 1, status_range <= 1, etc.) were derived and
+-- back-tested (R-B2) against Berlin's biennial MSS panel and have not been
+-- reviewed for Hamburg's annual Sozialmonitoring panel, and the H1 sign-offs
+-- (docs/epic-h/H1-geo-signoff.md, H1-domain-signoff.md) scoped their PASS to
+-- int_gentrification_ts pipeline wiring only ("no dashboard/report is published
+-- from it yet").
+-- METHODOLOGY QUESTION flagged for the gate (#125): do these Berlin-calibrated
+-- trajectory thresholds transfer to Hamburg's annual (not biennial) cadence
+-- unmodified, or does "status_delta >= 1 within the panel" mean something
+-- different when editions are 1 year apart instead of 2? Not decided here.
+--
 -- dbt_meta_owner: data-engineer
 -- geo-ds-sign-off: docs/methodology/R-B2-geo-signoff.md (R-B2 #71 PASS used as basis)
 -- depends_on: {{ ref('int_gentrification_ts') }}
@@ -92,7 +106,8 @@ with
             typology_stage,
             is_uninhabited
         from {{ ref("int_gentrification_ts") }}
-        where is_uninhabited = false
+        -- Berlin-only staging filter (#125) -- see header note.
+        where is_uninhabited = false and city_code = 'BER'
     ),
 
     -- Pivot to per-PLR per-vintage aggregate statistics

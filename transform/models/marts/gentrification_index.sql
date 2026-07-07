@@ -27,6 +27,21 @@
 -- PLR-level aggregate; not an individual- or building-level statement. Inferring an
 -- individual's situation from a PLR stage is an ecological fallacy (G-2 guardrail;
 -- index-definition.md §1.2).
+--
+-- BERLIN-ONLY SCOPE (#125, staging decision -- not a methodology change): as of the
+-- H1 (#40) integration, int_gentrification_ts also carries Hamburg rows
+-- (city_code='HH', ADR-0014). This governed, contract-enforced public mart
+-- (city_code accepted_values=["BER"] below) stays Berlin-only for now: the H1
+-- geo-DS/domain-expert sign-offs (docs/epic-h/H1-geo-signoff.md,
+-- H1-domain-signoff.md) explicitly scoped their PASS to int_gentrification_ts
+-- pipeline wiring, stating "no dashboard/report is published from it yet."
+-- METHODOLOGY QUESTION flagged for the gate (#125): should Hamburg now be admitted
+-- to this published index (widening city_code to ["BER","HH"] and area_level to
+-- include Hamburg's dim_area levels), or should it remain staged until the
+-- conditions in those sign-offs (crosswalk match-rate test, G2 disclosures) are
+-- satisfied? Not decided here -- the explicit filter below preserves Berlin's
+-- existing rows/values exactly and keeps Hamburg out of the public mart pending
+-- that decision.
 {{
     config(
         materialized="table",
@@ -148,3 +163,5 @@ inner join
     {{ ref("dim_area") }} as da
     on ts.city_code = da.city_code
     and ts.area_code = da.area_code
+-- Berlin-only staging filter (#125) -- see header note.
+where ts.city_code = 'BER'
