@@ -1,0 +1,41 @@
+{
+  "source_id": "berlin__lor_geometries",
+  "source_class": "pinned",
+  "city": "berlin",
+  "upstream": {
+    "url": "https://gdi.berlin.de/services/wfs/lor_2019 (pre2021) ; https://gdi.berlin.de/services/wfs/lor_2021",
+    "vintage": "lor_pre2021 (2019 WFS edition) + lor_2021 (2021 WFS edition)",
+    "retrieved_at": "2026-07-06T19:50:39Z"
+  },
+  "outputs": [
+    {
+      "path": "data/raw/berlin/lor/pre2021_plr.parquet",
+      "row_count": 448,
+      "schema_fingerprint": "sha256:2a4b23cd035f2ecf6abf11ac1d9beec02b5a47c90b4e7bbe7ac6bd2374eafd75",
+      "content_hash": "sha256:305868e1a92811eff4e964de72549074bcbad9b34cc878af579bbc9198b0de41"
+    },
+    {
+      "path": "data/raw/berlin/lor/pre2021_bzr.parquet",
+      "row_count": 138,
+      "schema_fingerprint": "sha256:2a4b23cd035f2ecf6abf11ac1d9beec02b5a47c90b4e7bbe7ac6bd2374eafd75",
+      "content_hash": "sha256:284167ef1a95fb620d562ef87a616bbbb0bfc671f0344f573f65065148c4fd2d"
+    },
+    {
+      "path": "data/raw/berlin/lor/lor_2021_plr.parquet",
+      "row_count": 542,
+      "schema_fingerprint": "sha256:2a4b23cd035f2ecf6abf11ac1d9beec02b5a47c90b4e7bbe7ac6bd2374eafd75",
+      "content_hash": "sha256:44cc7b2fd8384f41da4d6f08a66773f6e7769e8f77aa16e65556c23ad0aa8c26"
+    },
+    {
+      "path": "data/raw/berlin/lor/lor_2021_bzr.parquet",
+      "row_count": 143,
+      "schema_fingerprint": "sha256:2a4b23cd035f2ecf6abf11ac1d9beec02b5a47c90b4e7bbe7ac6bd2374eafd75",
+      "content_hash": "sha256:b6f36a8ebf6326d5f4ff69d92ab62f92400228892020e6fe8df3148c741374d1"
+    }
+  ],
+  "ingest_script": {
+    "module": "ingestion.berlin.lor.ingest_lor_geometries",
+    "git_sha": "2f6b2f6853967d004d6942592bb52d4740e6cc97"
+  },
+  "manifest_schema_version": 1
+}

@@ -1,0 +1,35 @@
+{
+  "source_id": "hamburg__geo",
+  "source_class": "pinned",
+  "city": "hamburg",
+  "upstream": {
+    "url": "https://geodienste.hamburg.de/HH_WFS_Statistische_Gebiete ; HH_WFS_Verwaltungsgrenzen",
+    "vintage": "current (live WFS edition; confirmed 2026-07-01)",
+    "retrieved_at": "2026-07-05T22:18:02Z"
+  },
+  "outputs": [
+    {
+      "path": "data/raw/hamburg/geo/bezirk.parquet",
+      "row_count": 7,
+      "schema_fingerprint": "sha256:4d9b4ad040cad5b53ee04d89e17f7be06a41eee92d75ea76a0e19d6cb33940e2",
+      "content_hash": "sha256:0fb9314a0b4f9ee3e4e4a92b2eef330a14ded679577b2fc04eb19f2122dd2a24"
+    },
+    {
+      "path": "data/raw/hamburg/geo/stadtteil.parquet",
+      "row_count": 104,
+      "schema_fingerprint": "sha256:4d9b4ad040cad5b53ee04d89e17f7be06a41eee92d75ea76a0e19d6cb33940e2",
+      "content_hash": "sha256:3d5eac77d9b40189b3b40cce494cf9ca03384e759a4986c22a0995ad6b824013"
+    },
+    {
+      "path": "data/raw/hamburg/geo/statgebiet.parquet",
+      "row_count": 945,
+      "schema_fingerprint": "sha256:4d9b4ad040cad5b53ee04d89e17f7be06a41eee92d75ea76a0e19d6cb33940e2",
+      "content_hash": "sha256:f7a720ba13e2bf7992a025e27f32237e620cc9b74653f3db268458cd56af22d3"
+    }
+  ],
+  "ingest_script": {
+    "module": "ingestion.hamburg.geo.ingest_hamburg_geo",
+    "git_sha": "2f6b2f6853967d004d6942592bb52d4740e6cc97"
+  },
+  "manifest_schema_version": 1
+}

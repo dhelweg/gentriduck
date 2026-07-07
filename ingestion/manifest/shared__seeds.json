@@ -1,0 +1,77 @@
+{
+  "source_id": "shared__seeds",
+  "source_class": "pinned",
+  "city": "shared",
+  "upstream": {
+    "url": "n/a (committed to git; not fetched from an external endpoint)",
+    "vintage": "n/a (git-committed reference data, versioned by git itself)",
+    "retrieved_at": "2026-07-05T21:06:22Z"
+  },
+  "outputs": [
+    {
+      "path": "transform/seeds/berlin_mietspiegel.csv",
+      "row_count": 635,
+      "schema_fingerprint": "sha256:cefc42a9d6788a6ae304213889927e2b1b0b2656f457af3d68db8c9f650d2179",
+      "content_hash": "sha256:427a7d55fb560a975eef82752d0bcecdd7c2caae59a3cda550ddddbdaf757cd0"
+    },
+    {
+      "path": "transform/seeds/seed_dim_area_level.csv",
+      "row_count": 5,
+      "schema_fingerprint": "sha256:d3e6f59508878ed578fe61bec10239709aaa5905ec613548a1a39df330aea320",
+      "content_hash": "sha256:764dd623399bb2ceefec2290e0b4bf805d1bec976c6ec772810e1ed1c81031e5"
+    },
+    {
+      "path": "transform/seeds/seed_dim_city.csv",
+      "row_count": 2,
+      "schema_fingerprint": "sha256:9378a43fde429f3baf2e2cdfa7431445d57c5a3bb2b4b66901916866bd48bbb3",
+      "content_hash": "sha256:eed0c0c0991b2c1f581948a1b5e7928f7a385c78e5aff94cbb8de2943c9c9697"
+    },
+    {
+      "path": "transform/seeds/seed_ewr_indicator_meta.csv",
+      "row_count": 13,
+      "schema_fingerprint": "sha256:595a26741aff55bdf9bc592cda3f4acddd8df43b0d8f74b6c989abe166477193",
+      "content_hash": "sha256:535e71724de98dc756a4a960e4e9d0fff82f45fa00a0e15f6e4385ed59977cda"
+    },
+    {
+      "path": "transform/seeds/seed_gentrification_ground_truth.csv",
+      "row_count": 18,
+      "schema_fingerprint": "sha256:54012c76c5c33d96a1a171e526ca8fc682be63b3225c76124ec66c0a583b2c98",
+      "content_hash": "sha256:0d29a37f5b670ec77747e81f9e99324e0a48e16096b21dea0cd4e866587f5954"
+    },
+    {
+      "path": "transform/seeds/seed_lor_crosswalk_2006_to_2021.csv",
+      "row_count": 3088,
+      "schema_fingerprint": "sha256:5e334757015f12ee384214eaf0a030c9b3eee3113f4f0a1f4bfb1aa5f745b434",
+      "content_hash": "sha256:653511c5ca6bc0dce5828d69aa038306cf2db342bd2ad8732dbbe73c2a42a224"
+    },
+    {
+      "path": "transform/seeds/seed_mss_expected_counts.csv",
+      "row_count": 7,
+      "schema_fingerprint": "sha256:945128ca446c9ecfd0128170e0a3b6b5fc1ca6af2d5850c75b1d7078b73426d8",
+      "content_hash": "sha256:035635e60cf764f60eb3a94ac476f20900f2dfb4d26ba7d5cd62d8e8504d4e8a"
+    },
+    {
+      "path": "transform/seeds/seed_poi_canonical_category.csv",
+      "row_count": 4,
+      "schema_fingerprint": "sha256:79692b33a6ab9b9a93c608bbcfc6ecf00ed8b1e37ef77b6150d5cfaa19719da9",
+      "content_hash": "sha256:497510c7b1d6667179f5e0d8ced8315c7000052979000868d77567eddb17266c"
+    },
+    {
+      "path": "transform/seeds/seed_poi_mapping.csv",
+      "row_count": 163,
+      "schema_fingerprint": "sha256:f1c15171789e8dbea2b9c6f5c7f3e188ba30f1051c1685ba7e4b2b17393fa6b9",
+      "content_hash": "sha256:5274d4d4e5bacb1b9dffafa1f1624a8ab0245f7e65c004ce6926f75a37049c6b"
+    },
+    {
+      "path": "transform/seeds/seed_poi_tag_drift.csv",
+      "row_count": 10,
+      "schema_fingerprint": "sha256:7d84f7478ef177441f2441550c47273cfcd4e886669fe4a3b08d15a7ab97246f",
+      "content_hash": "sha256:25a6f5a3e046dd9719e64165c8cb20e915652e94ea99b91a6a934fccb4ed37b4"
+    }
+  ],
+  "ingest_script": {
+    "module": "transform.seeds",
+    "git_sha": "2f6b2f6853967d004d6942592bb52d4740e6cc97"
+  },
+  "manifest_schema_version": 1
+}
