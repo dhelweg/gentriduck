@@ -95,7 +95,7 @@ its manifest entry is first written — the taxonomy lives in data
 ## The one static-file exception: seeds
 
 The dbt seeds (`transform/seeds/*.csv`) have no `ingest_*.py` script — they are
-committed CSVs, not fetched from the network. Their single `berlin__seeds` manifest
+committed CSVs, not fetched from the network. Their single `shared__seeds` manifest
 entry is written by `ingestion/manifest_backfill.py` (the same one-time tool used
 for the initial baseline, re-runnable whenever a seed changes) rather than by a
 per-run ingestion script. `ingest_script.git_sha` for this entry is the repo HEAD

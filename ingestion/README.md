@@ -94,6 +94,19 @@ Two Mietspiegel scripts (`ingest_mietspiegel.py`, `ingest_strassenverzeichnis.py
 Run them via `uv run --with pdfplumber python ingestion/berlin/mietspiegel/...` (this is exactly
 what `poe ingest` already does for these two — no extra step needed if you use the `poe` task).
 
+### Is my local data in sync? (`poe verify-data`, ADR-0016)
+
+Every script above writes a small committed manifest entry on success
+(`ingestion/manifest/<source_id>.json`) recording what it produced — row counts, a schema
+fingerprint, a content hash, and the git SHA/vintage it was ingested at. `uv run poe verify-data`
+compares that manifest to your local `data/` in seconds, **without a full `dbt build`** — the fast
+way to check "does this checkout's ingested data actually match what the current code expects?"
+before debugging a confusing downstream dbt failure. Add `--strict` to gate on it (e.g. before
+trusting a build for a `develop → main` merge; rolling sources like OSM never fail `--strict`).
+`uv run poe manifest-backfill` (re-)populates manifest entries from artefacts already on disk,
+without re-fetching anything. See `ingestion/manifest/README.md` for the full schema and the
+pinned/rolling taxonomy, and `ingestion/verify_data.py`'s docstring for the exit-code contract.
+
 ## Design contract (what makes these reusable outside this project)
 
 - **Free + open sources only** (CLAUDE.md golden rule #1). Every script's docstring states the

@@ -433,7 +433,7 @@ def main(argv: Optional[list[str]] = None) -> int:
 
     ok = run(out_dir, dry_run=args.dry_run)
 
-    if not args.dry_run:
+    if not args.dry_run and ok:
         _write_manifest(out_dir)
 
     if not ok:

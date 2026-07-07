@@ -541,7 +541,7 @@ def main(argv: Optional[list[str]] = None) -> int:
         firm_errors or "none",
     )
 
-    if not args.dry_run:
+    if not args.dry_run and success_count > 0:
         _write_manifest(out_dir)
 
     return 1 if firm_errors else 0

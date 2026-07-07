@@ -463,7 +463,7 @@ def main(argv: Optional[list[str]] = None) -> int:
         error_count,
     )
 
-    if not args.dry_run:
+    if not args.dry_run and success_count > 0:
         _write_manifest(out_dir)
 
     if error_count > 0:

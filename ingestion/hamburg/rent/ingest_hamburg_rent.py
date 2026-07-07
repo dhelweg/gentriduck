@@ -679,7 +679,7 @@ def main(argv: Optional[list[str]] = None) -> int:
     if "mietenspiegel" in targets:
         ok = run_mietenspiegel(out_dir, dry_run=args.dry_run) and ok
 
-    if not args.dry_run:
+    if not args.dry_run and ok:
         _write_manifest(out_dir)
 
     return 0 if ok else 1

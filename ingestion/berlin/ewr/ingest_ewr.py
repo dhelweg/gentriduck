@@ -1072,7 +1072,7 @@ def main(argv: Optional[list[str]] = None) -> int:
         for yr, cnt in sorted(plr_counts.items()):
             log.info("  %d: %d PLR rows", yr, cnt)
 
-    if not dry_run:
+    if not dry_run and success_count > 0:
         _write_manifest(out_dir)
 
     if error_count > 0:

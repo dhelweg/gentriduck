@@ -925,7 +925,8 @@ def main(argv: Optional[list[str]] = None) -> int:
             errors += 1
             continue
 
-    _write_manifest(out_dir)
+    if errors < len(years):
+        _write_manifest(out_dir)
 
     if errors:
         log.warning("Ingestion completed with %d error(s).", errors)

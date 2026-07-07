@@ -456,7 +456,8 @@ def main(argv: Optional[list[str]] = None) -> int:
 
     log.info("All years complete. Grand total: %d rows.", total)
 
-    _write_manifest(out_dir)
+    if total > 0:
+        _write_manifest(out_dir)
 
     return 0 if total > 0 else 1
 
