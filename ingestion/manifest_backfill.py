@@ -285,10 +285,21 @@ SOURCE_DEFS: list[SourceDef] = [
 ]
 
 
-def backfill(repo_root: Path = REPO_ROOT, dry_run: bool = False) -> int:
+def backfill(
+    repo_root: Path = REPO_ROOT, dry_run: bool = False, only: set[str] | None = None
+) -> int:
+    """Populate manifest entries from on-disk artefacts.
+
+    `only`, when given, restricts the run to those source_ids — for surgically
+    refreshing a handful of entries (e.g. git_sha/retrieved_at after an
+    ingest-script-only change with no data change) without touching every other
+    source's manifest file. Default (None) processes every SOURCE_DEFS entry.
+    """
     skipped = 0
     written = 0
     for sd in SOURCE_DEFS:
+        if only is not None and sd.source_id not in only:
+            continue
         out_dir = repo_root / sd.out_dir
         found = existing_outputs(out_dir, sd.patterns)
         if sd.exclude_patterns:
@@ -337,12 +348,25 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument(
         "--dry-run", action="store_true", help="Report what would be written without writing."
     )
+    p.add_argument(
+        "--only",
+        action="append",
+        default=None,
+        metavar="SOURCE_ID",
+        help=(
+            "Restrict the run to this source_id (repeatable). Use to surgically refresh "
+            "specific entries (e.g. git_sha/retrieved_at after an ingest-script-only change "
+            "with no data change) without touching every other source's manifest file. "
+            "Default: process every defined source."
+        ),
+    )
     return p
 
 
 def main(argv: list[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
-    return backfill(dry_run=args.dry_run)
+    only = set(args.only) if args.only else None
+    return backfill(dry_run=args.dry_run, only=only)
 
 
 if __name__ == "__main__":

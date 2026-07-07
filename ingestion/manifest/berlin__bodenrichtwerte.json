@@ -17,7 +17,7 @@
   ],
   "ingest_script": {
     "module": "ingestion.berlin.price_rent.ingest_bodenrichtwerte",
-    "git_sha": "2f6b2f6853967d004d6942592bb52d4740e6cc97"
+    "git_sha": "9cf6028ab6d493ea675cc31ff03be957e928c616"
   },
   "manifest_schema_version": 1
 }

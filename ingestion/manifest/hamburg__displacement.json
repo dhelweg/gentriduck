@@ -17,7 +17,7 @@
   ],
   "ingest_script": {
     "module": "ingestion.hamburg.displacement.ingest_hamburg_displacement",
-    "git_sha": "07b29662a00db8917cba0309e1bd41a678ed86b9"
+    "git_sha": "9cf6028ab6d493ea675cc31ff03be957e928c616"
   },
   "manifest_schema_version": 1
 }
