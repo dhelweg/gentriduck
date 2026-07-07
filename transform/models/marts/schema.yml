@@ -197,6 +197,9 @@ models:
         description: City identifier (ADR-0005). Always 'BER' (#125 staging filter; see model header).
         tests:
           - not_null
+          - accepted_values:
+              arguments:
+                values: ["BER"]
       - name: snapshot_year
         description: >
           MSS edition year (biennial: 2013, 2015, 2017, 2019, 2021, 2023, 2025).
