@@ -1,0 +1,23 @@
+{
+  "source_id": "hamburg__displacement",
+  "source_class": "pinned",
+  "city": "hamburg",
+  "upstream": {
+    "url": "https://geodienste.hamburg.de/HH_WFS_SozErhVO",
+    "vintage": "current (live WFS edition; confirmed 2026-07-01)",
+    "retrieved_at": "2026-07-07T06:28:09Z"
+  },
+  "outputs": [
+    {
+      "path": "data/raw/hamburg/displacement/erhaltungsverordnung.parquet",
+      "row_count": 16,
+      "schema_fingerprint": "sha256:be1607d274e3398b8699ce1298da0320b3d6cba9e6fd0ed234b0f15d107206f2",
+      "content_hash": "sha256:c67abb29ddc87f41de238c0a95c38ae3059657755168d49eb15a8b12e55083a2"
+    }
+  ],
+  "ingest_script": {
+    "module": "ingestion.hamburg.displacement.ingest_hamburg_displacement",
+    "git_sha": "9cf6028ab6d493ea675cc31ff03be957e928c616"
+  },
+  "manifest_schema_version": 1
+}

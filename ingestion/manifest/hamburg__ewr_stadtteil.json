@@ -1,0 +1,23 @@
+{
+  "source_id": "hamburg__ewr_stadtteil",
+  "source_class": "pinned",
+  "city": "hamburg",
+  "upstream": {
+    "url": "Transparenzportal \u2014 'Regionalstatistische Daten der Stadtteile Hamburgs' (CKAN)",
+    "vintage": "multi-year CSV series (see reference_year column for the exact range)",
+    "retrieved_at": "2026-07-05T22:19:20Z"
+  },
+  "outputs": [
+    {
+      "path": "data/raw/hamburg/ewr_stadtteil/stadtteile.parquet",
+      "row_count": 1188,
+      "schema_fingerprint": "sha256:8a89364fe95c75da0f1252664a5057ed157ee7a2b1316df30e787bafe4f6972b",
+      "content_hash": "sha256:4dc5d1e492117c417b4eb2417961cd200b47248cda16c5227a1e30430d33ef88"
+    }
+  ],
+  "ingest_script": {
+    "module": "ingestion.hamburg.ewr.ingest_hamburg_ewr_stadtteil",
+    "git_sha": "2f6b2f6853967d004d6942592bb52d4740e6cc97"
+  },
+  "manifest_schema_version": 1
+}

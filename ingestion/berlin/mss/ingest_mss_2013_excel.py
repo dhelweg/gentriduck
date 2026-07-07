@@ -42,6 +42,18 @@ import pandas as pd
 import pyarrow as pa
 import pyarrow.parquet as pq
 
+# ADR-0016: shared drift-detection manifest helper (sys.path pattern matches
+# ingest_hamburg_osm.py's existing cross-module import convention; see
+# ingest_lor_geometries.py for the same comment in full). This script's output
+# (mss_2013.parquet) folds into the same "berlin__mss" source_id as ingest_mss.py
+# — both write the full current mss_*.parquet set each time, so whichever ran
+# most recently is the module of record for ingest_script.git_sha; the outputs
+# list itself always reflects on-disk reality regardless (see manifest/README.md).
+_INGESTION_ROOT = Path(__file__).resolve().parents[2]
+if str(_INGESTION_ROOT) not in sys.path:
+    sys.path.insert(0, str(_INGESTION_ROOT))
+from manifest import existing_outputs, write_manifest_entry  # noqa: E402
+
 # macOS Python does not ship CA certs; use certifi's bundle when available.
 try:
     import certifi as _certifi
@@ -224,7 +236,32 @@ def main() -> int:
     table = pa.Table.from_pandas(df, schema=PARQUET_SCHEMA, preserve_index=False)
     pq.write_table(table, out_path, compression="snappy")
     log.info("Written: %s (%d rows)", out_path, len(df))
+
+    _write_manifest(out_dir)
+
     return 0
+
+
+def _write_manifest(out_dir: Path) -> None:
+    """ADR-0016: record the current mss_*.parquet set (excluding *_indicators) in
+    the shared "berlin__mss" manifest entry — see the import comment above."""
+    found = [p for p in existing_outputs(out_dir, ["mss_*.parquet"]) if "_indicators" not in p.stem]
+    if not found:
+        return
+    write_manifest_entry(
+        source_id="berlin__mss",
+        source_class="pinned",
+        city="berlin",
+        upstream_url="https://gdi.berlin.de/services/wfs/mss_<year> (mss<year>_indizes_<n> feature type)",
+        upstream_vintage=",".join(
+            str(y)
+            for y in sorted(
+                {int(p.stem.split("_")[1]) for p in found if p.stem.split("_")[1].isdigit()}
+            )
+        ),
+        output_paths=found,
+        ingest_script_module="ingestion.berlin.mss.ingest_mss_2013_excel",
+    )
 
 
 if __name__ == "__main__":

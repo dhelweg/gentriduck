@@ -183,6 +183,14 @@ except ImportError as exc:
         "Add it to pyproject.toml and run `uv sync`."
     ) from exc
 
+# ADR-0016: shared drift-detection manifest helper (sys.path pattern matches
+# ingest_hamburg_osm.py's existing cross-module import convention; see
+# ingestion/berlin/lor/ingest_lor_geometries.py for the same comment in full).
+_INGESTION_ROOT = Path(__file__).resolve().parents[2]
+if str(_INGESTION_ROOT) not in sys.path:
+    sys.path.insert(0, str(_INGESTION_ROOT))
+from manifest import existing_outputs, write_manifest_entry  # noqa: E402
+
 # ---------------------------------------------------------------------------
 # Constants
 # ---------------------------------------------------------------------------
@@ -671,7 +679,26 @@ def main(argv: Optional[list[str]] = None) -> int:
     if "mietenspiegel" in targets:
         ok = run_mietenspiegel(out_dir, dry_run=args.dry_run) and ok
 
+    if not args.dry_run and ok:
+        _write_manifest(out_dir)
+
     return 0 if ok else 1
+
+
+def _write_manifest(out_dir: Path) -> None:
+    """ADR-0016: record this source's current on-disk outputs in the committed manifest."""
+    found = existing_outputs(out_dir, ["mietenspiegel.parquet", "wohnlage.parquet"])
+    if not found:
+        return
+    write_manifest_entry(
+        source_id="hamburg__rent",
+        source_class="pinned",
+        city="hamburg",
+        upstream_url="https://geodienste.hamburg.de/HH_WFS_Wohnlagen ; Mietenspiegel WFS",
+        upstream_vintage="current (erhebungsstand 2025-04-01; confirmed live 2026-07-01)",
+        output_paths=found,
+        ingest_script_module="ingestion.hamburg.rent.ingest_hamburg_rent",
+    )
 
 
 if __name__ == "__main__":

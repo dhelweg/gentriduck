@@ -1,0 +1,29 @@
+{
+  "source_id": "berlin__wohnlage",
+  "source_class": "pinned",
+  "city": "berlin",
+  "upstream": {
+    "url": "https://gdi.berlin.de/services/wfs/wohnlagenadr{year}",
+    "vintage": "2023,2026",
+    "retrieved_at": "2026-06-18T06:38:20Z"
+  },
+  "outputs": [
+    {
+      "path": "data/raw/berlin/price_rent/wohnlage_2023.parquet",
+      "row_count": 397542,
+      "schema_fingerprint": "sha256:bbdaabfc5337bafc24a671cc67a075335fc52ab3a533e09bf2d84b58886844b2",
+      "content_hash": "sha256:2b5f8526b063702ace074992808a42772634ba54c3324bd5a8b1a73c239f3e24"
+    },
+    {
+      "path": "data/raw/berlin/price_rent/wohnlage_2026.parquet",
+      "row_count": 400505,
+      "schema_fingerprint": "sha256:bbdaabfc5337bafc24a671cc67a075335fc52ab3a533e09bf2d84b58886844b2",
+      "content_hash": "sha256:3f1f47287115a3ae4d71b4e1b8a6b6c7ee8a82b71f9273e28752a570a6775f72"
+    }
+  ],
+  "ingest_script": {
+    "module": "ingestion.berlin.price_rent.ingest_wohnlage",
+    "git_sha": "9cf6028ab6d493ea675cc31ff03be957e928c616"
+  },
+  "manifest_schema_version": 1
+}

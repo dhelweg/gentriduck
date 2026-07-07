@@ -1,0 +1,107 @@
+{
+  "source_id": "berlin__ewr",
+  "source_class": "pinned",
+  "city": "berlin",
+  "upstream": {
+    "url": "https://daten.berlin.de/api/3/action/package_search (CKAN) ; https://www.statistik-berlin-brandenburg.de/opendata/",
+    "vintage": "2008-2020,2024-2025",
+    "retrieved_at": "2026-06-18T21:47:03Z"
+  },
+  "outputs": [
+    {
+      "path": "data/raw/berlin/ewr/2008.parquet",
+      "row_count": 447,
+      "schema_fingerprint": "sha256:7a0ae1eae97a349caa06a466fd69b4c22ed446aeb899a7ed7b2b2de84df03970",
+      "content_hash": "sha256:199d614181c41a10cdb3927e97533b67cc0ee65c92ce97e2879b19f6e6f42c21"
+    },
+    {
+      "path": "data/raw/berlin/ewr/2009.parquet",
+      "row_count": 447,
+      "schema_fingerprint": "sha256:7a0ae1eae97a349caa06a466fd69b4c22ed446aeb899a7ed7b2b2de84df03970",
+      "content_hash": "sha256:cf007a91d137cf6b655753080221f70bcd6a9b1a5805752a30de71b083e703ec"
+    },
+    {
+      "path": "data/raw/berlin/ewr/2010.parquet",
+      "row_count": 447,
+      "schema_fingerprint": "sha256:7a0ae1eae97a349caa06a466fd69b4c22ed446aeb899a7ed7b2b2de84df03970",
+      "content_hash": "sha256:944a070b25569812391842eb772ea4022b919aa0ad39c66c92cfd4bbd6bdbe4d"
+    },
+    {
+      "path": "data/raw/berlin/ewr/2011.parquet",
+      "row_count": 447,
+      "schema_fingerprint": "sha256:7a0ae1eae97a349caa06a466fd69b4c22ed446aeb899a7ed7b2b2de84df03970",
+      "content_hash": "sha256:b8bc426d6674eafbe719c0659915544a6e8ab671819dd0dbaa7080b113d76a97"
+    },
+    {
+      "path": "data/raw/berlin/ewr/2012.parquet",
+      "row_count": 447,
+      "schema_fingerprint": "sha256:7a0ae1eae97a349caa06a466fd69b4c22ed446aeb899a7ed7b2b2de84df03970",
+      "content_hash": "sha256:0339b2ca42c9747cb901c7b5a92dd480d24ae7daec3d5bf3c30273618b01c7f9"
+    },
+    {
+      "path": "data/raw/berlin/ewr/2013.parquet",
+      "row_count": 447,
+      "schema_fingerprint": "sha256:7a0ae1eae97a349caa06a466fd69b4c22ed446aeb899a7ed7b2b2de84df03970",
+      "content_hash": "sha256:e2a0c5de39a45e58230fcef83bbb332ed1c75015a28452c4c44a96704d060a1a"
+    },
+    {
+      "path": "data/raw/berlin/ewr/2014.parquet",
+      "row_count": 447,
+      "schema_fingerprint": "sha256:7a0ae1eae97a349caa06a466fd69b4c22ed446aeb899a7ed7b2b2de84df03970",
+      "content_hash": "sha256:942b08e5b97023fe71a620cb77300f161cce7f791af245c8d6889cb463dd9b69"
+    },
+    {
+      "path": "data/raw/berlin/ewr/2015.parquet",
+      "row_count": 447,
+      "schema_fingerprint": "sha256:7a0ae1eae97a349caa06a466fd69b4c22ed446aeb899a7ed7b2b2de84df03970",
+      "content_hash": "sha256:8c145655fc733c8f15a59d40bc5ac073454ecfbca002c6ef8ea9ca3f4e790118"
+    },
+    {
+      "path": "data/raw/berlin/ewr/2016.parquet",
+      "row_count": 447,
+      "schema_fingerprint": "sha256:7a0ae1eae97a349caa06a466fd69b4c22ed446aeb899a7ed7b2b2de84df03970",
+      "content_hash": "sha256:fcc7aceb9aa76264431403e39d2fbfdc83cdc047387ca05023abca7e4313488b"
+    },
+    {
+      "path": "data/raw/berlin/ewr/2017.parquet",
+      "row_count": 447,
+      "schema_fingerprint": "sha256:7a0ae1eae97a349caa06a466fd69b4c22ed446aeb899a7ed7b2b2de84df03970",
+      "content_hash": "sha256:e3479f3816487ccde972df8c0db11de82e193cc34532c0fc004bec1b0b5aa32f"
+    },
+    {
+      "path": "data/raw/berlin/ewr/2018.parquet",
+      "row_count": 447,
+      "schema_fingerprint": "sha256:7a0ae1eae97a349caa06a466fd69b4c22ed446aeb899a7ed7b2b2de84df03970",
+      "content_hash": "sha256:fa97c853b497cbbc68b1ccf1145854ed4f16eb10379ca95acd4cb619c3332a6c"
+    },
+    {
+      "path": "data/raw/berlin/ewr/2019.parquet",
+      "row_count": 448,
+      "schema_fingerprint": "sha256:7a0ae1eae97a349caa06a466fd69b4c22ed446aeb899a7ed7b2b2de84df03970",
+      "content_hash": "sha256:6654ab096b6942ead5354449a19cfc708818ea0ec28571664531763d8a482280"
+    },
+    {
+      "path": "data/raw/berlin/ewr/2020.parquet",
+      "row_count": 448,
+      "schema_fingerprint": "sha256:7a0ae1eae97a349caa06a466fd69b4c22ed446aeb899a7ed7b2b2de84df03970",
+      "content_hash": "sha256:4e68c55e417d6aa3a3bcb8f33b8d66bd058ad9e07557a31fe6df9d67e297128b"
+    },
+    {
+      "path": "data/raw/berlin/ewr/2024.parquet",
+      "row_count": 542,
+      "schema_fingerprint": "sha256:7a0ae1eae97a349caa06a466fd69b4c22ed446aeb899a7ed7b2b2de84df03970",
+      "content_hash": "sha256:8fc70a84ce603a81b48a125632d0bff0f91e982a79332c4e568ebe5e176b3f13"
+    },
+    {
+      "path": "data/raw/berlin/ewr/2025.parquet",
+      "row_count": 542,
+      "schema_fingerprint": "sha256:7a0ae1eae97a349caa06a466fd69b4c22ed446aeb899a7ed7b2b2de84df03970",
+      "content_hash": "sha256:8ad2715b8393df47f9afdb64621b43a9bb015b57f4c4f95b452a8da1d463d0e5"
+    }
+  ],
+  "ingest_script": {
+    "module": "ingestion.berlin.ewr.ingest_ewr",
+    "git_sha": "9cf6028ab6d493ea675cc31ff03be957e928c616"
+  },
+  "manifest_schema_version": 1
+}
