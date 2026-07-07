@@ -96,6 +96,14 @@ except ImportError as exc:
 import pyarrow as pa
 import pyarrow.parquet as pq
 
+# ADR-0016: shared drift-detection manifest helper (sys.path pattern matches
+# ingest_hamburg_osm.py's existing cross-module import convention; see
+# ingest_lor_geometries.py for the same comment in full).
+_INGESTION_ROOT = Path(__file__).resolve().parents[2]
+if str(_INGESTION_ROOT) not in sys.path:
+    sys.path.insert(0, str(_INGESTION_ROOT))
+from manifest import existing_outputs, write_manifest_entry  # noqa: E402
+
 # ---------------------------------------------------------------------------
 # Known vintages and PDF URLs (confirmed live 2026-06-30 from archive page)
 # ---------------------------------------------------------------------------
@@ -611,12 +619,35 @@ def main(argv: Optional[list[str]] = None) -> int:
             errors += 1
             continue
 
+    _write_manifest(out_dir)
+
     if errors:
         log.warning("Ingestion completed with %d error(s).", errors)
         return 1
 
     log.info("Strassenverzeichnis ingestion complete: %d vintage(s) processed.", len(years))
     return 0
+
+
+def _write_manifest(out_dir: Path) -> None:
+    """ADR-0016: record this source's current on-disk outputs in the committed manifest."""
+    found = existing_outputs(out_dir, ["strassenverzeichnis_*.parquet"])
+    if not found:
+        return
+    write_manifest_entry(
+        source_id="berlin__strassenverzeichnis",
+        source_class="pinned",
+        city="berlin",
+        upstream_url="https://mietspiegel.berlin.de/wp-content/uploads/.../strassenverzeichnis{year}.pdf",
+        upstream_vintage=",".join(
+            str(y)
+            for y in sorted(
+                {int(p.stem.split("_")[1]) for p in found if p.stem.split("_")[1].isdigit()}
+            )
+        ),
+        output_paths=found,
+        ingest_script_module="ingestion.berlin.mietspiegel.ingest_strassenverzeichnis",
+    )
 
 
 if __name__ == "__main__":

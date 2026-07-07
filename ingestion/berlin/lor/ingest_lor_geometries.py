@@ -82,6 +82,15 @@ except ImportError as exc:
         "Add it to pyproject.toml and run `uv sync`."
     ) from exc
 
+# ADR-0016: shared drift-detection manifest helper. This script is run directly
+# (`python ingestion/berlin/lor/ingest_lor_geometries.py`), not as a `-m` package
+# module, so ingestion/ isn't on sys.path by default — insert it explicitly (same
+# pattern ingest_hamburg_osm.py already uses for its own sibling import).
+_INGESTION_ROOT = Path(__file__).resolve().parents[2]
+if str(_INGESTION_ROOT) not in sys.path:
+    sys.path.insert(0, str(_INGESTION_ROOT))
+from manifest import existing_outputs, write_manifest_entry  # noqa: E402
+
 # ---------------------------------------------------------------------------
 # Constants
 # ---------------------------------------------------------------------------
@@ -454,9 +463,39 @@ def main(argv: Optional[list[str]] = None) -> int:
         error_count,
     )
 
+    if not args.dry_run:
+        _write_manifest(out_dir)
+
     if error_count > 0:
         return 1
     return 0
+
+
+def _write_manifest(out_dir: Path) -> None:
+    """ADR-0016: record this source's current on-disk outputs in the committed manifest."""
+    found = existing_outputs(
+        out_dir,
+        [
+            "pre2021_plr.parquet",
+            "pre2021_bzr.parquet",
+            "lor_2021_plr.parquet",
+            "lor_2021_bzr.parquet",
+        ],
+    )
+    if not found:
+        return
+    write_manifest_entry(
+        source_id="berlin__lor_geometries",
+        source_class="pinned",
+        city="berlin",
+        upstream_url=(
+            "https://gdi.berlin.de/services/wfs/lor_2019 (pre2021) ; "
+            "https://gdi.berlin.de/services/wfs/lor_2021"
+        ),
+        upstream_vintage="lor_pre2021 (2019 WFS edition) + lor_2021 (2021 WFS edition)",
+        output_paths=found,
+        ingest_script_module="ingestion.berlin.lor.ingest_lor_geometries",
+    )
 
 
 if __name__ == "__main__":

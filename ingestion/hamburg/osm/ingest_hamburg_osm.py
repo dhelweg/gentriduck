@@ -60,6 +60,7 @@ Attribution (mandatory — ODbL):
 
 from __future__ import annotations
 
+import datetime
 import sys
 from pathlib import Path
 
@@ -72,6 +73,15 @@ _BERLIN_OSM_DIR = Path(__file__).resolve().parents[2] / "berlin" / "osm"
 sys.path.insert(0, str(_BERLIN_OSM_DIR))
 
 import ingest_osm_history as _berlin_osm  # noqa: E402  (path-dependent import)
+
+# ADR-0016: shared drift-detection manifest helper. Same sys.path pattern as the
+# Berlin import above; _INGESTION_ROOT is that import's own parent (ingestion/).
+# Rolling source — see ingest_osm_history.py's own manifest-import comment for
+# the .osh.pbf non-hashing rationale (identical here, same underlying source).
+_INGESTION_ROOT = _BERLIN_OSM_DIR.parent.parent
+if str(_INGESTION_ROOT) not in sys.path:
+    sys.path.insert(0, str(_INGESTION_ROOT))
+from manifest import existing_outputs, write_manifest_entry  # noqa: E402
 
 # ---------------------------------------------------------------------------
 # Hamburg-specific constants
@@ -234,6 +244,7 @@ def main(argv: list[str] | None = None) -> int:
 
     if not years_to_run:
         _berlin_osm.log.info("All years already exist. Done.")
+        _write_manifest(out_dir, osh_pbf)
         return 0
 
     workers = min(args.workers, len(years_to_run))
@@ -258,7 +269,37 @@ def main(argv: list[str] | None = None) -> int:
             )
 
     _berlin_osm.log.info("Done. Output directory: %s", out_dir)
+    _write_manifest(out_dir, osh_pbf)
     return 0
+
+
+def _write_manifest(out_dir: Path, osh_pbf: Path) -> None:
+    """ADR-0016: record this rolling source's current on-disk yearly snapshot
+    outputs in the committed manifest. The .osh.pbf itself is never hashed or
+    listed as an output (maintainer decision) — only its file mtime is recorded,
+    informationally, as a best-effort proxy for the Geofabrik publish date."""
+    found = existing_outputs(out_dir, ["*.parquet"])
+    if not found:
+        return
+    try:
+        pbf_mtime = datetime.datetime.fromtimestamp(
+            osh_pbf.stat().st_mtime, tz=datetime.timezone.utc
+        )
+        vintage = (
+            f"PBF file mtime {pbf_mtime.strftime('%Y-%m-%d')} "
+            "(best-effort proxy for Geofabrik publish date, not a true fetch record)"
+        )
+    except OSError:
+        vintage = "unknown (PBF publish-date not captured by the ingestor)"
+    write_manifest_entry(
+        source_id="hamburg__osm",
+        source_class="rolling",
+        city="hamburg",
+        upstream_url="https://osm-internal.download.geofabrik.de/europe/germany-internal.osh.pbf (login-gated, ADR-0002)",
+        upstream_vintage=vintage,
+        output_paths=found,
+        ingest_script_module="ingestion.hamburg.osm.ingest_hamburg_osm",
+    )
 
 
 def _run_year_worker(

@@ -86,6 +86,14 @@ try:
 except ImportError as exc:
     raise ImportError("shapely is required: uv sync") from exc
 
+# ADR-0016: shared drift-detection manifest helper (sys.path pattern matches
+# ingest_hamburg_osm.py's existing cross-module import convention; see
+# ingest_lor_geometries.py for the same comment in full).
+_INGESTION_ROOT = Path(__file__).resolve().parents[2]
+if str(_INGESTION_ROOT) not in sys.path:
+    sys.path.insert(0, str(_INGESTION_ROOT))
+from manifest import existing_outputs, write_manifest_entry  # noqa: E402
+
 # ---------------------------------------------------------------------------
 # Constants
 # ---------------------------------------------------------------------------
@@ -472,8 +480,26 @@ def main(argv: Optional[list[str]] = None) -> int:
     # Write output
     write_crosswalk(rows, out_path)
 
+    _write_manifest(lor_dir)
+
     log.info("LOR crosswalk computation complete.")
     return 0
+
+
+def _write_manifest(lor_dir: Path) -> None:
+    """ADR-0016: record this source's current on-disk output in the committed manifest."""
+    found = existing_outputs(lor_dir, ["lor_crosswalk.parquet"])
+    if not found:
+        return
+    write_manifest_entry(
+        source_id="berlin__lor_crosswalk",
+        source_class="pinned",
+        city="berlin",
+        upstream_url="derived (areal-weighted intersection of pre2021/2021 LOR geometries; GDI Berlin WFS upstream)",
+        upstream_vintage="derived from lor_pre2021 + lor_2021",
+        output_paths=found,
+        ingest_script_module="ingestion.berlin.lor.ingest_lor_crosswalk",
+    )
 
 
 if __name__ == "__main__":

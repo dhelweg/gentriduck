@@ -84,6 +84,14 @@ except ImportError as exc:
         "It is in pyproject.toml — run `uv sync`."
     ) from exc
 
+# ADR-0016: shared drift-detection manifest helper (sys.path pattern matches
+# ingest_hamburg_osm.py's existing cross-module import convention; see
+# ingest_lor_geometries.py for the same comment in full).
+_INGESTION_ROOT = Path(__file__).resolve().parents[2]
+if str(_INGESTION_ROOT) not in sys.path:
+    sys.path.insert(0, str(_INGESTION_ROOT))
+from manifest import existing_outputs, write_manifest_entry  # noqa: E402
+
 # ---------------------------------------------------------------------------
 # Constants
 # ---------------------------------------------------------------------------
@@ -452,7 +460,31 @@ def main(argv: Optional[list[str]] = None) -> int:
         total += ingest_year(year, out_dir)
 
     log.info("All years complete. Grand total: %d rows.", total)
+
+    _write_manifest(out_dir)
+
     return 0 if total > 0 else 1
+
+
+def _write_manifest(out_dir: Path) -> None:
+    """ADR-0016: record this source's current on-disk outputs in the committed manifest."""
+    found = existing_outputs(out_dir, ["bodenrichtwert_*.parquet"])
+    if not found:
+        return
+    write_manifest_entry(
+        source_id="berlin__bodenrichtwerte",
+        source_class="pinned",
+        city="berlin",
+        upstream_url="https://gdi.berlin.de/services/wfs/brw{year} (brw_{year}_vector feature type)",
+        upstream_vintage=",".join(
+            str(y)
+            for y in sorted(
+                {int(p.stem.split("_")[1]) for p in found if p.stem.split("_")[1].isdigit()}
+            )
+        ),
+        output_paths=found,
+        ingest_script_module="ingestion.berlin.price_rent.ingest_bodenrichtwerte",
+    )
 
 
 if __name__ == "__main__":
