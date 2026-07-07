@@ -5,7 +5,7 @@
   "upstream": {
     "url": "https://geodienste.hamburg.de/HH_WFS_SozErhVO",
     "vintage": "current (live WFS edition; confirmed 2026-07-01)",
-    "retrieved_at": "2026-07-05T22:19:14Z"
+    "retrieved_at": "2026-07-07T06:28:09Z"
   },
   "outputs": [
     {
@@ -17,7 +17,7 @@
   ],
   "ingest_script": {
     "module": "ingestion.hamburg.displacement.ingest_hamburg_displacement",
-    "git_sha": "2f6b2f6853967d004d6942592bb52d4740e6cc97"
+    "git_sha": "07b29662a00db8917cba0309e1bd41a678ed86b9"
   },
   "manifest_schema_version": 1
 }
