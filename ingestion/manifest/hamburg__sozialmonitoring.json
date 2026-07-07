@@ -1,0 +1,23 @@
+{
+  "source_id": "hamburg__sozialmonitoring",
+  "source_class": "pinned",
+  "city": "hamburg",
+  "upstream": {
+    "url": "https://geodienste.hamburg.de/wfs_sozialmonitoring (de.hh.up:sozialmonitoring)",
+    "vintage": "editions 2013-2025 (annual; embedded per-row in the output)",
+    "retrieved_at": "2026-07-05T22:19:13Z"
+  },
+  "outputs": [
+    {
+      "path": "data/raw/hamburg/sozialmonitoring/sozialmonitoring.parquet",
+      "row_count": 11030,
+      "schema_fingerprint": "sha256:94024b35ec2eaf91a504851fd5eaadcc92ff0e4dad5379187ab73f32f52ddc1f",
+      "content_hash": "sha256:f99295f132ad9cbb83f458ae26c81d8658aa73757c09348b0e6c45542ccfe2a3"
+    }
+  ],
+  "ingest_script": {
+    "module": "ingestion.hamburg.sozialmonitoring.ingest_hamburg_sozialmonitoring",
+    "git_sha": "2f6b2f6853967d004d6942592bb52d4740e6cc97"
+  },
+  "manifest_schema_version": 1
+}

@@ -52,16 +52,34 @@
 -- Same-year join in int_gentrification_ts means every row there has MSS + POI
 -- coexisting.
 --
+-- BERLIN-ONLY SCOPE (#125, staging decision -- not a methodology re-derivation):
+-- int_gentrification_ts now also carries Hamburg rows (Branch C, ADR-0014, H1 #40).
+-- This model is filtered to city_code='BER' because `edition_tk = edition_t +
+-- lag_k * 2` hardcodes Berlin MSS's BIENNIAL cadence -- ADR-0014 records Hamburg's
+-- Sozialmonitoring as ANNUAL since 2010, so the same "lag_k * 2" step would silently
+-- redefine a "1-step lag" as a 2-edition (not 1-edition) gap for Hamburg, and would
+-- need its own cadence-aware offset (lag_k * 1) plus a re-derivation of whether H3a/
+-- H3b even replicate on Hamburg's annual series -- a genuine methodology question,
+-- not a mechanical fix. The H1 sign-offs (docs/epic-h/H1-geo-signoff.md,
+-- H1-domain-signoff.md) scoped their PASS to int_gentrification_ts pipeline wiring
+-- only ("no dashboard/report is published from it yet") and geo-DS Condition 2
+-- explicitly defers a Hamburg E1/E2-equivalent regression to a future ticket.
+-- METHODOLOGY QUESTION flagged for geo-DS + domain-expert gate (#125): should a
+-- Hamburg lead-lag model be built now (with an annual-cadence redesign), and does
+-- H3a/H3b replicate on Hamburg's annual Sozialmonitoring series at all? Not decided
+-- here -- Berlin-only filter preserves existing Berlin behaviour and output exactly.
+--
 -- dbt_meta_owner: data-engineer
 -- depends_on: {{ ref('int_gentrification_ts') }}
 {{ config(materialized="table", meta={"dbt_meta_owner": "data-engineer"}) }}
 
 with
-    -- Source: inhabited PLRs with MSS data only (uninhabited excluded per §7.1)
+    -- Source: inhabited Berlin PLRs with MSS data only (uninhabited excluded per
+    -- §7.1; city_code='BER' per the staging-scope note above, #125).
     ts as (
         select *
         from {{ ref("int_gentrification_ts") }}
-        where is_uninhabited = false and mss_edition is not null
+        where is_uninhabited = false and mss_edition is not null and city_code = 'BER'
     ),
 
     -- D3 delta within vintage: delta_dynamism = dynamism_score at t vs t-1 (for H3b

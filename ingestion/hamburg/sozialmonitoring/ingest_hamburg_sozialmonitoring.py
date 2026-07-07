@@ -129,6 +129,14 @@ except ImportError:
 import pyarrow as pa
 import pyarrow.parquet as pq
 
+# ADR-0016: shared drift-detection manifest helper (sys.path pattern matches
+# ingest_hamburg_osm.py's existing cross-module import convention; see
+# ingestion/berlin/lor/ingest_lor_geometries.py for the same comment in full).
+_INGESTION_ROOT = Path(__file__).resolve().parents[2]
+if str(_INGESTION_ROOT) not in sys.path:
+    sys.path.insert(0, str(_INGESTION_ROOT))
+from manifest import existing_outputs, write_manifest_entry  # noqa: E402
+
 # ---------------------------------------------------------------------------
 # Constants
 # ---------------------------------------------------------------------------
@@ -443,7 +451,26 @@ def main(argv: Optional[list[str]] = None) -> int:
         return 1
 
     log.info("Done. %d rows, %d editions.", len(rows), len(editions_seen))
+
+    _write_manifest(out_dir)
+
     return 0
+
+
+def _write_manifest(out_dir: Path) -> None:
+    """ADR-0016: record this source's current on-disk output in the committed manifest."""
+    found = existing_outputs(out_dir, ["sozialmonitoring.parquet"])
+    if not found:
+        return
+    write_manifest_entry(
+        source_id="hamburg__sozialmonitoring",
+        source_class="pinned",
+        city="hamburg",
+        upstream_url="https://geodienste.hamburg.de/wfs_sozialmonitoring (de.hh.up:sozialmonitoring)",
+        upstream_vintage="editions 2013-2025 (annual; embedded per-row in the output)",
+        output_paths=found,
+        ingest_script_module="ingestion.hamburg.sozialmonitoring.ingest_hamburg_sozialmonitoring",
+    )
 
 
 if __name__ == "__main__":

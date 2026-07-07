@@ -1,0 +1,29 @@
+{
+  "source_id": "berlin__mietspiegel",
+  "source_class": "pinned",
+  "city": "berlin",
+  "upstream": {
+    "url": "https://mietspiegel.berlin.de/wp-content/uploads/.../mietspiegeltabelle{year}.pdf",
+    "vintage": "2024,2026",
+    "retrieved_at": "2026-06-18T06:24:17Z"
+  },
+  "outputs": [
+    {
+      "path": "data/raw/berlin/mietspiegel/mietspiegel_2024.parquet",
+      "row_count": 7,
+      "schema_fingerprint": "sha256:7b21263ea7e9c1c7b77ac9a404bc60a06abcddb742dc8699fc8419389179ec03",
+      "content_hash": "sha256:28c9483e053f8d7bceacded0c5c8d4e40096703439cadd5bffdfe6ea0bf84fcd"
+    },
+    {
+      "path": "data/raw/berlin/mietspiegel/mietspiegel_2026.parquet",
+      "row_count": 144,
+      "schema_fingerprint": "sha256:7b21263ea7e9c1c7b77ac9a404bc60a06abcddb742dc8699fc8419389179ec03",
+      "content_hash": "sha256:2a5e1653d73baaebec959b3fbd111aca3c6b9852b380069ca785b1ae34e5825e"
+    }
+  ],
+  "ingest_script": {
+    "module": "ingestion.berlin.mietspiegel.ingest_mietspiegel",
+    "git_sha": "9cf6028ab6d493ea675cc31ff03be957e928c616"
+  },
+  "manifest_schema_version": 1
+}

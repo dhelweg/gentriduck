@@ -1,0 +1,131 @@
+{
+  "source_id": "hamburg__osm",
+  "source_class": "rolling",
+  "city": "hamburg",
+  "upstream": {
+    "url": "https://osm-internal.download.geofabrik.de/europe/germany-internal.osh.pbf (login-gated, ADR-0002)",
+    "vintage": "unknown (PBF publish-date not captured by the ingestor; PBF itself is never hashed, ADR-0016)",
+    "retrieved_at": "2026-07-06T23:00:45Z"
+  },
+  "outputs": [
+    {
+      "path": "data/raw/osm/hamburg/2008.parquet",
+      "row_count": 843,
+      "schema_fingerprint": "sha256:0117a394ec65a4b1a3830a7e46f0dbe703ee09e7abddd96caeaedce7e994226c",
+      "content_hash": "sha256:bb2c1d1be936a5c350e58671e128bd9f71a61b02738192d73c2abc5d2e914970"
+    },
+    {
+      "path": "data/raw/osm/hamburg/2009.parquet",
+      "row_count": 5828,
+      "schema_fingerprint": "sha256:0117a394ec65a4b1a3830a7e46f0dbe703ee09e7abddd96caeaedce7e994226c",
+      "content_hash": "sha256:e7a4d8d48d403989378e248fe47cffc9b72e986a4a4947626e0f205dcea3c065"
+    },
+    {
+      "path": "data/raw/osm/hamburg/2010.parquet",
+      "row_count": 13583,
+      "schema_fingerprint": "sha256:0117a394ec65a4b1a3830a7e46f0dbe703ee09e7abddd96caeaedce7e994226c",
+      "content_hash": "sha256:093293c4b139165d07a20cf06f088baea5d2507b696dbd4294bda963661f262d"
+    },
+    {
+      "path": "data/raw/osm/hamburg/2011.parquet",
+      "row_count": 20307,
+      "schema_fingerprint": "sha256:0117a394ec65a4b1a3830a7e46f0dbe703ee09e7abddd96caeaedce7e994226c",
+      "content_hash": "sha256:8a1a8c34aa95896746b9fbdae2ca1b85ca3d88629cbaa4799ef5d006140b756b"
+    },
+    {
+      "path": "data/raw/osm/hamburg/2012.parquet",
+      "row_count": 25340,
+      "schema_fingerprint": "sha256:0117a394ec65a4b1a3830a7e46f0dbe703ee09e7abddd96caeaedce7e994226c",
+      "content_hash": "sha256:46013100a51c2a1b8ab12ed8b584db43024fc60d665abada74245b193fc35381"
+    },
+    {
+      "path": "data/raw/osm/hamburg/2013.parquet",
+      "row_count": 31844,
+      "schema_fingerprint": "sha256:0117a394ec65a4b1a3830a7e46f0dbe703ee09e7abddd96caeaedce7e994226c",
+      "content_hash": "sha256:1b39d897103dae09a41a707571a25c3d8c2eafb3667841c07b46ca37f43e9539"
+    },
+    {
+      "path": "data/raw/osm/hamburg/2014.parquet",
+      "row_count": 36040,
+      "schema_fingerprint": "sha256:0117a394ec65a4b1a3830a7e46f0dbe703ee09e7abddd96caeaedce7e994226c",
+      "content_hash": "sha256:5b9103370ae99d37f0c042bb05ef5973fa1304d2eb88223977dbd37333584def"
+    },
+    {
+      "path": "data/raw/osm/hamburg/2015.parquet",
+      "row_count": 39461,
+      "schema_fingerprint": "sha256:0117a394ec65a4b1a3830a7e46f0dbe703ee09e7abddd96caeaedce7e994226c",
+      "content_hash": "sha256:79152644c3f9d3be35f21c348e6b11adccd54cd3440fe5859eff0ddf3813093f"
+    },
+    {
+      "path": "data/raw/osm/hamburg/2016.parquet",
+      "row_count": 43634,
+      "schema_fingerprint": "sha256:0117a394ec65a4b1a3830a7e46f0dbe703ee09e7abddd96caeaedce7e994226c",
+      "content_hash": "sha256:15dad8bf571a607c99154a04f1823785d93c23eb5a935af9e116e297db53fa28"
+    },
+    {
+      "path": "data/raw/osm/hamburg/2017.parquet",
+      "row_count": 47452,
+      "schema_fingerprint": "sha256:0117a394ec65a4b1a3830a7e46f0dbe703ee09e7abddd96caeaedce7e994226c",
+      "content_hash": "sha256:a949ca4e474459710214353d6d039993b502a923730e8f4c8662a303fb51461b"
+    },
+    {
+      "path": "data/raw/osm/hamburg/2018.parquet",
+      "row_count": 50305,
+      "schema_fingerprint": "sha256:0117a394ec65a4b1a3830a7e46f0dbe703ee09e7abddd96caeaedce7e994226c",
+      "content_hash": "sha256:7c9891cf0fc436dcf64475b84d2789e7ef1bf8db52c8801e59c07467d4cac3f4"
+    },
+    {
+      "path": "data/raw/osm/hamburg/2019.parquet",
+      "row_count": 57313,
+      "schema_fingerprint": "sha256:0117a394ec65a4b1a3830a7e46f0dbe703ee09e7abddd96caeaedce7e994226c",
+      "content_hash": "sha256:c19b0910c62967f6b6c28ca9f4e22da2e91b55d9d2b51ad3d82c215d2296799b"
+    },
+    {
+      "path": "data/raw/osm/hamburg/2020.parquet",
+      "row_count": 62401,
+      "schema_fingerprint": "sha256:0117a394ec65a4b1a3830a7e46f0dbe703ee09e7abddd96caeaedce7e994226c",
+      "content_hash": "sha256:8507c693c42b73dd1e4e9ef75eb550869b3a80c28eed4b5f58ece0aa7227b81d"
+    },
+    {
+      "path": "data/raw/osm/hamburg/2021.parquet",
+      "row_count": 66307,
+      "schema_fingerprint": "sha256:0117a394ec65a4b1a3830a7e46f0dbe703ee09e7abddd96caeaedce7e994226c",
+      "content_hash": "sha256:c4fa151652a2c4cfe5801c0adbd1745148a5043bcebfc3accf85ba7f6ef61214"
+    },
+    {
+      "path": "data/raw/osm/hamburg/2022.parquet",
+      "row_count": 71085,
+      "schema_fingerprint": "sha256:0117a394ec65a4b1a3830a7e46f0dbe703ee09e7abddd96caeaedce7e994226c",
+      "content_hash": "sha256:9c34ffffcf69283b25cc3673c47b0194e767c1eb28c906f20a5215b98e97cea6"
+    },
+    {
+      "path": "data/raw/osm/hamburg/2023.parquet",
+      "row_count": 75196,
+      "schema_fingerprint": "sha256:0117a394ec65a4b1a3830a7e46f0dbe703ee09e7abddd96caeaedce7e994226c",
+      "content_hash": "sha256:2469a8c796877a6229251d6d00984c923d67b3a60b98e45749683d94f4f9f667"
+    },
+    {
+      "path": "data/raw/osm/hamburg/2024.parquet",
+      "row_count": 80510,
+      "schema_fingerprint": "sha256:0117a394ec65a4b1a3830a7e46f0dbe703ee09e7abddd96caeaedce7e994226c",
+      "content_hash": "sha256:2f7031a0a854b9f504b4f33ce97e78c34e33d483e12284c9a7412c115e370668"
+    },
+    {
+      "path": "data/raw/osm/hamburg/2025.parquet",
+      "row_count": 88026,
+      "schema_fingerprint": "sha256:0117a394ec65a4b1a3830a7e46f0dbe703ee09e7abddd96caeaedce7e994226c",
+      "content_hash": "sha256:fd4944044b5d3ffd4ace77b339d1246b15f57ee1d08b5fa5c9adcffe6b87eeb3"
+    },
+    {
+      "path": "data/raw/osm/hamburg/2026-partial.parquet",
+      "row_count": 96125,
+      "schema_fingerprint": "sha256:0117a394ec65a4b1a3830a7e46f0dbe703ee09e7abddd96caeaedce7e994226c",
+      "content_hash": "sha256:da2ca837a1100879c5dd8002e19c86de58585eeeb88c9cce50f2d4d629a46fad"
+    }
+  ],
+  "ingest_script": {
+    "module": "ingestion.hamburg.osm.ingest_hamburg_osm",
+    "git_sha": "2f6b2f6853967d004d6942592bb52d4740e6cc97"
+  },
+  "manifest_schema_version": 1
+}

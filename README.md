@@ -6,7 +6,7 @@ website of **gentrification & social-development statistics** for Berlin (and, l
 
 - **Stack:** [dbt](https://www.getdbt.com/) + [DuckDB](https://duckdb.org/) (local) · Python ([uv](https://docs.astral.sh/uv/)), analysis in scipy / scikit-learn · [Evidence.dev](https://evidence.dev/) static site reading published marts via in-browser DuckDB-WASM, hosted free on GitHub / Cloudflare Pages ([ADR-0012](docs/adr/0012-serving-and-hosting-stack.md))
 - **Data:** OpenStreetMap history (© OpenStreetMap contributors, ODbL) + Berlin open data — LOR geographies, EWR population register, Bodenrichtwerte / Mietspiegel price & rent — **free & open only**
-- **Status:** Epics **A–F** substantially complete; the Berlin statistics **website (Epic G) is built and soft-launched** (noindex) on GitHub Pages while the Cloudflare Pages primary host is finalised; multi-city (**Epic H**, Hamburg) in progress. ~105 of 112 tracked issues done (as of 2026-07). See the roadmap below.
+- **Status:** Epics **A–F** substantially complete; the Berlin statistics **website (Epic G) is built and soft-launched** (noindex) on GitHub Pages while the Cloudflare Pages primary host is finalised; **multi-city (Epic H)** underway — Hamburg is ingested and wired through the pipeline but **staged (not yet published)** pending methodology validation. Most of the tracked backlog is done (as of 2026-07). See the roadmap below.
 
 ## Repository layout (monorepo)
 
@@ -24,11 +24,11 @@ website of **gentrification & social-development statistics** for Berlin (and, l
 ## Roadmap
 
 The full plan lives in [`docs/PROJECT_PLAN.md`](docs/PROJECT_PLAN.md); architecture decisions are
-recorded in [`docs/adr/`](docs/adr/README.md) (ADR-0001 … ADR-0015); the live backlog is the
+recorded in [`docs/adr/`](docs/adr/README.md) (ADR-0001 … ADR-0016); the live backlog is the
 **Gentriduck** GitHub Project board. Epics (✓ = substantially complete): **A** foundations ✓ ·
 **B** revive the 2018 concept ✓ · **C** longitudinal OSM POI history ✓ · **D** price/rent dimension ✓ ·
 **E** analysis & ML ✓ · **F** serving layer ✓ · **G** public website ✓ (built, soft-launched) ·
-**H** multi-city (Hamburg, in progress).
+**H** multi-city (Hamburg ingested + wired through the pipeline, staged/unpublished pending validation).
 
 ## Setup on macOS / Windows / Linux
 
@@ -101,6 +101,7 @@ uv run poe refresh
 
 #    Or step by step:
 uv run poe ingest          # every ingestion script (see ingestion/README.md for module details)
+uv run poe verify-data     # ADR-0016: does this machine's ingested data match the committed manifest? (drift check, no build; also runs as a poe refresh pre-flight)
 uv run poe build           # dbt build (staging -> intermediate -> marts) + tests
 uv run poe export-serving  # publish marts to data/serving/*.parquet (DATA_LICENSE.md)
 uv run poe test            # dbt tests only

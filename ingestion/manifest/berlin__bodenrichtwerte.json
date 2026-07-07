@@ -1,0 +1,23 @@
+{
+  "source_id": "berlin__bodenrichtwerte",
+  "source_class": "pinned",
+  "city": "berlin",
+  "upstream": {
+    "url": "https://gdi.berlin.de/services/wfs/brw{year} (brw_{year}_vector feature type)",
+    "vintage": "2024",
+    "retrieved_at": "2026-06-18T00:20:10Z"
+  },
+  "outputs": [
+    {
+      "path": "data/raw/berlin/price_rent/bodenrichtwert_2024.parquet",
+      "row_count": 1621,
+      "schema_fingerprint": "sha256:75dcb66eb7f8d01a074487fa8dfa1538b3bc37e635b9f252427ddb7a10d7d1e8",
+      "content_hash": "sha256:8771165c89a4ee146efd2af6d069e5dab626fde67f4d92a7a8dc94a5e7bf361b"
+    }
+  ],
+  "ingest_script": {
+    "module": "ingestion.berlin.price_rent.ingest_bodenrichtwerte",
+    "git_sha": "9cf6028ab6d493ea675cc31ff03be957e928c616"
+  },
+  "manifest_schema_version": 1
+}

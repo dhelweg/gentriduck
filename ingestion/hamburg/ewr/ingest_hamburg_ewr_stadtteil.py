@@ -164,6 +164,14 @@ import pandas as pd
 import pyarrow as pa
 import pyarrow.parquet as pq
 
+# ADR-0016: shared drift-detection manifest helper (sys.path pattern matches
+# ingest_hamburg_osm.py's existing cross-module import convention; see
+# ingestion/berlin/lor/ingest_lor_geometries.py for the same comment in full).
+_INGESTION_ROOT = Path(__file__).resolve().parents[2]
+if str(_INGESTION_ROOT) not in sys.path:
+    sys.path.insert(0, str(_INGESTION_ROOT))
+from manifest import existing_outputs, write_manifest_entry  # noqa: E402
+
 # ---------------------------------------------------------------------------
 # Constants
 # ---------------------------------------------------------------------------
@@ -493,7 +501,26 @@ def main(argv: Optional[list[str]] = None) -> int:
         df["reference_year"].min(),
         df["reference_year"].max(),
     )
+
+    _write_manifest(out_dir, int(df["reference_year"].min()), int(df["reference_year"].max()))
+
     return 0
+
+
+def _write_manifest(out_dir: Path, year_min: int, year_max: int) -> None:
+    """ADR-0016: record this source's current on-disk output in the committed manifest."""
+    found = existing_outputs(out_dir, ["stadtteile.parquet"])
+    if not found:
+        return
+    write_manifest_entry(
+        source_id="hamburg__ewr_stadtteil",
+        source_class="pinned",
+        city="hamburg",
+        upstream_url="Transparenzportal — 'Regionalstatistische Daten der Stadtteile Hamburgs' (CKAN)",
+        upstream_vintage=f"{year_min}-{year_max}",
+        output_paths=found,
+        ingest_script_module="ingestion.hamburg.ewr.ingest_hamburg_ewr_stadtteil",
+    )
 
 
 if __name__ == "__main__":

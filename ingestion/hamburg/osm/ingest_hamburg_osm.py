@@ -42,6 +42,11 @@ Usage:
       --osh-pbf data/raw/osm/germany-internal.osh.pbf \\
       --out-dir data/raw/osm/hamburg --years 2008-2024
 
+  For an in-progress calendar year (parity with Berlin's --partial-years, #125):
+  uv run python ingestion/hamburg/osm/ingest_hamburg_osm.py \\
+      --osh-pbf data/raw/osm/germany-internal.osh.pbf \\
+      --out-dir data/raw/osm/hamburg --years 2025-2026 --partial-years 2026
+
 Bounding box source: OpenStreetMap Nominatim — Hamburg, Germany (administrative
 boundary bbox), same convention as Berlin's ingest_osm_history.py.
 
@@ -55,6 +60,7 @@ Attribution (mandatory — ODbL):
 
 from __future__ import annotations
 
+import datetime
 import sys
 from pathlib import Path
 
@@ -67,6 +73,15 @@ _BERLIN_OSM_DIR = Path(__file__).resolve().parents[2] / "berlin" / "osm"
 sys.path.insert(0, str(_BERLIN_OSM_DIR))
 
 import ingest_osm_history as _berlin_osm  # noqa: E402  (path-dependent import)
+
+# ADR-0016: shared drift-detection manifest helper. Same sys.path pattern as the
+# Berlin import above; _INGESTION_ROOT is that import's own parent (ingestion/).
+# Rolling source — see ingest_osm_history.py's own manifest-import comment for
+# the .osh.pbf non-hashing rationale (identical here, same underlying source).
+_INGESTION_ROOT = _BERLIN_OSM_DIR.parent.parent
+if str(_INGESTION_ROOT) not in sys.path:
+    sys.path.insert(0, str(_INGESTION_ROOT))
+from manifest import existing_outputs, write_manifest_entry  # noqa: E402
 
 # ---------------------------------------------------------------------------
 # Hamburg-specific constants
@@ -162,6 +177,13 @@ def main(argv: list[str] | None = None) -> int:
         default=1,
         help="Number of parallel worker processes (default: 1).",
     )
+    parser.add_argument(
+        "--partial-years",
+        default="",
+        help="Comma-separated years whose output file is named '{year}-partial.parquet' "
+        "instead of '{year}.parquet' (e.g. '2026' for an in-progress year). Parity with "
+        "ingestion/berlin/osm/ingest_osm_history.py's --partial-years (#125).",
+    )
     args = parser.parse_args(argv)
 
     osh_pbf: Path = args.osh_pbf
@@ -178,6 +200,11 @@ def main(argv: list[str] | None = None) -> int:
         return 1
 
     years = _berlin_osm.parse_years(args.years)
+    partial_years: set[int] = (
+        {int(y.strip()) for y in args.partial_years.split(",") if y.strip()}
+        if args.partial_years
+        else set()
+    )
     out_dir: Path = args.out_dir
     skip_existing = args.skip_existing and not args.force
 
@@ -203,17 +230,21 @@ def main(argv: list[str] | None = None) -> int:
         HAMBURG_MAX_LAT,
     )
 
+    def _stem(year: int) -> str:
+        return f"{year}-partial" if year in partial_years else str(year)
+
     years_to_run = [
         y
         for y in sorted(years, reverse=True)
-        if not (skip_existing and (out_dir / f"{y}.parquet").exists())
+        if not (skip_existing and (out_dir / f"{_stem(y)}.parquet").exists())
     ]
     for y in sorted(years):
         if y not in years_to_run:
-            _berlin_osm.log.info("Skipping year=%d (output exists: %s.parquet)", y, y)
+            _berlin_osm.log.info("Skipping year=%d (output exists: %s.parquet)", y, _stem(y))
 
     if not years_to_run:
         _berlin_osm.log.info("All years already exist. Done.")
+        _write_manifest(out_dir, osh_pbf)
         return 0
 
     workers = min(args.workers, len(years_to_run))
@@ -223,7 +254,7 @@ def main(argv: list[str] | None = None) -> int:
 
     def _run_year(year: int) -> None:
         df = _berlin_osm.extract_snapshot(osh_pbf, year, poi_mapping)
-        _berlin_osm.write_parquet(df, out_dir / f"{year}.parquet")
+        _berlin_osm.write_parquet(df, out_dir / f"{_stem(year)}.parquet")
 
     if workers == 1:
         for year in years_to_run:
@@ -234,18 +265,55 @@ def main(argv: list[str] | None = None) -> int:
         with multiprocessing.Pool(processes=workers) as pool:
             pool.starmap(
                 _run_year_worker,
-                [(osh_pbf, y, poi_mapping, out_dir) for y in years_to_run],
+                [(osh_pbf, y, poi_mapping, out_dir, partial_years) for y in years_to_run],
             )
 
     _berlin_osm.log.info("Done. Output directory: %s", out_dir)
+    _write_manifest(out_dir, osh_pbf)
     return 0
 
 
-def _run_year_worker(osh_pbf: Path, year: int, poi_mapping: dict, out_dir: Path) -> None:
+def _write_manifest(out_dir: Path, osh_pbf: Path) -> None:
+    """ADR-0016: record this rolling source's current on-disk yearly snapshot
+    outputs in the committed manifest. The .osh.pbf itself is never hashed or
+    listed as an output (maintainer decision) — only its file mtime is recorded,
+    informationally, as a best-effort proxy for the Geofabrik publish date."""
+    found = existing_outputs(out_dir, ["*.parquet"])
+    if not found:
+        return
+    try:
+        pbf_mtime = datetime.datetime.fromtimestamp(
+            osh_pbf.stat().st_mtime, tz=datetime.timezone.utc
+        )
+        vintage = (
+            f"PBF file mtime {pbf_mtime.strftime('%Y-%m-%d')} "
+            "(best-effort proxy for Geofabrik publish date, not a true fetch record)"
+        )
+    except OSError:
+        vintage = "unknown (PBF publish-date not captured by the ingestor)"
+    write_manifest_entry(
+        source_id="hamburg__osm",
+        source_class="rolling",
+        city="hamburg",
+        upstream_url="https://osm-internal.download.geofabrik.de/europe/germany-internal.osh.pbf (login-gated, ADR-0002)",
+        upstream_vintage=vintage,
+        output_paths=found,
+        ingest_script_module="ingestion.hamburg.osm.ingest_hamburg_osm",
+    )
+
+
+def _run_year_worker(
+    osh_pbf: Path,
+    year: int,
+    poi_mapping: dict,
+    out_dir: Path,
+    partial_years: set[int] | None = None,
+) -> None:
     """Top-level worker function for multiprocessing (must be picklable)."""
     _patch_for_hamburg()
+    stem = f"{year}-partial" if (partial_years and year in partial_years) else str(year)
     df = _berlin_osm.extract_snapshot(osh_pbf, year, poi_mapping)
-    _berlin_osm.write_parquet(df, out_dir / f"{year}.parquet")
+    _berlin_osm.write_parquet(df, out_dir / f"{stem}.parquet")
 
 
 if __name__ == "__main__":

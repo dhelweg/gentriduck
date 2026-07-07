@@ -63,6 +63,15 @@ export-serving = "python transform/export_serving_parquet.py"
 # GeoJSON FeatureCollections for Evidence's AreaMap (web/static/geo/, gitignored).
 # Run after `poe export-serving`.
 export-area-geojson = "python web/scripts/export_area_geojson.py"
+# ADR-0016: fast, local drift check between the committed manifest
+# (ingestion/manifest/*.json) and this machine's data/ contents. Seconds, no dbt
+# build. Default is informational (always exit 0); --strict gates on pinned-source
+# drift only (rolling/OSM sources never fail --strict). See ingestion/verify_data.py.
+verify-data = "python ingestion/verify_data.py"
+# ADR-0016: one-time / re-runnable tool that populates manifest entries from
+# artefacts already on disk, without re-fetching anything (in particular, without
+# the ~20h OSM history extraction). See ingestion/manifest_backfill.py.
+manifest-backfill = "python ingestion/manifest_backfill.py"
 fmt      = { sequence = ["ruff format .", "sqlfmt transform"], default_item_type = "cmd" }
 lint     = { sequence = ["ruff check .", "sqlfluff lint transform"], default_item_type = "cmd" }
 # R-C3: analysis scripts are deterministic (random_state=42) and require ingested data.
@@ -122,4 +131,8 @@ ingest-osm-hamburg = "python ingestion/hamburg/osm/ingest_hamburg_osm.py --osh-p
 # toolchain, owned by web-engineer/G0-G1), and analysis/backtest (one-off validation, not
 # site-serving artefacts). See ADR-0015 for the full rationale, including the deferred
 # GitHub-Actions-schedule path for a future automated cadence.
-refresh = { sequence = ["deps", "ingest", "build", "export-serving", "export-area-geojson"], default_item_type = "ref" }
+# ADR-0016: verify-data runs FIRST as a non-strict, informational pre-flight (prints
+# a drift summary; always exits 0) — never a hard gate on refresh, preserving
+# ADR-0015's graceful degradation. Run `poe verify-data --strict` separately for a
+# gating check.
+refresh = { sequence = ["verify-data", "deps", "ingest", "build", "export-serving", "export-area-geojson"], default_item_type = "ref" }

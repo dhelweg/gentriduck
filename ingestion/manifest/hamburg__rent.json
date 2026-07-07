@@ -1,0 +1,29 @@
+{
+  "source_id": "hamburg__rent",
+  "source_class": "pinned",
+  "city": "hamburg",
+  "upstream": {
+    "url": "https://geodienste.hamburg.de/HH_WFS_Wohnlagen ; Mietenspiegel WFS",
+    "vintage": "current (erhebungsstand 2025-04-01; confirmed live 2026-07-01)",
+    "retrieved_at": "2026-07-05T22:19:35Z"
+  },
+  "outputs": [
+    {
+      "path": "data/raw/hamburg/rent/mietenspiegel.parquet",
+      "row_count": 88,
+      "schema_fingerprint": "sha256:a8c6e4c791e59d91fc4504a43e42ecade3ed91248a9486695cd5f41c424070e3",
+      "content_hash": "sha256:ce85186571bb425f79c96ae18441d2ada05316be5c96977c981f4b9c00a0ab55"
+    },
+    {
+      "path": "data/raw/hamburg/rent/wohnlage.parquet",
+      "row_count": 283801,
+      "schema_fingerprint": "sha256:dd2cd35d52ea4cf205e58daf7420567c9b30f25331304af059303d61d74ce056",
+      "content_hash": "sha256:e8c5b25c069f65f78753d892b36948317f84c5f4932d15f5503d0aef2b0d11d7"
+    }
+  ],
+  "ingest_script": {
+    "module": "ingestion.hamburg.rent.ingest_hamburg_rent",
+    "git_sha": "9cf6028ab6d493ea675cc31ff03be957e928c616"
+  },
+  "manifest_schema_version": 1
+}

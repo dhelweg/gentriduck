@@ -1,0 +1,23 @@
+{
+  "source_id": "berlin__lor_crosswalk",
+  "source_class": "pinned",
+  "city": "berlin",
+  "upstream": {
+    "url": "derived (areal-weighted intersection of pre2021/2021 LOR geometries; GDI Berlin WFS upstream)",
+    "vintage": "derived from lor_pre2021 + lor_2021",
+    "retrieved_at": "2026-07-06T19:50:40Z"
+  },
+  "outputs": [
+    {
+      "path": "data/raw/berlin/lor/lor_crosswalk.parquet",
+      "row_count": 3088,
+      "schema_fingerprint": "sha256:d36a5ca7b1f5e0ef3272ea5dc92b1522075ce3438d65275641e5759f318af9bd",
+      "content_hash": "sha256:629586d4107f9e22b5ed99ddf66c72401a367c5e5a46929af368c7184509e237"
+    }
+  ],
+  "ingest_script": {
+    "module": "ingestion.berlin.lor.ingest_lor_crosswalk",
+    "git_sha": "2f6b2f6853967d004d6942592bb52d4740e6cc97"
+  },
+  "manifest_schema_version": 1
+}

@@ -1,0 +1,53 @@
+{
+  "source_id": "berlin__mss",
+  "source_class": "pinned",
+  "city": "berlin",
+  "upstream": {
+    "url": "https://gdi.berlin.de/services/wfs/mss_<year> (mss<year>_indizes_<n> feature type)",
+    "vintage": "2015,2017,2019,2021,2023,2025",
+    "retrieved_at": "2026-06-28T10:39:53Z"
+  },
+  "outputs": [
+    {
+      "path": "data/raw/berlin/mss/mss_2015.parquet",
+      "row_count": 447,
+      "schema_fingerprint": "sha256:a10c0085d9749e4eac24affe6467dbfa1989ca0945d99540e762dc1ce31c83a7",
+      "content_hash": "sha256:e447233f699f3f330ab44f31549934d75874d93707143238642142e4f580760a"
+    },
+    {
+      "path": "data/raw/berlin/mss/mss_2017.parquet",
+      "row_count": 447,
+      "schema_fingerprint": "sha256:a10c0085d9749e4eac24affe6467dbfa1989ca0945d99540e762dc1ce31c83a7",
+      "content_hash": "sha256:1003e83e09006216cbaa0f96149e665e712c24c6f6e14a558c2fcc983f5649f7"
+    },
+    {
+      "path": "data/raw/berlin/mss/mss_2019.parquet",
+      "row_count": 447,
+      "schema_fingerprint": "sha256:a10c0085d9749e4eac24affe6467dbfa1989ca0945d99540e762dc1ce31c83a7",
+      "content_hash": "sha256:70e7a7dab5d3168632b429e1923e444aaa645b27bd4639b4fc4a078b71c35bcb"
+    },
+    {
+      "path": "data/raw/berlin/mss/mss_2021.parquet",
+      "row_count": 542,
+      "schema_fingerprint": "sha256:a10c0085d9749e4eac24affe6467dbfa1989ca0945d99540e762dc1ce31c83a7",
+      "content_hash": "sha256:933db0c9d6c9c8cc8b69c40aead4567b96414fff484fb529ca3f487c67c18344"
+    },
+    {
+      "path": "data/raw/berlin/mss/mss_2023.parquet",
+      "row_count": 542,
+      "schema_fingerprint": "sha256:a10c0085d9749e4eac24affe6467dbfa1989ca0945d99540e762dc1ce31c83a7",
+      "content_hash": "sha256:77b3d9f58bba1a0ddd451e2adff5d25378270f25ebf6dc80a066228d2ec8b2fd"
+    },
+    {
+      "path": "data/raw/berlin/mss/mss_2025.parquet",
+      "row_count": 542,
+      "schema_fingerprint": "sha256:a10c0085d9749e4eac24affe6467dbfa1989ca0945d99540e762dc1ce31c83a7",
+      "content_hash": "sha256:0a71b91567555f53ce9a20385a79dd1fd6256f724216fc729eeca1d3630e4d8d"
+    }
+  ],
+  "ingest_script": {
+    "module": "ingestion.berlin.mss.ingest_mss",
+    "git_sha": "9cf6028ab6d493ea675cc31ff03be957e928c616"
+  },
+  "manifest_schema_version": 1
+}

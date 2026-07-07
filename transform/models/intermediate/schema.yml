@@ -415,10 +415,13 @@ models:
       spurious share dynamics. Option B (ohsome edit-density normalization) is available
       for a future epic.
 
-      YoY deltas are computed within (area_code, area_vintage). Because the upstream
-      int_poi_share_base_2021 remaps all rows to the lor_2021 scheme before this model
-      reads them, the LAG window spans the 2020->2021 boundary and produces non-NULL
-      deltas at snapshot_year=2021 (fixes issue #63).
+      YoY deltas are computed within (city_code, area_code, area_vintage). For Berlin,
+      the upstream int_poi_share_base_2021 remaps all rows to the lor_2021 scheme
+      before this model reads them, so the LAG window spans the 2020->2021 boundary
+      and produces non-NULL deltas at snapshot_year=2021 (fixes issue #63). For any
+      other city with a single vintage across its whole series (e.g. Hamburg's
+      'current', ADR-0014, #125), int_poi_share_base_2021 passes rows through
+      unchanged and the LAG window is already contiguous with no boundary to bridge.
 
       C5 anomaly checks (implemented as standalone test SQL files, not schema.yml tests,
       because DuckDB does not allow window functions in WHERE clauses):
@@ -437,7 +440,7 @@ models:
             where: "area_code is not null"
     columns:
       - name: city_code
-        description: City identifier (ADR-0005). Always 'BER'.
+        description: City identifier (ADR-0005). 'BER' (Berlin) or 'HH' (Hamburg, #125).
         tests:
           - not_null:
               config:
@@ -456,15 +459,17 @@ models:
                 where: "snapshot_year is not null"
       - name: area_vintage
         description: >
-          LOR scheme vintage. Always 'lor_2021' since int_poi_share_base_2021 remaps
-          all pre-2021 PLR codes to their 2021 equivalents before this model reads them.
+          Berlin: always 'lor_2021' since int_poi_share_base_2021 remaps all
+          pre-2021 PLR codes to their 2021 equivalents before this model reads
+          them. Other cities: their own upstream vintage passed through unchanged
+          (e.g. Hamburg's 'current', ADR-0014, #125).
         tests:
           - not_null:
               config:
                 where: "area_code is not null"
           - accepted_values:
               arguments:
-                values: ["lor_2021"]
+                values: ["lor_2021", "current"]
               config:
                 where: "area_code is not null"
       - name: total_poi_count
@@ -1087,14 +1092,17 @@ models:
 
   - name: int_poi_share_base
     description: >
-      C5 helper: pre-materializes PLR POI share per year before dynamism computation.
-      DuckDB does not support nested window functions; materializing this as a separate
-      table breaks the chain at this boundary.
+      C5 helper: pre-materializes per-area POI share per year before dynamism
+      computation. DuckDB does not support nested window functions; materializing
+      this as a separate table breaks the chain at this boundary.
 
-      Grain: (city_code, snapshot_year, area_code, area_vintage). Contains both
+      Grain: (city_code, snapshot_year, area_code, area_vintage). Contains Berlin's
       lor_pre2021 (snapshot_year <= 2020) and lor_2021 (snapshot_year >= 2021) rows
-      with vintage-specific PLR codes. Direct consumers should use int_poi_share_base_2021
-      (which remaps all rows to the 2021 PLR scheme) unless they need the raw vintage split.
+      with vintage-specific PLR codes, plus any other city's own single-vintage rows
+      (e.g. Hamburg's 'current' statistische Gebiete, ADR-0014, #125). Direct
+      consumers should use int_poi_share_base_2021 (which remaps Berlin's rows to
+      the 2021 PLR scheme and passes other cities through unchanged) unless they
+      need the raw vintage split.
 
       This model is consumed exclusively by int_poi_share_base_2021.
     meta:
@@ -1111,7 +1119,7 @@ models:
             where: "area_code is not null"
     columns:
       - name: city_code
-        description: City identifier (ADR-0005). Always 'BER'.
+        description: City identifier (ADR-0005). 'BER' (Berlin) or 'HH' (Hamburg, #125).
         tests:
           - not_null:
               config:
@@ -1130,41 +1138,57 @@ models:
                 where: "snapshot_year is not null"
       - name: area_vintage
         description: >
-          LOR scheme vintage: 'lor_pre2021' (snapshot_year <= 2020) or
-          'lor_2021' (snapshot_year >= 2021).
+          Berlin: LOR scheme vintage, 'lor_pre2021' (snapshot_year <= 2020) or
+          'lor_2021' (snapshot_year >= 2021). Hamburg: 'current' (single live-WFS
+          statistische-Gebiete edition, ADR-0014 Pillar 1 -- no historical vintage
+          crosswalk yet, #125).
         tests:
           - not_null:
               config:
                 where: "area_code is not null"
           - accepted_values:
               arguments:
-                values: ["lor_pre2021", "lor_2021"]
+                values: ["lor_pre2021", "lor_2021", "current"]
               config:
                 where: "area_code is not null"
       - name: total_poi_count
-        description: Total POI count for this PLR in this snapshot year.
+        description: Total POI count for this area in this snapshot year.
       - name: berlin_total_poi_count
-        description: Sum of total_poi_count across all PLRs for this city and year.
+        description: >
+          Sum of total_poi_count across all areas for this city and year. Column
+          name retained from the pre-#125 Berlin-only version; the value is
+          per-city (window partitioned by city_code), not literally Berlin-only.
       - name: plr_poi_share
         description: >
-          This PLR's fraction of total Berlin POIs for this year:
+          This area's fraction of total city-wide POIs for this year:
           total_poi_count / berlin_total_poi_count. Ranges 0-1; city-wide sum = 1.0.
 
   - name: int_poi_share_base_2021
     description: >
-      Remaps int_poi_share_base to a unified LOR 2021 PLR scheme for all snapshot years.
-      Fixes issue #63: before this model, int_poi_status_dynamism read int_poi_share_base
-      directly, causing the LAG window (partitioned by area_code + area_vintage) to produce
-      NULL at snapshot_year=2021 because pre-2021 rows had different PLR codes and a
+      Remaps int_poi_share_base to a unified LOR 2021 PLR scheme for all Berlin
+      snapshot years, and passes through any other city's single-vintage rows
+      unchanged (e.g. Hamburg's 'current', #125). Fixes issue #63: before this
+      model, int_poi_status_dynamism read int_poi_share_base directly, causing the
+      LAG window (partitioned by area_code + area_vintage) to produce NULL at
+      snapshot_year=2021 because pre-2021 rows had different PLR codes and a
       different area_vintage value.
 
       Crosswalk strategy (mirrors int_berlin_ewr_plr2021):
-      - lor_2021 rows (snapshot_year >= 2021): passed through unchanged.
-      - lor_pre2021 rows (snapshot_year <= 2020): joined to seed_lor_crosswalk_2006_to_2021;
-        total_poi_count (an extensive/count indicator) is apportioned as SUM(count * weight).
+      - Berlin lor_pre2021 rows (snapshot_year <= 2020): joined to
+        seed_lor_crosswalk_2006_to_2021; total_poi_count (an extensive/count
+        indicator) is apportioned as SUM(count * weight); output area_vintage
+        forced to 'lor_2021'.
+      - ALL OTHER rows (Berlin's own lor_2021 rows, snapshot_year >= 2021; and any
+        other city's own vintage, e.g. Hamburg's 'current'): passed through
+        unchanged, keeping their own area_vintage. See the SQL header for the
+        methodology question this passthrough choice raises for a hypothetical
+        future city with its own mid-series boundary reform (#125) -- Hamburg
+        itself has no such reform in the ingested source, so passthrough is exact
+        for it today.
 
-      All output rows use area_vintage='lor_2021'. berlin_total_poi_count and plr_poi_share
-      are recomputed after aggregation (ratio recomputation is exact for counts).
+      berlin_total_poi_count and plr_poi_share are recomputed after aggregation,
+      partitioned by (city_code, snapshot_year, area_vintage) (ratio recomputation
+      is exact for counts).
 
       Consumed exclusively by int_poi_status_dynamism.
     meta:
@@ -1176,32 +1200,35 @@ models:
               - city_code
               - snapshot_year
               - area_code
+              - area_vintage
           config:
             where: "area_code is not null"
     columns:
       - name: city_code
-        description: City identifier (ADR-0005). Always 'BER'.
+        description: City identifier (ADR-0005). 'BER' (Berlin) or 'HH' (Hamburg, #125).
         tests:
           - not_null:
               config:
                 where: "area_code is not null"
       - name: area_code
-        description: PLR area code in the LOR 2021 scheme (8-digit, zero-padded).
+        description: PLR/area code (8-digit LOR 2021 code for Berlin; Hamburg statistisches-Gebiet code, passthrough).
         tests:
           - not_null:
               config:
                 where: "snapshot_year is not null"
       - name: area_vintage
         description: >
-          LOR scheme vintage. Always 'lor_2021': pre-2021 source rows are crosswalk-mapped
-          to 2021 PLR codes; 2021+ source rows pass through directly.
+          Berlin: always 'lor_2021' (pre-2021 source rows are crosswalk-mapped to
+          2021 PLR codes; 2021+ source rows pass through directly). Other cities
+          (e.g. Hamburg): their own upstream vintage, passed through unchanged
+          (e.g. 'current', #125).
         tests:
           - not_null:
               config:
                 where: "area_code is not null"
           - accepted_values:
               arguments:
-                values: ["lor_2021"]
+                values: ["lor_2021", "current"]
               config:
                 where: "area_code is not null"
       - name: snapshot_year
@@ -1212,19 +1239,21 @@ models:
                 where: "area_code is not null"
       - name: total_poi_count
         description: >
-          Aggregated total POI count for this 2021 PLR in this year.
-          For lor_2021 passthrough rows: same as int_poi_share_base.
-          For lor_pre2021 remapped rows: SUM(source_count * crosswalk_weight) across all
-          pre-2021 PLRs that map to this 2021 PLR (exact for count/extensive data).
+          Aggregated total POI count for this area in this year.
+          For passthrough rows (Berlin lor_2021, other cities): same as int_poi_share_base.
+          For Berlin lor_pre2021-remapped rows: SUM(source_count * crosswalk_weight) across
+          all pre-2021 PLRs that map to this 2021 PLR (exact for count/extensive data).
       - name: berlin_total_poi_count
         description: >
-          Sum of total_poi_count across all 2021 PLRs for this city and year.
-          City-wide total is invariant to PLR boundary remapping (same city, same POIs).
+          Sum of total_poi_count across all areas for this city, year, and vintage.
+          City-wide total is invariant to Berlin's PLR boundary remapping (same
+          city, same year, same POIs). Column name retained from the pre-#125
+          Berlin-only version.
       - name: plr_poi_share
         description: >
-          This 2021 PLR's fraction of total Berlin POIs for this year:
+          This area's fraction of total city-wide POIs for this year:
           total_poi_count / berlin_total_poi_count. Recomputed after aggregation.
-          Ranges 0-1; city-wide sum per year = 1.0.
+          Ranges 0-1; city-wide sum per (city, year, vintage) = 1.0.
 
   - name: int_gentrification_ts
     description: >
@@ -1572,6 +1601,11 @@ models:
       covariate). No D4 delta columns — D4 changes are near-tautological outcome proxies.
 
       C5 correction: dynamism_score (C5-corrected) is used throughout, never raw count deltas.
+
+      Berlin-only scope (#125): filtered to city_code='BER' -- the biennial
+      "lag_k * 2" edition-step hardcode is Berlin-MSS-specific and is not valid for
+      Hamburg's annual Sozialmonitoring cadence (ADR-0014). See SQL header for the
+      methodology question flagged for the geo-DS + domain-expert gate.
     meta:
       dbt_meta_owner: data-engineer
     tests:
