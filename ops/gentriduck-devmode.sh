@@ -18,7 +18,7 @@
 #   GENTRIDUCK_DEVMODE_MODEL   (default: sonnet)        GENTRIDUCK_DEVMODE_EFFORT  (default: medium)
 #   GENTRIDUCK_DEVMODE_RC_NAME (default: gentriduck-dev) GENTRIDUCK_DEVMODE_LOG     (default: ~/.claude/…)
 #   GENTRIDUCK_DEVMODE_PERMISSION_MODE (default: host-aware — Mac & Windows/WSL2=bypassPermissions, native Linux=dangerously-skip)
-#   GENTRIDUCK_DEVMODE_STALL_SECS      (default: 900)   — hang-watchdog idle threshold
+#   GENTRIDUCK_DEVMODE_STALL_SECS      (default: 1800)  — hang-watchdog idle threshold
 #
 # NON-STOP + SELF-HEALING: the while-loop restarts claude when it EXITS (usage limit / crash), and a
 # background watchdog restarts it when it HANGS — process alive but its session transcript has gone
@@ -61,7 +61,7 @@ case "$(uname -s)" in
         DEFAULT_PERMISSION="bypassPermissions" ;;
 esac
 PERMISSION_MODE="${GENTRIDUCK_DEVMODE_PERMISSION_MODE:-$DEFAULT_PERMISSION}"
-STALL_SECS="${GENTRIDUCK_DEVMODE_STALL_SECS:-900}"         # watchdog: restart if the transcript is idle this long
+STALL_SECS="${GENTRIDUCK_DEVMODE_STALL_SECS:-1800}"        # watchdog: restart if the transcript is idle this long
 
 cd "$DIR"
 
