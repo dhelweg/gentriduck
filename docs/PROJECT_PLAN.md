@@ -350,6 +350,13 @@ data and see whether the paper's conclusions reproduce; exact 2018 inputs are no
   inputs, the OSM completeness-bias correction (C5), limitations. · *geo-data-scientist + data-analyst* · A9,C5.
 - **G3** **Attribution & licensing** page (OSM ODbL, Berlin data licenses) shown on the site, and a
   **privacy/ethics** statement (aggregate-only, no PII; socially sensitive topic). · *architect + data-analyst* · G1.
+- **G4** **Privacy-friendly web analytics** for the GitHub Pages site (Cloudflare Web Analytics or
+  GoatCounter): cookieless pageviews / unique visitors / referrers / top paths, no consent banner;
+  tool choice via ADR (golden rule 2), snippet versioned in `web/`. · *architect (ADR) →
+  web-engineer pair* · G1, ADR-0012 Amendment A. · **#194**
+
+*Post-soft-launch site improvements beyond G0–G4 are tracked as `[Site]` tickets on the board
+(#149–#156, #169, #175) plus the #146 hosting re-assessment — not enumerated here.*
 
 ### Epic H — Multi-city expansion (future)
 - **H1** Onboard a **second city** purely via the ADR-0005 adapter pattern (new `dim_city` row +
