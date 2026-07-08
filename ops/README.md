@@ -128,7 +128,7 @@ methodology gate. Override per-launch via env:
 | `GENTRIDUCK_DEVMODE_MODEL` | `sonnet` | alias (`sonnet`/`opus`/`fable`) or a full model id |
 | `GENTRIDUCK_DEVMODE_EFFORT` | `medium` | `low` · `medium` · `high` · `xhigh` · `max` |
 | `GENTRIDUCK_DEVMODE_PERMISSION_MODE` | *host-aware* | macOS & Windows/WSL2 → `bypassPermissions`, native Linux → `dangerously-skip`; or `default` · `acceptEdits` · `dontAsk` · `auto` · `plan` |
-| `GENTRIDUCK_DEVMODE_STALL_SECS` | `900` | hang-watchdog idle threshold (restart if the session transcript is idle this long) |
+| `GENTRIDUCK_DEVMODE_STALL_SECS` | `1800` | hang-watchdog idle threshold (restart if the session transcript is idle this long) |
 | `GENTRIDUCK_DEVMODE_RC_NAME` | `gentriduck-dev` | Remote Control session name |
 | `GENTRIDUCK_DEVMODE_LOG` | `~/.claude/gentriduck-devmode.log` | log path |
 
