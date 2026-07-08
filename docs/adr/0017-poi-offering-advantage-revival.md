@@ -1,6 +1,6 @@
 # ADR-0017: POI Offering Advantage (OA) revival — 3-level location quotient, faithful/improved separation, `methodology_variant`
 
-- **Status:** Proposed (awaiting R-C1 dual sign-off — geo-DS + domain-expert — then maintainer accept)
+- **Status:** Accepted (R-C1 dual sign-off recorded 2026-07-09 — geo-DS PASS, domain-expert PASS)
 - **Date:** 2026-07-09
 - **Deciders:** system-architect (author); geo-data-scientist + gentrification-domain-expert (R-C1 gate); maintainer (accept)
 - **Issue:** #164 [OA-P0.2]; part of the OA revival cluster #163–#175
@@ -246,9 +246,9 @@ owning tickets so the PM's pre-integration check has an authoritative reference.
 
 ## R-C1 sign-off (required before integration into `develop`)
 
-- **geo-data-scientist:** PENDING — `docs/epic-b/P0.2-oa-adr-geo-signoff.md` (to be authored).
-- **gentrification-domain-expert:** PENDING — `docs/epic-b/P0.2-oa-adr-domain-signoff.md` (to be authored).
+- **geo-data-scientist:** PASS — `docs/epic-b/P0.2-oa-adr-geo-signoff.md`.
+- **gentrification-domain-expert:** PASS — `docs/epic-b/P0.2-oa-adr-domain-signoff.md`.
 
-*This ADR must NOT be integrated into `develop` until BOTH verdicts are `PASS` (R-C1). The
-system-architect authored this ADR and does not sign it off. On dual PASS, the maintainer flips Status
-to Accepted and adds the row to `docs/adr/README.md`.*
+*Both R-C1 verdicts are `PASS`; the PM integrated this ADR into `develop` per ADR-0011 self-integration
+authority (no new tool/library/data-source introduced, so no separate maintainer approval is required
+beyond the R-C1 gate). The system-architect authored this ADR and did not sign it off.*
