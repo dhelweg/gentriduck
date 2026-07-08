@@ -202,6 +202,142 @@ the dbt build path.
 > questions and Required items above (Q1→§1/§4, Q2→§7, Q3→§6, Required 1–4→§9, C5-composition→§5,
 > CRS→§3, spatial-robust inference→§8). This table is the single discharge record.
 
+## 11. Offering Advantage (OA) on distance-weighted stocks (#163 [OA-P0.1])
+
+**Status:** geo-DS decision for the OA revival cluster (issues #163–#175); gated under R-C1
+(`docs/epic-b/P0.1-oa-variant-geo-signoff.md`). Operationalizes the 2018 thesis OA
+(`reference/system/70_oa_helper.sql`, `71_oa.sql`; thesis pp. 55–56, 91) on **both** the hard
+point-in-polygon variant (`int_osm_poi_plr`) and the mass-conserving Gaussian variant (§1–§5,
+`int_osm_poi_plr_weighted`). This section settles the two method questions that block OA-P0.2 and
+OA-A.2: (11.1) how the location quotient composes with the kernel's mass normalization, and
+(11.2) whether the 500 m bandwidth is wide enough for the OA catchment.
+
+### 11.1 OA is a nested location quotient — order of operations on weighted stocks
+
+**Construct (thesis 70/71_oa).** OA is a location quotient (LQ) computed at three nested levels
+against a **parent-relative** reference base, *not* against the grand city total at every level:
+
+```
+domain X:            OA(X, a)   = ( X_a / Σ_d d_a )            / ( X_city / Σ_d d_city )
+category c⊂domain D: OA(c, a)   = ( c_a / D_a )                / ( c_city / D_city )
+type t⊂domain D:     OA(t, a)   = ( t_a / D_a )                / ( t_city / D_city )
+```
+
+where `_a` is the stock in area `a` (PLR) and `_city` is the city-wide stock. The reference base is
+the **immediate parent aggregate** (all-domains total for a domain; the parent domain for a category
+or type — confirmed against `71_oa.sql`, where every category/type OA divides by
+`d_<domain>_stock`, not by the grand total). OA = 1 means "represented exactly at the city-wide
+compositional rate"; > 1 = over-represented ("offering advantage"), < 1 = under-represented. This
+is the standard LQ (Isard 1960; Miller, Gibson & Wright 1991 on LQ interpretation).
+
+**Decision — compute the weighted stock first, then form the LQ (never the reverse).** On the
+Gaussian variant the unit of analysis is `weighted_count` (§1–§2): each POI `j` is spread across the
+PLRs within its bandwidth by mass-conserving weights `ŵ_ij` (Σ_i ŵ_ij = 1). The correct pipeline is:
+
+1. **Kernel + mass-normalize per POI** (already done in `int_osm_poi_plr_weighted`): produce
+   `weighted_count(a, year, domain, category, type) = Σ_j ŵ_ij`.
+2. **Aggregate to each level** by summing `weighted_count` up the taxonomy (type → category →
+   domain → all-domains) *within* each PLR and, separately, city-wide.
+3. **Form the LQ** as the ratio of the local parent-relative share to the city-wide parent-relative
+   share, exactly as in 71_oa, substituting `weighted_count` for the hard `*_stock`.
+
+Forming per-POI shares *before* the kernel, or applying the kernel to an already-formed ratio, is
+**prohibited**: a ratio of two kernel-smoothed quantities is not the kernel-smooth of the ratio, and
+smoothing a ratio would let a high-LQ neighbour bleed a spurious "advantage" across the border. The
+LQ must be the last operation.
+
+**Denominator — city-wide *weighted* totals per level, computed within the same variant.** The OA
+helper (city reference) must be built from the **same `weighted_count` universe** as the numerator,
+per taxonomy level and per snapshot year, never from the hard `int_osm_poi_plr` counts. Mixing a
+weighted local numerator with a hard-count city denominator breaks the LQ's unit-free property and
+its "=1 is average" interpretation.
+
+A useful invariance follows from §2 mass conservation and is the key result of this spike:
+**because each POI retains its own taxonomy labels and its `ŵ_ij` sum to 1, the city-wide weighted
+total per level equals the hard-count city total per level** (Σ over all PLRs of `weighted_count`
+for category c = number of POIs of category c = its raw city count). So the OA *denominator* is (to
+floating-point) identical across the hard and weighted variants; **the kernel only smooths the
+local compositional numerator.** OA-A.2 should still compute the denominator from the weighted
+stocks (for internal consistency and to inherit the §11.3 leakage guard), but this invariance is the
+correctness check: `Σ_a weighted_count_level = hard city total_level` per (year, level) is an
+enforceable dbt test.
+
+**Relation to the C5 completeness rule (§5).** §5's "C5 share-normalization first, weighting second"
+rule governs the **D3 dynamism time-series** (`share_yoy_change` of a category's *spatial* share of
+its city total). OA is a **cross-sectional compositional** ratio, a different denominator (a type's
+share *of its parent within the PLR*), so §5's ordering does not transfer mechanically. OA has its
+own, milder completeness property: **the LQ is invariant to any PLR-level uniform coverage scaling**
+— if OSM maps a PLR's POIs more completely but proportionately across categories, every local share
+and hence every OA is unchanged. The residual completeness threat to OA is therefore **category-
+differential** mapping completeness and tag-schema drift over time (some tags — e.g. `amenity=cafe`
+vs historical `shop=coffee` — matured earlier than others), which bites the **lagged `prev_oa_*`**
+predictors of H2/H3 far more than the cross-sectional `oa_*`. This is a temporal-comparability
+caveat carried into OA-A.4/C.1, not a blocker for the cross-sectional build (see signoff C-2).
+
+### 11.2 Bandwidth reassessment — 500 m is too narrow for the OA catchment; extend the sweep upward
+
+The §4 default `b = 500 m` was justified as a **pedestrian density-gradient** catchment (walkable
+amenity radius; Kiez-diffusion scale). OA is a **different construct**: it measures the competitive/
+complementary *offering mix* around a location — a retail-service catchment, which the retail-
+geography literature places well beyond the walkable-amenity radius. Central-place and retail-
+gravitation theory (Reilly 1931, *The Law of Retail Gravitation*; Huff 1964, *A probabilistic
+analysis of consumer spatial behavior*, J. Marketing 28(3); Berry 1967, *Geography of Market
+Centers and Retail Distribution*) model comparison-goods and service catchments at the 1–2 km scale
+in dense urban fabric, not 500 m. Two convergent, repo-internal reasons reinforce widening it for OA
+specifically:
+
+1. **Faithfulness to the thesis.** The 2018 OA was built on a distance-weighting matrix that spread
+   each PLR's stock across **all** PLRs by (un-normalized) centroid-to-centroid inverse distance
+   (§1; `reference/system/45_osm_poi_features_domain_piv_distcalc.sql`) — effectively an *unbounded*
+   catchment. A 500 m hard-truncated Gaussian is far narrower than the construct the thesis OA
+   actually operationalized; the faithful Run 1 backtest will systematically under-smooth OA
+   relative to the golden unless the bandwidth is widened.
+2. **Mass leakage in large PLRs (§11.3).** At 500 m the `ST_DWithin` truncation drops any POI that
+   is > 500 m from *every* PLR representative point — most acute in Berlin's large, low-density PLRs
+   (Tempelhofer Feld, Grunewald, Flughafensee). Those POIs get `total_weight = 0` → NULL
+   `normalized_weight` → **silently dropped**, so mass is *not* conserved there and the OA
+   denominator base inside those PLRs is distorted. Widening the bandwidth shrinks this leakage.
+
+**Recommendation.**
+- **Do not use 500 m as the OA headline.** Keep 500 m only as the shared lower anchor of the sweep
+  (so OA and the D1/D3 density layers can be cross-read on one axis).
+- **Extend the sweep upward for the OA construct to 1000 m and 1500 m**, and make the **OA headline
+  bandwidth 1000 m** (a defensible urban comparison-goods catchment; Huff 1964; Reilly 1931),
+  reporting divergence across {500, 1000, 1500} m as the ADR-0008 §4 mandatory sensitivity sweep for
+  OA. The existing 250/750 m points remain for the density layers; the OA sweep is
+  **{500, 1000, 1500}** with 1000 m headline.
+- Encode the OA bandwidth set as the same per-city `poi_kernel_bandwidth_m` var pattern (ADR-0005;
+  §4 condition 1), tagged into `weight_variant` (`gaussian_1000m`, `gaussian_1500m`) so OA runs are
+  never blended with the density-layer variants.
+- The hard point-in-polygon variant (`standard`) remains the bandwidth-free floor for the
+  hard-vs-weighted OA comparison mandated by the plan (decision 3).
+
+This is a **default + sweep**, not a hard assumption: the headline is 1000 m, but the full
+{500, 1000, 1500} m OA sensitivity is reported, and if OA rankings prove bandwidth-fragile the G2
+methodology page must say so (mirrors the §7 r > 0.7 publish gate discipline).
+
+### 11.3 Mass-leakage guard (implementation condition for OA-A.2)
+
+Because the OA denominator base is formed *within* each PLR, the §11.2(2) leakage — POIs in large
+PLRs > b from every representative point being dropped — directly biases OA there. OA-A.2 must add a
+**leakage guard**: a POI whose in-bandwidth weight sum is zero is **fall-back-assigned to its hard
+home PLR** (`hard_area_code`, already carried in `int_osm_poi_plr_weighted`) with weight 1, so no
+POI mass is lost and Σ_a weighted_count_level = hard city total_level holds exactly (the §11.1
+invariance test). This guard is cheap, preserves mass conservation, and is required regardless of
+the chosen bandwidth (it only ever fires for genuinely isolated POIs). Widening to 1000 m
+(§11.2) reduces how often it fires but does not remove the need for it.
+
+### 11.4 Discharge for the OA cluster
+
+| OA-P0.1 question | Decision | Where |
+|---|---|---|
+| How to compute OA on weighted stocks | Weighted stock first → aggregate up taxonomy → LQ last; parent-relative nested base | §11.1 |
+| OA denominator | City-wide **weighted** totals per level, same variant; equals hard city totals by mass conservation (enforceable test) | §11.1 |
+| C5 interaction | OA is cross-sectional/compositional — LQ invariant to uniform PLR coverage; residual threat is category-differential drift on `prev_oa_*` (H2/H3), not `oa_*` | §11.1 |
+| Is 500 m wide enough for OA | No — density-gradient radius, not a retail catchment | §11.2 |
+| Bandwidth recommendation | OA sweep {500, 1000, 1500} m, **headline 1000 m**; hard variant as floor | §11.2 |
+| Mass leakage in large PLRs | Fall-back to hard home PLR at weight 1 (leakage guard) | §11.3 |
+
 ---
 
 ## Sources
@@ -222,6 +358,10 @@ the dbt build path.
 - OECD/JRC (2008), *Handbook on Constructing Composite Indicators* — common polarity before
   aggregation (carried via `index-definition.md`).
 - Openshaw (1984), *The Modifiable Areal Unit Problem*, CATMOG 38 — MAUP framing for §7.
+- Reilly (1931), *The Law of Retail Gravitation* — retail catchment scale (§11.2).
+- Huff (1964), *A probabilistic analysis of consumer spatial behavior*, J. Marketing 28(3) — probabilistic retail catchment (§11.2).
+- Berry (1967), *Geography of Market Centers and Retail Distribution* — central-place / comparison-goods catchments (§11.2).
+- Isard (1960), *Methods of Regional Analysis*; Miller, Gibson & Wright (1991), *Location Quotient: A Basic Tool for Economic Development Analysis* — location-quotient definition/interpretation (§11.1).
 - PySAL `libpysal` / `esda` / `spreg` (BSD-3); Uber `h3` (Apache-2.0). <https://pysal.org/>
 - Moran (1950), *Notes on Continuous Stochastic Phenomena*, Biometrika 37(1) — Moran's I.
 - Dangschat (1988), *Gentrification — die Aufwertung innenstadtnaher Wohnviertel* — invasion-succession / diffusion hypothesis.
