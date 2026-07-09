@@ -1090,6 +1090,103 @@ models:
       - name: gesamtindex
         description: Always NULL -- Hamburg publishes no numeric gesamtindex analogue.
 
+  - name: int_poi_features_pivot
+    description: >
+      C4 intermediate: pivots fct_poi_development from long format (one row per
+      city/year/area/vintage/domain/category/type) to wide format (one row per
+      city/year/area/vintage) with one column per POI category, one column per POI
+      domain, one column per POI type, and a total_poi_count summary column.
+
+      OA-A.1 (#165, ADR-0017 D1): domain- and type-level pivots restore the columns
+      dropped at this model's flattening point (previously category-only). Each
+      level is pivoted independently by conditional SUM(...) FILTER(WHERE <level>_h
+      = '...') on its own harmonized label -- a straightforward carry-through, not a
+      new methodology decision (no aggregation/weighting/normalization choice).
+      Column-name prefixes (poi_domain_<slug> / poi_<slug> / poi_type_<slug>) avoid
+      collisions where the same label appears at more than one level (e.g. 'Office',
+      'Other', 'Vacancy' are each both a domain and a category value in
+      seed_poi_mapping.csv).
+
+      Value coverage: domain and type pivots cover ALL distinct seed_poi_mapping.csv
+      domain (13) / type (163) values -- the closed-world taxonomy C1/H1 ingestion
+      resolves every OSM tag to (a non-matching tag is dropped at ingestion, never
+      written with a fallback label). The pre-existing category pivot is a
+      hand-curated subset of seed_poi_mapping.csv's 53 categories (UNCHANGED by this
+      ticket); categories/domains/types not enumerated as a named column still count
+      in total_poi_count. int_osm_poi_harmonized's drift remap
+      (seed_poi_canonical_category) can rarely coalesce in a handful of
+      differently-cased labels not in seed_poi_mapping.csv -- same "counted in the
+      total, not in a named column" behaviour.
+
+      Graceful degradation: returns zero rows when fct_poi_development has no rows.
+      Consumed by int_poi_share_base (total_poi_count only, today); domain/type
+      columns are for OA-A.2 (#166, int_poi_offering_advantage).
+    meta:
+      dbt_meta_owner: data-engineer
+    tests:
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns:
+              - city_code
+              - snapshot_year
+              - area_code
+              - area_vintage
+          config:
+            where: "area_code is not null"
+    columns:
+      - name: city_code
+        description: City identifier (ADR-0005). 'BER' (Berlin) or 'HH' (Hamburg).
+        tests:
+          - not_null:
+              config:
+                where: "area_code is not null"
+      - name: snapshot_year
+        description: Calendar year of the OSM snapshot.
+        tests:
+          - not_null:
+              config:
+                where: "area_code is not null"
+      - name: area_code
+        description: PLR area code (8-digit, zero-padded).
+        tests:
+          - not_null:
+              config:
+                where: "snapshot_year is not null"
+      - name: area_vintage
+        description: >
+          Spatial-join vintage. 'lor_pre2021'/'lor_2021' for Berlin LOR; 'current'
+          for Hamburg statistische Gebiete.
+        tests:
+          - not_null:
+              config:
+                where: "area_code is not null"
+          - accepted_values:
+              arguments:
+                values: ["lor_pre2021", "lor_2021", "current"]
+              config:
+                where: "area_code is not null"
+      - name: total_poi_count
+        description: >
+          Total POI count for this area in this snapshot year, summed across all
+          categories/domains/types (level-independent -- every POI has exactly one
+          domain, one category, one type).
+        tests:
+          - not_null:
+              config:
+                where: "area_code is not null"
+          - dbt_utils.expression_is_true:
+              arguments:
+                expression: "> 0"
+              config:
+                where: "area_code is not null"
+      # Individual poi_domain_<slug> (13), poi_<slug> (category, 48 -- pre-existing,
+      # unchanged by #165), and poi_type_<slug> (163) columns are conditional-count
+      # pivots: NULL is a valid state (zero POIs of that domain/category/type in this
+      # area/year), so a not_null test would be incorrect. Not individually documented
+      # here (224 columns); see the model description above for the naming convention
+      # and value-coverage note, and int_poi_features_pivot.sql for the exact column
+      # list (one FILTER clause per column, grouped by level with a header comment).
+
   - name: int_poi_share_base
     description: >
       C5 helper: pre-materializes per-area POI share per year before dynamism

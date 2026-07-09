@@ -296,11 +296,23 @@ models:
   - name: fct_poi_development
     description: >
       C3-fact -- POI development fact table. Aggregates OSM POI counts per
-      (city_code, snapshot_year, area_code, area_vintage, poi_category_h) at PLR grain.
-      Source: int_osm_poi_plr (C3 spatial join). Excludes rows where area_code IS NULL
-      (POIs outside PLR boundaries). One row per unique combination of the five
-      grouping dimensions; poi_count is the count of POIs in that cell.
-      Materialised as table (aggregation over spatial join result).
+      (city_code, snapshot_year, area_code, area_vintage, poi_domain_h, poi_category_h,
+      poi_type_h) at PLR grain. Source: int_osm_poi_plr (C3 spatial join) and
+      int_osm_poi_hamburg. Excludes rows where area_code IS NULL (POIs outside PLR
+      boundaries). One row per unique combination of the seven grouping dimensions;
+      poi_count is the count of POIs in that cell. Materialised as table (aggregation
+      over spatial join result).
+
+      OA-A.1 (#165, ADR-0017 D1): poi_domain_h and poi_type_h were added to the grain
+      alongside the pre-existing poi_category_h -- a strictly additive re-plumb of
+      columns int_osm_poi_plr / int_osm_poi_hamburg already carried but this model
+      previously dropped. Not R-C1 methodology-bearing: poi_type_h functionally
+      determines (poi_domain_h, poi_category_h) in seed_poi_mapping.csv (every
+      harmonized type maps to exactly one domain/category pair), so grouping by all
+      three together is the natural finest-grain aggregation, not a new
+      indicator/weighting/normalization choice. Category-grain consumers
+      (int_poi_features_pivot) remain correct: summing poi_count filtered by
+      poi_category_h over the finer rows reproduces the pre-#165 category totals.
     meta:
       dbt_meta_owner: data-engineer
     columns:
@@ -332,12 +344,46 @@ models:
           - accepted_values:
               arguments:
                 values: ["lor_pre2021", "lor_2021", "current"]
-      - name: poi_category_h
-        description: Harmonized POI category.
+      - name: poi_domain_h
+        description: >
+          OA-A.1 #165: harmonized POI domain (top level of the 3-level taxonomy;
+          ADR-0017 D1's domain-level OA term). COALESCE(canonical_poi_domain,
+          poi_domain) from int_osm_poi_harmonized, carried through int_osm_poi_plr /
+          int_osm_poi_hamburg. Values are drawn from seed_poi_mapping.domain (13
+          distinct values); a small number of drift-canonical values from
+          seed_poi_canonical_category may also appear (see int_osm_poi_harmonized) --
+          the relationships test below is `severity: warn`, not `error`, for this
+          reason.
         tests:
           - not_null
+          - relationships:
+              arguments:
+                to: ref('seed_poi_mapping')
+                field: domain
+              config:
+                severity: warn
+      - name: poi_category_h
+        description: Harmonized POI category (mid level of the 3-level taxonomy).
+        tests:
+          - not_null
+      - name: poi_type_h
+        description: >
+          OA-A.1 #165: harmonized POI type (finest level of the 3-level taxonomy;
+          ADR-0017 D1's type-level OA term). Values are drawn from
+          seed_poi_mapping.type (163 distinct values); same drift-canonical caveat as
+          poi_domain_h applies, hence `severity: warn`.
+        tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('seed_poi_mapping')
+                field: type
+              config:
+                severity: warn
       - name: poi_count
-        description: Count of POIs in this (city, year, area, vintage, category) cell.
+        description: >
+          Count of POIs in this (city, year, area, vintage, domain, category, type)
+          cell.
         tests:
           - not_null
       - name: source_attribution
@@ -352,7 +398,9 @@ models:
               - snapshot_year
               - area_code
               - area_vintage
+              - poi_domain_h
               - poi_category_h
+              - poi_type_h
           config:
             where: "area_code is not null"
       - dbt_utils.expression_is_true:
