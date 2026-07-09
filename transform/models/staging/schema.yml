@@ -971,6 +971,7 @@ models:
               - year_built_bucket
               - size_bucket
               - wohnlage
+              - ausstattung
           config:
             where: "edition_year is not null"
             severity: warn
@@ -997,6 +998,14 @@ models:
         description: Apartment-size bucket, preserved as-published.
       - name: wohnlage
         description: Location tier, matching stg_hamburg_wohnlage's label scheme.
+      - name: ausstattung
+        description: >
+          Fitting-standard dimension (#215 [H-C6]). Live 2025 edition carries
+          exactly one value ('mit Bad und Sammelheizung' -- with bath and
+          central/collective heating). Selection of a representative value for
+          a rent-VALUE join is made downstream in
+          int_hamburg_wohnlage_mietenspiegel, not here (this staging model is
+          plumbing only, R-C1).
       - name: rent_low
         description: Lower rent-range bound (EUR/sqm/month).
       - name: rent_mid
