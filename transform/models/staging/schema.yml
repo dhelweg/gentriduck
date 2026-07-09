@@ -1315,6 +1315,89 @@ models:
               config:
                 where: "wohnlage is not null"
 
+  - name: stg_berlin_milieuschutz
+    description: >
+      R-B1 (#70 [B1]) / ADR-0019 -- staging view over Berlin Milieuschutz
+      (soziale Erhaltungsverordnung, Sec. 172 Abs. 1 Nr. 2 BauGB)
+      designated-area polygons. Direct legal analogue of
+      stg_hamburg_displacement_zones (ADR-0014 Pillar 4). Source: GDI Berlin
+      WFS (erhaltungsverordnungsgebiete:erhaltgeb_em), CRS EPSG:25833,
+      dl-de-zero-2.0. PLUMBING, not methodology (R-C1): straight
+      polygon-attribute staging, no weighting/scoring/index-construction
+      logic. Zero consumers as of this writing -- the consuming
+      intermediate/sub-index slice (rent-pressure proxy, ADR-0019 Decision 2)
+      is a separate, gated follow-up. Populated by
+      ingestion/berlin/displacement/ingest_milieuschutz.py. Returns zero rows
+      (typed stub) until data/raw/berlin/displacement/milieuschutz.parquet
+      exists. 82 designated areas confirmed live 2026-07-09.
+    meta:
+      dbt_meta_owner: data-engineer
+    # Data-presence gate (docs/lessons/local-first-data-presence.md).
+    data_tests:
+
+      - assert_not_empty:
+          config:
+            severity: warn
+      - assert_min_rows:
+          arguments:
+            min_rows: 10
+          config:
+            severity: warn
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns:
+              - city_code
+              - area_code
+          config:
+            where: "area_code is not null"
+            severity: warn
+    columns:
+      - name: city_code
+        description: Canonical city code 'berlin' (ADR-0005; matches dim_city.city_code).
+        data_tests:
+
+          - not_null:
+              config:
+                where: "area_code is not null"
+          - accepted_values:
+              arguments:
+                values: ["berlin"]
+              config:
+                where: "area_code is not null"
+      - name: area_code
+        description: >
+          Natural key / schluessel WFS attribute for the designated
+          Milieuschutz area (e.g. "EM0105"). Does NOT join to
+          stg_berlin_lor.area_code (a bespoke designation boundary, not a
+          PLR aggregate).
+        data_tests:
+
+          - not_null
+      - name: area_name
+        description: Human-readable designation name (gebietsname WFS attribute, e.g. "Sparrplatz").
+      - name: bezirk_name
+        description: Informational Bezirk the area sits in (bezirk WFS attribute); NOT a join key.
+      - name: in_force_date
+        description: >
+          Date the Erhaltungsverordnung took effect (f_in_kraft WFS
+          attribute), if published. Null where the source omits it.
+      - name: area_ha
+        description: Area in hectares, as-published (fl_ha WFS attribute; string, not cast).
+      - name: geometry_wkb
+        description: Designated-area polygon in WKB, native CRS EPSG:25833 (not reprojected).
+        data_tests:
+
+          - not_null:
+              config:
+                where: "area_code is not null"
+      - name: source_attribution
+        description: dl-de-zero-2.0 attribution string (ADR-0019).
+        data_tests:
+
+          - not_null:
+              config:
+                where: "area_code is not null"
+
   - name: stg_berlin_verkaufte_grundstuecke
     description: >
       D1b — Verkaufte Grundstücke (Kauffälle) Berlin 2024 + 2025, GDI Berlin WFS,
