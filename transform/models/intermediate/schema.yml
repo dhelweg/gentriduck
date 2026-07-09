@@ -2040,11 +2040,20 @@ models:
 
       Bandwidth b = 500 m default (dbt var 'poi_kernel_bandwidth_m'); per-city parameter,
       never hard-coded (ADR-0005). MAUP sweep uses 250 m / 750 m variants via analysis/a6_maup.py.
+      OA (#166) sweeps 500 m / 1000 m / 1500 m with a 1000 m headline (spatial-methods.md §11.2).
+
+      Mass-leakage guard (spatial-methods.md §11.3; ADR-0017 D5 C-1): a POI whose home PLR
+      is large/low-density (Tempelhofer Feld, Grunewald) can be > b from every PLR's
+      representative point and match zero rows via ST_DWithin. Such POIs are fall-back
+      assigned to their hard home PLR (`hard_area_code`) at weight 1, so no POI mass is
+      silently dropped and Σ_a weighted_count per level equals the hard-count city total
+      per level (enforced by test_c1_oa_weighted_mass_conservation_invariance.sql).
 
       Output: one row per (city_code, snapshot_year, area_code, area_vintage, poi_category_h,
       poi_type_h, weight_variant) with weighted_count (fractional; sum = standard count
       city-wide); weight_variant discriminator (e.g. 'gaussian_500m'). Feeds the same share pipeline as int_poi_features_pivot
-      for the distance-weighted dynamism_score used by Gi* hotspot analysis (spatial-methods.md §6).
+      for the distance-weighted dynamism_score used by Gi* hotspot analysis (spatial-methods.md §6),
+      and (#166) int_poi_offering_advantage's weighted OA variant.
 
       CRS: EPSG:25833 throughout (ADR-0010 Amendment 3; spatial-methods.md §3).
       Graceful degradation: zero-row typed stub when OSM/LOR data absent.
@@ -2138,6 +2147,178 @@ models:
           - not_null:
               config:
                 where: "area_code is not null"
+
+  - name: int_poi_offering_advantage
+    description: >
+      OA-A.2 (#166, ADR-0017): Offering Advantage (OA) -- 3-level nested location
+      quotient (LQ) for POI stock at domain, category, and type taxonomy leaves,
+      computed for BOTH weight_variant values (hard 'standard' + Gaussian-weighted),
+      faithful Run 1 only (thesis pp. 55-56, 91; reference/system/70_oa_helper.sql,
+      71_oa.sql; spatial-methods.md §11; ADR-0017 D1-D5).
+
+      OA(level, a) = (level_a / parent_a) / (level_city / parent_city) -- domain's
+      parent is the all-domains grand total; category's AND type's parent is their
+      shared domain total (neither nests under category). OA = 1 means represented
+      at the city-wide compositional rate; > 1 over-represented; < 1 under-represented
+      (standard LQ, Isard 1960; Miller/Gibson/Wright 1991).
+
+      Grain: one row per taxonomy leaf actually observed (city_code, snapshot_year,
+      area_code, area_vintage, poi_domain_h, poi_category_h, poi_type_h,
+      weight_variant, methodology_variant); every row is 'faithful' today
+      (methodology_variant enumerated now so OA-B.1..B.4 (#170-173) append
+      'improved' rows without a grain migration -- ADR-0017 D4).
+
+      Sparse representation (documented Epic B directional divergence, not a
+      defect): a taxonomy leaf with zero POIs in a PLR-year produces no row here,
+      unlike the thesis's zero-filled wide pivot -- see model SQL header for the
+      golden-comparison implication (OA-A.3 #167).
+
+      C-1 invariance (ADR-0017 D5, BLOCKING): weighted-variant city-wide totals per
+      level must equal the hard-count city-wide totals per level exactly, guaranteed
+      by int_osm_poi_plr_weighted's mass-leakage guard and enforced by the singular
+      test test_c1_oa_weighted_mass_conservation_invariance.sql.
+
+      Interpretation (domain-expert D-1/D-2, ADR-0017 D5): OA is a DESCRIPTIVE
+      early-gentrification indicator, not a causal displacement predictor, and is a
+      multi-signed bundle (do not sum raw oa_* across types into one score --
+      Vacancy-domain OA is a disinvestment marker, the opposite pole from
+      amenity-domain OA).
+
+      Graceful degradation: zero rows when fct_poi_development and/or
+      int_osm_poi_plr_weighted have no rows.
+    meta:
+      dbt_meta_owner: data-engineer
+    tests:
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns:
+              - city_code
+              - snapshot_year
+              - area_code
+              - area_vintage
+              - poi_domain_h
+              - poi_category_h
+              - poi_type_h
+              - weight_variant
+              - methodology_variant
+          config:
+            where: "area_code is not null"
+    columns:
+      - name: city_code
+        description: City identifier (ADR-0005).
+        tests:
+          - not_null:
+              config:
+                where: "area_code is not null"
+      - name: snapshot_year
+        description: Calendar year of the OSM snapshot.
+        tests:
+          - not_null:
+              config:
+                where: "area_code is not null"
+      - name: area_code
+        description: PLR area code (8-digit, zero-padded). Vintage-specific.
+        tests:
+          - not_null:
+              config:
+                where: "snapshot_year is not null"
+      - name: area_vintage
+        description: >
+          Spatial-join vintage. 'lor_pre2021'/'lor_2021' for Berlin LOR; 'current'
+          for Hamburg statistische Gebiete (this model unions all cities via
+          fct_poi_development, not Berlin-only).
+        tests:
+          - accepted_values:
+              arguments:
+                values: ["lor_pre2021", "lor_2021", "current"]
+              config:
+                where: "area_code is not null"
+      - name: poi_domain_h
+        description: Harmonized POI domain (from seed_poi_mapping.csv via fct_poi_development).
+        tests:
+          - not_null:
+              config:
+                where: "area_code is not null"
+      - name: poi_category_h
+        description: Harmonized POI category.
+        tests:
+          - not_null:
+              config:
+                where: "area_code is not null"
+      - name: poi_type_h
+        description: Harmonized POI type.
+        tests:
+          - not_null:
+              config:
+                where: "area_code is not null"
+      - name: weight_variant
+        description: >
+          'standard' (hard point-in-polygon count) or the Gaussian-weighted
+          kernel variant carried through from int_osm_poi_plr_weighted (e.g.
+          'gaussian_1000m', the OA headline bandwidth -- spatial-methods.md §11.2).
+        tests:
+          - not_null:
+              config:
+                where: "area_code is not null"
+      - name: methodology_variant
+        description: >
+          ADR-0017 D4 structural invariant. This ticket populates 'faithful' only;
+          'improved' rows are appended by OA-B.1..B.4 (#170-173), never blended.
+        tests:
+          - accepted_values:
+              arguments:
+                values: ["faithful", "improved"]
+              config:
+                where: "area_code is not null"
+      - name: type_stock_local
+        description: t_a -- this row's own taxonomy-leaf stock within its PLR.
+      - name: type_stock_city
+        description: t_city -- city-wide stock for this exact (domain, category, type) triple.
+      - name: category_stock_local
+        description: c_a -- category total within this PLR (sum over types in this category).
+      - name: category_stock_city
+        description: c_city -- city-wide category total.
+      - name: domain_stock_local
+        description: >
+          D_a -- domain total within this PLR; shared parent base for both
+          category-level and type-level OA (ADR-0017 D1).
+      - name: domain_stock_city
+        description: D_city -- city-wide domain total.
+      - name: all_domains_stock_local
+        description: Σ_d d_a -- all-domains grand total within this PLR (domain-level parent base).
+      - name: all_domains_stock_city
+        description: Σ_d d_city -- all-domains grand total city-wide.
+      - name: oa_domain
+        description: >
+          Domain-level location quotient: (domain_stock_local / all_domains_stock_local)
+          / (domain_stock_city / all_domains_stock_city). NULL when a denominator
+          is zero (parent-share division, spatial-methods.md §11.1).
+        tests:
+          - dbt_utils.expression_is_true:
+              arguments:
+                expression: ">= 0"
+              config:
+                where: "area_code is not null and oa_domain is not null"
+      - name: oa_category
+        description: >
+          Category-level LQ against the shared parent domain (not the
+          all-domains total; ADR-0017 D1). NULL when a denominator is zero.
+        tests:
+          - dbt_utils.expression_is_true:
+              arguments:
+                expression: ">= 0"
+              config:
+                where: "area_code is not null and oa_category is not null"
+      - name: oa_type
+        description: >
+          Type-level LQ against the shared parent domain (NOT category;
+          ADR-0017 D1). NULL when a denominator is zero.
+        tests:
+          - dbt_utils.expression_is_true:
+              arguments:
+                expression: ">= 0"
+              config:
+                where: "area_code is not null and oa_type is not null"
 
   - name: int_mss_bzr_aggregate
     description: >
