@@ -1,0 +1,18 @@
+# CV-1 (#186), per ADR-0020 §"Direct-issue-creation control": Gentriduck's Issues backlog is
+# maintained by the maintainer + autonomous agents only. Community change requests are steered
+# to the voting board instead of a blank issue form — no bot/auto-close, just a redirect at the
+# point where a visitor would otherwise open an issue.
+blank_issues_enabled: false
+contact_links:
+  - name: Propose or upvote a change (community voting board)
+    url: https://github.com/dhelweg/gentriduck/discussions/categories/ideas
+    about: >-
+      This repo's Issues backlog is maintained by the maintainer + autonomous agents only
+      (ADR-0011, ADR-0020). To propose a change, post or upvote it in the "Ideas" Discussions
+      category — requests crossing the vote threshold are screened and, if they pass, promoted
+      into the backlog as a normal ticket. See CONTRIBUTING.md for the full model.
+  - name: Report a bug you hit running the pipeline locally
+    url: https://github.com/dhelweg/gentriduck/discussions/categories/ideas
+    about: >-
+      Bug reports are also welcome via the Ideas discussion category (they don't need votes to
+      be looked at, but posting there keeps intake in one place) — see CONTRIBUTING.md.
