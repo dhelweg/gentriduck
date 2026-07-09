@@ -74,13 +74,13 @@ except ImportError:
 # Reuse the already-reviewed, already-published Run 1 (faithful) H1 (OA) computation
 # verbatim from analysis/e1_regressions.py (OA-A.4 #168, R-C1 dual-signed-off) rather
 # than re-deriving a second, independently-computed number for the same statistic in
-# this comparison ticket. This is a deliberate scope decision, not an oversight: while
-# drafting this script an unrelated area_code padding discrepancy was found in
-# e1_regressions.load_h1_h2_data's merge against the OA panel (raw, mixed-length
-# `t.raum_id` vs the 8-char-padded OA table key silently drops ~79% of PLRs from the
-# OA merge, n=436->92) -- filed as its own bug ticket (#200) rather than silently
-# fixed here, which would have produced a DIFFERENT, unreviewed Run 1 number
-# inconsistent with the already-signed-off `docs/epic-e/E1-regression-findings.md`.
+# this comparison ticket. While drafting this script an area_code padding bug was
+# found in e1_regressions.load_h1_h2_data's merge against the OA panel (raw,
+# mixed-length `t.raum_id` vs the 8-char-padded OA table key silently dropped ~79%
+# of PLRs from the OA merge, n=436->92) -- filed and fixed as #200
+# (analysis/e1_regressions.py's load_h1_h2_data now pads area_code, restoring the
+# full n=435 sample). This script automatically picks up the corrected figure by
+# reusing e1_regressions.py's function verbatim, with no change needed here.
 sys.path.insert(0, str(Path(__file__).parent))
 import e1_regressions as _e1  # noqa: E402
 
@@ -258,6 +258,28 @@ def render_report(faithful: dict | None, improved: dict | None) -> str:
             f"|rho| faithful={abs(faithful['rho']):.3f} (n={faithful['n']}) vs "
             f"|rho| improved={abs(improved['rho']):.3f} (n={improved['n']})."
         )
+        if faithful["sig"] and f_matches:
+            aggregate_summary = (
+                "Run 1's aggregate basket shows a significant, H1-expected relationship this pass"
+            )
+        elif faithful["sig"] and not f_matches:
+            aggregate_summary = (
+                "Run 1's aggregate basket is statistically significant but in the OPPOSITE direction "
+                "from the H1 prior this pass (a significant, wrong-signed result, not a null result)"
+            )
+        else:
+            aggregate_summary = "Run 1's aggregate basket is not statistically significant this pass"
+        if improved["sig"] and i_matches:
+            improved_summary = (
+                "Run 2's aggregate basket shows a significant, H1-expected relationship this pass"
+            )
+        elif improved["sig"] and not i_matches:
+            improved_summary = (
+                "Run 2's aggregate basket is statistically significant but in the OPPOSITE direction "
+                "from the H1 prior this pass"
+            )
+        else:
+            improved_summary = "Run 2's aggregate basket is not statistically significant this pass"
         lines.append(
             "- **This is not evidence that curation 'improves' or 'worsens' prediction** — the two "
             "rho values are computed against different outcomes over different periods and cannot be "
@@ -265,16 +287,16 @@ def render_report(faithful: dict | None, improved: dict | None) -> str:
             "changed\" with \"the metric changed\" (exactly the confound ADR-0017 D3 exists to prevent). "
             "The comparable, apples-to-apples ablation this ticket's acceptance criterion asks for "
             "requires the Run-1/Run-2 reconciliation follow-up (a lor_pre2021-era improved-variant "
-            "re-tiering) noted above. **As reported this pass, neither workstream's aggregate/composite "
-            "OA predictor shows a significant H1-expected relationship with its own contemporaneous "
-            "outcome** — this is itself the substantive finding (a directional-disagreement/non-"
-            "significance result, not a ranked performance comparison), and is consistent with the "
-            "already-published, separately-signed-off caveat that this specific H1 (OA) aggregate test "
-            "was FAIL in `docs/epic-e/E1-regression-findings.md` (Run 1) even before this comparison; "
-            "domain-level and category-level OA tests elsewhere in that same findings doc (H1b, H2, "
-            "H3a/H3b) DO show significant, expected-direction results — the weak aggregate `oa_mean`/"
-            "`status_score_improved` basket used here is a coarser summary than those finer-grained "
-            "tests, not evidence against OA as a construct."
+            f"re-tiering) noted above. **As reported this pass: {aggregate_summary}; {improved_summary}.** "
+            "Neither result should be read as confirming the H1 prior for the aggregate basket; this "
+            "is itself the substantive finding, and is consistent with the already-published, "
+            "separately-signed-off caveat that this specific H1 (OA) aggregate test was FAIL in "
+            "`docs/epic-e/E1-regression-findings.md` (Run 1) even before this comparison — a "
+            "significant-but-wrong-signed result is still a FAIL against the H1 prior, not a "
+            "confirmation. Domain-level and category-level OA tests elsewhere in that same findings "
+            "doc (H1b, H2, H3a/H3b) DO show significant, expected-direction results — the weak/"
+            "wrong-signed aggregate `oa_mean`/`status_score_improved` basket used here is a coarser "
+            "summary than those finer-grained tests, not evidence against OA as a construct."
         )
     else:
         lines.append("- Cannot compare: one or both runs returned insufficient data.\n")

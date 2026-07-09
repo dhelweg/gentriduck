@@ -64,33 +64,39 @@ disinvestment marker, never summed into the "more business = more upscaling" sig
 
 **Faithful (reproduces the thesis's own H1 test, all business types):** using the
 thesis's actual Offering-Advantage basket (the four business domains it identified as
-upscaling-relevant, averaged) against the 2018 golden data, the relationship is **weak
-and not statistically significant** (n=92 areas, in the tests available this pass).
+upscaling-relevant, averaged) against the 2018 golden data, the relationship is
+**statistically significant but points the opposite way from the thesis's prior**
+(n=435 areas — more of this business basket goes with slightly *worse*, not better,
+social standing).
 
 **Improved (the curated, theory-weighted basket) against Berlin's current official
-social monitor:** also **weak and not statistically significant** (n=1,607
-area-years, 2021–2025).
+social monitor:** **weak and not statistically significant** (n=1,607 area-years,
+2021–2025), also pointing the same, unexpected direction.
 
 Neither result, on its own, is the headline. What *is* worth reporting:
 
 - **Both point in the same, unexpected direction** — more of the tracked business
-  activity going with slightly *worse*, not better, social standing — though neither
-  effect clears the bar for statistical confidence. Taken together this is a
-  **directional-disagreement-with-theory, non-significant** finding, not a confirmed
-  result in either direction.
+  activity going with slightly *worse*, not better, social standing. The faithful
+  result clears the bar for statistical confidence (in the unexpected direction); the
+  improved result does not reach significance either way. Taken together this is a
+  **directional-disagreement-with-theory** finding for the coarse aggregate basket —
+  not a confirmation of the thesis's original H1 prior in either workstream.
 - **This does not mean Offering Advantage "doesn't work."** The [thesis re-check
   page](/thesis-recheck) shows that finer-grained tests using the *same* faithful OA
   construct — a single business type (fast food) rather than an averaged four-domain
   basket — are significant and correctly signed, and get *stronger* under OA than under
   a raw count. Averaging several business domains into one basket smooths out exactly
   the kind of type-specific signal (fast food is one clear example) that the finer
-  tests pick up. The weak result here is a property of the coarse basket, not evidence
+  tests pick up. The wrong-signed aggregate result here is a property of the coarse
+  basket, not evidence
   against the underlying construct.
 - **The two numbers above are not a fair head-to-head.** They come from different
   years, different area boundaries, and — because the improved variant only exists for
   the current period — different underlying social outcomes entirely. We are not
   claiming curation "helped" or "hurt"; we are reporting that, on their own separate
-  best-available tests, neither basket clears significance this round.
+  best-available tests, the faithful basket clears significance in the *unexpected*
+  direction and the improved basket does not clear significance at all — neither
+  confirms the thesis's original H1 prior.
 
 ## Why we can't (yet) run the head-to-head test
 
@@ -104,8 +110,11 @@ honestly compute. We'd rather say that plainly than manufacture a misleading num
 
 ## Honest caveats
 
-- **Neither correlation here is statistically significant** — read both as
-  inconclusive, not as confirmed findings pointing either direction.
+- **Neither correlation confirms the thesis's original H1 prior** — the faithful
+  basket is statistically significant but wrong-signed, and the improved basket does
+  not reach significance either way. Read both as evidence against the *aggregate*
+  basket confirming H1, not as confirmed findings in the thesis's predicted
+  direction.
 - The comparison above is **structural, not a controlled experiment**: the two numbers
   differ in outcome measure, time period, and area boundaries simultaneously.
 - This page describes **correlational, descriptive** results. Nothing here is a causal
