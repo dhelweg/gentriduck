@@ -25,6 +25,9 @@
 -- or affordability sub-index input is an explicitly separate, gated
 -- slice.
 --
+-- QA-6 (#181): zero consumers as of this writing -- the consuming slice is
+-- tracked as #203 (Hamburg rent/Wohnlage + displacement-zone integration).
+--
 -- Deliberately preserves Hamburg's own year_built_bucket/size_bucket/
 -- wohnlage labels as-published rather than remapping onto Berlin's
 -- bucket keys in this staging layer (mirrors stg_hamburg_wohnlage's and

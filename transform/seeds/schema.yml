@@ -13,15 +13,18 @@ seeds:
     columns:
       - name: domain
         description: Top-level POI domain (English label; e.g. 'Gastronomy', 'Tourism').
-        tests:
+        data_tests:
+
           - not_null
       - name: category
         description: Mid-level POI category within the domain (English label).
-        tests:
+        data_tests:
+
           - not_null
       - name: type
         description: Specific POI type (English label; maps to OSM tag values).
-        tests:
+        data_tests:
+
           - not_null
 
   - name: seed_dim_city
@@ -34,16 +37,19 @@ seeds:
     columns:
       - name: city_code
         description: Short city identifier (e.g. 'BER', 'HH'). Natural key.
-        tests:
+        data_tests:
+
           - not_null
           - unique
       - name: city_name
         description: Human-readable city name (e.g. 'Berlin', 'Hamburg').
-        tests:
+        data_tests:
+
           - not_null
       - name: country_code
         description: ISO 3166-1 alpha-2 country code (e.g. 'DE').
-        tests:
+        data_tests:
+
           - not_null
       - name: native_crs_epsg
         description: >
@@ -54,7 +60,8 @@ seeds:
           CRS in staging (not reprojected at ingestion); ST_Transform to
           WGS84 happens per-consumer (e.g. the ohsome join), matching the
           existing Berlin int_osm_poi_plr_weighted.sql convention.
-        tests:
+        data_tests:
+
           - not_null
 
   - name: seed_dim_area_level
@@ -67,12 +74,14 @@ seeds:
     columns:
       - name: level_code
         description: Area level code (stable administrative abbreviation; e.g. 'bzr', 'plr').
-        tests:
+        data_tests:
+
           - not_null
           - unique
       - name: level_name
         description: Human-readable level name (e.g. 'Bezirksregion').
-        tests:
+        data_tests:
+
           - not_null
       - name: description
         description: Brief description of the administrative level.
@@ -94,20 +103,24 @@ seeds:
     columns:
       - name: indicator
         description: Indicator key matching stg_berlin_ewr.indicator.
-        tests:
+        data_tests:
+
           - not_null
           - unique
       - name: label_de
         description: German label for the indicator as used in EWR documentation.
-        tests:
+        data_tests:
+
           - not_null
       - name: label_en
         description: English label / description of the indicator and its computation.
-        tests:
+        data_tests:
+
           - not_null
       - name: unit
         description: Unit of measurement (e.g. 'share', 'count', 'years').
-        tests:
+        data_tests:
+
           - not_null
       - name: definition_vintage_from
         description: >
@@ -115,17 +128,20 @@ seeds:
           stable and comparable. Analysts should filter reference_year >= definition_vintage_from
           for time-series analysis. For migration_background_share this is 2017 (not 2015)
           due to the Mikrozensus definitional break.
-        tests:
+        data_tests:
+
           - not_null
       - name: definition_vintage_to
         description: Last reference year for which this indicator definition is stable.
-        tests:
+        data_tests:
+
           - not_null
       - name: source_table
         description: >
           Source EWR CSV column name (or expression) from which this indicator is derived
           (e.g. 'E_E' for residents_total, 'DAU5' for residence_duration_5y_share).
-        tests:
+        data_tests:
+
           - not_null
       - name: caveats
         description: >
@@ -174,20 +190,23 @@ seeds:
         description: >
           PLR area code in the pre-2021 LOR scheme (8-digit string, zero-padded).
           Matches area_code in stg_berlin_ewr where area_vintage='lor_pre2021'.
-        tests:
+        data_tests:
+
           - not_null
       - name: plr_id_2021
         description: >
           PLR area code in the LOR 2021 reform scheme (8-digit string, zero-padded).
           Matches area_code in stg_berlin_ewr where area_vintage='lor_2021'.
-        tests:
+        data_tests:
+
           - not_null
       - name: mapping_type
         description: >
           Type of mapping: 'official_concordance' (from Senate publication),
           'areal_pop_weighted' (areal/population weighted), 'identity' (same code),
           or 'stub' (placeholder, not for analysis).
-        tests:
+        data_tests:
+
           - not_null
           - accepted_values:
               arguments:
@@ -203,7 +222,8 @@ seeds:
           given plr_id_pre2021 should sum to 1.0. weight = intersection_area /
           pre2021_plr_area. Type: double (enforced via column_types to ensure
           scientific-notation values in the CSV are parsed correctly).
-        tests:
+        data_tests:
+
           - not_null
       - name: reverse_weight
         description: >
@@ -216,7 +236,8 @@ seeds:
           covariates (mart_price_rent_dimension, lor_2021-only) onto lor_pre2021
           area codes via area-weighted averaging (geo-DS approved, #136). Type:
           double (enforced via column_types).
-        tests:
+        data_tests:
+
           - not_null
       - name: note
         description: >
@@ -240,11 +261,13 @@ seeds:
     columns:
       - name: osm_key
         description: Raw OSM tag key (e.g. 'amenity', 'shop', 'sport', 'leisure').
-        tests:
+        data_tests:
+
           - not_null
       - name: osm_value
         description: Raw OSM tag value (e.g. 'coworking_space', 'health_food').
-        tests:
+        data_tests:
+
           - not_null
       - name: osm_secondary_key
         description: >
@@ -260,26 +283,31 @@ seeds:
           Empty for tags not yet in the C1 poi_mapping (forward-looking drift rules).
       - name: canonical_key
         description: Target canonical OSM key after drift remapping (e.g. 'office', 'shop').
-        tests:
+        data_tests:
+
           - not_null
       - name: canonical_value
         description: Target canonical OSM value after drift remapping (e.g. 'coworking', 'organic').
-        tests:
+        data_tests:
+
           - not_null
       - name: since_year
         description: Year from which this drift rule should be applied (integer).
-        tests:
+        data_tests:
+
           - not_null
       - name: confidence
         description: Geo-data-scientist confidence level for this rule.
-        tests:
+        data_tests:
+
           - not_null
           - accepted_values:
               arguments:
                 values: ["high", "medium", "low"]
       - name: rationale
         description: Free-text rationale for the drift mapping rule.
-        tests:
+        data_tests:
+
           - not_null
 
   - name: seed_poi_canonical_category
@@ -313,11 +341,13 @@ seeds:
     columns:
       - name: canonical_key
         description: Canonical OSM tag key (e.g. 'office', 'shop', 'leisure').
-        tests:
+        data_tests:
+
           - not_null
       - name: canonical_value
         description: Canonical OSM tag value (e.g. 'coworking', 'organic', 'yoga_studio').
-        tests:
+        data_tests:
+
           - not_null
       - name: poi_domain
         description: >
@@ -325,25 +355,29 @@ seeds:
           for the office/coworking row (#199 fix, matches seed_poi_mapping.csv);
           still lower-case for the 3 rows tracked by #201 (currently inactive --
           match zero real Berlin POIs).
-        tests:
+        data_tests:
+
           - not_null
       - name: poi_category
         description: >
           Mid-level POI category within the domain. Same Title-Case-vs-lower-case
           split as poi_domain -- see #199/#201.
-        tests:
+        data_tests:
+
           - not_null
       - name: poi_type
         description: >
           Specific canonical POI type. Same Title-Case-vs-lower-case split as
           poi_domain -- see #199/#201.
-        tests:
+        data_tests:
+
           - not_null
       - name: gentrification_proxy
         description: >
           Whether this canonical POI type serves as a gentrification proxy signal
           (boolean string 'true' / 'false').
-        tests:
+        data_tests:
+
           - not_null
           - accepted_values:
               arguments:
@@ -361,20 +395,23 @@ seeds:
     columns:
       - name: edition
         description: MSS publication year (2013, 2015, 2017, 2019, 2021, 2023, 2025).
-        tests:
+        data_tests:
+
           - not_null
           - unique
       - name: expected_plr_count
         description: >
           Published PLR count for this edition. 447 for pre-2021 LOR editions;
           542 for LOR 2021 editions. Source: ADR-0006 / MSS reports.
-        tests:
+        data_tests:
+
           - not_null
       - name: lor_vintage
         description: >
           LOR boundary vintage for this edition. 'lor_pre2021' for editions <=2019;
           'lor_2021' for editions >=2021.
-        tests:
+        data_tests:
+
           - not_null
           - accepted_values:
               arguments:
@@ -405,22 +442,26 @@ seeds:
         description: >
           8-character PLR area code (LOR 2021 vintage). Natural key.
           Verified against stg_berlin_lor (area_vintage='lor_2021').
-        tests:
+        data_tests:
+
           - not_null
           - unique
       - name: plr_name
         description: Human-readable PLR name (German proper noun; Berlin place names).
-        tests:
+        data_tests:
+
           - not_null
       - name: bezirk
         description: Berlin district (Bezirk) name (e.g. 'Neukölln', 'Pankow').
-        tests:
+        data_tests:
+
           - not_null
       - name: label
         description: >
           Ground-truth gentrification label: 'hotspot' (under pressure / vulnerable),
           'coldspot' (stable / low deprivation), or 'mixed' (transitional / completed).
-        tests:
+        data_tests:
+
           - not_null
           - accepted_values:
               arguments:
@@ -429,14 +470,15 @@ seeds:
         description: >
           Short citation for the label assignment (e.g. 'Döring & Ulbricht 2016',
           'MSS 2023 Status=4', 'Helweg 2018 thesis §4.2').
-        tests:
+        data_tests:
+
           - not_null
       - name: notes
         description: >
           Optional context: current MSS status/class, literature reference,
           or caveats about the mapping accuracy.
 
-  - name: berlin_mietspiegel
+  - name: seed_berlin_mietspiegel
     description: >
       D1 — Berliner Mietspiegel multi-vintage rent table seed (2017-present).
       Each row is one cell of the Mietspiegeltabelle: a (vintage, year_built_bucket,
@@ -451,7 +493,8 @@ seeds:
       Vintages available: 2017, 2019, 2021, 2023, 2024, 2026 (all fully transcribed).
     meta:
       dbt_meta_owner: data-engineer
-    tests:
+    data_tests:
+
       - dbt_utils.expression_is_true:
           arguments:
             expression: "rent_low <= rent_mid"
@@ -466,7 +509,8 @@ seeds:
       - name: vintage
         description: >
           Mietspiegel edition year (integer; 2017, 2019, 2021, 2023, 2024, or 2026).
-        tests:
+        data_tests:
+
           - not_null
           - accepted_values:
               arguments:
@@ -478,35 +522,41 @@ seeds:
           Construction year bucket. 2017 values: 'pre_1918', '1919_1949', '1950_1964',
           '1965_1972', '1973_1990_west', '1973_1990_ost', '1991_2002', '2003_2015'.
           Later editions may merge west/ost and use 'ab_2003' for the newest bucket.
-        tests:
+        data_tests:
+
           - not_null
       - name: size_bucket
         description: >
           Apartment floor area bucket: 'under_40' (<40 m2), '40_to_60' (40-<60 m2),
           '60_to_90' (60-<90 m2), '90_plus' (>=90 m2).
-        tests:
+        data_tests:
+
           - not_null
           - accepted_values:
               arguments:
                 values: [under_40, 40_to_60, 60_to_90, 90_plus]
       - name: wohnlage
         description: Location quality tier ('einfach', 'mittel', 'gut').
-        tests:
+        data_tests:
+
           - not_null
           - accepted_values:
               arguments:
                 values: [einfach, mittel, gut]
       - name: rent_low
         description: Lower bound of the 3/4-Spanne (EUR/m2/month, net cold rent).
-        tests:
+        data_tests:
+
           - not_null
       - name: rent_mid
         description: Median net cold rent (EUR/m2/month).
-        tests:
+        data_tests:
+
           - not_null
       - name: rent_high
         description: Upper bound of the 3/4-Spanne (EUR/m2/month, net cold rent).
-        tests:
+        data_tests:
+
           - not_null
       - name: source
         description: >
@@ -533,7 +583,8 @@ seeds:
     columns:
       - name: level
         description: Taxonomy level this crosswalk row resolves ('domain', 'category', 'type').
-        tests:
+        data_tests:
+
           - not_null
           - accepted_values:
               arguments:
@@ -542,12 +593,14 @@ seeds:
         description: >
           Raw thesis OA column suffix, e.g. 'total_d_tourismus_stock',
           'gastro_t_restaurant_italiener_stock'. Unique per row.
-        tests:
+        data_tests:
+
           - not_null
           - unique
       - name: domain_h
         description: Our poi_domain_h value this suffix resolves to (always populated).
-        tests:
+        data_tests:
+
           - not_null
       - name: category_h
         description: Our poi_category_h value (populated for level in category/type; null for domain).
@@ -601,14 +654,16 @@ seeds:
     columns:
       - name: level
         description: Taxonomy level this row's tier applies to ('domain', 'category', 'type').
-        tests:
+        data_tests:
+
           - not_null
           - accepted_values:
               arguments:
                 values: ["domain", "category", "type"]
       - name: poi_domain_h
         description: poi_domain_h value this row's tier applies to (always populated).
-        tests:
+        data_tests:
+
           - not_null
       - name: poi_category_h
         description: poi_category_h value (populated for level in category/type; blank for domain).
@@ -620,20 +675,23 @@ seeds:
           1=keep low weight (ambiguous/incumbent-serving), 2=keep medium weight
           (plausible, not headline), 3=keep full weight (headline literature signature).
           Set from theory alone, before any outcome correlation is examined (ADR-0017 D3).
-        tests:
+        data_tests:
+
           - not_null
           - accepted_values:
               arguments:
                 values: [0, 1, 2, 3]
       - name: offering_weight
         description: Numeric weight derived 1:1 from offering_tier (0/0.33/0.66/1.0).
-        tests:
+        data_tests:
+
           - not_null
       - name: causal_rationale
         description: >
           Cited theoretical justification for the tier (thesis/urban-sociology source per
           R-C2 grounding rule); the sole record of the causality-first, pre-data decision.
-        tests:
+        data_tests:
+
           - not_null
       - name: data_corr
         description: >

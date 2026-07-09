@@ -1,7 +1,7 @@
 -- stg_berlin_mietspiegel.sql
 -- D1 staging view over the multi-vintage Berliner Mietspiegel seed.
 --
--- Source: berlin_mietspiegel seed (transform/seeds/berlin_mietspiegel.csv).
+-- Source: seed_berlin_mietspiegel seed (transform/seeds/seed_berlin_mietspiegel.csv).
 -- Transcribed from official PDFs published by Senatsverwaltung fuer
 -- Stadtentwicklung, Bauen und Wohnen Berlin. PDFs not redistributed
 -- (ADR-0003 item 11); only transcribed numeric rent values are committed.
@@ -44,4 +44,4 @@ select
     rent_mid,
     rent_high,
     source as source_attribution
-from {{ ref("berlin_mietspiegel") }}
+from {{ ref("seed_berlin_mietspiegel") }}

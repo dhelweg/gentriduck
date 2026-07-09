@@ -20,6 +20,9 @@
 -- explicitly separate, gated slice (mirrors the displacement-zone and
 -- EWR-stadtteil pillars' own scoping calls).
 --
+-- QA-6 (#181): zero consumers as of this writing -- the consuming slice is
+-- tracked as #203 (Hamburg rent/Wohnlage + displacement-zone integration).
+--
 -- Deliberately preserves Hamburg's own Wohnlage label scheme as-published
 -- rather than remapping onto Berlin's einfach/mittel/gut scale in this
 -- staging layer (mirrors stg_hamburg_sozialmonitoring's decision not to

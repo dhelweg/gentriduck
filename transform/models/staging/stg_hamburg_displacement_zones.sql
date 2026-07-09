@@ -16,6 +16,9 @@
 -- sub-index (mirroring #70's eventual scope) is an explicitly separate,
 -- gated slice with its own geo-DS + domain-expert sign-off.
 --
+-- QA-6 (#181): zero consumers as of this writing -- the consuming slice is
+-- tracked as #203 (Hamburg rent/Wohnlage + displacement-zone integration).
+--
 -- Staging view over the parquet produced by
 -- ingestion/hamburg/displacement/ingest_hamburg_displacement.py.
 --

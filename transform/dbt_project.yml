@@ -43,7 +43,8 @@ seeds:
 
 # Test severity overrides for standalone SQL test files.
 # C5 anomaly tests use warn severity: data quality alerts, not hard blockers.
-tests:
+data_tests:
+
   gentriduck:
     test_c5_poi_share_spike:
       +severity: warn
