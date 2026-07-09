@@ -304,7 +304,7 @@ def main() -> None:
     # Load the spatial extension (required for ST_AsWKB / ST_GeomFromWKB).
     try:
         con.execute("LOAD spatial;")
-    except Exception:
+    except Exception:  # noqa: S110 -- best-effort load, absence handled downstream
         pass  # already loaded or not available (stub DB)
 
     scores_df, geom_df = load_data(con)

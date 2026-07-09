@@ -86,7 +86,7 @@ def git_sha(repo_root: Path = REPO_ROOT) -> str:
     """Best-effort current repo-wide git SHA. Returns 'unknown' if git/.git is unavailable."""
     try:
         result = subprocess.run(
-            ["git", "rev-parse", "HEAD"],
+            ["git", "rev-parse", "HEAD"],  # noqa: S607 -- fixed "git" argv, not user input
             cwd=repo_root,
             capture_output=True,
             text=True,

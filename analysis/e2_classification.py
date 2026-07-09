@@ -320,7 +320,7 @@ def leakage_guard_crosssection(
     train_areas = set(area_codes[train_idx])
     test_areas = set(area_codes[test_idx])
     overlap = train_areas & test_areas
-    assert len(overlap) == 0, (
+    assert len(overlap) == 0, (  # noqa: S101 -- R-C3 leakage guard, intentional runtime invariant
         f"LEAKAGE: {len(overlap)} area_codes appear in both train and test folds: "
         f"{list(overlap)[:5]}"
     )
@@ -415,7 +415,9 @@ def run_cv_panel(
         # Verify by construction that GroupKFold provides no area overlap
         train_areas = set(area_codes[train_idx])
         test_areas = set(area_codes[test_idx])
-        assert len(train_areas & test_areas) == 0, "GroupKFold violated — should never happen"
+        assert (  # noqa: S101 -- R-C3 leakage guard, intentional runtime invariant
+            len(train_areas & test_areas) == 0
+        ), "GroupKFold violated — should never happen"
 
         x_train, x_test = x[train_idx], x[test_idx]
         y_train, y_test = y[train_idx], y[test_idx]
