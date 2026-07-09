@@ -31,7 +31,11 @@
 -- uv run poe build continue to pass (docs/lessons/local-first-data-presence.md).
 --
 -- Output columns:
--- city_code          varchar  -- canonical 'berlin' (ADR-0005)
+-- city_code          varchar  -- canonical 'BER' (ADR-0005). Source parquet carries
+-- the legacy lowercase 'berlin' (ingest_milieuschutz.py CITY_CODE
+-- constant, pre-QA-4); normalised here via canonical_city_code()
+-- (QA-4/#179) so this staging model matches every other Berlin
+-- source and joins cleanly to dim_area/stg_berlin_lor.
 -- area_code          varchar  -- natural key / schluessel attribute, e.g. "EM0105".
 -- Does NOT join to stg_berlin_lor.area_code directly (a
 -- Milieuschutz boundary is its own bespoke polygon, not a
@@ -66,7 +70,7 @@
 {% if file_count > 0 %}
 
     select
-        city_code,
+        {{ canonical_city_code('city_code') }} as city_code,
         area_code,
         area_name,
         bezirk_name,
