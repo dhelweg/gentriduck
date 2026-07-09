@@ -48,7 +48,10 @@ the [maps page](/maps) or the [time-series view](/time-series).
 select
     area_name,
     status_class as stage,
-    dynamism_class as pressure_trend
+    dynamism_class as pressure_trend,
+    -- Exact-code drill-down (#150): every area is one click from its full page, not just the
+    -- district's top-ranked spotlight below.
+    '/area/' || area_code as area_link
 from gentriduck_marts.gentrification_index
 where variant = 'live_data' and area_level = 'plr' and city_code = 'BER'
   and period_yyyymm = (
@@ -59,10 +62,10 @@ where variant = 'live_data' and area_level = 'plr' and city_code = 'BER'
 order by (dynamism_class_bi = 'negative') desc, dynamism_index desc
 ```
 
-Every neighbourhood in the selected district, highest gentrification pressure first. The top-ranked
-one is profiled in the spotlight below.
+Every neighbourhood in the selected district, highest gentrification pressure first. Click any row
+to open its exact page; the top-ranked one is also profiled in the spotlight below.
 
-<DataTable data={browse} rows=10 rowShading=true>
+<DataTable data={browse} rows=10 rowShading=true link=area_link>
     <Column id=area_name title="Neighbourhood (PLR)"/>
     <Column id=stage title="Stage"/>
     <Column id=pressure_trend title="Pressure trend"/>
@@ -245,5 +248,6 @@ order by snapshot_year
 ## Further reading
 
 See [methodology & data sources](/methodology) for what the index means, the
-[citywide POI & price/rent overview](/poi-price-overview) for these signals across all of Berlin, or
-the [time-series view](/time-series) for how the whole city has moved.
+[citywide POI & price/rent overview](/poi-price-overview) for these signals across all of Berlin, the
+[time-series view](/time-series) for how the whole city has moved, or the
+[full neighbourhood list](/area) to search for a specific area directly.
