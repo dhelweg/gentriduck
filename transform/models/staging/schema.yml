@@ -1294,7 +1294,11 @@ models:
       - name: geometry_wkb
         description: Address point in WKB (MultiPoint), CRS EPSG:25833.
       - name: wohnlage
-        description: Wohnlage classification (wol WFS attribute; einfach/mittel/gut).
+        description: >
+          Wohnlage classification (wol WFS attribute; einfach/mittel/gut, plus 'ohne'
+          -- addresses the WFS assigns no simple/middle/good location grade, predominantly
+          non-residential/uninhabited addresses (#212). int_berlin_wohnlage_plr excludes
+          'ohne' from the residential tier-share denominator (R-C2).
         data_tests:
 
           - not_null:
@@ -1302,7 +1306,7 @@ models:
                 where: "city_code is not null"
           - accepted_values:
               arguments:
-                values: ["einfach", "mittel", "gut"]
+                values: ["einfach", "mittel", "gut", "ohne"]
               config:
                 where: "city_code is not null"
       - name: address_id
