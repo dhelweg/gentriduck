@@ -527,3 +527,88 @@ seeds:
         description: Our poi_type_h value (populated only for level='type').
       - name: note
         description: Free-text note flagging translation ambiguity or a known crosswalk divergence.
+
+  - name: seed_poi_offering_relevance
+    description: >
+      OA-B.1 (#170): causality-first POI relevance/tier seed curating which POI types
+      count toward the **improved** (Workstream 2, `methodology_variant='improved'`)
+      offering-advantage signal (ADR-0017 D3). One row per (level, domain, category,
+      type) node of the existing 3-level taxonomy (seed_poi_mapping.csv) -- 231 rows
+      (13 domain + 55 category + 163 type). Tiers are set from **urban-sociology/retail-
+      gentrification theory alone**, before any correlation with an outcome is looked at
+      (ADR-0017 D3 2x2: causally-plausible-and-correlated is kept, non-causal correlates
+      are dropped as spurious even if correlated; theory can never be overridden upward
+      by data). `data_corr` is a placeholder, filled by OA-B.2 (#171) with the data-driven
+      confirmation pass; it can only corroborate or down-weight within a tier, never
+      promote a tier-0 ('drop') node -- the non-circularity rule (ADR-0017 D3, plan
+      "POI relevance model").
+
+      Grounding: Zukin 2009 *Naked City* (boutique/artisanal "third wave" retail);
+      Ley 1996 *The New Middle Class* (cultural-intermediary consumption); Lees, Slater
+      & Wyly 2008 *Gentrification* (retail-succession signature list: cafes, galleries,
+      boutiques, fitness/wellness); Dangschat 1988 invasion-succession (incumbent trades
+      displaced BY upgrading are not themselves a signal of it); Smith 1979 rent-gap
+      theory (Vacancy retained as the theorised **opposite-pole disinvestment** marker,
+      ADR-0017 D-2 -- never summed with amenity rows); Florida 2002 creative class
+      (coworking); Gotham 2005 tourism gentrification (hotel/hostel growth). Full source
+      list in `docs/adr/0017-poi-offering-advantage-revival.md` Sources. The original
+      4-row `seed_poi_canonical_category.csv` stub (`coworking_space=true`,
+      `organic_food=true`, `yoga_studio=true`, `fitness_outdoor=false`) is the historical
+      precedent this seed generalizes and supersedes for offering-relevance purposes;
+      that seed's `gentrification_proxy` column is unaffected/untouched here.
+
+      `offering_tier` in {0,1,2,3} maps to `offering_weight` in {0.0, 0.33, 0.66, 1.0}:
+      0 = drop (not causally plausible as a commercial-offering signal, e.g. public/civic
+      infrastructure explicitly out of scope per the ticket -- benches, toilets, vending,
+      public transport); 1 = keep at low weight (ambiguous / incumbent-serving, flagged
+      for OA-B.2 data confirmation); 2 = keep at medium weight (plausible but not a
+      headline signature); 3 = keep at full weight (headline literature signature, e.g.
+      specialty cafes, boutiques, independent bookstores, coworking, boutique fitness).
+
+      **Methodology-bearing (CLAUDE.md R-C1):** this seed sets tier weights that feed
+      the improved-variant offering-advantage weighting (OA-B.3 #172); requires geo-DS +
+      domain-expert `Verdict: PASS` before integration into `develop`.
+    meta:
+      dbt_meta_owner: data-engineer
+    columns:
+      - name: level
+        description: Taxonomy level this row's tier applies to ('domain', 'category', 'type').
+        tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ["domain", "category", "type"]
+      - name: poi_domain_h
+        description: poi_domain_h value this row's tier applies to (always populated).
+        tests:
+          - not_null
+      - name: poi_category_h
+        description: poi_category_h value (populated for level in category/type; blank for domain).
+      - name: poi_type_h
+        description: poi_type_h value (populated only for level='type').
+      - name: offering_tier
+        description: >
+          Causality-first relevance tier in {0,1,2,3}: 0=drop (not causally plausible),
+          1=keep low weight (ambiguous/incumbent-serving), 2=keep medium weight
+          (plausible, not headline), 3=keep full weight (headline literature signature).
+          Set from theory alone, before any outcome correlation is examined (ADR-0017 D3).
+        tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: [0, 1, 2, 3]
+      - name: offering_weight
+        description: Numeric weight derived 1:1 from offering_tier (0/0.33/0.66/1.0).
+        tests:
+          - not_null
+      - name: causal_rationale
+        description: >
+          Cited theoretical justification for the tier (thesis/urban-sociology source per
+          R-C2 grounding rule); the sole record of the causality-first, pre-data decision.
+        tests:
+          - not_null
+      - name: data_corr
+        description: >
+          Placeholder for the OA-B.2 (#171) data-driven confirmation pass (correlation of
+          this node's offering-advantage with the outcome). Null until #171 fills it;
+          never used to promote a tier-0 node (non-circularity rule, ADR-0017 D3).
