@@ -68,23 +68,11 @@ from __future__ import annotations
 import argparse
 import datetime
 import logging
-import ssl
 import sys
 import time
 import urllib.parse
-import urllib.request
 from pathlib import Path
 from typing import Optional
-
-# macOS Python does not ship CA certs; use certifi's bundle when available.
-try:
-    import certifi as _certifi
-
-    _SSL_CONTEXT = ssl.create_default_context(cafile=_certifi.where())
-except ImportError:
-    _SSL_CONTEXT = ssl.create_default_context()
-
-import json
 
 import pyarrow as pa
 import pyarrow.parquet as pq
@@ -104,6 +92,11 @@ _INGESTION_ROOT = Path(__file__).resolve().parents[2]
 if str(_INGESTION_ROOT) not in sys.path:
     sys.path.insert(0, str(_INGESTION_ROOT))
 from manifest import existing_outputs, write_manifest_entry  # noqa: E402
+
+# QA-2 (#177): shared retry+backoff fetch helper (the atomic-write helper is
+# NOT used here — this script's partial-download-keeps-.tmp semantics differ
+# from `common.io.atomic_write_parquet`'s always-rename-on-success contract).
+from common.http import FetchError, fetch_geojson  # noqa: E402
 
 # ---------------------------------------------------------------------------
 # Per-year configuration
@@ -208,28 +201,17 @@ def build_wfs_url(wfs_base_url: str, wfs_type_names: str, offset: int) -> str:
 
 
 def fetch_page(wfs_base_url: str, wfs_type_names: str, offset: int, timeout: int = 120) -> dict:
-    """Fetch one WFS page as a parsed GeoJSON dict."""
+    """Fetch one WFS page as a parsed GeoJSON dict.
+
+    QA-2 (#177): delegates to `common.http.fetch_geojson` for the bounded
+    retry+backoff + FeatureCollection validation previously duplicated here.
+    """
     url = build_wfs_url(wfs_base_url, wfs_type_names, offset)
     log.debug("Fetching Wohnlage WFS page: startIndex=%d", offset)
     try:
-        with urllib.request.urlopen(url, timeout=timeout, context=_SSL_CONTEXT) as resp:  # noqa: S310
-            raw = resp.read()
-    except urllib.error.URLError as exc:
-        raise RuntimeError(f"Network error fetching offset={offset}: {exc}") from exc
-    except Exception as exc:
-        raise RuntimeError(f"Unexpected error fetching offset={offset}: {exc}") from exc
-
-    try:
-        data = json.loads(raw)
-    except json.JSONDecodeError as exc:
-        raise RuntimeError(f"Invalid JSON at offset={offset}: {exc}") from exc
-
-    if data.get("type") != "FeatureCollection":
-        raise RuntimeError(
-            f"Expected GeoJSON FeatureCollection at offset={offset}, "
-            f"got type={data.get('type')!r}. Excerpt: {str(raw[:200])}"
-        )
-    return data
+        return fetch_geojson(url, timeout=timeout)
+    except FetchError as exc:
+        raise RuntimeError(f"Failed fetching offset={offset}: {exc}") from exc
 
 
 def fetch_all_features(

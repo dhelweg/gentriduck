@@ -233,3 +233,44 @@ bandwidth cap is a non-issue at noindex soft-launch traffic.
 
 **Gate:** hosting/architecture change, **not methodology-bearing** (consistent with this ADR's own
 Status/Process note), so no geo-DS/domain sign-off is required.
+
+## Amendment B — GoatCounter for privacy-friendly web analytics (2026-07-09, #194)
+
+**What changed:** the site adopts **GoatCounter** (AGPL-3.0, open-source, self-hostable — used here
+on its free hosted tier at `<code>.goatcounter.com`) for cookieless pageview/visitor/referrer/top-path
+analytics, injected as a single async `<script>` beacon on every built page.
+
+**Decision — GoatCounter over Cloudflare Web Analytics.** Both candidates from G4's tracking issue
+are free and cookieless with no consent banner required. GoatCounter is chosen because:
+- **Open-source (AGPL-3.0)**, matching golden rule #1's "free + open" preference more strongly than
+  Cloudflare Web Analytics (a proprietary, closed-source product that happens to have a free tier).
+  Self-hosting remains a documented escape hatch if the hosted free tier ever becomes a constraint —
+  Cloudflare Web Analytics has no such fallback.
+- **No relationship to site hosting.** Unlike Cloudflare Pages (rejected for hosting itself in
+  Amendment A over the wasm 25-MiB limit), GoatCounter's beacon is hosting-agnostic — it works
+  identically on the current GitHub Pages host and any future host from #146, so this decision does
+  not get re-litigated by a hosting change.
+- **Minimal integration surface**: one `<script data-goatcounter="..." async src="//gc.zgo.at/count.js">`
+  tag, no cookie, no fingerprinting, IP addresses not stored beyond aggregation — see GoatCounter's
+  published privacy policy. A public dashboard (optional) can be shared without exposing raw logs.
+
+**Implementation:** mirrors the existing `postbuild-noindex.mjs` pattern (ADR-0012, main text) — a
+Node postbuild script (`web/scripts/postbuild-analytics.mjs`) injects the beacon into every built
+HTML file's `<head>`, run as a `&&` step after `evidence build` in `package.json`. The GoatCounter
+site **code** (the `<code>` in `<code>.goatcounter.com`) is **not a secret** — it is designed to be
+public in every page's source — so it is read from a plain env var (`GOATCOUNTER_CODE`, documented in
+`web/README.md`, no `.env` requirement) rather than treated as a credential. **If unset, the postbuild
+step is a no-op** (logs a notice) so local dev/preview and CI-less builds are unaffected — this keeps
+"no account needed to preview" (golden rule #5) intact; analytics is an opt-in production concern, not
+a build dependency.
+
+**Open follow-up (maintainer action, not code):** a GoatCounter account/site (free, `goatcounter.com`
+signup, choose a site code) must be created once and `GOATCOUNTER_CODE` set at deploy time
+(`ops/deploy-gh-pages.sh` or the maintainer's shell) — the PM cannot create third-party accounts on
+the maintainer's behalf. Until that env var is set in the deploy environment, the site builds and
+serves exactly as before (no beacon, no behavior change) — this ticket ships the tooling, not the
+live account.
+
+**Gate:** hosting/tooling addition (a new free, open-source analytics beacon), **not
+methodology-bearing** (no R-C1 path touched) — consistent with this ADR's own Status/Process note, so
+no geo-DS/domain sign-off is required.

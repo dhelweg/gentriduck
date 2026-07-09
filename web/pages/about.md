@@ -1,12 +1,16 @@
 ---
 title: About this project
+sidebar_position: 30
 ---
 
 # About this project
 
 If you found this site and are wondering "who or what made this, and can I trust it?" — this page
 is for you. It's the story of the project, not of any one neighbourhood's numbers; for what the
-statistics mean and where they come from, see [methodology & data sources](/methodology).
+statistics mean and where they come from, see [methodology & data sources](/methodology). For a
+deeper look at the two halves of "how" specifically, see [how it's
+built](/how-its-built) (the data pipeline) and [how it's
+organised](/how-its-organised) (the multi-agent workflow) — this page is the short version of both.
 
 ## It started as a 2018 university thesis
 
@@ -83,3 +87,8 @@ above, and the complete history of architecture decisions are all public:
 Start with the [methodology & data sources](/methodology) page for what the numbers mean, or browse
 the repository's `docs/adr/` folder for the project's architecture decisions and `.claude/agents/`
 for the agent definitions described above.
+
+---
+
+<sub>[Home](/) · [Methodology & data sources](/methodology) · [About this project](/about) · [GitHub repository](https://github.com/dhelweg/gentriduck)</sub>
+

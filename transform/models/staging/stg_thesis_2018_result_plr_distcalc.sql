@@ -121,7 +121,7 @@ select
     true as is_distance_weighted
 from
     read_csv(
-        '{{ var("project_root") }}/reference/goldens/20180909_result_full_plr_distcalc.csv',
+        {{ source("thesis_2018", "result_full_plr_distcalc") }},
         encoding = 'latin-1',
         auto_detect = true
     )

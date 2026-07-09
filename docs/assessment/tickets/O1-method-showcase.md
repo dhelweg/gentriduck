@@ -7,7 +7,7 @@ spread across `CLAUDE.md`, `.claude/agents/*`, `.claude/skills/*` and `docs/PROJ
 into a coherent, reproducible reference makes the **method** a first-class output and eases onboarding.
 
 ## Goal
-A polished `docs/method/` reference describing the operating model, plus an honest **engineering retrospective**,
+A polished `docs/process/` reference describing the operating model, plus an honest **engineering retrospective**,
 reproducible by others.
 
 ## Scope & approach
@@ -19,7 +19,7 @@ reproducible by others.
 - Living doc, updated at milestones; linked from `README.md`.
 
 ## Acceptance criteria
-- `docs/method/` published (operating model + retrospective), linked from README; reproducible setup steps.
+- `docs/process/` published (operating model + retrospective), linked from README; reproducible setup steps.
 - Reads as a standalone reference someone outside the project could follow.
 - Contains no personal, employer, or non-project content.
 

@@ -1,5 +1,6 @@
 ---
 title: Methodology & data sources
+sidebar_position: 20
 ---
 
 # Methodology & data sources
@@ -232,3 +233,8 @@ project's public GitHub repository:
 See also the [home page](/) for the current index, [time-series](/time-series) for per-area
 trajectories, [maps](/maps) for a citywide choropleth, [area detail](/area-detail) for a full per-area
 breakdown, and the [citywide POI & price/rent overview](/poi-price-overview).
+
+---
+
+<sub>[Home](/) · [Methodology & data sources](/methodology) · [About this project](/about) · [GitHub repository](https://github.com/dhelweg/gentriduck)</sub>
+

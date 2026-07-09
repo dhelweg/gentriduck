@@ -1,5 +1,6 @@
 ---
 title: Time series — how Berlin has moved
+sidebar_position: 11
 ---
 
 <!--
@@ -60,6 +61,8 @@ Over the three most recent official editions, these areas' official social statu
 ```sql improvers
 select
     g.area_name,
+    -- Exact-code drill-down (#150): area/[code] resolves lor_2021 PLR codes only.
+    '/area/' || t.area_code as area_link,
     t.status_index_first as status_2021,
     t.status_index_last as status_2025,
     t.status_delta,
@@ -75,7 +78,7 @@ order by t.status_delta asc, g.area_name
 limit 12
 ```
 
-<DataTable data={improvers} rows=12 rowShading=true emptySet="warn">
+<DataTable data={improvers} rows=12 rowShading=true emptySet="warn" link=area_link>
     <Column id=area_name title="Neighbourhood (PLR)"/>
     <Column id=status_2021 title="Status 2021"/>
     <Column id=status_2025 title="Status 2025"/>
@@ -88,6 +91,7 @@ limit 12
 ```sql decliners
 select
     g.area_name,
+    '/area/' || t.area_code as area_link,
     t.status_index_first as status_2021,
     t.status_index_last as status_2025,
     t.status_delta,
@@ -103,7 +107,7 @@ order by t.status_delta desc, g.area_name
 limit 12
 ```
 
-<DataTable data={decliners} rows=12 rowShading=true emptySet="warn">
+<DataTable data={decliners} rows=12 rowShading=true emptySet="warn" link=area_link>
     <Column id=area_name title="Neighbourhood (PLR)"/>
     <Column id=status_2021 title="Status 2021"/>
     <Column id=status_2025 title="Status 2025"/>
@@ -138,6 +142,12 @@ order by area_count desc
 
 ## Go deeper
 
-Open any single neighbourhood's full breakdown — status trajectory, commercial mix, and price/rent —
-on the [area detail page](/area-detail), or see the citywide [maps](/maps) and the
+Click any row above to open that exact neighbourhood's full breakdown — status trajectory,
+commercial mix, and price/rent. To browse by district instead, use the
+[area detail page](/area-detail), or see the citywide [maps](/maps) and the
 [home page](/) for the current index and stage typology.
+
+---
+
+<sub>[Home](/) · [Methodology & data sources](/methodology) · [About this project](/about) · [GitHub repository](https://github.com/dhelweg/gentriduck)</sub>
+

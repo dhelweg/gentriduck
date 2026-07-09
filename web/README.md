@@ -26,6 +26,19 @@ npm run build                    # static build -> web/build/
 No `MOTHERDUCK_TOKEN`, account, or network access is required to build or preview — the site
 reads only the local `data/serving/*.parquet` snapshot.
 
+## Analytics (optional, production only)
+
+The build injects a [GoatCounter](https://www.goatcounter.com/) (AGPL-3.0, open-source,
+cookieless, no consent banner) pageview beacon if `GOATCOUNTER_CODE` is set in the environment
+before `npm run build` — see `docs/adr/0012-serving-and-hosting-stack.md` Amendment B for the
+full decision. **Unset by default**, which is a no-op (no beacon, byte-identical build) — local
+dev/preview needs no account, per golden rule #5. To enable in production, create a free site at
+goatcounter.com and export its site code before building:
+
+```bash
+GOATCOUNTER_CODE=<your-site-code> npm run build
+```
+
 ## Layout
 - `sources/gentriduck_marts/` — DuckDB source (`:memory:`, reads `../data/serving/*.parquet`
   directly via `read_parquet`); one `.sql` file per published mart.

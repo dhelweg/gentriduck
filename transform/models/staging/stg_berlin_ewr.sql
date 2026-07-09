@@ -70,7 +70,8 @@
     )
 }}
 
-{% set ewr_parquet_glob = var("project_root") ~ "/data/raw/berlin/ewr/*.parquet" %}
+{% set ewr_parquet_glob = raw_path("berlin/ewr/*.parquet") %}
+{%- set _src_raw_berlin_ewr = source("raw_berlin", "ewr") -%}
 
 {% if execute %}
     {%- set file_count_result = run_query(
@@ -115,7 +116,7 @@
             select *
             from
                 read_parquet(
-                    '{{ ewr_parquet_glob }}',
+                    {{ _src_raw_berlin_ewr }},
                     hive_partitioning = false,
                     union_by_name = true
                 )

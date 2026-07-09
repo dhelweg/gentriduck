@@ -48,9 +48,11 @@ log = logging.getLogger(__name__)
 # Configuration (ADR-0010 Amendment 7: configurable connection)
 # ---------------------------------------------------------------------------
 _env_db = os.environ.get("GENTRIDUCK_DB")
-DUCKDB_PATH = _env_db if _env_db else "data/gentriduck.duckdb"
+# QA-7 (#182): __file__-anchored so this script runs from any cwd.
+_repo_root = Path(__file__).parent.parent
+DUCKDB_PATH = Path(_env_db) if _env_db else _repo_root / "data" / "gentriduck.duckdb"
 
-OUT_DIR = Path("data/analysis")
+OUT_DIR = _repo_root / "data" / "analysis"
 
 # spatial-methods.md §7: PLR-vs-BZR rank correlation threshold.
 MAUP_THRESHOLD = 0.7
@@ -368,7 +370,7 @@ def main() -> None:
     con = duckdb.connect(DUCKDB_PATH, read_only=True)
     try:
         con.execute("LOAD spatial;")
-    except Exception:
+    except Exception:  # noqa: S110 -- best-effort load, absence handled downstream
         pass
 
     log.info("Running MAUP sensitivity analysis...")

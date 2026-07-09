@@ -43,7 +43,8 @@ seeds:
 
 # Test severity overrides for standalone SQL test files.
 # C5 anomaly tests use warn severity: data quality alerts, not hard blockers.
-tests:
+data_tests:
+
   gentriduck:
     test_c5_poi_share_spike:
       +severity: warn
@@ -58,3 +59,8 @@ tests:
 # Override via --vars 'project_root: /absolute/path' if PWD is not the repo root.
 vars:
   project_root: "{{ env_var('PWD', '.') }}"
+  # QA-4b (#202): single source of truth for which dim_city.city_code values are
+  # publication-ready (exposed downstream / on the site). Berlin is the only
+  # published city today; Hamburg (ADR-0014) is ingested but not yet published.
+  # Override via --vars 'published_cities: [BER, HH]' when a second city ships.
+  published_cities: ["BER"]

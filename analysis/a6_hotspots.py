@@ -61,9 +61,13 @@ log = logging.getLogger(__name__)
 # Configurable DB path (ADR-0010 Amendment 7: configurable, not hard-coded)
 # ---------------------------------------------------------------------------
 _env_db = os.environ.get("GENTRIDUCK_DB")
-DUCKDB_PATH = _env_db if _env_db else "data/gentriduck.duckdb"
+# QA-7 (#182): __file__-anchored so this script runs from any cwd, not just
+# the repo root (standardizes on the same pattern as backtest_index.py /
+# e2_classification.py).
+_repo_root = Path(__file__).parent.parent
+DUCKDB_PATH = Path(_env_db) if _env_db else _repo_root / "data" / "gentriduck.duckdb"
 
-OUT_DIR = Path("data/analysis")
+OUT_DIR = _repo_root / "data" / "analysis"
 
 # spatial-methods.md §6: α=0.05 significance threshold for cluster labels.
 ALPHA = 0.05
@@ -300,7 +304,7 @@ def main() -> None:
     # Load the spatial extension (required for ST_AsWKB / ST_GeomFromWKB).
     try:
         con.execute("LOAD spatial;")
-    except Exception:
+    except Exception:  # noqa: S110 -- best-effort load, absence handled downstream
         pass  # already loaded or not available (stub DB)
 
     scores_df, geom_df = load_data(con)

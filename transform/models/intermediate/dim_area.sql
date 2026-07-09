@@ -6,7 +6,8 @@
 -- 1. int_thesis_2018_area_index — 2018 thesis goldens (BER / bezirk / bzr / plr codes).
 -- 2. stg_berlin_lor — WFS LOR PLR geometry staging (BER / plr, both vintages).
 -- Added in #52 (dim_area wiring). This is the source that makes OSM 8-digit
--- PLR area_codes visible to dimension tests and to the int_ewr_series join.
+-- PLR area_codes visible to dimension tests and to int_ewr_socioeco's PLR join
+-- (int_ewr_series, an earlier dead-code join, was removed in QA-6/#181).
 -- city_code is 'BER' (ADR-0005 canonical) from stg_berlin_lor.
 -- 3. stg_berlin_lor_bzr — WFS LOR BZR geometry staging (BER / bzr, both vintages).
 -- Added in #134 (bug fix): sources correctly-encoded (UTF-8) BZR names from the

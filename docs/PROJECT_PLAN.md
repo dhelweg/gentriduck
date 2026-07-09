@@ -475,7 +475,7 @@ weakness maps to a ticket: **W1** spatial autocorrelation → #79/#65 · **W2** 
 Pure project deliverables; no scope creep into the core data work.*
 - **O1** **Method showcase + engineering retrospective:** document the AI-assisted multi-agent operating model
   (agents, coder↔reviewer↔gate, ADR gate, structured handoffs) as a reusable reference, with a retrospective
-  (what worked, what the gates caught, pitfalls). · *architect + PM (+ data-analyst)* · A6 · `docs/method/`
+  (what worked, what the gates caught, pitfalls). · *architect + PM (+ data-analyst)* · A6 · `docs/process/`
   published + linked from README; reproducible. · **#81**
 - **O2** **Reproducible methodology whitepaper:** a versioned, citable write-up (data, methods, validation,
   limitations, ethics) regenerated from the repo — deeper than the G2 page; adds `CITATION.cff`. ·

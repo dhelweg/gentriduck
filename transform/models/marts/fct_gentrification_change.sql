@@ -55,7 +55,11 @@
 
 with
     -- Berlin-only staging filter (#125) -- see header note.
-    ts as (select * from {{ ref("int_gentrification_ts") }} where city_code = 'BER'),
+    ts as (
+        select *
+        from {{ ref("int_gentrification_ts") }}
+        where {{ published_cities_filter("city_code") }}
+    ),
 
     with_rank as (
         select

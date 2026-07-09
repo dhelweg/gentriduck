@@ -94,8 +94,8 @@ def _script_changed_since(sha: str, script_relpath: str, repo_root: Path) -> Opt
     if not sha or sha == "unknown":
         return None
     try:
-        result = subprocess.run(
-            ["git", "log", "--oneline", f"{sha}..HEAD", "--", script_relpath],
+        result = subprocess.run(  # noqa: S603 -- fixed "git" argv, not user input
+            ["git", "log", "--oneline", f"{sha}..HEAD", "--", script_relpath],  # noqa: S607
             cwd=repo_root,
             capture_output=True,
             text=True,

@@ -183,9 +183,9 @@ with
 -- wohnlage_low_n: TRUE when the PLR-vintage has < 10 total address points.
 -- Downstream: NULL wohnlage_score and estimated rent for low-N PLR-vintages.
 select
-    -- Normalise to canonical city code per ADR-0005; stg_berlin_wohnlage emits
-    -- 'berlin'.
-    case when a.city_code = 'berlin' then 'BER' else a.city_code end as city_code,
+    -- QA-4 (#179): normalise via the shared canonical_city_code() macro
+    -- (single source of truth, ADR-0005); stg_berlin_wohnlage emits 'berlin'.
+    {{ canonical_city_code('a.city_code') }} as city_code,
     a.vintage,
     a.area_code,
     a.area_vintage,

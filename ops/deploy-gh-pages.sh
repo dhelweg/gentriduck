@@ -18,6 +18,10 @@
 # One-time GitHub setup (maintainer, in the repo's web UI): Settings -> Pages ->
 # "Build and deployment" -> Source: "Deploy from a branch" -> Branch: gh-pages / (root).
 #
+# Optional (ADR-0012 Amendment B / #194): export GOATCOUNTER_CODE=<your-site-code> before
+# `npm run build` to enable the privacy-friendly analytics beacon (unset = no-op, no behavior
+# change). One-time setup: create a free site at https://www.goatcounter.com/ (maintainer).
+#
 # The gh-pages branch is force-replaced with a single fresh commit each deploy (no history
 # bloat) and is a generated artefact branch — never merge it into develop/main.
 set -euo pipefail
@@ -51,6 +55,16 @@ git -C "$tmp" checkout -q -b gh-pages
 git -C "$tmp" add -A
 git -C "$tmp" -c user.name="$author_name" -c user.email="$author_email" \
   commit -q -m "deploy: gh-pages $(date -u +%FT%TZ) (source $(git rev-parse --short HEAD))"
-git -C "$tmp" push --force "$origin" gh-pages
+
+# SEC-2 (#191): the deny-list in .claude/settings.json can't see inside a script invocation --
+# a compromised or mistaken change to this file could turn "git push --force" into a push at
+# some other ref. Hard-assert the target here so the force-push is provably scoped to the
+# generated gh-pages artefact branch and nothing else (never main/develop).
+push_ref="refs/heads/gh-pages:refs/heads/gh-pages"
+if [ "$(git -C "$tmp" symbolic-ref --short HEAD)" != "gh-pages" ]; then
+  echo "error: refusing to force-push -- local branch is not gh-pages." >&2
+  exit 1
+fi
+git -C "$tmp" push --force "$origin" "$push_ref"
 
 echo "Deployed web/build -> gh-pages. Live once GitHub Pages is enabled (Settings -> Pages -> Source: gh-pages)."

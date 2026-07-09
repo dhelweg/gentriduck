@@ -12,7 +12,7 @@ description: The data-engineer coding workflow for Gentriduck — plan from an i
 3. **Implement** in the right domain:
    - dbt models in `transform/models/{staging,intermediate,marts}` (staging/intermediate = views,
      marts = tables); seeds in `transform/seeds`; macros in `transform/macros`.
-   - ingestion in `ingestion/` (pure-Python, cross-platform; OSM via ohsome/quackosm per ADR-0002).
+   - ingestion in `ingestion/` (pure-Python, cross-platform; OSM full-history via `osmium` per ADR-0002 Option B, amended 2026-07-09).
    - Reference `dim_city`/`dim_area` (ADR-0005); never hard-code Berlin in shared models.
    - **Grounding rule (R-C2):** Every methodology choice (indicator selection, normalization,
      weights, spatial aggregation) must be accompanied by a citation in the SQL comment naming the

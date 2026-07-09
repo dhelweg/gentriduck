@@ -94,6 +94,9 @@ if str(_INGESTION_ROOT) not in sys.path:
     sys.path.insert(0, str(_INGESTION_ROOT))
 from manifest import existing_outputs, write_manifest_entry  # noqa: E402
 
+# QA-2 (#177): shared atomic-write helper.
+from common.io import atomic_write_parquet  # noqa: E402
+
 # ---------------------------------------------------------------------------
 # Constants
 # ---------------------------------------------------------------------------
@@ -362,9 +365,8 @@ def validate_weight_sums(
 
 
 def write_crosswalk(rows: list[dict], out_path: Path) -> None:
-    """Write the crosswalk rows to Parquet using CROSSWALK_SCHEMA."""
+    """Write the crosswalk rows to Parquet using CROSSWALK_SCHEMA (atomic write)."""
     n = len(rows)
-    tmp_path = out_path.with_suffix(".tmp.parquet")
     table = pa.table(
         {
             "plr_id_pre2021": pa.array([r["plr_id_pre2021"] for r in rows], type=pa.string()),
@@ -376,9 +378,9 @@ def write_crosswalk(rows: list[dict], out_path: Path) -> None:
         },
         schema=CROSSWALK_SCHEMA,
     )
-    out_path.parent.mkdir(parents=True, exist_ok=True)
-    pq.write_table(table, tmp_path, compression="snappy")
-    tmp_path.rename(out_path)
+    # QA-2 (#177): atomic write -- a crash mid-write must never leave a
+    # partial/corrupt file where dbt or verify_data.py expects a complete one.
+    atomic_write_parquet(table, out_path)
     log.info("Wrote %d crosswalk rows -> %s", n, out_path)
 
 

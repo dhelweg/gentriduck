@@ -3,6 +3,8 @@
 - **Status:** Accepted
 - **Date:** 2026-06-17
 - **Ratified:** 2026-06-18
+- **Amended:** 2026-07-09 (see "## Amendment" below — records the `quackosm` → `osmium` pivot
+  that shipped in C1/#20; no change to the Option B decision itself)
 
 ## Context
 
@@ -99,6 +101,8 @@ each with quackosm, stack into a time series in DuckDB.
 
 **Primary path: Option B — full-history PBF (`.osh.pbf`) downloaded from Geofabrik's internal
 server using the maintainer's OSM contributor account, processed locally with `quackosm`.**
+*(Local-processing tool superseded by `osmium` at implementation time — see "## Amendment" below;
+the Option B sourcing decision itself is unchanged.)*
 
 ### Rationale for switching from the originally proposed Option A
 
@@ -118,7 +122,8 @@ Option C remains rejected: no public backfill of historical snapshots exists.
   Germany `.osh.pbf`. Login with OSM contributor account. One-off download per machine into
   `data/raw/osm/` (gitignored).
 - **Local processing:** `quackosm` (Apache-2.0, pure Python / DuckDB) reads the `.osh.pbf`
-  directly; no `osmium-tool` required for the happy path.
+  directly; no `osmium-tool` required for the happy path. **Superseded at implementation time by
+  the `osmium` Python package** (BSL-1.0) — see "## Amendment (2026-07-09)".
 - **Time grain:** **annual snapshots**, `YYYY-01-01T00:00:00Z`, years **2008 → present**.
   2018 is included so Epic B's directional check uses the same vintage as the paper.
 - **Ingestion contract:** `ingestion/<city>/osm/` materialises one **GeoParquet** file per
@@ -145,6 +150,32 @@ Option C remains rejected: no public backfill of historical snapshots exists.
 - **City-agnostic seam respected (ADR-0005).** The ingestion is `ingestion/<city>/osm/`; the
   source choice and tag-mapping live in the adapter; the warehouse sees a generic
   `(city, area, year, …)` parquet.
+
+## Amendment (2026-07-09): `quackosm` → `osmium` local-processing pivot
+
+**Architect ruling, filed from QA-8b (#206), split out of #183.** `quackosm` was declared in
+`pyproject.toml` per the Decision above but is **imported nowhere** in the codebase; the C1
+implementation (`ingestion/berlin/osm/ingest_osm_history.py`, #20) instead reads the `.osh.pbf`
+directly with the `osmium` Python package (BSL-1.0, `osmium>=4.0`, already in the manifest).
+
+**Why the pivot was sound (confirmed, not a defect):** `quackosm`'s DuckDB-based reader is built
+for a single-timestamp `.osm.pbf`/`.pbf` snapshot — it has no first-class notion of the
+**multi-timestamp OSH history** format this ADR's Option B actually downloads. Extracting "features
+visible as of `YYYY-01-01`" for 17 years from one `.osh.pbf` pass needs a history-aware streaming
+reader with per-object-version visibility logic, which is exactly what `osmium.SimpleHandler` (the
+canonical libosmium Python binding) provides out of the box. Re-deriving that from quackosm's
+snapshot-oriented API would mean re-implementing OSH visibility semantics in application code for
+no benefit — osmium is the right tool for *this* format, quackosm remains the right tool for a
+*single-snapshot* PBF read (Option C, not adopted — see "Decision" above).
+
+**Disposition:**
+- The **sourcing decision (Option B, full-history `.osh.pbf` via the maintainer's Geofabrik login)
+  is unchanged** — only the local-processing library differs from what this ADR originally named.
+- `quackosm` is **pruned from `pyproject.toml`** (QA-8b, #206) — it is not used anywhere and there
+  is no near-term path that needs it (a future single-snapshot ingestion, if ever added, would
+  re-introduce it with its own justification rather than carry dead weight now).
+- `osmium>=4.0` remains the sole OSM-processing dependency and is the one referenced going forward
+  by any future amendment to this ADR.
 
 ## Open questions
 

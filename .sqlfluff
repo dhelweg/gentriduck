@@ -20,6 +20,21 @@ apply_dbt_builtins = true
 # run_query stub: returns an object with a columns[0][0] accessor that yields 0.
 # This makes stg_osm_poi.sql template to the zero-row stub branch, which is valid SQL.
 run_query = "{% macro run_query(q) %}{% set ns = namespace() %}{% set ns.result = '' %}{{ ns }}{% endmacro %}"
+# QA-4 (#179): stub for the project's canonical_city_code() macro
+# (transform/macros/canonical_city_code.sql) so sqlfluff's plain-jinja templater
+# (no dbt compile) can parse call sites without a dbt-macro loader.
+canonical_city_code = "{% macro canonical_city_code(column) %}case when {{ column }} = 'berlin' then 'BER' else {{ column }} end{% endmacro %}"
+# QA-5 (#180): stub for the project's raw_path() macro
+# (transform/macros/raw_path.sql) so sqlfluff's plain-jinja templater can parse
+# call sites without a dbt-macro loader. Returns a syntactically-valid dummy
+# path string; the real value is only needed at dbt-execute time.
+raw_path = "{% macro raw_path(relative_path) %}/tmp/raw/{{ relative_path }}{% endmacro %}"
+# QA-4b (#202): stub for the project's published_cities_filter() macro
+# (transform/macros/published_cities_filter.sql) so sqlfluff's plain-jinja
+# templater can parse call sites without a dbt-macro loader. Returns a
+# syntactically-valid single-value IN clause; the real published_cities var
+# list is only resolved at dbt-execute time.
+published_cities_filter = "{% macro published_cities_filter(column) %}{{ column }} in ('BER'){% endmacro %}"
 
 [sqlfluff:templater:jinja:context]
 # Default value for file_count used in stg_osm_poi.sql graceful-degradation logic.

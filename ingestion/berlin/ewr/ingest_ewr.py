@@ -579,7 +579,7 @@ def _parse_csv_bytes(raw_bytes: bytes, year: int) -> pd.DataFrame:
                     df.shape[1],
                 )
                 return df
-        except Exception:  # noqa: BLE001
+        except Exception:  # noqa: BLE001, S112
             continue
 
     raise ValueError(f"Cannot parse EWR CSV for {year} — check separator/encoding")
@@ -1057,7 +1057,7 @@ def main(argv: Optional[list[str]] = None) -> int:
                 try:
                     t = pq.read_table(str(out_path), columns=["area_code"])
                     plr_counts[year] = len(t)
-                except Exception:  # noqa: BLE001
+                except Exception:  # noqa: BLE001, S110
                     pass
         else:
             error_count += 1

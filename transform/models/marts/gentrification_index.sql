@@ -7,6 +7,8 @@
 -- 1. int_thesis_2018_area_index — 2018 thesis goldens
 -- (variant='standard'/'distance_weighted')
 -- 2. int_gentrification_ts — R-A1 re-grounded live-data index (variant='live_data')
+-- 3. int_gentrification_ts — OA-B.3 (#172) tier-weighted improved OA predictor
+-- (variant='improved', Berlin lor_2021 only; see that block below for scope)
 --
 -- R-A1 re-grounding (#64): status_index now carries MSS social status (D1, ordinal
 -- 1–4),
@@ -163,5 +165,43 @@ inner join
     {{ ref("dim_area") }} as da
     on ts.city_code = da.city_code
     and ts.area_code = da.area_code
--- Berlin-only staging filter (#125) -- see header note.
-where ts.city_code = 'BER'
+-- Publication filter (QA-4b, #202): var('published_cities') -- see header note.
+where {{ published_cities_filter('ts.city_code') }}
+
+union all
+
+-- OA-B.3 (#172): "improved" variant -- the causality-first tier-weighted OA
+-- predictor (int_poi_status_dynamism_improved via int_gentrification_ts),
+-- Berlin lor_2021 rows only. This variant swaps the D3 POI PREDICTOR for its
+-- curated counterpart; it does NOT recompute the D1/D2 MSS social-status
+-- OUTCOME, so status_class/dynamism_class/status_class_bi/dynamism_class_bi
+-- are NULL here (no typology stage exists for a bare predictor score) --
+-- consumers wanting the D1xD2 typology should read the 'live_data' variant.
+-- NEVER blended with 'live_data' or the thesis variants (ADR-0017 D3/D4).
+-- Filtered to rows where the improved predictor actually computed (excludes
+-- the lor_pre2021/Hamburg branches where it is NULL by construction -- see
+-- int_gentrification_ts header).
+select
+    ts.city_code,
+    da.area_level,
+    ts.area_code,
+    da.area_name,
+    cast(ts.snapshot_year as varchar) || '12' as period_yyyymm,
+    'improved' as variant,
+    cast(ts.residents_total as double) as population,
+    ts.status_score_improved as status_index,
+    cast(null as varchar) as status_class,
+    cast(null as varchar) as status_class_bi,
+    ts.dynamism_score_improved as dynamism_index,
+    cast(null as varchar) as dynamism_class,
+    cast(null as varchar) as dynamism_class_bi,
+    cast(null as varchar) as own_idx_class,
+    cast(null as varchar) as own_idx_class_bi
+from {{ ref("int_gentrification_ts") }} as ts
+inner join
+    {{ ref("dim_area") }} as da
+    on ts.city_code = da.city_code
+    and ts.area_code = da.area_code
+where
+    {{ published_cities_filter('ts.city_code') }}
+    and ts.status_score_improved is not null

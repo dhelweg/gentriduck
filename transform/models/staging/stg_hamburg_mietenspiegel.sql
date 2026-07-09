@@ -25,6 +25,9 @@
 -- or affordability sub-index input is an explicitly separate, gated
 -- slice.
 --
+-- QA-6 (#181): zero consumers as of this writing -- the consuming slice is
+-- tracked as #203 (Hamburg rent/Wohnlage + displacement-zone integration).
+--
 -- Deliberately preserves Hamburg's own year_built_bucket/size_bucket/
 -- wohnlage labels as-published rather than remapping onto Berlin's
 -- bucket keys in this staging layer (mirrors stg_hamburg_wohnlage's and
@@ -63,7 +66,8 @@
     )
 }}
 
-{% set hh_mietenspiegel_glob = var("project_root") ~ "/data/raw/hamburg/rent/mietenspiegel.parquet" %}
+{% set hh_mietenspiegel_glob = raw_path("hamburg/rent/mietenspiegel.parquet") %}
+{%- set _src_raw_hamburg_mietenspiegel = source("raw_hamburg", "mietenspiegel") -%}
 
 {% if execute %}
     {%- set file_count_result = run_query(
@@ -85,7 +89,7 @@
         rent_mid,
         rent_high,
         source_attribution
-    from read_parquet('{{ hh_mietenspiegel_glob }}', union_by_name = true)
+    from read_parquet({{ _src_raw_hamburg_mietenspiegel }}, union_by_name = true)
     where edition_year is not null
 
 {% else %}

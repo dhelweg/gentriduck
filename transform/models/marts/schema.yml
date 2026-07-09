@@ -34,7 +34,8 @@ models:
       - name: city_code
         description: City identifier (FK -> dim_city). ADR-0005 seam.
         data_type: varchar
-        tests:
+        data_tests:
+
           - not_null
           - accepted_values:
               arguments:
@@ -46,7 +47,8 @@ models:
       - name: area_level
         description: Area level identifier from the conformed taxonomy.
         data_type: varchar
-        tests:
+        data_tests:
+
           - not_null
           - accepted_values:
               arguments:
@@ -54,29 +56,37 @@ models:
       - name: area_code
         description: Area code. Part of the natural key.
         data_type: varchar
-        tests:
+        data_tests:
+
           - not_null
       - name: area_name
         description: Area name (German proper noun; Berlin place names).
         data_type: varchar
-        tests:
+        data_tests:
+
           - not_null
       - name: period_yyyymm
         description: Reporting period as string YYYYMM (e.g. '201612').
         data_type: varchar
-        tests:
+        data_tests:
+
           - not_null
       - name: variant
         description: >
           Index variant. 'standard' uses non-distance-weighted POI features;
           'distance_weighted' uses POI inverse-distance weighting;
-          'live_data' uses the C4 time-series pipeline (OSM + EWR, all years).
+          'live_data' uses the C4 time-series pipeline (OSM + EWR, all years);
+          'improved' (OA-B.3 #172) carries the causality-first tier-weighted OA
+          predictor (int_poi_status_dynamism_improved), Berlin lor_2021 rows
+          only -- a separate, never-blended methodology_variant from
+          'live_data' (ADR-0017 D3/D4).
         data_type: varchar
-        tests:
+        data_tests:
+
           - not_null
           - accepted_values:
               arguments:
-                values: ["standard", "distance_weighted", "live_data"]
+                values: ["standard", "distance_weighted", "live_data", "improved"]
       - name: population
         description: Area population (Einwohner) at the reporting period.
         data_type: double
@@ -86,6 +96,12 @@ models:
           (cast to DOUBLE: 1.0=hoch/best … 4.0=sehr_niedrig/worst; NULL=uninhabited PLR).
           For thesis variants (standard/distance_weighted): z-score of POI-based status features
           (original 2018 definition unchanged).
+          For 'improved' (OA-B.3 #172): status_score_improved, a z-score of the
+          tier-weighted amenity-OA composite (NOT the MSS ordinal -- this
+          variant swaps in the curated POI PREDICTOR, the D1 social-status
+          OUTCOME is not recomputed here; see int_gentrification_ts /
+          int_poi_status_dynamism_improved for the full construct). NOT
+          comparable in scale to the live_data ordinal.
           POLARITY of live_data values: INVERSE numeric vs 2018 thesis status_summe; same
           deprivation gradient. Cross-variant comparison requires explicit D1 flip (index §5).
         data_type: double
@@ -97,6 +113,9 @@ models:
           'active-gentrification', 'consolidation-pressure', 'improving-vulnerable'.
           NULL for uninhabited PLRs (is_uninhabited=true).
           For thesis variants: original projected status class (three values; unchanged).
+          For 'improved' (OA-B.3 #172): always NULL -- this variant carries a
+          continuous predictor score (status_index above), not an MSS-derived
+          typology stage (no outcome recomputation here).
           PLR-level aggregate; not an individual/building-level statement (G-2 guardrail;
           ecological-inference disclaimer: index-definition.md §1.2).
         data_type: varchar
@@ -108,7 +127,8 @@ models:
           3=niedrig & 4=sehr_niedrig->low; ADR-0008 D1 binding, index-definition-domain-draft.md
           D1xD2 stage table). NULL for uninhabited PLRs.
         data_type: varchar
-        tests:
+        data_tests:
+
           - accepted_values:
               arguments:
                 values: ["high", "medium", "low"]
@@ -119,6 +139,10 @@ models:
           R-A1 update (#64): for live_data variant, now carries D2 MSS Dynamik ordinal
           (cast to DOUBLE: 1.0=positiv/improving … 3.0=negativ/worsening; NULL=uninhabited PLR).
           For thesis variants (standard/distance_weighted): z-score of POI-based dynamism features.
+          For 'improved' (OA-B.3 #172): dynamism_score_improved, a z-score of the
+          tier-weighted amenity-OA composite's YoY share change (curated POI
+          PREDICTOR only, not a recomputed D2 outcome). NOT comparable in scale
+          to the live_data ordinal.
           D2 is already vulnerability-positive in numeric order (3=worsening=most vulnerable).
         data_type: double
       - name: dynamism_class
@@ -138,7 +162,8 @@ models:
           (no second MSS Dynamik projection exists to distinguish them, unlike the thesis
           variants' two distinct classification passes). NULL for uninhabited PLRs.
         data_type: varchar
-        tests:
+        data_tests:
+
           - accepted_values:
               arguments:
                 values: ["positive", "neutral", "negative"]
@@ -150,7 +175,8 @@ models:
       - name: own_idx_class_bi
         description: Binary own index class (positive/neutral/negative English labels).
         data_type: varchar
-    tests:
+    data_tests:
+
       - dbt_utils.unique_combination_of_columns:
           arguments:
             combination_of_columns:
@@ -184,7 +210,8 @@ models:
       (H1 #40, ADR-0014) but are staged out of this mart pending the gate decision.
     meta:
       dbt_meta_owner: data-engineer
-    tests:
+    data_tests:
+
       - dbt_utils.unique_combination_of_columns:
           arguments:
             combination_of_columns:
@@ -195,7 +222,8 @@ models:
     columns:
       - name: city_code
         description: City identifier (ADR-0005). Always 'BER' (#125 staging filter; see model header).
-        tests:
+        data_tests:
+
           - not_null
           - accepted_values:
               arguments:
@@ -203,15 +231,18 @@ models:
       - name: snapshot_year
         description: >
           MSS edition year (biennial: 2013, 2015, 2017, 2019, 2021, 2023, 2025).
-        tests:
+        data_tests:
+
           - not_null
       - name: area_code
         description: PLR area code (8-digit, zero-padded).
-        tests:
+        data_tests:
+
           - not_null
       - name: area_vintage
         description: LOR vintage ('lor_pre2021' or 'lor_2021').
-        tests:
+        data_tests:
+
           - not_null
       - name: mss_edition
         description: MSS publication year (same as snapshot_year; retained for explicit tracking).
@@ -271,7 +302,8 @@ models:
           NULL for first edition in vintage or when either status_index is NULL.
           D1 POLARITY: lower numeric = higher status. 'improved' = status numerically decreased.
           Use ordered logit for regression (R-A3 C2; §3.2); never treat delta as metric.
-        tests:
+        data_tests:
+
           - accepted_values:
               arguments:
                 values: ["improved", "stable", "worsened"]
@@ -321,25 +353,29 @@ models:
           Canonical city identifier (ADR-0005; matches dim_city.city_code). Berlin's
           legacy lowercase 'berlin' OSM-ingestion convention (#140) is normalised to
           'BER' at aggregation time in this model.
-        tests:
+        data_tests:
+
           - not_null
           - accepted_values:
               arguments:
                 values: ["BER", "HH"]
       - name: snapshot_year
         description: Calendar year of the OSM snapshot.
-        tests:
+        data_tests:
+
           - not_null
       - name: area_code
         description: PLR area code (8-digit, zero-padded). Never NULL (NULL rows excluded upstream).
-        tests:
+        data_tests:
+
           - not_null
       - name: area_vintage
         description: >
           Spatial-join vintage. 'lor_pre2021'/'lor_2021' for Berlin LOR; 'current'
           for Hamburg statistische Gebiete (single live-WFS edition, ADR-0014
           Pillar 1 — no historical vintage crosswalk yet).
-        tests:
+        data_tests:
+
           - not_null
           - accepted_values:
               arguments:
@@ -354,7 +390,8 @@ models:
           seed_poi_canonical_category may also appear (see int_osm_poi_harmonized) --
           the relationships test below is `severity: warn`, not `error`, for this
           reason.
-        tests:
+        data_tests:
+
           - not_null
           - relationships:
               arguments:
@@ -364,7 +401,8 @@ models:
                 severity: warn
       - name: poi_category_h
         description: Harmonized POI category (mid level of the 3-level taxonomy).
-        tests:
+        data_tests:
+
           - not_null
       - name: poi_type_h
         description: >
@@ -372,7 +410,8 @@ models:
           ADR-0017 D1's type-level OA term). Values are drawn from
           seed_poi_mapping.type (163 distinct values); same drift-canonical caveat as
           poi_domain_h applies, hence `severity: warn`.
-        tests:
+        data_tests:
+
           - not_null
           - relationships:
               arguments:
@@ -384,13 +423,16 @@ models:
         description: >
           Count of POIs in this (city, year, area, vintage, domain, category, type)
           cell.
-        tests:
+        data_tests:
+
           - not_null
       - name: source_attribution
         description: CC BY attribution string (ODbL -- OpenStreetMap contributors).
-        tests:
+        data_tests:
+
           - not_null
-    tests:
+    data_tests:
+
       - dbt_utils.unique_combination_of_columns:
           arguments:
             combination_of_columns:
@@ -440,7 +482,8 @@ models:
       annual cadence).
     meta:
       dbt_meta_owner: data-engineer
-    tests:
+    data_tests:
+
       - dbt_utils.unique_combination_of_columns:
           arguments:
             combination_of_columns:
@@ -451,7 +494,8 @@ models:
       - name: city_code
         description: City identifier (ADR-0005). Always 'BER' (#125 staging filter; see model header).
         data_type: varchar
-        tests:
+        data_tests:
+
           - not_null
           - accepted_values:
               arguments:
@@ -459,12 +503,14 @@ models:
       - name: area_code
         description: PLR area code (LOR 2021 or pre-2021 vintage).
         data_type: varchar
-        tests:
+        data_tests:
+
           - not_null
       - name: area_vintage
         description: LOR vintage identifier ('lor_pre2021' or 'lor_2021').
         data_type: varchar
-        tests:
+        data_tests:
+
           - not_null
           - accepted_values:
               arguments:
@@ -472,7 +518,8 @@ models:
       - name: n_editions
         description: Number of MSS editions available for this PLR within this vintage.
         data_type: bigint
-        tests:
+        data_tests:
+
           - not_null
       - name: first_edition
         description: First MSS edition year in this PLR's trajectory (within vintage).
@@ -513,7 +560,8 @@ models:
           'declining'             — materially more deprived over time
           'mixed'                 — no clear dominant trend or < 2 editions
         data_type: varchar
-        tests:
+        data_tests:
+
           - not_null
           - accepted_values:
               arguments:
@@ -542,7 +590,8 @@ models:
           'medium' — n_editions == 2 and non-mixed trajectory
           'low'    — mixed trajectory type or n_editions <= 1
         data_type: varchar
-        tests:
+        data_tests:
+
           - not_null
           - accepted_values:
               arguments:
@@ -553,7 +602,8 @@ models:
           niedrig or sehr_niedrig deprivation levels throughout the panel).
           Useful for cross-validation against R-B2 hotspot labels.
         data_type: boolean
-        tests:
+        data_tests:
+
           - not_null
       - name: is_persistently_affluent
         description: >
@@ -561,7 +611,8 @@ models:
           hoch deprivation level throughout the panel).
           Useful for cross-validation against R-B2 coldspot labels.
         data_type: boolean
-        tests:
+        data_tests:
+
           - not_null
 
   - name: mart_price_rent_dimension
@@ -612,7 +663,8 @@ models:
       Graceful degradation: returns zero rows when intermediate models return zero rows.
     meta:
       dbt_meta_owner: data-engineer
-    tests:
+    data_tests:
+
       - dbt_utils.unique_combination_of_columns:
           arguments:
             combination_of_columns:
@@ -627,7 +679,8 @@ models:
         description: >
           City identifier (ADR-0005). Always 'BER' — normalised by int_berlin_brw_plr and
           int_berlin_wohnlage_plr (staging layers emit 'berlin'; normalised for dim_city FK).
-        tests:
+        data_tests:
+
           - not_null:
               config:
                 where: "area_code is not null"
@@ -641,19 +694,22 @@ models:
           Price/rent dimension vintage year (integer).
           For BRW-only rows: derived from YEAR(brw.reference_date), 2017–2024.
           For Wohnlage-only rows (e.g. 2026): Wohnlage WFS edition year.
-        tests:
+        data_tests:
+
           - not_null:
               config:
                 where: "area_code is not null"
       - name: area_code
         description: PLR area code (8-digit, zero-padded). LOR 2021 scheme for BRW; vintage-specific for Wohnlage.
-        tests:
+        data_tests:
+
           - not_null
       - name: area_vintage
         description: >
           LOR boundary vintage. 'lor_2021' for BRW rows (always lor_2021 in int_berlin_brw_plr).
           'lor_pre2021' or 'lor_2021' for Wohnlage rows (vintage-specific join).
-        tests:
+        data_tests:
+
           - not_null:
               config:
                 where: "area_code is not null"
@@ -795,7 +851,8 @@ models:
       seed return zero rows.
     meta:
       dbt_meta_owner: data-engineer
-    tests:
+    data_tests:
+
       - dbt_utils.unique_combination_of_columns:
           arguments:
             combination_of_columns:
@@ -806,22 +863,26 @@ models:
     columns:
       - name: city_code
         description: City identifier (ADR-0005). Always 'BER'.
-        tests:
+        data_tests:
+
           - not_null
           - accepted_values:
               arguments:
                 values: ["BER"]
       - name: snapshot_year
         description: Price/rent dimension vintage year (integer), carried through from mart_price_rent_dimension.
-        tests:
+        data_tests:
+
           - not_null
       - name: area_code
         description: PLR area code (8-digit, zero-padded) in the lor_pre2021 scheme.
-        tests:
+        data_tests:
+
           - not_null
       - name: area_vintage
         description: Always 'lor_pre2021' -- the re-keyed output grain.
-        tests:
+        data_tests:
+
           - not_null
           - accepted_values:
               arguments:
@@ -887,7 +948,8 @@ models:
       (district/subarea_l1/subarea_l2).
     meta:
       dbt_meta_owner: data-engineer
-    tests:
+    data_tests:
+
       - dbt_utils.unique_combination_of_columns:
           arguments:
             combination_of_columns:
@@ -899,7 +961,8 @@ models:
       - name: city_code
         description: City identifier (FK -> dim_city). ADR-0005 seam.
         data_type: varchar
-        tests:
+        data_tests:
+
           - not_null
           - relationships:
               arguments:
@@ -908,12 +971,14 @@ models:
       - name: area_level
         description: Area level identifier from the conformed taxonomy.
         data_type: varchar
-        tests:
+        data_tests:
+
           - not_null
       - name: area_code
         description: Area code. Part of the natural key.
         data_type: varchar
-        tests:
+        data_tests:
+
           - not_null
       - name: area_name
         description: Area name (WFS UTF-8 source; see dim_area's dedup pattern).
@@ -924,7 +989,8 @@ models:
           'current' for Hamburg). Kept ungrouped -- consumers pick the
           vintage matching the period they display.
         data_type: varchar
-        tests:
+        data_tests:
+
           - not_null
       - name: geometry_geojson
         description: >
@@ -933,3 +999,127 @@ models:
           ST_Transform(..., always_xy := true), mirroring int_osm_poi_plr's
           native-CRS<->WGS84 convention. Text (JSON-encoded), not parsed.
         data_type: varchar
+
+  - name: mart_poi_offering_advantage
+    description: >
+      #208 (split from #207, maintainer-requested): surfaces the already-computed,
+      already-signed-off POI Offering Advantage (OA) location-quotient values
+      (int_poi_offering_advantage, ADR-0017/0018) plus per-area POI density through
+      a mart, so the site can query them (Evidence pages bundle gentriduck_marts.*
+      only). Not methodology-bearing -- pure pass-through/join, no new
+      indicator/weight/normalization.
+
+      Grain: one row per (city_code, snapshot_year, area_code, area_vintage,
+      weight_variant, methodology_variant, poi_domain_h, poi_category_h,
+      poi_type_h) -- identical to int_poi_offering_advantage's own grain.
+      poi_count / poi_density_per_km2 are joined in from fct_poi_development at
+      the same taxonomy leaf; area_km2 from ST_Area in each city's native
+      (metres-based) CRS.
+    meta:
+      dbt_meta_owner: data-engineer
+    data_tests:
+
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns:
+              - city_code
+              - snapshot_year
+              - area_code
+              - area_vintage
+              - poi_domain_h
+              - poi_category_h
+              - poi_type_h
+              - weight_variant
+              - methodology_variant
+          config:
+            where: "area_code is not null"
+    columns:
+      - name: city_code
+        description: City identifier (ADR-0005).
+        data_tests:
+
+          - not_null
+      - name: snapshot_year
+        description: Calendar year of the OSM snapshot.
+        data_tests:
+
+          - not_null
+      - name: area_code
+        description: PLR area code (Berlin) / subarea_l2 code (Hamburg). Vintage-specific.
+        data_tests:
+
+          - not_null
+      - name: area_vintage
+        description: >
+          Spatial-join vintage. 'lor_pre2021'/'lor_2021' for Berlin LOR; 'current'
+          for Hamburg statistische Gebiete.
+        data_tests:
+
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ["lor_pre2021", "lor_2021", "current"]
+      - name: weight_variant
+        description: >
+          'standard' (hard point-in-polygon count) or 'gaussian_<bandwidth>'
+          (mass-conserving kernel-weighted count). See int_poi_offering_advantage
+          for the C-1 mass-conservation invariance this depends on.
+        data_tests:
+
+          - not_null
+      - name: methodology_variant
+        description: >
+          'faithful' (Run 1, thesis-fidelity, all types, no curation; ADR-0017 D3).
+          The causal-tier curated 'improved' variant (OA-B.1..B.4, #170-173) will
+          append rows here without a grain migration once built.
+        data_tests:
+
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ["faithful", "improved"]
+      - name: poi_domain_h
+        description: Harmonized POI domain (top level of the 3-level taxonomy).
+        data_tests:
+
+          - not_null
+      - name: poi_category_h
+        description: Harmonized POI category (mid level of the 3-level taxonomy).
+        data_tests:
+
+          - not_null
+      - name: poi_type_h
+        description: Harmonized POI type (finest level of the 3-level taxonomy).
+        data_tests:
+
+          - not_null
+      - name: oa_domain
+        description: >
+          Domain-level Offering Advantage (location quotient). 1.0 = represented
+          at the city-wide compositional rate; >1 over-represented; <1
+          under-represented. See int_poi_offering_advantage for the formula and
+          the D-1/D-2 interpretation guardrails (descriptive, not causal;
+          multi-signed bundle -- never sum across domains).
+      - name: oa_category
+        description: Category-level Offering Advantage, parent-relative to its domain.
+      - name: oa_type
+        description: Type-level Offering Advantage, parent-relative to its domain.
+      - name: poi_count
+        description: >
+          Count of POIs in this (city, year, area, vintage, domain, category,
+          type) cell, from fct_poi_development (unweighted hard count). NULL
+          for a small share (~5%) of 'gaussian_*' weight_variant rows: the
+          Gaussian kernel can spread weighted mass into a PLR/leaf with zero
+          hard-count POIs of that exact type (kernel smoothing crosses PLR
+          boundaries; fct_poi_development is point-in-polygon only), so that
+          leaf has no fct_poi_development row to join. area_km2 is unaffected
+          (area-keyed, not leaf-keyed).
+      - name: area_km2
+        description: >
+          Area of the (city_code, area_code, area_vintage) polygon in km^2,
+          computed via ST_Area in the city's native (metres-based) CRS
+          (dim_city.native_crs_epsg) before any WGS84 reprojection.
+      - name: poi_density_per_km2
+        description: >
+          poi_count / area_km2 for this taxonomy leaf (e.g. "Gastronomy POIs per
+          km2"). NULL when area_km2 is NULL or zero.

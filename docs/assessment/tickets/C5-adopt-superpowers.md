@@ -22,7 +22,7 @@ reproducible.
 6. Flip ADR-0009 to **Accepted** (or revise if the trial surfaces conflicts).
 
 ## Acceptance criteria
-- Pinned Superpowers install with the agreed skills enabled; version recorded in `docs/method/`.
+- Pinned Superpowers install with the agreed skills enabled; version recorded in `docs/process/`.
 - One trial task completed with no regression to the binding gate / PM loop; brief notes on value vs. conflict.
 - TDD→dbt-test mapping documented; no red-green-refactor forced on dbt.
 - ADR-0009 status updated (Accepted or revised).

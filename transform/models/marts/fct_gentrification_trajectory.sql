@@ -107,7 +107,7 @@ with
             is_uninhabited
         from {{ ref("int_gentrification_ts") }}
         -- Berlin-only staging filter (#125) -- see header note.
-        where is_uninhabited = false and city_code = 'BER'
+        where is_uninhabited = false and {{ published_cities_filter('city_code') }}
     ),
 
     -- Pivot to per-PLR per-vintage aggregate statistics

@@ -4,9 +4,12 @@ analysis/e3_maps.py
 E3 choropleth maps: gentrification index and trajectory stage by PLR.
 
 Produces SVG-based choropleth maps using shapely and the LOR 2021 geometry
-(data/raw/berlin/lor/lor_2021.parquet). geopandas is available for geometry
-loading and coordinate projection; matplotlib is NOT in the project dependencies,
-so maps are rendered as inline-SVG HTML files (no paid APIs, no new libraries).
+(data/raw/berlin/lor/lor_2021_plr.parquet). QA-8 (#183): geometry is loaded and
+reprojected (EPSG:25833 -> WGS84) entirely in SQL via DuckDB's spatial
+extension (ST_Transform), per ADR-0010 Amendment 1's mandated
+DuckDB-to-Python geometry handoff contract -- no geopandas/pyproj dependency.
+matplotlib is NOT in the project dependencies, so maps are rendered as
+inline-SVG HTML files (no paid APIs, no new libraries).
 
 Source attributions:
   - LOR geometry: Geoportal Berlin / GDI Berlin, CC BY 3.0 DE
@@ -29,9 +32,15 @@ import pandas as pd
 logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
 log = logging.getLogger(__name__)
 
-DB_PATH = os.environ.get("GENTRIDUCK_DB", "data/gentriduck.duckdb")
-LOR_PARQUET = Path("data/raw/berlin/lor/lor_2021.parquet")
-OUT_DIR = Path("data/analysis")
+# QA-7 (#182): __file__-anchored so this script runs from any cwd.
+_repo_root = Path(__file__).parent.parent
+_env_db = os.environ.get("GENTRIDUCK_DB")
+DB_PATH = Path(_env_db) if _env_db else _repo_root / "data" / "gentriduck.duckdb"
+# QA-8 (#183): filename fixed from the stale pre-#134 "lor_2021.parquet" to the
+# actual output name ingest_lor_geometries.py writes (lor_2021_plr.parquet) --
+# this script always hit its own zero-geometry warning branch before this fix.
+LOR_PARQUET = _repo_root / "data" / "raw" / "berlin" / "lor" / "lor_2021_plr.parquet"
+OUT_DIR = _repo_root / "data" / "analysis"
 
 # D1×D2 stage colour palette (colourblind-accessible diverging scheme)
 STAGE_COLOURS: dict[str, str] = {
@@ -55,41 +64,43 @@ STAGE_LABELS: dict[str, str] = {
 STATUS_COLOURS = ["#2166ac", "#92c5de", "#f4a582", "#d73027"]
 
 
-def load_geometry() -> "pd.DataFrame | None":
-    """Loads LOR 2021 PLR geometry from parquet; returns None with warning on failure."""
+def load_geometry(con: duckdb.DuckDBPyConnection) -> "pd.DataFrame | None":
+    """Loads LOR 2021 PLR geometry, reprojected to WGS84, via DuckDB's spatial extension.
+
+    QA-8 (#183): reprojects in SQL with ST_Transform (native EPSG:25833 -> WGS84),
+    per ADR-0010 Amendment 1 Required-3 ("DuckDB->PySAL geometry handoff" contract --
+    reproject in SQL, never in Python). This removes the geopandas dependency this
+    script previously pulled in transitively via quackosm (ADR-0010 Amendment 1
+    Required-1 excludes geopandas/pyproj from the baseline manifest); only shapely
+    (already a project dependency) parses the resulting WKB.
+    """
     if not LOR_PARQUET.exists():
         log.warning(
             "LOR geometry parquet not found at %s — maps will not be generated.", LOR_PARQUET
         )
         return None
     try:
-        import pyarrow.parquet as pq
         from shapely import wkb
 
-        df = pq.read_table(str(LOR_PARQUET)).to_pandas()
-        df["geometry"] = df["geometry_wkb"].apply(wkb.loads)
+        con.execute("INSTALL spatial;")
+        con.execute("LOAD spatial;")
+        df = con.execute(
+            """
+            SELECT
+                area_code,
+                area_name,
+                ST_AsWKB(
+                    ST_Transform(ST_GeomFromWKB(geometry_wkb), 'EPSG:25833', 'EPSG:4326')
+                ) AS geometry_wkb_wgs84
+            FROM read_parquet(?)
+            """,
+            [str(LOR_PARQUET)],
+        ).fetchdf()
+        df["geometry"] = df["geometry_wkb_wgs84"].apply(lambda b: wkb.loads(bytes(b)))
         return df[["area_code", "area_name", "geometry"]]
     except Exception as exc:
         log.warning("Failed to load LOR geometry: %s — maps will not be generated.", exc)
         return None
-
-
-def project_to_wgs84(geom_df: pd.DataFrame) -> pd.DataFrame:
-    """
-    Reprojects from EPSG:25833 (ETRS89 / UTM33N) to WGS84 for SVG rendering.
-    Uses geopandas which is available as a transitive dep of quackosm.
-    """
-    try:
-        import geopandas as gpd
-
-        gdf = gpd.GeoDataFrame(geom_df, geometry="geometry", crs="EPSG:25833")
-        gdf_wgs = gdf.to_crs("EPSG:4326")
-        out = geom_df.copy()
-        out["geometry"] = gdf_wgs.geometry.values
-        return out
-    except Exception as exc:
-        log.warning("CRS reprojection failed: %s — using raw coordinates.", exc)
-        return geom_df
 
 
 def _ring_to_svg(coords) -> str:
@@ -299,14 +310,11 @@ def main() -> None:
         WHERE area_vintage = 'lor_2021'
     """).fetchdf()
 
+    geom_df = load_geometry(con)
     con.close()
-
-    geom_df = load_geometry()
     if geom_df is None:
         log.warning("Map generation skipped — geometry unavailable.")
         return
-
-    geom_df = project_to_wgs84(geom_df)
 
     # matplotlib is not in pyproject.toml; SVG choropleths are produced instead.
     # The SPEC requested .png but that requires matplotlib (needs ADR-0001 approval).

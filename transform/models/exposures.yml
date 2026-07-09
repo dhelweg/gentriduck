@@ -1,0 +1,124 @@
+version: 2
+
+# QA-6 (#181): dbt exposures for the analysis/*.py and web/ (Evidence.dev)
+# consumers of gentriduck's marts and lead-lag/aggregate intermediates.
+# Without these, `dbt-utils` orphan-model detection (and dbt docs' DAG) has
+# no way to know these models ARE consumed outside the dbt project itself --
+# every one of them looks like an unreferenced dead end from dbt's point of
+# view alone. Declaring the exposure gives orphan detection (and future
+# contributors reading the DAG) the missing edge.
+
+exposures:
+  - name: analysis_e1_regressions
+    label: "E1 H1-H3c regressions (analysis/e1_regressions.py)"
+    type: analysis
+    maturity: medium
+    description: >
+      Reproduces the 2018 thesis's H1-H3c regressions (OA / prev-OA
+      predictors) in Python (scipy/statsmodels), plus the EWR-based
+      same-era H2/H3 extensions.
+    url: https://github.com/dhelweg/gentriduck/blob/develop/analysis/e1_regressions.py
+    depends_on:
+      - ref('fct_poi_development')
+      - ref('int_osm_poi_plr_weighted')
+      - ref('int_poi_offering_advantage')
+      - ref('int_ewr_lead_lag')
+      - ref('int_mss_lead_lag')
+      - ref('int_mss_bzr_aggregate')
+    owner:
+      name: data-analyst
+
+  - name: analysis_e2_classification
+    label: "E2 scikit-learn classification (analysis/e2_classification.py)"
+    type: analysis
+    maturity: medium
+    description: >
+      Replaces the 2018 thesis's Weka classification with scikit-learn,
+      using the same MSS lead-lag / BZR-aggregate predictors as E1.
+    url: https://github.com/dhelweg/gentriduck/blob/develop/analysis/e2_classification.py
+    depends_on:
+      - ref('int_mss_lead_lag')
+      - ref('int_mss_bzr_aggregate')
+    owner:
+      name: data-analyst
+
+  - name: analysis_e3_narratives_and_maps
+    label: "E3 narratives + maps (analysis/e3_narratives.py, analysis/e3_maps.py)"
+    type: analysis
+    maturity: medium
+    description: >
+      Analytical narratives and static maps over the gentrification
+      trajectory / change facts and MSS lead-lag series.
+    url: https://github.com/dhelweg/gentriduck/blob/develop/analysis/e3_narratives.py
+    depends_on:
+      - ref('fct_gentrification_change')
+      - ref('fct_gentrification_trajectory')
+      - ref('int_mss_lead_lag')
+    owner:
+      name: data-analyst
+
+  - name: analysis_a6_maup
+    label: "A6 MAUP sensitivity check (analysis/a6_maup.py)"
+    type: analysis
+    maturity: medium
+    description: >
+      Modifiable-areal-unit-problem sensitivity check across PLR/BZR
+      aggregation levels using the weighted OSM POI intermediate.
+    url: https://github.com/dhelweg/gentriduck/blob/develop/analysis/a6_maup.py
+    depends_on:
+      - ref('int_osm_poi_plr_weighted')
+    owner:
+      name: data-analyst
+
+  - name: analysis_a9_spatial_dynamic
+    label: "A9 spatial-dynamic (diffusion) analysis (analysis/a9_spatial_dynamic.py)"
+    type: analysis
+    maturity: medium
+    description: >
+      Spatial-dynamic (diffusion) gentrification analysis over the
+      gentrification-change fact table.
+    url: https://github.com/dhelweg/gentriduck/blob/develop/analysis/a9_spatial_dynamic.py
+    depends_on:
+      - ref('fct_gentrification_change')
+    owner:
+      name: data-analyst
+
+  - name: analysis_backtest_and_oa_validation
+    label: "Ground-truth back-test + OA validation (analysis/backtest_index.py, analysis/b_oa_validation.py, analysis/c_offering_relevance_validation.py, analysis/c_three_way_comparison.py)"
+    type: analysis
+    maturity: medium
+    description: >
+      Back-tests the governed gentrification_index against the ground-truth
+      seed, validates the offering-advantage (OA) predictor against the 2018
+      golden and against the data-driven causal-tier seed, and runs the
+      faithful-vs-improved-vs-2018-golden three-way comparison
+      (Epic B / OA-B.2, OA-C.1).
+    url: https://github.com/dhelweg/gentriduck/blob/develop/analysis/backtest_index.py
+    depends_on:
+      - ref('gentrification_index')
+      - ref('fct_poi_development')
+      - ref('int_poi_offering_advantage')
+    owner:
+      name: data-analyst
+
+  - name: web_evidence_site
+    label: "Gentriduck public stats site (Evidence.dev, web/)"
+    type: application
+    maturity: medium
+    description: >
+      The public Gentriduck stats website (Epic G). Queries the governed
+      marts directly via web/sources/gentriduck_marts/*.sql (DuckDB-WASM,
+      ADR-0012) for the time-series, POI, and price/rent pages, and reads
+      dim_area_geometry via web/scripts/export_area_geojson.py (a static
+      GeoJSON export step, not a live query) for the choropleth AreaMap.
+    url: https://github.com/dhelweg/gentriduck/tree/develop/web
+    depends_on:
+      - ref('gentrification_index')
+      - ref('fct_poi_development')
+      - ref('fct_gentrification_change')
+      - ref('fct_gentrification_trajectory')
+      - ref('mart_price_rent_dimension')
+      - ref('mart_price_rent_dimension_pre2021')
+      - ref('dim_area_geometry')
+    owner:
+      name: web-engineer

@@ -70,19 +70,9 @@ from __future__ import annotations
 import argparse
 import logging
 import re
-import ssl
 import sys
-import urllib.request
 from pathlib import Path
 from typing import Optional
-
-# macOS Python does not ship CA certs; use certifi's bundle when available.
-try:
-    import certifi as _certifi
-
-    _SSL_CONTEXT = ssl.create_default_context(cafile=_certifi.where())
-except ImportError:
-    _SSL_CONTEXT = ssl.create_default_context()
 
 try:
     import pdfplumber  # noqa: F401 — checked at import time; used in parse functions
@@ -94,7 +84,6 @@ except ImportError as exc:
     ) from exc
 
 import pyarrow as pa
-import pyarrow.parquet as pq
 
 # ADR-0016: shared drift-detection manifest helper (sys.path pattern matches
 # ingest_hamburg_osm.py's existing cross-module import convention; see
@@ -103,6 +92,10 @@ _INGESTION_ROOT = Path(__file__).resolve().parents[2]
 if str(_INGESTION_ROOT) not in sys.path:
     sys.path.insert(0, str(_INGESTION_ROOT))
 from manifest import existing_outputs, write_manifest_entry  # noqa: E402
+
+# QA-2 (#177): shared retry+backoff PDF download and atomic-write helpers.
+from common.http import FetchError, download_pdf  # noqa: E402
+from common.io import atomic_write_parquet  # noqa: E402
 
 # ---------------------------------------------------------------------------
 # Known vintages and PDF URLs (confirmed live 2026-06-30 from archive page)
@@ -165,27 +158,6 @@ logging.basicConfig(
     datefmt="%Y-%m-%dT%H:%M:%S",
 )
 log = logging.getLogger("strassenverzeichnis_ingest")
-
-# ---------------------------------------------------------------------------
-# PDF download
-# ---------------------------------------------------------------------------
-
-
-def download_pdf(url: str, dest: Path, timeout: int = 60) -> None:
-    """Download a PDF to dest (atomic write via temp file)."""
-    tmp = dest.with_suffix(".tmp.pdf")
-    dest.parent.mkdir(parents=True, exist_ok=True)
-    req = urllib.request.Request(url, headers={"User-Agent": "gentriduck-ingest/1.0"})
-    log.info("Downloading %s -> %s", url, dest)
-    try:
-        with urllib.request.urlopen(req, timeout=timeout, context=_SSL_CONTEXT) as resp:  # noqa: S310
-            data = resp.read()
-    except urllib.error.URLError as exc:
-        raise RuntimeError(f"Network error downloading {url}: {exc}") from exc
-    tmp.write_bytes(data)
-    tmp.rename(dest)
-    log.info("Saved %d bytes -> %s", len(data), dest)
-
 
 # ---------------------------------------------------------------------------
 # Text-line parsing
@@ -479,9 +451,8 @@ def _extract_from_pdf(pdf_path: Path, vintage: int) -> list[dict]:
 
 
 def write_parquet(rows: list[dict], out_path: Path, vintage: int, attribution: str) -> None:
-    """Write extracted rows to Parquet using the Strassenverzeichnis schema."""
+    """Write extracted rows to Parquet using the Strassenverzeichnis schema (atomic write)."""
     n = len(rows)
-    tmp_path = out_path.with_suffix(".tmp.parquet")
     table = pa.table(
         {
             "vintage": pa.array([vintage] * n, type=pa.int32()),
@@ -495,10 +466,9 @@ def write_parquet(rows: list[dict], out_path: Path, vintage: int, attribution: s
         },
         schema=STRASSENVERZEICHNIS_SCHEMA,
     )
-    out_path.parent.mkdir(parents=True, exist_ok=True)
-    pq.write_table(table, tmp_path, compression="snappy")
-    tmp_path.rename(out_path)
-    log.info("Wrote %d rows -> %s", n, out_path)
+    # QA-2 (#177): atomic write -- a crash mid-write must never leave a
+    # partial/corrupt file where dbt or verify_data.py expects a complete one.
+    atomic_write_parquet(table, out_path)
 
 
 # ---------------------------------------------------------------------------
@@ -590,7 +560,7 @@ def main(argv: Optional[list[str]] = None) -> int:
         else:
             try:
                 download_pdf(url, pdf_path)
-            except RuntimeError as exc:
+            except FetchError as exc:
                 log.error("Failed to download vintage %d: %s", year, exc)
                 errors += 1
                 continue
