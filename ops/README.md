@@ -208,14 +208,20 @@ After each weekly `develop → main` merge, the PM session checks whether the re
 yes, it rebuilds and redeploys as release close-out, on a machine with the ingested data:
 
 ```bash
-uv run poe refresh                                     # data → data/serving/*.parquet + web/static/geo/
-cd web && npm ci && npm run sources && npm run build   # → web/build/ (incl. noindex meta)
-cd .. && ops/deploy-gh-pages.sh                        # force-replace gh-pages with the fresh build
+uv run poe refresh      # data → data/serving/*.parquet + web/static/geo/
+uv run poe web-build    # cd web && npm ci && npm run sources && npm run build → web/build/ (incl. noindex meta)
+ops/deploy-gh-pages.sh  # force-replace gh-pages with the fresh build
 ```
 
 If the release touched neither, skip the deploy and say so in the handoff. Build from `main`
 (the published branch), not `develop`. The `gh-pages` branch is a generated artefact — never
 merge it back. See the script header for details (`.nojekyll`, author identity, empty-build guard).
+
+**Web-build smoke check (QA-9, #184):** `uv run poe web-build` (added 2026-07-09) wraps the
+same three Node steps as a reusable poe task, so a mart/schema change that silently breaks the
+Evidence build gets a cheap local signal before it reaches the release routine above — run it
+after `poe refresh` any time a model or schema touching a published mart changes, not just at
+weekly release time.
 
 > **Cost note:** continuous mode burns usage continuously and will hit session limits; the
 > restart-on-reset loop handles that but it is not cheap. The light `sonnet`/`medium` defaults keep

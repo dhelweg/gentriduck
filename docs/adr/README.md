@@ -17,10 +17,10 @@ ADR before adopting a new tool, library, or data source** (no "first tool that w
 | [0010](0010-spatial-distance-weighting.md) | Spatial distance weighting | Accepted |
 | [0011](0011-autonomous-merge-develop-branch.md) | Autonomous merge via a `develop` integration branch | Accepted |
 | [0012](0012-serving-and-hosting-stack.md) | Serving & hosting stack | Accepted |
-| [0013](0013-whitepaper-authoring-tool.md) | Quarto + Typst whitepaper authoring tool | Proposed (task O2, blocked on maintainer sign-off) |
+| 0013 | Quarto + Typst whitepaper authoring tool | Draft on branch `feat/82-adr-0013-whitepaper-tool`, blocked on #82 (not yet on `develop`) |
 | [0014](0014-hamburg-data-sources.md) | Hamburg data sources (second city) | Accepted |
 | [0015](0015-data-refresh-orchestration.md) | Data refresh / orchestration (`uv run poe refresh`) | Accepted |
-| [0016](0016-ingested-data-drift-detection.md) | Ingested-data drift detection across local instances | Proposed (awaiting maintainer sign-off) |
+| [0016](0016-ingested-data-drift-detection.md) | Ingested-data drift detection across local instances | Accepted (2026-07-06) |
 | [0017](0017-poi-offering-advantage-revival.md) | POI offering-advantage (OA) revival — 3-level LQ, faithful/improved separation, `methodology_variant` | Accepted |
 | [0018](0018-causal-tiered-poi-selection.md) | Causality-first-with-data-confirmation POI selection rule (Workstream 2 / improved OA) | Accepted |
 
