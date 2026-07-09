@@ -12,7 +12,11 @@ dependencies = [
     "pyarrow>=14",
     "scikit-learn>=1.5",
     "scipy>=1.13",
-    "quackosm>=0.11",
+    # osmium (BSL-1.0): full-history .osh.pbf reader for C1 OSM ingestion (ADR-0002 Option B).
+    # `quackosm` was pruned here (QA-8b, #206, ADR-0002 Amendment 2026-07-09): it was declared per
+    # the ADR's original Decision but never imported -- osmium's history-aware SimpleHandler is the
+    # right fit for the multi-timestamp .osh.pbf format quackosm's snapshot-oriented reader doesn't
+    # natively support. See the ADR amendment for the full rationale.
     "osmium>=4.0",
     "shapely>=2.0",
     "certifi>=2024.0",
@@ -20,7 +24,11 @@ dependencies = [
     # libpysal: spatial weights from shapely geometries (no geopandas).
     # esda: Getis-Ord Gi*, Moran's I, LISA (R-A6, R-A9).
     # spreg: spatial-lag/error regression (R-A9).
-    # h3: optional MAUP sensitivity layer, analysis-only (Apache-2.0).
+    # h3: optional MAUP sensitivity layer, analysis-only (Apache-2.0). Deliberately deferred/
+    # unused dependency (QA-8b, #206 confirms this is not drift): spatial-methods.md #7
+    # explicitly allows skipping the H3 lens once PLR-vs-BZR rank correlation clears the r>0.7
+    # MAUP threshold, which analysis/a6_maup.py confirms it does -- so h3 stays an accepted,
+    # roadmapped floor rather than dead weight. Re-evaluate if a future PLR-vs-BZR check fails.
     # Excluded: geopandas, pyogrio, pyproj, fiona, tobler (ADR-0010 Amendment 1).
     "libpysal>=4.10",
     "esda>=2.5",
