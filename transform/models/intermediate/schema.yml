@@ -2469,6 +2469,93 @@ models:
           The Mietspiegel vintage year actually matched to this Wohnlage vintage
           (nearest-<= rule, geo condition 8) -- audit trail for the vintage match.
 
+  - name: int_berlin_rent_pressure_proxy
+    description: >
+      #70 [B1] / ADR-0019 Decision 2: affordability / rent-pressure proxy --
+      combines modelled Mietspiegel rent level (relative to the citywide/PLR
+      median, per-year z-score) with the MSS transferbezug_anteil transfer-receipt
+      share (ability-to-pay-stress proxy, already vulnerability-positive per the
+      R-A4/#67 geo-signoff) into an equal-weight mean-of-z-scores composite. NOT a
+      rent-to-income ratio (no PLR-grain income series exists; ADR-0007 gap;
+      ADR-0019 Alternative C rejected that approach under R-C2 grounding).
+
+      Coverage limitation: as actually ingested, transferbezug_anteil is non-null
+      for MSS editions 2015, 2017, 2023, 2025 and NULL for editions 2019, 2021
+      (narrower suspension window than R-A4/#67's "<=2021" characterization --
+      verified directly against stg_berlin_mss_indicators). rent_pressure_proxy
+      is therefore populated for Wohnlage snapshot_year in (2017, 2023, 2026) and
+      NULL for snapshot_year in (2019, 2021) by construction. z_rent_rel alone is
+      populated for all snapshot years.
+
+      Zero consumers as of this model -- not yet wired into any mart or the
+      governed gentrification_index (ADR-0019 explicitly defers that integration
+      to a later, separately-gated slice). See
+      docs/methodology/B1-rent-pressure-geo-signoff.md and
+      docs/methodology/B1-rent-pressure-domain-signoff.md.
+
+      Source: int_price_rent_wohnlage_mietspiegel + stg_berlin_mss_indicators.
+    meta:
+      dbt_meta_owner: data-engineer
+    data_tests:
+
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns:
+              - city_code
+              - snapshot_year
+              - area_code
+              - area_vintage
+          config:
+            where: "area_code is not null"
+    columns:
+      - name: city_code
+        description: City identifier (ADR-0005), normalised to 'BER'.
+        data_tests:
+
+          - not_null:
+              config:
+                where: "area_code is not null"
+      - name: snapshot_year
+        description: Wohnlage WFS edition year (2017, 2019, 2021, 2023, 2026).
+      - name: area_code
+        description: PLR identifier (matches stg_berlin_lor / int_price_rent_wohnlage_mietspiegel).
+      - name: area_vintage
+        description: LOR boundary vintage ('lor_pre2021' or 'lor_2021').
+      - name: est_rent_mid
+        description: >
+          Modelled mid rent estimate carried through from
+          int_price_rent_wohnlage_mietspiegel (Signal 3 input to z_rent_rel).
+          NULL when the source is NULL (wohnlage_low_n).
+      - name: transferbezug_anteil
+        description: >
+          MSS transfer-receipt (SGB II/XII) share for the matched edition
+          (ability-to-pay-stress input to z_transfer_stress). NULL for matched
+          editions 2019 and 2021 (see model header coverage-limitation note).
+      - name: transfer_stress_mss_edition
+        description: >
+          The MSS edition actually matched to this Wohnlage snapshot_year
+          (nearest-<= rule, mirrors geo condition 8) -- audit trail for the match.
+      - name: z_rent_rel
+        description: >
+          Per-snapshot_year z-score of est_rent_mid across PLRs (higher = rent
+          further above that year's citywide median). Populated for all
+          snapshot years where est_rent_mid is non-null.
+      - name: z_transfer_stress
+        description: >
+          Per-snapshot_year z-score of transferbezug_anteil across PLRs (higher =
+          more transfer-dependent residents; vulnerability-positive, no sign flip
+          -- R-A4/#67 Finding d). NULL for snapshot_year in (2019, 2021); see
+          model header coverage-limitation note.
+      - name: rent_pressure_proxy
+        description: >
+          mean(z_rent_rel, z_transfer_stress) -- affordability-stress composite
+          (ADR-0019 Decision 2). NULL when either input z-score is NULL (no
+          imputation across the transferbezug suspension gap). High = above-median
+          modelled rent combined with an above-median transfer-dependent
+          population share (rent risen/already high where residents can least
+          absorb it) -- an affordability-stress signal, not a measured
+          displacement event and not a rent-to-income ratio.
+
   - name: int_price_rent_brw_wohnlage_combined
     description: >
       QA-6b (#204): extracted from mart_price_rent_dimension.sql -- aligns the BRW
