@@ -1,0 +1,50 @@
+labels: ["community-request"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ## Propose a change to Gentriduck
+
+        This is the community's **voting board** (ADR-0020) — the intended channel for change
+        requests. Read/fork/checkout are always free; this form is how you propose something.
+        See the pinned **"Community voting board — guidelines"** discussion in this category for
+        the full policy before submitting.
+
+        **How it works:** submit below, then 👍-react to requests you support. Once a request
+        crosses **10 upvotes**, an autonomous triage agent screens it (spam / malicious /
+        off-topic / free-open-source-only checks) and, if it passes, promotes it into the project
+        backlog as a normal ticket — subject to every existing engineering gate (architect/ADR gate
+        for new tools, dual methodology sign-off for anything touching the gentrification index,
+        coder/reviewer review, `develop`/`main` branch gating). **Votes decide intake priority
+        only** — they never bypass review, and never influence methodology fidelity.
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: What gap, bug, or missing capability are you seeing?
+      placeholder: e.g. "There's no way to compare two cities side by side on the time-series page."
+    validations:
+      required: true
+  - type: textarea
+    id: proposed-change
+    attributes:
+      label: Proposed change
+      description: What would you like to see built or changed?
+    validations:
+      required: true
+  - type: textarea
+    id: rationale
+    attributes:
+      label: Rationale
+      description: Why does this matter? Who benefits?
+    validations:
+      required: false
+  - type: markdown
+    attributes:
+      value: |
+        ---
+        **Please note:** requests for paid/proprietary tools or data sources are out of scope
+        (Gentriduck is free-and-open-only, golden rule 1) and will not be promoted. Requests that
+        touch the gentrification index's methodology (weights, normalization, spatial method) are
+        welcome, but promotion never skips the project's independent methodology sign-off — a
+        popular vote is not a substitute for that review.

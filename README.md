@@ -119,6 +119,18 @@ the data ADRs (`docs/adr/`) for the source list and licences.
 > bloat and the data is freely re-downloadable. Goldens and SQL references are tiny and are
 > the basis of the directional reproducibility check in Epic B, so they live in the repo.
 
+## Contributing
+
+Read, fork, and check out freely — this is an open-data / open-source project. Direct backlog
+tickets and code merges stay maintainer- and agent-controlled (ADR-0011, ADR-0020); the way to
+**propose** a change is the **[community voting board](https://github.com/dhelweg/gentriduck/discussions/categories/ideas)**
+(GitHub Discussions "Ideas" category — see the pinned
+[guidelines discussion](https://github.com/dhelweg/gentriduck/discussions/213)). Submit a request,
+upvote ones you support; requests crossing a vote threshold are screened and, if they pass,
+promoted into the backlog as a normal ticket — subject to every existing engineering gate (no
+vote count ever buys a bypass). See [ADR-0020](docs/adr/0020-community-contribution-governance-voting-board.md)
+for the full governance model.
+
 ## Licence
 
 Code: [MIT](LICENSE). Published derived dataset (`data/serving/*.parquet`): [ODbL v1.0](https://opendatacommons.org/licenses/odbl/1-0/) — see `DATA_LICENSE.md` for the full rationale, reuse terms, and regeneration path; per-source attribution strings are in `docs/epic-g/G3-attribution-licensing.md`.
