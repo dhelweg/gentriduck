@@ -2,7 +2,7 @@
 
 - **Task:** H1-H3c regression and lead-lag analysis, real thesis hypotheses
 - **Issue:** #65 / #115
-- **Date:** 2026-06-30
+- **Date:** 2026-07-09
 - **Data (H1/H1b):** stg_thesis_2018_result_plr + int_poi_features_pivot (2018), n=436
 - **Data (H2/H3 MSS 2021–2025):** int_mss_lead_lag (lor_2021) + int_poi_features_pivot
 - **Data (H2/H3 MSS 2015–2019, B7):** int_mss_lead_lag (lor_pre2021) + int_poi_features_pivot
@@ -12,6 +12,8 @@
 ## Methodology
 
 Spearman rank correlations and OLS regression test five hypotheses from the 2018 Berlin gentrification thesis (pp. 55-56, p. 91). POI category counts from `int_poi_features_pivot` are used as the primary predictor variables.
+
+**OA-A.4 (#168) rework:** every hypothesis is ALSO tested against the Offering Advantage (OA) location-quotient predictor -- the thesis's actual `oa_*`/`prev_oa_*` construct (reference/system/80_result_h1_plr.sql, 80_result_h2_plr.sql; `int_poi_offering_advantage` #166, ADR-0017) -- rows tagged `(OA)` in the test column. Raw-count rows are retained unlabelled for continuity and comparison; OA rows are the ticket's primary swapped predictor. `oa_mean` (H1/H1b) and `oa_mean_t`/`delta_oa_mean_t` (H2/H3) are the mean of the 4 upscaling-relevant domain OAs (Gastronomy, Entertainment, Retail, Services -- geo-DS Condition C-3, domain-level primary) from `load_oa_category_panel` -- see docstrings in `analysis/e1_regressions.py`. OA is available at PLR scale only (built from `fct_poi_development`/`int_osm_poi_plr_weighted`, both PLR-grain); BZR/Bezirk (B10 #120) and the EWR same-era panel keep their pre-existing raw-count/dynamism predictors unchanged -- a documented Epic B directional-divergence scope boundary, not a defect (CLAUDE.md "Epic B framing"), left for a future ticket if an OA-BZR/Bezirk or OA-EWR bridge is wanted.
 
 **Three comparison sets for H2/H3:**
 
@@ -37,6 +39,9 @@ The primary validation criterion is directional agreement (same sign as thesis e
 | H1 | Spearman | 436 | rho | -0.0463 | 0.3348 | No | negative | negative | PASS | POI stock (total_poi_count) ~ MSS social status (status_index) |
 | H1 | OLS | 436 | beta | -3.97e-04 R2=0.0044 | 0.1670 | No | negative | negative | PASS | POI stock (total_poi_count) ~ MSS social status (status_index) |
 | H1b | Spearman | 436 | rho | 0.1364 | 0.0043 | Yes | positive | positive | PASS | Fast-food POI count ~ MSS social status (status_index) |
+| H1 | Spearman (OA) | 92 | rho | 0.1350 | 0.1996 | No | negative | positive | FAIL | OA-quotient basket (mean of 4 upscaling-relevant domain OAs) ~ MSS social status |
+| H1 | OLS (OA) | 92 | beta | 0.4561 R2=0.0227 | 0.1515 | No | negative | positive | FAIL | OA-quotient basket (mean of 4 upscaling-relevant domain OAs) ~ MSS social status |
+| H1b | Spearman (OA) | 70 | rho | 0.4189 | 0.0003 | Yes | positive | positive | PASS | Fast-food OA quotient ~ MSS social status (status_index) |
 
 ## Results — Section 2: H2/H3 MSS Panel (modern era, 2021–2025)
 
@@ -45,15 +50,23 @@ The primary validation criterion is directional agreement (same sign as thesis e
 | Hyp | Test | N | Type | Value | p-value | Sig | Expected Dir | Actual Dir | Match | Description |
 |---|---|---|---|---|---|---|---|---|---|---|
 | H2 | Spearman k=1 | 1071 | rho | -0.1155 | 0.0002 | Yes | negative | negative | PASS | Current-edition POI stock ~ future status change [k=1 MSS editions, 2021+ panel] |
+| H2 | Spearman (OA) k=1 | 1070 | rho | -0.1187 | 0.0001 | Yes | negative | negative | PASS | Current-edition OA-quotient basket ~ future status change [k=1 MSS editions, 2021+ panel] |
 | H2 | Spearman k=2 | 535 | rho | -0.1924 | 0.0000 | Yes | negative | negative | PASS | Current-edition POI stock ~ future status change [k=2 MSS editions, 2021+ panel] |
+| H2 | Spearman (OA) k=2 | 534 | rho | -0.1825 | 0.0000 | Yes | negative | negative | PASS | Current-edition OA-quotient basket ~ future status change [k=2 MSS editions, 2021+ panel] |
 | H3a | Spearman k=1 | 535 | rho | 0.0593 | 0.1706 | No | negative | positive | FAIL | C5-corrected Δdynamism at t leads Δstatus at t+k (POI change leads status change) [k=1] |
 | H3b | Spearman k=1 | 535 | rho | 0.0593 | 0.1706 | No | negative | positive | FAIL | Δstatus at t leads Δdynamism at t+k (status change leads POI change) [k=1] |
 | H3c | Spearman k=1 | 1071 | rho | 0.0632 | 0.0386 | Yes | negative | positive | FAIL | Simultaneous dynamism ~ status_index co-movement (same edition) [k=1] |
+| H3a | Spearman (OA) k=1 | 1070 | rho | -0.0094 | 0.7584 | No | negative | negative | PASS | OA-quotient change at t leads Δstatus at t+k (POI-composition change leads status change) [k=1] |
+| H3b | Spearman (OA) k=1 | 1070 | rho | -0.0094 | 0.7584 | No | negative | negative | PASS | Δstatus at t leads OA-quotient change at t+k (status change leads POI-composition change) [k=1] |
+| H3c | Spearman (OA) k=1 | 1070 | rho | 0.0962 | 0.0016 | Yes | negative | positive | FAIL | Simultaneous OA-quotient ~ status_index co-movement (same edition) [k=1] |
 | H3a | Spearman k=2 | 0 | rho | N/A | N/A | No | negative | N/A | FAIL | C5-corrected Δdynamism at t leads Δstatus at t+k (POI change leads status change) [k=2] |
 | H3b | Spearman k=2 | 0 | rho | N/A | N/A | No | negative | N/A | FAIL | Δstatus at t leads Δdynamism at t+k (status change leads POI change) [k=2] |
 | H3c | Spearman k=2 | 535 | rho | 0.0790 | 0.0680 | No | negative | positive | FAIL | Simultaneous dynamism ~ status_index co-movement (same edition) [k=2] |
+| H3a | Spearman (OA) k=2 | 534 | rho | -0.1376 | 0.0014 | Yes | negative | negative | PASS | OA-quotient change at t leads Δstatus at t+k (POI-composition change leads status change) [k=2] |
+| H3b | Spearman (OA) k=2 | 534 | rho | -0.1376 | 0.0014 | Yes | negative | negative | PASS | Δstatus at t leads OA-quotient change at t+k (status change leads POI-composition change) [k=2] |
+| H3c | Spearman (OA) k=2 | 534 | rho | 0.1555 | 0.0003 | Yes | negative | positive | FAIL | Simultaneous OA-quotient ~ status_index co-movement (same edition) [k=2] |
 
-**Directional agreement (H2/H3 MSS): 2/8. Significant: 3/8.**
+**Directional agreement (H2/H3 MSS): 8/16. Significant: 9/16.**
 
 ## Results — Section 3: H2/H3 MSS Pre-2021 Panel (thesis-era, 2015–2019, B7 #117)
 
@@ -63,15 +76,23 @@ The primary validation criterion is directional agreement (same sign as thesis e
 | Hyp | Test | N | Type | Value | p-value | Sig | Expected Dir | Actual Dir | Match | Description |
 |---|---|---|---|---|---|---|---|---|---|---|
 | H2 | Spearman k=1 | 1305 | rho | -0.0280 | 0.3129 | No | negative | negative | PASS | Current-edition POI stock ~ future status change [k=1 MSS editions, 2015–2019 panel] |
+| H2 | Spearman (OA) k=1 | 1289 | rho | -0.0382 | 0.1701 | No | negative | negative | PASS | Current-edition OA-quotient basket ~ future status change [k=1 MSS editions, 2015–2019 panel] |
 | H2 | Spearman k=2 | 869 | rho | -0.0438 | 0.1976 | No | negative | negative | PASS | Current-edition POI stock ~ future status change [k=2 MSS editions, 2015–2019 panel] |
+| H2 | Spearman (OA) k=2 | 854 | rho | 0.0129 | 0.7057 | No | negative | positive | FAIL | Current-edition OA-quotient basket ~ future status change [k=2 MSS editions, 2015–2019 panel] |
 | H3a | Spearman k=1 | 869 | rho | 0.0307 | 0.3658 | No | negative | positive | FAIL | C5-corrected Δdynamism at t leads Δstatus at t+k (POI change leads status change) [k=1] |
 | H3b | Spearman k=1 | 869 | rho | 0.0307 | 0.3658 | No | negative | positive | FAIL | Δstatus at t leads Δdynamism at t+k (status change leads POI change) [k=1] |
 | H3c | Spearman k=1 | 1305 | rho | 0.0037 | 0.8926 | No | negative | positive | FAIL | Simultaneous dynamism ~ status_index co-movement (same edition) [k=1] |
+| H3a | Spearman (OA) k=1 | 1288 | rho | 0.0154 | 0.5799 | No | negative | positive | FAIL | OA-quotient change at t leads Δstatus at t+k (POI-composition change leads status change) [k=1] |
+| H3b | Spearman (OA) k=1 | 1288 | rho | 0.0154 | 0.5799 | No | negative | positive | FAIL | Δstatus at t leads OA-quotient change at t+k (status change leads POI-composition change) [k=1] |
+| H3c | Spearman (OA) k=1 | 1289 | rho | 0.1720 | 0.0000 | Yes | negative | positive | FAIL | Simultaneous OA-quotient ~ status_index co-movement (same edition) [k=1] |
 | H3a | Spearman k=2 | 434 | rho | 0.0021 | 0.9658 | No | negative | positive | FAIL | C5-corrected Δdynamism at t leads Δstatus at t+k (POI change leads status change) [k=2] |
 | H3b | Spearman k=2 | 434 | rho | 0.0021 | 0.9658 | No | negative | positive | FAIL | Δstatus at t leads Δdynamism at t+k (status change leads POI change) [k=2] |
 | H3c | Spearman k=2 | 869 | rho | 0.0268 | 0.4300 | No | negative | positive | FAIL | Simultaneous dynamism ~ status_index co-movement (same edition) [k=2] |
+| H3a | Spearman (OA) k=2 | 854 | rho | -0.0127 | 0.7099 | No | negative | negative | PASS | OA-quotient change at t leads Δstatus at t+k (POI-composition change leads status change) [k=2] |
+| H3b | Spearman (OA) k=2 | 854 | rho | -0.0127 | 0.7099 | No | negative | negative | PASS | Δstatus at t leads OA-quotient change at t+k (status change leads POI-composition change) [k=2] |
+| H3c | Spearman (OA) k=2 | 854 | rho | 0.1602 | 0.0000 | Yes | negative | positive | FAIL | Simultaneous OA-quotient ~ status_index co-movement (same edition) [k=2] |
 
-**Directional agreement (H2/H3 MSS pre-2021): 2/8. Significant: 0/8.**
+**Directional agreement (H2/H3 MSS pre-2021): 5/16. Significant: 2/16.**
 
 ## Results — Section 4: H2/H3 EWR Same-Era (2014–2020, thesis source and timeframe)
 
@@ -142,10 +163,10 @@ The primary validation criterion is directional agreement (same sign as thesis e
 
 ## Overall Scorecard
 
-**Total directional agreement: 31/56. Significant: 24/56.**
+**Total directional agreement: 41/75. Significant: 33/75.**
 
-**MSS modern panel (H1+H2+H3, 2021–2025): 5/11 direction, 4/11 significant.**
-**MSS pre-2021 panel (H2+H3 only, 2015–2019): 2/8 direction, 0/8 significant.**
+**MSS modern panel (H1+H2+H3, 2021–2025): 12/22 direction, 11/22 significant.**
+**MSS pre-2021 panel (H2+H3 only, 2015–2019): 5/16 direction, 2/16 significant.**
 **EWR same-era (H2+H3 only): 15/15 direction, 15/15 significant.**
 
 ## Divergences from 2018 Thesis
@@ -155,7 +176,6 @@ The primary validation criterion is directional agreement (same sign as thesis e
 - **H2/H3 MSS**: tested on 2021–2025 live panel (lor_2021, 535–1071 rows) vs thesis's 2012–2018 EWR cross-section. Different era, different index.
 - **H2/H3 EWR**: tested on 2014–2020 annual panel (lor_2021, ~542 rows per lag). Same source as thesis. k=2 (2014→2016) matches thesis gap. delta_ewr is metric (arithmetic z-score diff); OLS additionally applied where MSS ordinal prohibits it.
 - **No multiple-comparison correction** applied across hypotheses.
-- **BZR/Bezirk status aggregation (B10):** B10 uses population-weighted mean of PLR ordinal status codes (rounded), not the Senate/thesis method of re-z-scoring aggregated raw indicators (s1-s4 / d1-d4) within the BZR population and re-classifying. Fit for the directional MAUP probe, but may mis-stage boundary BZRs/Bezirke.
 - Epic B framing: directional revival — exact number reproduction not required. See CLAUDE.md §Epic B framing.
 
 ## Limitations
