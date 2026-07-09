@@ -116,6 +116,17 @@ models:
       Berlin and Hamburg).
     meta:
       dbt_meta_owner: data-engineer
+    # QA-3 (#178): grain test -- the model's own QUALIFY ROW_NUMBER() OVER
+    # (PARTITION BY city_code, area_level, area_code ...) = 1 dedup step makes this
+    # the natural key; both LOR vintages are deliberately collapsed to one row here
+    # (see model SQL header), so no vintage column participates in the grain.
+    tests:
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns:
+              - city_code
+              - area_level
+              - area_code
     columns:
       - name: city_code
         description: City identifier (FK -> dim_city).
@@ -682,6 +693,102 @@ models:
           - accepted_values:
               arguments:
                 values: ["lor_pre2021"]
+
+  - name: int_ewr_socioeco
+    description: >
+      C4 intermediate: pivots int_berlin_ewr_plr2021 from long to wide format and
+      computes the EWR composite socio-economic vulnerability score -- the
+      **R-C1 methodology-gate model** for Berlin's socio-economic covariate
+      (CLAUDE.md methodology gate list). QA-3 (#178): this schema entry documents
+      the model for the first time; no logic change (documentation/tests only).
+
+      Full composite (Thesis Section 4.2, 2014+): mean of 5 z-scores
+      (foreigners_share, age_under18_share, migration_background_share,
+      mean_age_years, residence_duration_5y_share), each computed across all PLRs
+      for that (city_code, reference_year). Higher ewr_composite = more
+      socio-economically vulnerable; negated when entering gentrification_score in
+      int_gentrification_ts.
+
+      Partial composite (B9b, pre-2014 extension, 3 indicators: age_under18_share,
+      mean_age_years, residence_duration_5y_share) is available via
+      ewr_composite_partial for reference_year <= 2013, where foreigners_share and
+      migration_background_share are absent from the source EWR editions.
+      is_partial_composite flags which rows only have the partial composite
+      (ewr_composite is NULL for those rows). NOT cross-era comparable with the
+      full composite -- see B9-geo-signoff.md / B9-domain-signoff.md.
+
+      migration_background_share is methodologically stable only from 2017
+      (Mikrozensus reform); this model does not filter on it -- consumers should
+      apply reference_year >= 2017 for migration comparisons.
+
+      Grain: one row per (city_code, area_code, area_vintage, reference_year).
+      All rows carry area_vintage='lor_2021' (source is already crosswalk-aligned
+      by int_berlin_ewr_plr2021). Berlin only (city_code='BER').
+
+      Graceful degradation: returns zero rows when int_berlin_ewr_plr2021 has no rows.
+    meta:
+      dbt_meta_owner: data-engineer
+    tests:
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns:
+              - city_code
+              - area_code
+              - area_vintage
+              - reference_year
+          config:
+            where: "area_code is not null"
+    columns:
+      - name: city_code
+        description: City identifier (ADR-0005). Always 'BER'.
+        tests:
+          - accepted_values:
+              arguments:
+                values: ["BER"]
+              config:
+                where: "area_code is not null"
+      - name: area_code
+        description: PLR identifier in the lor_2021 scheme (8-digit, zero-padded).
+        tests:
+          - not_null:
+              config:
+                where: "reference_year is not null"
+      - name: area_vintage
+        description: >
+          Always 'lor_2021' -- source (int_berlin_ewr_plr2021) has already
+          crosswalk-aligned all pre-2021 rows to the 2021 PLR scheme.
+        tests:
+          - accepted_values:
+              arguments:
+                values: ["lor_2021"]
+              config:
+                where: "area_code is not null"
+      - name: reference_year
+        description: Calendar year of the 31-Dec EWR snapshot (2010-2024).
+        tests:
+          - not_null:
+              config:
+                where: "area_code is not null"
+      - name: ewr_composite
+        description: >
+          Full 5-indicator composite (Thesis Section 4.2, 2014+): mean z-score of
+          foreigners_share, age_under18_share, migration_background_share,
+          mean_age_years, residence_duration_5y_share. NULL pre-2014 (see
+          ewr_composite_partial) or when any key indicator is suppressed.
+      - name: ewr_composite_partial
+        description: >
+          Partial 3-indicator composite (B9b, all years): mean z-score of
+          age_under18_share, mean_age_years, residence_duration_5y_share only.
+          NOT cross-era comparable with ewr_composite -- consumers must filter on
+          is_partial_composite to pick the right column for their analysis window.
+      - name: is_partial_composite
+        description: >
+          TRUE for reference_year <= 2013 (only the partial composite is
+          available); FALSE for reference_year >= 2014 (full composite present).
+        tests:
+          - not_null:
+              config:
+                where: "area_code is not null"
 
   - name: int_ewr_socioeco_pre2021
     description: >
