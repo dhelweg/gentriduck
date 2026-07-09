@@ -58,7 +58,6 @@ import osmium
 import osmium.osm
 import pandas as pd
 import pyarrow as pa
-import pyarrow.parquet as pq
 
 # ADR-0016: shared drift-detection manifest helper. Rolling source — the
 # extracted yearly snapshot parquets ARE manifest outputs; the .osh.pbf itself
@@ -69,6 +68,13 @@ _INGESTION_ROOT = Path(__file__).resolve().parents[2]
 if str(_INGESTION_ROOT) not in sys.path:
     sys.path.insert(0, str(_INGESTION_ROOT))
 from manifest import existing_outputs, write_manifest_entry  # noqa: E402
+
+# QA-2 (#177) slice 5: shared atomic-write helper. This module has no HTTP
+# fetches of its own (osmium reads a local .osh.pbf), so only common.io
+# applies here — not common.http. ingest_hamburg_osm.py (H1, #40) imports
+# this module's write_parquet unchanged, so this one change covers both
+# Berlin and Hamburg OSM ingestion.
+from common.io import atomic_write_parquet  # noqa: E402
 
 # ---------------------------------------------------------------------------
 # Constants
@@ -459,11 +465,15 @@ def extract_all_snapshots(
 
 
 def write_parquet(df: pd.DataFrame, out_path: Path) -> None:
-    """Write the snapshot DataFrame to a GeoParquet-compatible parquet file."""
-    out_path.parent.mkdir(parents=True, exist_ok=True)
+    """Write the snapshot DataFrame to a GeoParquet-compatible parquet file.
+
+    QA-2 (#177) slice 5: atomic write — a crash mid-write (this ingestor's
+    ~75 min/year runtime makes mid-run interruption realistic) must never
+    leave a partial/corrupt file where dbt or verify_data.py expects a
+    complete one.
+    """
     table = pa.Table.from_pandas(df, schema=OUTPUT_SCHEMA, preserve_index=False)
-    pq.write_table(table, out_path, compression="zstd", compression_level=3)
-    log.info("  -> Written: %s (%d rows)", out_path, len(df))
+    atomic_write_parquet(table, out_path, compression="zstd", compression_level=3)
 
 
 # ---------------------------------------------------------------------------

@@ -26,6 +26,7 @@ def atomic_write_parquet(
     out_path: Path,
     *,
     compression: str = "snappy",
+    compression_level: int | None = None,
 ) -> None:
     """Write `table` to `out_path` atomically.
 
@@ -33,11 +34,19 @@ def atomic_write_parquet(
     onto `out_path` only after the write succeeds — dbt/`verify_data.py`
     never observe a partial file. On any write failure the tmp file is
     removed and the exception re-raised; `out_path` is left untouched.
+
+    `compression_level` (optional) is forwarded to `pq.write_table` as-is —
+    e.g. `compression="zstd", compression_level=3`, matching the OSM
+    ingestors' (QA-2 #177 slice 5) prior direct-call tuning; omitted by
+    default so existing snappy callers are unaffected.
     """
     out_path.parent.mkdir(parents=True, exist_ok=True)
     tmp_path = out_path.with_suffix(".tmp.parquet")
+    kwargs: dict = {"compression": compression}
+    if compression_level is not None:
+        kwargs["compression_level"] = compression_level
     try:
-        pq.write_table(table, tmp_path, compression=compression)
+        pq.write_table(table, tmp_path, **kwargs)
     except Exception:
         tmp_path.unlink(missing_ok=True)
         raise
