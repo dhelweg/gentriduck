@@ -17,6 +17,13 @@ For the Gentriduck revival the primary validation criterion is directional agree
 (same sign / direction as thesis expectation), consistent with the Epic B framing
 (directional revival — exact number reproduction is not required).
 
+OA-A.4 (#168): every hypothesis is additionally tested against the Offering Advantage
+(OA) location-quotient predictor -- the thesis's actual oa_*/prev_oa_* construct
+(reference/system/80_result_h1_plr.sql, 80_result_h2_plr.sql;
+int_poi_offering_advantage #166, ADR-0017) -- alongside the pre-existing raw-count /
+C5-dynamism predictors (kept for continuity; see load_oa_category_panel,
+load_h1_h2_data, load_lead_lag_data, and the "(OA)"-tagged rows in test_h1/h2/h3).
+
 Data tables used:
   * stg_thesis_2018_result_plr  — 2018 golden PLR data (status_index, dynamism_index,
                                    own_idx_class_bi); 436 PLR rows.
@@ -137,11 +144,84 @@ THESIS_HYPOTHESES: dict[str, dict] = {
 # ---------------------------------------------------------------------------
 
 
+def load_oa_category_panel(
+    con: duckdb.DuckDBPyConnection, weight_variant: str = "standard"
+) -> object:
+    """OA-A.4 (#168): Offering Advantage panel, one row per (area_code,
+    area_vintage, snapshot_year), pivoted from `int_poi_offering_advantage`
+    (ADR-0017, #166).
+
+    Faithful Run 1 only (`methodology_variant = 'faithful'`); `weight_variant`
+    defaults to 'standard' (hard point-in-polygon counts) to mirror the raw
+    `int_poi_features_pivot` counts H1/H2/H3 previously used (thesis pp. 55-56,
+    91 tested unweighted stock; the Gaussian-weighted variant is a Gentriduck
+    addition, not part of the faithful revival -- ADR-0017 D2.3).
+
+    **Domain-level primary, category-level fallback only for H1b (geo-DS
+    Condition C-3, docs/epic-b/A3-oa-validation-geo-signoff.md §5):** "OA-A.4's
+    H1-H3c regressions should primarily use domain-level OA as predictors,
+    falling back to category/type only where the thesis's own hypothesis
+    specifically operationalizes a finer leaf (e.g. H1b fast-food)." Category-
+    /type-level OA is statistically noisier (a single POI can swing a low-count
+    leaf's local share -- OA-A.2 #166's own D-3 note; C-3's own evidence: domain
+    rho 0.15-0.91 vs category/type rho as low as 0.001-0.5).
+
+    `oa_domain(gastronomy|entertainment|retail|services)`: MAX(oa_domain)
+    FILTER by `poi_domain_h`, one value per domain (identical across every
+    (category, type) row sharing that domain -- MAX collapses the sparse rows
+    without double-counting). These four domains are exactly the ones the H1
+    raw-count "upscaling proxy" categories (cafe, bar, restaurant, nightlife,
+    hairdresser, clothing, beauty) fall under (Gastronomy: cafe/restaurant/
+    fast-food; Entertainment: bar/nightlife; Services: hairdresser/beauty;
+    Retail: clothing).
+
+    `oa_fast_food`: MAX(oa_category) FILTER (poi_category_h = 'Fast Food') --
+    the C-3-sanctioned category-level exception for H1b (thesis p.55 H1b names
+    fast-food specifically, not the whole Gastronomy domain).
+
+    `oa_mean` = unweighted mean of the 4 domain-level OA values -- the OA
+    analogue of `total_poi_count` for the H1/H2/H3 "basket" tests (a single
+    scalar "OA" of a closed basket is definitionally ~1, so the mean of these
+    four upscaling-relevant domains is the grounded aggregate substitute, per
+    C-3's domain-level-primary guidance).
+    """
+    df = con.execute(f"""
+        SELECT
+            area_code,
+            area_vintage,
+            snapshot_year,
+            MAX(oa_domain) FILTER (WHERE poi_domain_h = 'Gastronomy')   AS oa_domain_gastronomy,
+            MAX(oa_domain) FILTER (WHERE poi_domain_h = 'Entertainment') AS oa_domain_entertainment,
+            MAX(oa_domain) FILTER (WHERE poi_domain_h = 'Retail')        AS oa_domain_retail,
+            MAX(oa_domain) FILTER (WHERE poi_domain_h = 'Services')      AS oa_domain_services,
+            MAX(oa_category) FILTER (WHERE poi_category_h = 'Fast Food') AS oa_fast_food
+        FROM main.int_poi_offering_advantage
+        WHERE weight_variant = '{weight_variant}'
+          AND methodology_variant = 'faithful'
+        GROUP BY area_code, area_vintage, snapshot_year
+    """).df()
+    domain_cols = [
+        "oa_domain_gastronomy",
+        "oa_domain_entertainment",
+        "oa_domain_retail",
+        "oa_domain_services",
+    ]
+    df["oa_mean"] = df[domain_cols].mean(axis=1, skipna=True)
+    return df
+
+
 def load_h1_h2_data(con: duckdb.DuckDBPyConnection) -> object:
-    """Load PLR-level 2018 golden data joined with POI category counts for H1/H2.
+    """Load PLR-level 2018 golden data joined with POI category counts + OA for H1/H2.
 
     Join key: LPAD(raum_id, 8, '0') = area_code (thesis IDs are 7-char; pivot is 8-char zero-padded).
     Snapshot year 2018, vintage lor_pre2021 matches the thesis data collection period.
+
+    OA-A.4 (#168): also joins `int_poi_offering_advantage` category-level OA
+    (`load_oa_category_panel`) at the same (area_code, 2018, lor_pre2021) cell --
+    the thesis's own H1 result view (reference/system/80_result_h1_plr.sql)
+    selects `oa_gastro_c_cafe_stock` etc. alongside the raw `c_*_stock`
+    columns from the SAME edition (`zeit`), confirming H1's OA predictor is the
+    *current*-edition OA, matching `oa_cafe` etc. here.
     """
     # Thesis p.55: core POI features — cafes, bars, restaurants, fast-food, nightlife,
     # hairdressers (upscaling proxies); fast-food is negative per H1b.
@@ -169,6 +249,21 @@ def load_h1_h2_data(con: duckdb.DuckDBPyConnection) -> object:
           AND t.status_index IS NOT NULL
           AND p.total_poi_count IS NOT NULL
     """).df()
+
+    oa_available = "int_poi_offering_advantage" in {
+        row[0]
+        for row in con.execute(
+            "SELECT table_name FROM information_schema.tables WHERE table_schema='main'"
+        ).fetchall()
+    }
+    if oa_available:
+        df_oa = load_oa_category_panel(con)
+        df_oa_2018 = df_oa[
+            (df_oa["snapshot_year"] == 2018) & (df_oa["area_vintage"] == "lor_pre2021")
+        ]
+        df = df.merge(
+            df_oa_2018.drop(columns=["snapshot_year", "area_vintage"]), on="area_code", how="left"
+        )
     return df
 
 
@@ -245,7 +340,7 @@ def load_ewr_lead_lag_data(con: duckdb.DuckDBPyConnection) -> object:
 
 
 def load_lead_lag_data(con: duckdb.DuckDBPyConnection, vintage: str = "lor_2021") -> object:
-    """Load MSS lead-lag panel joined with POI pivot counts for H3a/H3b/H3c.
+    """Load MSS lead-lag panel joined with POI pivot counts + OA for H3a/H3b/H3c.
 
     int_mss_lead_lag provides lag_k=1,2 MSS edition pairs.
     int_poi_features_pivot is joined at edition_t and edition_tk snapshot years.
@@ -255,6 +350,21 @@ def load_lead_lag_data(con: duckdb.DuckDBPyConnection, vintage: str = "lor_2021"
     B7 (#117): vintage parameter selects the LOR boundary system.
     'lor_2021' = modern 2021-2025 panel (default).
     'lor_pre2021' = thesis-era 2015-2019 panel (k=1: 2015→2017, 2017→2019; k=2: 2015→2019).
+
+    OA-A.4 (#168): also joins `int_poi_offering_advantage` category-level OA
+    (`load_oa_category_panel`) at edition_t and edition_tk, exposing
+    `oa_mean_t` / `oa_mean_tk` (current + t+k OA) and `delta_oa_mean_t`
+    (`oa_mean_tk - oa_mean_t`, the OA-change analogue of `delta_poi` /
+    `delta_dynamism_t`). Thesis p.55 H2 uses `prev_oa_*` (an earlier edition's
+    OA predicting projected future status) -- `oa_mean_t` here plays exactly
+    that "prior OA" role relative to the future `delta_status_ordinal`
+    (reference/system/80_result_h2_plr.sql). `delta_oa_mean_t` is a compositional
+    (location-quotient) change measure, which -- being a ratio against the
+    same-period city-wide total -- is structurally robust to the shared OSM
+    coverage-growth artifact that motivated the C5 dynamism correction
+    (index-definition.md §2.4; docs/epic-c/C5-geo-signoff.md) in a similar
+    way; both are reported here (see test_h3) rather than one replacing the
+    other, since C5-dynamism already has its own geo-DS sign-off.
     """
     df = con.execute(f"""
         SELECT
@@ -284,6 +394,27 @@ def load_lead_lag_data(con: duckdb.DuckDBPyConnection, vintage: str = "lor_2021"
             AND ll.area_vintage = p_tk.area_vintage
         WHERE ll.area_vintage = '{vintage}'
     """).df()
+
+    tables = {
+        row[0]
+        for row in con.execute(
+            "SELECT table_name FROM information_schema.tables WHERE table_schema='main'"
+        ).fetchall()
+    }
+    if "int_poi_offering_advantage" in tables:
+        df_oa = load_oa_category_panel(con)
+        df_oa_v = df_oa[df_oa["area_vintage"] == vintage][["area_code", "snapshot_year", "oa_mean"]]
+        df = df.merge(
+            df_oa_v.rename(columns={"snapshot_year": "edition_t", "oa_mean": "oa_mean_t"}),
+            on=["area_code", "edition_t"],
+            how="left",
+        )
+        df = df.merge(
+            df_oa_v.rename(columns={"snapshot_year": "edition_tk", "oa_mean": "oa_mean_tk"}),
+            on=["area_code", "edition_tk"],
+            how="left",
+        )
+        df["delta_oa_mean_t"] = df["oa_mean_tk"] - df["oa_mean_t"]
     return df
 
 
@@ -656,6 +787,92 @@ def test_h1(df) -> list[dict]:
         }
     )
 
+    # OA-A.4 (#168): OA-quotient predictors -- the thesis's actual H1/H1b
+    # construct (reference/system/80_result_h1_plr.sql selects oa_gastro_c_cafe_stock
+    # etc. alongside the raw stocks). oa_mean (mean of the 4 upscaling-relevant
+    # domain OA values, load_oa_category_panel, geo-DS Condition C-3) replaces
+    # total_poi_count;
+    # oa_fast_food replaces poi_fast_food for H1b. Same expected directions as
+    # the raw-count tests (Epic B directional-revival framing, CLAUDE.md) --
+    # OA and raw stock are expected to move together for these proxies, though
+    # OA is compositional (relative to city-wide share) rather than absolute.
+    if "oa_mean" in df.columns:
+        x_oa = df["oa_mean"].values.astype(float)
+        r_oa = run_spearman(x_oa, y, "Spearman(oa_mean, status_index)")
+        results.append(
+            {
+                "hyp": "H1",
+                "test": "Spearman (OA)",
+                "desc": "OA-quotient basket (mean of 4 upscaling-relevant domain OAs) ~ MSS social status",
+                "citation": (
+                    "Thesis p.55 H1, OA construct (reference/system/80_result_h1_plr.sql "
+                    "oa_* columns; int_poi_offering_advantage #166/ADR-0017); OA-A.4 #168 "
+                    "swaps the raw-stock predictor for the domain-level OA quotient (geo-DS "
+                    "Condition C-3, docs/epic-b/A3-oa-validation-geo-signoff.md §5: "
+                    '"H1-H3c ... should primarily use domain-level OA"). '
+                    "Same D1 polarity as the raw-count H1 test (status_index inverse-numeric)."
+                ),
+                "stat_val": r_oa["rho"],
+                "stat_type": "rho",
+                "n": r_oa["n"],
+                "p": r_oa["p"],
+                "sig": r_oa["sig"],
+                "r2": None,
+                "expected_dir": THESIS_HYPOTHESES["H1"]["expected_dir"],
+                "actual_dir": _dir(r_oa["rho"]),
+                "dir_match": _dir_match(r_oa["rho"], THESIS_HYPOTHESES["H1"]["expected_dir"]),
+            }
+        )
+
+        r_oa_ols = run_ols(x_oa, y, "OLS(status_index ~ oa_mean)")
+        results.append(
+            {
+                "hyp": "H1",
+                "test": "OLS (OA)",
+                "desc": "OA-quotient basket (mean of 4 upscaling-relevant domain OAs) ~ MSS social status",
+                "citation": (
+                    "Thesis p.55 H1, OA construct (reference/system/80_result_h1_plr.sql); "
+                    "OA-A.4 #168, geo-DS Condition C-3 (domain-level primary)."
+                ),
+                "stat_val": r_oa_ols["coef"],
+                "stat_type": "beta",
+                "n": r_oa_ols["n"],
+                "p": r_oa_ols["p"],
+                "sig": r_oa_ols["sig"],
+                "r2": r_oa_ols["r2"],
+                "expected_dir": THESIS_HYPOTHESES["H1"]["expected_dir"],
+                "actual_dir": _dir(r_oa_ols["coef"]),
+                "dir_match": _dir_match(r_oa_ols["coef"], THESIS_HYPOTHESES["H1"]["expected_dir"]),
+            }
+        )
+
+    if "oa_fast_food" in df.columns:
+        xf_oa = df["oa_fast_food"].values.astype(float)
+        r_ff_oa = run_spearman(xf_oa, y, "Spearman(oa_fast_food, status_index)")
+        results.append(
+            {
+                "hyp": "H1b",
+                "test": "Spearman (OA)",
+                "desc": "Fast-food OA quotient ~ MSS social status (status_index)",
+                "citation": (
+                    "Thesis p.55 H1b, OA construct (reference/system/80_result_h1_plr.sql "
+                    "oa_gastro_c_fast_food_stock); OA-A.4 #168 swaps the raw fast-food count "
+                    "for its OA quotient -- category-level here per geo-DS Condition C-3's "
+                    "explicit fast-food exception (docs/epic-b/A3-oa-validation-geo-signoff.md "
+                    "§5). Same D1 polarity as the raw-count H1b test."
+                ),
+                "stat_val": r_ff_oa["rho"],
+                "stat_type": "rho",
+                "n": r_ff_oa["n"],
+                "p": r_ff_oa["p"],
+                "sig": r_ff_oa["sig"],
+                "r2": None,
+                "expected_dir": THESIS_HYPOTHESES["H1b"]["expected_dir"],
+                "actual_dir": _dir(r_ff_oa["rho"]),
+                "dir_match": _dir_match(r_ff_oa["rho"], THESIS_HYPOTHESES["H1b"]["expected_dir"]),
+            }
+        )
+
     return results
 
 
@@ -710,6 +927,41 @@ def test_h2(df_ll: object, panel_label: str = "2021+ panel") -> list[dict]:
                 "dir_match": _dir_match(r["rho"], THESIS_HYPOTHESES["H2"]["expected_dir"]),
             }
         )
+
+        # OA-A.4 (#168): oa_mean_t ~ delta_status_ordinal -- the thesis's actual
+        # H2 construct is prev_oa_* (an earlier edition's OA quotient predicting
+        # projected future status, reference/system/80_result_h2_plr.sql);
+        # oa_mean_t (edition_t domain-level OA, load_oa_category_panel, geo-DS
+        # Condition C-3) plays that "prior OA"
+        # role relative to delta_status_ordinal (edition_t -> edition_tk).
+        if "oa_mean_t" in sub.columns:
+            x_oa = sub["oa_mean_t"].values.astype(float)
+            r_oa = run_spearman(x_oa, y, f"Spearman(oa_mean_t, delta_status, k={k})")
+            results.append(
+                {
+                    "hyp": "H2",
+                    "test": f"Spearman (OA) k={k}",
+                    "desc": (
+                        f"Current-edition OA-quotient basket ~ future status change "
+                        f"[k={k} MSS editions, {panel_label}]"
+                    ),
+                    "citation": (
+                        "Thesis p.55 H2, prev_oa_* construct (reference/system/80_result_h2_plr.sql); "
+                        "OA-A.4 #168 swaps the raw POI-stock predictor for the domain-level OA "
+                        "quotient (oa_mean_t = mean of 4 upscaling-relevant domain OAs, edition_t; "
+                        "geo-DS Condition C-3, docs/epic-b/A3-oa-validation-geo-signoff.md §5)."
+                    ),
+                    "stat_val": r_oa["rho"],
+                    "stat_type": "rho",
+                    "n": r_oa["n"],
+                    "p": r_oa["p"],
+                    "sig": r_oa["sig"],
+                    "r2": None,
+                    "expected_dir": THESIS_HYPOTHESES["H2"]["expected_dir"],
+                    "actual_dir": _dir(r_oa["rho"]),
+                    "dir_match": _dir_match(r_oa["rho"], THESIS_HYPOTHESES["H2"]["expected_dir"]),
+                }
+            )
 
     return results
 
@@ -839,6 +1091,99 @@ def test_h3(df_ll: object, panel_label: str = "2021+ panel") -> list[dict]:
                 "dir_match": _dir_match(r3c["rho"], THESIS_HYPOTHESES["H3c"]["expected_dir"]),
             }
         )
+
+        # OA-A.4 (#168): OA-change lead-lag analogues, run ALONSIDE (not instead
+        # of) the C5-corrected dynamism tests above -- the C5 correction already
+        # has its own geo-DS sign-off (docs/epic-c/C5-geo-signoff.md) for the
+        # OSM-coverage-growth artifact; delta_oa_mean_t is independently robust
+        # to that artifact (compositional / relative-to-city-total, see
+        # load_lead_lag_data docstring) rather than replacing the C5 measure.
+        # Ticket #168 body: "H3a-c use OA-change vs status-change lead/lag".
+        if "delta_oa_mean_t" in sub.columns and "oa_mean_t" in sub.columns:
+            delta_oa_t = sub["delta_oa_mean_t"].values.astype(float)
+            oa_t = sub["oa_mean_t"].values.astype(float)
+
+            # H3a (OA): delta_oa_mean_t leads delta_status_ordinal.
+            r3a_oa = run_spearman(
+                delta_oa_t, delta_status, f"Spearman(delta_oa_mean_t, delta_status, k={k})"
+            )
+            results.append(
+                {
+                    "hyp": "H3a",
+                    "test": f"Spearman (OA) k={k}",
+                    "desc": f"OA-quotient change at t leads Δstatus at t+k (POI-composition change leads status change) [k={k}]",
+                    "citation": (
+                        "Thesis p.91 H3a, OA-change construct (ticket #168: "
+                        '"H3a-c use OA-change vs status-change lead/lag"); '
+                        "delta_oa_mean_t = oa_mean_tk - oa_mean_t (load_lead_lag_data); "
+                        "same D1 polarity as the dynamism-based H3a test above."
+                    ),
+                    "stat_val": r3a_oa["rho"],
+                    "stat_type": "rho",
+                    "n": r3a_oa["n"],
+                    "p": r3a_oa["p"],
+                    "sig": r3a_oa["sig"],
+                    "r2": None,
+                    "expected_dir": THESIS_HYPOTHESES["H3a"]["expected_dir"],
+                    "actual_dir": _dir(r3a_oa["rho"]),
+                    "dir_match": _dir_match(
+                        r3a_oa["rho"], THESIS_HYPOTHESES["H3a"]["expected_dir"]
+                    ),
+                }
+            )
+
+            # H3b (OA): delta_status_ordinal leads delta_oa_mean_t.
+            r3b_oa = run_spearman(
+                delta_status, delta_oa_t, f"Spearman(delta_status, delta_oa_mean_t, k={k})"
+            )
+            results.append(
+                {
+                    "hyp": "H3b",
+                    "test": f"Spearman (OA) k={k}",
+                    "desc": f"Δstatus at t leads OA-quotient change at t+k (status change leads POI-composition change) [k={k}]",
+                    "citation": (
+                        "Thesis p.91 H3b, OA-change construct (ticket #168); "
+                        "delta_oa_mean_t = oa_mean_tk - oa_mean_t; same D1 polarity as the "
+                        "dynamism-based H3b test above."
+                    ),
+                    "stat_val": r3b_oa["rho"],
+                    "stat_type": "rho",
+                    "n": r3b_oa["n"],
+                    "p": r3b_oa["p"],
+                    "sig": r3b_oa["sig"],
+                    "r2": None,
+                    "expected_dir": THESIS_HYPOTHESES["H3b"]["expected_dir"],
+                    "actual_dir": _dir(r3b_oa["rho"]),
+                    "dir_match": _dir_match(
+                        r3b_oa["rho"], THESIS_HYPOTHESES["H3b"]["expected_dir"]
+                    ),
+                }
+            )
+
+            # H3c (OA): simultaneous oa_mean_t ~ status_index_t co-movement.
+            r3c_oa = run_spearman(oa_t, stat_t, f"Spearman(oa_mean_t, status_t, k={k})")
+            results.append(
+                {
+                    "hyp": "H3c",
+                    "test": f"Spearman (OA) k={k}",
+                    "desc": f"Simultaneous OA-quotient ~ status_index co-movement (same edition) [k={k}]",
+                    "citation": (
+                        "Thesis p.91 H3c, OA construct (ticket #168); oa_mean_t at edition_t "
+                        "~ status_index_t; same D1 polarity as the dynamism-based H3c test above."
+                    ),
+                    "stat_val": r3c_oa["rho"],
+                    "stat_type": "rho",
+                    "n": r3c_oa["n"],
+                    "p": r3c_oa["p"],
+                    "sig": r3c_oa["sig"],
+                    "r2": None,
+                    "expected_dir": THESIS_HYPOTHESES["H3c"]["expected_dir"],
+                    "actual_dir": _dir(r3c_oa["rho"]),
+                    "dir_match": _dir_match(
+                        r3c_oa["rho"], THESIS_HYPOTHESES["H3c"]["expected_dir"]
+                    ),
+                }
+            )
 
     return results
 
@@ -1081,6 +1426,23 @@ def write_findings(
         f.write("Spearman rank correlations and OLS regression test five hypotheses from the 2018 ")
         f.write("Berlin gentrification thesis (pp. 55-56, p. 91). POI category counts from ")
         f.write("`int_poi_features_pivot` are used as the primary predictor variables.\n\n")
+        f.write(
+            "**OA-A.4 (#168) rework:** every hypothesis is ALSO tested against the Offering "
+            "Advantage (OA) location-quotient predictor -- the thesis's actual "
+            "`oa_*`/`prev_oa_*` construct (reference/system/80_result_h1_plr.sql, "
+            "80_result_h2_plr.sql; `int_poi_offering_advantage` #166, ADR-0017) -- rows tagged "
+            "`(OA)` in the test column. Raw-count rows are retained unlabelled for continuity "
+            "and comparison; OA rows are the ticket's primary swapped predictor. `oa_mean` "
+            "(H1/H1b) and `oa_mean_t`/`delta_oa_mean_t` (H2/H3) are the mean of the 4 "
+            "upscaling-relevant domain OAs (Gastronomy, Entertainment, Retail, Services -- "
+            "geo-DS Condition C-3, domain-level primary) from `load_oa_category_panel` -- see docstrings in "
+            "`analysis/e1_regressions.py`. OA is available at PLR scale only (built from "
+            "`fct_poi_development`/`int_osm_poi_plr_weighted`, both PLR-grain); BZR/Bezirk "
+            "(B10 #120) and the EWR same-era panel keep their pre-existing raw-count/dynamism "
+            "predictors unchanged -- a documented Epic B directional-divergence scope boundary, "
+            'not a defect (CLAUDE.md "Epic B framing"), left for a future ticket if an '
+            "OA-BZR/Bezirk or OA-EWR bridge is wanted.\n\n"
+        )
         f.write("**Three comparison sets for H2/H3:**\n\n")
         f.write(
             "1. **MSS panel (2021–2025):** Uses `int_mss_lead_lag` (lor_2021) — best ground truth "

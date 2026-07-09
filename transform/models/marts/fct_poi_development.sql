@@ -1,13 +1,28 @@
 -- fct_poi_development.sql
 -- C3-fact — POI development fact table: aggregated POI counts per
--- (city_code, snapshot_year, area_code, area_vintage, poi_category_h).
+-- (city_code, snapshot_year, area_code, area_vintage, poi_domain_h,
+-- poi_category_h, poi_type_h).
 --
 -- Purpose: captures the temporal development of POI composition at PLR grain
 -- (Berlin) / statistisches-Gebiet grain (Hamburg), which feeds the
 -- gentrification dynamism index (Epic C onwards).
 --
--- Grain: one row per (city_code, snapshot_year, area_code, area_vintage,
--- poi_category_h).
+-- Grain (OA-A.1 #165 -- ADR-0017 D1): one row per (city_code, snapshot_year,
+-- area_code, area_vintage, poi_domain_h, poi_category_h, poi_type_h). Prior to
+-- #165 this table was grained at poi_category_h only; poi_domain_h and
+-- poi_type_h were dropped here even though int_osm_poi_plr / int_osm_poi_hamburg
+-- already carried the full 3-level harmonized taxonomy (C2). This is a
+-- strictly ADDITIVE re-plumb, not a breaking rename: poi_category_h keeps its
+-- name/meaning, and every existing category-grain consumer (int_poi_features_pivot)
+-- still gets correct category totals by re-aggregating (SUM) over the now-finer
+-- type dimension -- see int_poi_features_pivot.sql. The finer grain does not
+-- introduce ambiguity: poi_type_h -> (poi_domain_h, poi_category_h) is a
+-- functional dependency in seed_poi_mapping.csv (verified: every harmonized
+-- type maps to exactly one domain/category pair; ingest_osm_history.py /
+-- ingest_hamburg_osm.py write poi_domain/poi_category/poi_type as one
+-- resolved (domain, category, type) triple per POI, never independently), so
+-- grouping by all three together is the natural finest-grain aggregation, not
+-- a new indicator/weighting/normalization decision (not R-C1 methodology-bearing).
 -- Rows where area_code IS NULL are excluded (POIs outside area boundaries;
 -- water bodies, airport areas, or coordinates outside city limits).
 --
@@ -46,7 +61,11 @@ with
             snapshot_year,
             area_code,
             area_vintage,
+            -- OA-A.1 #165: carry the full 3-level harmonized taxonomy through
+            -- (previously only poi_category_h was selected here).
+            poi_domain_h,
             poi_category_h,
+            poi_type_h,
             source_attribution
         from {{ ref("int_osm_poi_plr") }}
         where area_code is not null
@@ -58,7 +77,9 @@ with
             snapshot_year,
             area_code,
             area_vintage,
+            poi_domain_h,
             poi_category_h,
+            poi_type_h,
             source_attribution
         from {{ ref("int_osm_poi_hamburg") }}
         where area_code is not null
@@ -78,13 +99,22 @@ with
             snapshot_year,
             area_code,
             area_vintage,
+            poi_domain_h,
             poi_category_h,
+            poi_type_h,
             count(*) as poi_count,
             -- Carry source_attribution from any row in the group (same for all rows
             -- within a city/year cohort since they share a single data source).
             any_value(source_attribution) as source_attribution
         from combined
-        group by city_code, snapshot_year, area_code, area_vintage, poi_category_h
+        group by
+            city_code,
+            snapshot_year,
+            area_code,
+            area_vintage,
+            poi_domain_h,
+            poi_category_h,
+            poi_type_h
     )
 
 select
@@ -92,7 +122,9 @@ select
     snapshot_year,
     area_code,
     area_vintage,
+    poi_domain_h,
     poi_category_h,
+    poi_type_h,
     poi_count,
     source_attribution
 from aggregated

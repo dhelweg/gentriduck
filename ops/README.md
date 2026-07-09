@@ -128,7 +128,7 @@ methodology gate. Override per-launch via env:
 | `GENTRIDUCK_DEVMODE_MODEL` | `sonnet` | alias (`sonnet`/`opus`/`fable`) or a full model id |
 | `GENTRIDUCK_DEVMODE_EFFORT` | `medium` | `low` · `medium` · `high` · `xhigh` · `max` |
 | `GENTRIDUCK_DEVMODE_PERMISSION_MODE` | *host-aware* | macOS & Windows/WSL2 → `bypassPermissions`, native Linux → `dangerously-skip`; or `default` · `acceptEdits` · `dontAsk` · `auto` · `plan` |
-| `GENTRIDUCK_DEVMODE_STALL_SECS` | `900` | hang-watchdog idle threshold (restart if the session transcript is idle this long) |
+| `GENTRIDUCK_DEVMODE_STALL_SECS` | `1800` | hang-watchdog idle threshold (restart if the session transcript is idle this long) |
 | `GENTRIDUCK_DEVMODE_RC_NAME` | `gentriduck-dev` | Remote Control session name |
 | `GENTRIDUCK_DEVMODE_LOG` | `~/.claude/gentriduck-devmode.log` | log path |
 
@@ -195,6 +195,27 @@ to start a second instance** of the same Remote Control session, so two PMs can'
 - Edit the `PROMPT` in the script to change what "next-best task" and the human-gate rules
   mean. Keep it aligned with the methodology gate and board discipline in
   [`../CLAUDE.md`](../CLAUDE.md).
+
+## Deploy — publishing the website (`deploy-gh-pages.sh`)
+
+The public site is GitHub Pages serving the generated `gh-pages` branch (ADR-0012 Amendment A;
+Cloudflare re-assessment tracked in #146). **Nothing deploys automatically** — no CI, and Pages
+does not build from `main`.
+
+**Standing policy (maintainer, 2026-07-07): the deploy is part of the weekly release routine.**
+After each weekly `develop → main` merge, the PM session checks whether the release changed
+`web/**` or a published mart (a model exported by `poe export-serving` / the map GeoJSON). If
+yes, it rebuilds and redeploys as release close-out, on a machine with the ingested data:
+
+```bash
+uv run poe refresh                                     # data → data/serving/*.parquet + web/static/geo/
+cd web && npm ci && npm run sources && npm run build   # → web/build/ (incl. noindex meta)
+cd .. && ops/deploy-gh-pages.sh                        # force-replace gh-pages with the fresh build
+```
+
+If the release touched neither, skip the deploy and say so in the handoff. Build from `main`
+(the published branch), not `develop`. The `gh-pages` branch is a generated artefact — never
+merge it back. See the script header for details (`.nojekyll`, author identity, empty-build guard).
 
 > **Cost note:** continuous mode burns usage continuously and will hit session limits; the
 > restart-on-reset loop handles that but it is not cheap. The light `sonnet`/`medium` defaults keep

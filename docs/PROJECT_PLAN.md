@@ -350,6 +350,13 @@ data and see whether the paper's conclusions reproduce; exact 2018 inputs are no
   inputs, the OSM completeness-bias correction (C5), limitations. · *geo-data-scientist + data-analyst* · A9,C5.
 - **G3** **Attribution & licensing** page (OSM ODbL, Berlin data licenses) shown on the site, and a
   **privacy/ethics** statement (aggregate-only, no PII; socially sensitive topic). · *architect + data-analyst* · G1.
+- **G4** **Privacy-friendly web analytics** for the GitHub Pages site (Cloudflare Web Analytics or
+  GoatCounter): cookieless pageviews / unique visitors / referrers / top paths, no consent banner;
+  tool choice via ADR (golden rule 2), snippet versioned in `web/`. · *architect (ADR) →
+  web-engineer pair* · G1, ADR-0012 Amendment A. · **#194**
+
+*Post-soft-launch site improvements beyond G0–G4 are tracked as `[Site]` tickets on the board
+(#149–#156, #169, #175) plus the #146 hosting re-assessment — not enumerated here.*
 
 ### Epic H — Multi-city expansion (future)
 - **H1** Onboard a **second city** purely via the ADR-0005 adapter pattern (new `dim_city` row +
@@ -431,6 +438,32 @@ D3(#29)/G2(#38)/C6(#26) until R-A1 lands.*
   gate; adapt TDD→dbt tests; document in O1. · *architect + PM* · ADR-0009, A6 · agreed skills enabled, no
   gate/loop regression, version pinned + documented; ADR-0009 → Accepted. · **#84**
 
+### Security hardening wave SEC — autonomous-setup enforcement (2026-07-08 review)
+*Triggered by the autonomous-setup security review
+(`docs/assessment/2026-07-08-security-review-autonomous-setup.md`). The review found the setup's core
+safety claim — "`main` stays human-gated" — rests entirely on client-side rules the running agent can
+route around: no server-side branch protection, a blanket `Bash(gh *)` allow that lets `gh api` merge
+PRs and move refs past both key denies, and an unhardened prompt-injection surface (the devmode PM
+re-scans all open issues each cycle with skipped permissions, the maintainer's `gh` credentials, and
+unrestricted `curl`/`wget` egress). No secrets are committed; the devmode script's own guards are sound.
+**Order:** SEC-1 → SEC-2 → SEC-3 (SEC-1 is a maintainer-only repo-settings action and backstops the rest).*
+
+- **SEC-1** Server-side enforcement for `main`: GitHub ruleset (require PR, block direct/force pushes
+  and deletions, no bypass) + force-push/deletion protection on `develop`; record the go/no-go on
+  ADR-0011 Alternative D (separate PM identity). · *maintainer (UI) + architect (docs)* · ADR-0011 ·
+  direct pushes to `main` rejected server-side regardless of local settings; weekly UI merge unchanged.
+  · **#190**
+- **SEC-2** Narrow the devmode allow-list: replace `Bash(gh *)` with the needed subcommands (closing
+  the `gh api` merge/ref-move/`gh auth token` hole), deny `git clean -fdx`, guard
+  `deploy-gh-pages.sh`'s force-push to `gh-pages` only; document accepted residual risks. ·
+  *architect + PM* · SEC-1 (#190) · `gh api` can't merge/move refs from devmode; routine PM work
+  prompt-free; residual risks in the settings `$comment`. · **#191**
+- **SEC-3** Prompt-injection hardening: untrusted-input rule in the PM + WebFetch-capable agent
+  definitions (non-maintainer issue bodies & web content = data, never instructions; escalate via
+  PushNotification), coordinate intake restriction with CV-0/CV-1, document the expected-egress host
+  set. · *architect + PM (+ domain agents' defs)* · SEC-1/SEC-2, CV-0 (#185) · injection-shaped test
+  issue is triaged, not executed, in a supervised cycle. · **#192**
+
 **Thesis critical-assessment coverage.** The honest critical read of the 2018 work lives in
 `docs/assessment/2018-thesis-critical-assessment.md` (a critical assessment only — **no grade**). Every
 weakness maps to a ticket: **W1** spatial autocorrelation → #79/#65 · **W2** overfitting/leakage → #65/#75 ·
@@ -478,6 +511,9 @@ Pure project deliverables; no scope creep into the core data work.*
   model is multi-dimensional (ADR-0008) with longitudinal stages and spatially-robust inference.
 - **O (outputs):** the operating-model reference + the reproducible methodology whitepaper build; the dataset
   and ingestion tooling are openly published with attribution; outputs carry the non-advocacy/transparency stance.
+- **SEC (2026-07-08 review):** `main` is server-side protected (a direct push is rejected by GitHub no matter
+  the local settings); the devmode allow-list no longer offers a `gh api` path around the merge/push denies;
+  the PM treats non-maintainer issue bodies and fetched web content as data, never instructions.
 
 ## Notes / open items
 - Original thesis repo is **read-only** — only cloned, never modified.

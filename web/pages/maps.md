@@ -80,9 +80,12 @@ where variant = '${inputs.variant.value}'
 
 {#if inputs.area_level.value === 'plr'}
 
+<!-- #149: `standard` and `live_data` sit on opposite sides of Berlin's 2021 area-boundary
+     redraw (447 pre-2021 PLR vs. 542 current PLR) -- picking the geojson by variant keeps
+     the boundaries in sync with whichever area codes the query above actually returns. -->
 <AreaMap
     data={areas}
-    geoJsonUrl={`${base}/geo/plr.geojson`}
+    geoJsonUrl={`${base}/geo/plr_${inputs.variant.value}.geojson`}
     geoId="area_code"
     areaCol="area_code"
     value={inputs.indicator.value}
@@ -98,9 +101,12 @@ Click a Planungsraum on the map to open its [detailed breakdown](/area-detail).
 
 {:else}
 
+<!-- #149: BZR only has `standard`-variant data (see the warning above), so the geoJsonUrl
+     stays fixed to that vintage regardless of the selected variant -- there's no
+     `bzr_live_data.geojson` to switch to yet. -->
 <AreaMap
     data={areas}
-    geoJsonUrl={`${base}/geo/bzr.geojson`}
+    geoJsonUrl={`${base}/geo/bzr_standard.geojson`}
     geoId="area_code"
     areaCol="area_code"
     value={inputs.indicator.value}

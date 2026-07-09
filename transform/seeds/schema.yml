@@ -484,3 +484,46 @@ seeds:
         description: >
           Source citation including edition year, publisher, reference date, and
           equipment standard.
+
+  - name: seed_poi_thesis_taxonomy_crosswalk
+    description: >
+      OA-A.3 (#167): crosswalk from the 2018 thesis's golden oa_*/prev_oa_*
+      column suffixes (German taxonomy slugs, reference/system/70_oa_helper.sql,
+      71_oa.sql) to the current OSM-derived taxonomy (poi_domain_h/category_h/
+      type_h vocabulary, seed_poi_mapping.csv). 85 rows -- one per golden OA
+      column suffix (13 domain + 27 category + 45 type), generated to match
+      the golden CSV's exact 85-suffix inventory (see
+      stg_thesis_2018_result_plr_oa.sql header). Used by
+      analysis/b_oa_validation.py to join recomputed OA
+      (int_poi_offering_advantage) against the golden.
+      One documented divergence: thesis groups Biergarten under vergnuegung
+      (Entertainment); current taxonomy classifies Beer Garden under
+      Gastronomy -- mapped to domain_h='Gastronomy' (see note column) so the
+      join is non-empty; flagged for geo-DS/domain-expert review.
+    meta:
+      dbt_meta_owner: data-engineer
+    columns:
+      - name: level
+        description: Taxonomy level this crosswalk row resolves ('domain', 'category', 'type').
+        tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ["domain", "category", "type"]
+      - name: thesis_oa_suffix
+        description: >
+          Raw thesis OA column suffix, e.g. 'total_d_tourismus_stock',
+          'gastro_t_restaurant_italiener_stock'. Unique per row.
+        tests:
+          - not_null
+          - unique
+      - name: domain_h
+        description: Our poi_domain_h value this suffix resolves to (always populated).
+        tests:
+          - not_null
+      - name: category_h
+        description: Our poi_category_h value (populated for level in category/type; null for domain).
+      - name: type_h
+        description: Our poi_type_h value (populated only for level='type').
+      - name: note
+        description: Free-text note flagging translation ambiguity or a known crosswalk divergence.
