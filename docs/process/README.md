@@ -1,4 +1,4 @@
-# `docs/method/` — AI-assisted operating model & engineering retrospective
+# `docs/process/` — AI-assisted operating model & engineering retrospective
 
 Reference documentation for Gentriduck's multi-agent development process.
 
