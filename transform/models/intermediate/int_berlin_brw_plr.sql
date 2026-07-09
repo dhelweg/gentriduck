@@ -217,9 +217,9 @@ with
 --
 -- n_brw_zones: count of distinct residential BRW zones contributing to each PLR.
 select
-    -- Normalise to canonical city code per ADR-0005; stg_berlin_bodenrichtwert emits
-    -- 'berlin'.
-    case when city_code = 'berlin' then 'BER' else city_code end as city_code,
+    -- QA-4 (#179): normalise via the shared canonical_city_code() macro
+    -- (single source of truth, ADR-0005); stg_berlin_bodenrichtwert emits 'berlin'.
+    {{ canonical_city_code('city_code') }} as city_code,
     year(reference_date) as snapshot_year,
     area_code,
     area_vintage,

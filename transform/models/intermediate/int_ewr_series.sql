@@ -5,14 +5,16 @@
 -- Selects from stg_berlin_ewr (long-format, PLR grain, 13 indicators) and
 -- inner-joins dim_area to validate that each area_code exists in the warehouse.
 --
+-- QA-4 (#179): stale-comment fix -- stg_berlin_ewr normalises to canonical
+-- city_code='BER' (uppercase, ADR-0005) at its own staging boundary, NOT
+-- lowercase 'berlin' as this comment previously (incorrectly) claimed. This
+-- model is self-documented DEAD CODE (see int_ewr_socioeco.sql's header and
+-- QA-6/#181, which tracks its removal) -- int_ewr_socioeco reads from
+-- int_berlin_ewr_plr2021 instead. Left in place, comment corrected only, since
+-- deletion is QA-6's scope, not this ticket's.
+--
 -- Graceful-degradation: stg_berlin_ewr returns zero rows when no parquet files
--- have been ingested yet.  dim_area currently only contains BZR / PLR rows from
--- the 2018 thesis golden (city_code='BER', uppercase).  Because stg_berlin_ewr
--- uses city_code='berlin' (lowercase, ADR-0005 C1 convention) and dim_area
--- currently only holds 'BER' rows, the inner join intentionally returns zero
--- rows until EITHER (a) EWR data is ingested AND (b) dim_area is extended with
--- lowercase 'berlin' PLR rows from stg_berlin_lor.  This is correct and
--- expected; dbt build passes with zero rows.
+-- have been ingested yet.
 --
 -- When both conditions are met, each output row represents one indicator
 -- observation for one PLR area for one reference year, with area metadata
