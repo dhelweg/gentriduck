@@ -76,7 +76,7 @@ sources:
           Berlin-Brandenburg, CC BY 3.0 DE. Read by stg_berlin_ewr.
         meta:
           external_location: "{{ env_var('PWD', '.') }}/data/raw/berlin/ewr/*.parquet"
-        loaded_at_field: reference_date
+        loaded_at_field: "cast(reference_date as timestamp)"
         freshness:
           warn_after: {count: 400, period: day}
           error_after: {count: 800, period: day}
@@ -116,7 +116,7 @@ sources:
           GDI Berlin WFS, dl-de-zero-2.0. Read by stg_berlin_bodenrichtwert.
         meta:
           external_location: "{{ env_var('PWD', '.') }}/data/raw/berlin/price_rent/bodenrichtwert_*.parquet"
-        loaded_at_field: reference_date
+        loaded_at_field: "cast(reference_date as timestamp)"
         freshness:
           warn_after: {count: 400, period: day}
           error_after: {count: 800, period: day}
@@ -136,7 +136,7 @@ sources:
           DL-Zero-2.0. Read by stg_berlin_verkaufte_grundstuecke.
         meta:
           external_location: "{{ env_var('PWD', '.') }}/data/raw/berlin/price_rent/kauffaelle_*.parquet"
-        loaded_at_field: reference_date
+        loaded_at_field: "cast(reference_date as timestamp)"
         freshness:
           warn_after: {count: 400, period: day}
           error_after: {count: 800, period: day}
