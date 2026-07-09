@@ -21,7 +21,7 @@ population register, OpenStreetMap, and official land-value/rent references — 
 describes a small area of a few thousand residents, never a person, household, or building.
 
 <div style="display:flex; gap:0.75rem; flex-wrap:wrap; margin:0.5rem 0 1.5rem 0;">
-  <a href="/about"><b>How it's built →</b></a>
+  <a href="/how-its-organised"><b>How it's organised →</b></a>
   <a href="#the-finding"><b>What we found →</b></a>
   <a href="/methodology"><b>How we measure it →</b></a>
 </div>
@@ -179,12 +179,15 @@ the [maps](/maps) and [area detail](/area-detail) to explore specific neighbourh
 [time-series view](/time-series) for how the city has moved over the years.
 
 **⚙️ You build data pipelines** — the whole thing is dbt + DuckDB, local-first, rebuilt from open
-sources with a full OpenStreetMap history back to 2008. The
-[about page](/about) sketches the stack; the
+sources with a full OpenStreetMap history back to 2008. Start with
+[how it's built](/how-its-built) for the stack, the data sources, and a worked example of the
+completeness-bias correction; the
 [GitHub repository](https://github.com/dhelweg/gentriduck) has every model, seed, and test.
 
 **🤖 You design AI systems** — this site is built by a supervised multi-agent workflow with an
-enforced, adversarial methodology gate. See [how it's built](/about), then the
+enforced, adversarial methodology gate. Start with
+[how it's organised](/how-its-organised) for the agent team and the pipeline that ships a change,
+then the
 [agent definitions](https://github.com/dhelweg/gentriduck/tree/main/.claude/agents) and
 [architecture decision records](https://github.com/dhelweg/gentriduck/tree/main/docs/adr) in the
 repository.
