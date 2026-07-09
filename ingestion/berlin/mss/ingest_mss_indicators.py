@@ -67,26 +67,12 @@ from __future__ import annotations
 import argparse
 import logging
 import re
-import ssl
 import sys
-import urllib.error
 import urllib.parse
-import urllib.request
 from pathlib import Path
 from typing import Optional
 
-# macOS Python does not ship CA certs; use certifi's bundle when available.
-try:
-    import certifi as _certifi
-
-    _SSL_CONTEXT = ssl.create_default_context(cafile=_certifi.where())
-except ImportError:
-    _SSL_CONTEXT = ssl.create_default_context()
-
-import json
-
 import pyarrow as pa
-import pyarrow.parquet as pq
 
 # ADR-0016: shared drift-detection manifest helper (sys.path pattern matches
 # ingest_hamburg_osm.py's existing cross-module import convention; see
@@ -95,6 +81,10 @@ _INGESTION_ROOT = Path(__file__).resolve().parents[2]
 if str(_INGESTION_ROOT) not in sys.path:
     sys.path.insert(0, str(_INGESTION_ROOT))
 from manifest import existing_outputs, write_manifest_entry  # noqa: E402
+
+# QA-2 (#177): shared retry+backoff fetch and atomic-write helpers.
+from common.http import FetchError, fetch_bytes, fetch_geojson  # noqa: E402
+from common.io import atomic_write_parquet  # noqa: E402
 
 # ---------------------------------------------------------------------------
 # Constants
@@ -190,20 +180,6 @@ def _wfs_base_url(edition: int) -> str:
     return f"https://gdi.berlin.de/services/wfs/mss_{edition}"
 
 
-def _fetch_raw(url: str, timeout: int = 120) -> bytes:
-    """Fetch raw bytes from a URL. Raises RuntimeError on network/HTTP errors."""
-    log.debug("GET %s", url)
-    try:
-        with urllib.request.urlopen(url, timeout=timeout, context=_SSL_CONTEXT) as resp:  # noqa: S310
-            return resp.read()
-    except urllib.error.HTTPError as exc:
-        raise RuntimeError(f"HTTP {exc.code} from {url}") from exc
-    except urllib.error.URLError as exc:
-        raise RuntimeError(f"Network error fetching {url}: {exc}") from exc
-    except Exception as exc:
-        raise RuntimeError(f"Unexpected error fetching {url}: {exc}") from exc
-
-
 def discover_indexind_type_name(edition: int) -> str:
     """
     Call GetCapabilities and return the exact ``indexind`` feature type name.
@@ -221,7 +197,10 @@ def discover_indexind_type_name(edition: int) -> str:
         )
     )
     log.info("[%d] Probing GetCapabilities: %s", edition, caps_url)
-    raw = _fetch_raw(caps_url, timeout=30)
+    try:
+        raw = fetch_bytes(caps_url, timeout=30)
+    except FetchError as exc:
+        raise RuntimeError(f"[{edition}] GetCapabilities failed: {exc}") from exc
     xml_text = raw.decode("utf-8", errors="replace")
 
     names = re.findall(r"<Name>([^<]+)</Name>", xml_text)
@@ -257,18 +236,10 @@ def fetch_indexind_geojson(edition: int, type_name: str, timeout: int = 180) -> 
     )
     url = base_url + "?" + params
     log.info("[%d] Fetching GeoJSON: %s", edition, url)
-    raw = _fetch_raw(url, timeout=timeout)
-
     try:
-        data = json.loads(raw)
-    except json.JSONDecodeError as exc:
-        raise RuntimeError(f"[{edition}] Invalid JSON response. Excerpt: {raw[:200]!r}") from exc
-
-    if data.get("type") != "FeatureCollection":
-        raise RuntimeError(
-            f"[{edition}] Expected FeatureCollection, got type={data.get('type')!r}. "
-            f"Excerpt: {str(raw[:200])}"
-        )
+        data = fetch_geojson(url, timeout=timeout)
+    except FetchError as exc:
+        raise RuntimeError(f"[{edition}] GetFeature failed: {exc}") from exc
 
     n_features = len(data.get("features", []))
     log.info("[%d] Received %d features", edition, n_features)
@@ -395,7 +366,7 @@ def parse_features_long(geojson: dict, edition: int) -> list[dict]:
 
 
 def write_parquet(rows: list[dict], out_path: Path) -> None:
-    """Write long-format rows to a Parquet file using the indicators schema."""
+    """Write long-format rows to a Parquet file using the indicators schema (atomic write)."""
     table = pa.table(
         {
             "edition": pa.array([r["edition"] for r in rows], type=pa.int32()),
@@ -412,14 +383,9 @@ def write_parquet(rows: list[dict], out_path: Path) -> None:
         schema=INDICATORS_PARQUET_SCHEMA,
     )
 
-    out_path.parent.mkdir(parents=True, exist_ok=True)
-    pq.write_table(table, out_path, compression="snappy")
-    log.info(
-        "[%d] Wrote %d rows to %s",
-        rows[0]["edition"] if rows else 0,
-        len(rows),
-        out_path,
-    )
+    # QA-2 (#177): atomic write -- a crash mid-write must never leave a
+    # partial/corrupt file where dbt or verify_data.py expects a complete one.
+    atomic_write_parquet(table, out_path)
 
 
 # ---------------------------------------------------------------------------
