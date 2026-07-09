@@ -1233,6 +1233,157 @@ models:
           vulnerable (same sign convention as Berlin's int_ewr_socioeco.ewr_composite).
           NOT directly comparable in magnitude to Berlin's 5-indicator composite.
 
+  - name: int_hamburg_wohnlage_stadtteil
+    description: >
+      #203 [H-C5]: Wohnlage residential-quality tier composition per
+      Stadtteil -- Hamburg analogue of int_berlin_wohnlage_plr (D3, Thesis
+      Sec.3.4). Unlike Berlin's point-in-polygon spatial join, this model
+      uses a publisher-supplied Stadtteil name-match (verified 100% row
+      coverage against stg_hamburg_geo.area_name, area_level='subarea_l1';
+      enforced >=98% by test_hamburg_wohnlage_stadtteil_match_rate). No
+      rent-VALUE join (Berlin D1 analogue) is attempted in this slice --
+      deliberately deferred (see model SQL header). Wohnlage vocabulary is a
+      two-tier scheme ('Gute Wohnlage'/'Normale Wohnlage'), NOT Berlin's
+      three-tier einfach/mittel/gut -- preserved as-published, no cross-city
+      remap. No time dimension (current-state crosswalk, no WFS edition-year
+      published). geo-DS + domain-expert sign-off: PASS
+      (docs/epic-h/203-hc5-geo-signoff.md, docs/epic-h/203-hc5-domain-signoff.md).
+      Graceful degradation: returns zero rows when stg_hamburg_wohnlage or
+      stg_hamburg_geo return zero rows.
+    meta:
+      dbt_meta_owner: data-engineer
+    data_tests:
+
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns:
+              - city_code
+              - area_code
+              - area_vintage
+              - wohnlage
+          config:
+            where: "area_code is not null"
+      - dbt_utils.expression_is_true:
+          arguments:
+            expression: "pct_wohnlage between 0 and 1"
+          config:
+            where: "pct_wohnlage is not null"
+    columns:
+      - name: city_code
+        description: City identifier (ADR-0005). Always 'HH'.
+        data_tests:
+
+          - not_null:
+              config:
+                where: "area_code is not null"
+          - accepted_values:
+              arguments:
+                values: ["HH"]
+              config:
+                where: "area_code is not null"
+      - name: area_code
+        description: Stadtteil area code (matches stg_hamburg_geo, area_level='subarea_l1').
+        data_tests:
+
+          - not_null
+      - name: area_vintage
+        description: "Hamburg geometry vintage ('current' -- ADR-0014; no historical vintage ingested yet)."
+        data_tests:
+
+          - not_null:
+              config:
+                where: "area_code is not null"
+      - name: wohnlage
+        description: >
+          Hamburg's own Wohnlage tier label ('Gute Wohnlage', 'Normale
+          Wohnlage' -- live schema, #203). NOT remapped onto Berlin's
+          einfach/mittel/gut scheme.
+        data_tests:
+
+          - not_null
+      - name: n_addresses
+        description: Count of Wohnlage-classified addresses in this Stadtteil for this tier.
+      - name: pct_wohnlage
+        description: >
+          Share of addresses in this Wohnlage tier within this Stadtteil.
+          pct_wohnlage = n_addresses / SUM(n_addresses) OVER (PARTITION BY
+          city_code, area_code, area_vintage). Sums to 1.0 within each
+          Stadtteil. Ranges 0 to 1 inclusive.
+      - name: wohnlage_low_n
+        description: >
+          Flag: TRUE when the Stadtteil has fewer than 10 total Wohnlage
+          address points (mirrors Berlin D3 geo condition 7). Downstream
+          consumers must NULL derived scalars for low-N Stadtteile, never
+          zero-fill.
+
+  - name: int_hamburg_displacement_zone_flag
+    description: >
+      #203 [H-C5]: spatially resolves stg_hamburg_displacement_zones
+      (current-state soziale Erhaltungsverordnung / Sec.172 BauGB polygons)
+      onto the Stadtteil grain -- Hamburg analogue of
+      int_berlin_milieuschutz_plr_flag (#70 [B1]), same legal basis, same
+      disclosure-only scoping (binary flag + overlap fraction; NOT
+      composited with int_hamburg_wohnlage_stadtteil or wired into the
+      contract-enforced gentrification_index mart). ST_Intersects (not
+      ST_Within) -- Erhaltungsverordnung polygons are not aligned to
+      Stadtteil boundaries. CRS EPSG:25832 native on both sides (NOT
+      Berlin's EPSG:25833); a y-axis sanity guard (5.90e6-5.97e6) mirrors
+      Berlin's own coordinate-swap guard. Current-state only (16 in-force
+      zones as of #203; no per-year edition endpoint) -- not a
+      reconstructed historical panel. geo-DS + domain-expert sign-off:
+      PASS (docs/epic-h/203-hc5-geo-signoff.md,
+      docs/epic-h/203-hc5-domain-signoff.md).
+      Graceful degradation: returns zero rows when stg_hamburg_displacement_zones
+      or stg_hamburg_geo return zero rows.
+    meta:
+      dbt_meta_owner: data-engineer
+    data_tests:
+
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns:
+              - city_code
+              - area_code
+              - area_vintage
+    columns:
+      - name: city_code
+        description: City identifier (ADR-0005), always 'HH'.
+        data_tests:
+
+          - not_null
+      - name: area_code
+        description: Stadtteil identifier (matches stg_hamburg_geo, area_level='subarea_l1').
+      - name: area_vintage
+        description: "Hamburg geometry vintage ('current' -- ADR-0014)."
+      - name: under_displacement_protection
+        description: >
+          TRUE when the Stadtteil spatially intersects at least one current
+          soziale Erhaltungsverordnung designation. A policy marker of
+          displacement risk the city already recognizes, not a measured
+          displacement outcome -- Stadtteile without the flag are not
+          thereby "safe from displacement," only "not (yet) formally
+          protected" (mirrors int_berlin_milieuschutz_plr_flag's framing).
+        data_tests:
+
+          - not_null
+      - name: displacement_zone_count
+        description: Count of distinct Erhaltungsverordnung designations overlapping this Stadtteil (0 if none).
+      - name: displacement_zone_area_codes
+        description: >
+          Comma-separated list of overlapping designation area_codes, NULL
+          when under_displacement_protection is FALSE.
+      - name: earliest_in_force_date
+        description: >
+          Earliest in-force date among overlapping designations,
+          informational only -- NOT a reconstructed historical status
+          panel (source exposes current-state only; see model SQL header).
+      - name: displacement_zone_overlap_frac
+        description: >
+          Total intersection area / Stadtteil area, clipped to [0,1]. No
+          materiality threshold is applied by this model -- deferred to the
+          consumer (mirrors int_berlin_milieuschutz_plr_flag's
+          milieuschutz_overlap_frac).
+
   - name: int_hamburg_sozialmonitoring_index
     description: >
       #40 H1 methodology-gated integration slice: numeric-ordinal mapping of Hamburg

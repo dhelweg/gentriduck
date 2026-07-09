@@ -904,11 +904,17 @@ models:
           (schema TBC at live probe).
       - name: street_name
         description: Street name, if published at street rather than address grain.
+      - name: stadtteil
+        description: >
+          Publisher-supplied Stadtteil name for this address (raw passthrough
+          attribute). Matched 1:1 against stg_hamburg_geo.area_name
+          (area_level='subarea_l1') at 100% row coverage in
+          int_hamburg_wohnlage_stadtteil (#203) -- not a computed join.
       - name: wohnlage
         description: >
           Hamburg's own location-quality tier label (NOT assumed identical
-          to Berlin's einfach/mittel/gut scheme). UNCONFIRMED against the
-          real source schema — re-verify at first live ingestion.
+          to Berlin's einfach/mittel/gut scheme). Live schema confirmed a
+          two-tier scheme ('Gute Wohnlage', 'Normale Wohnlage') -- #203.
         data_tests:
 
           - not_null
