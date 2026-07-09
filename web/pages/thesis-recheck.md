@@ -6,8 +6,11 @@ title: The 2018 thesis, re-checked
   NEW page (maintainer request): a dedicated thesis-vs-project re-check, structured by the six
   original hypotheses. The live site leads with CURRENT data (home/maps/area-detail); this page is
   the historical reproduction study, kept separate. Content restates the signed-off Epic B findings
-  (docs/epic-g/O4-milestone-B-narrative.md) — no new methodology claim. When productionised, the
-  public framing should get a geo-DS + domain-expert read (as the methodology page did), per R-C2.
+  (docs/epic-g/O4-milestone-B-narrative.md) plus the OA-A "faithful" revival (Run 1) findings
+  (docs/epic-e/E1-regression-findings.md #168, docs/epic-b/A3-oa-validation-findings.md #167) — no
+  new methodology claim, only the thesis's own Offering-Advantage predictor swapped in per ADR-0017.
+  Public framing follows the #155/G2 sign-off precedent (geo-DS + domain-expert read of the public
+  claims) — see docs/epic-g/A5-thesis-recheck-refresh-*-signoff.md.
 -->
 
 # The 2018 thesis, re-checked
@@ -24,10 +27,14 @@ historical check. For what Berlin looks like **today**, start with the [home pag
 
 <Alert status="info">
   <b>The short version:</b> rebuilt on the <i>same</i> data the thesis used, its core result
-  replicates cleanly. Swap in Berlin's more robust <i>official</i> social monitor, and the signal
-  weakens — real, but fragile. The relationship between commerce and social change is genuine, but
-  it depends on how you measure "social change" and on the period you look at. We show that tension
-  rather than hiding it.
+  replicates cleanly. Swap in the thesis's own commercial predictor — the <b>Offering Advantage</b>
+  (a location quotient, not a raw shop count) — and fast food becomes the clearest signal of all,
+  while the "social change leads commercial change" finding partially <i>revives</i> at a two-year
+  lag in modern official data, where a raw count still failed. Swap in Berlin's more robust
+  <i>official</i> social monitor instead of the thesis's welfare register, and the overall signal
+  weakens — real, but fragile. The relationship between commerce and social change is genuine, but it
+  depends on how you measure both "commerce" and "social change," and on the period you look at. We
+  show that tension rather than hiding it.
 </Alert>
 
 ## Two studies, same idea
@@ -35,63 +42,81 @@ historical check. For what Berlin looks like **today**, start with the [home pag
 |  | 2018 thesis | Gentriduck (this project) |
 |---|---|---|
 | **Question** | Does commercial activity track & predict neighbourhood social change in Berlin? | The same — re-checked, then extended |
-| **Commercial signal** | OpenStreetMap points of interest (cafés, bars, restaurants, fast food) | Same OSM sources, full annual history back to 2008 |
+| **Commercial signal** | OpenStreetMap points of interest, expressed as an *Offering Advantage* (a location quotient: a PLR's local share of a business category relative to Berlin overall) | Same OSM sources and same Offering-Advantage construct, full annual history back to 2008 |
 | **Social measure** | Berlin welfare register (EWR), 2014–2020 | EWR *and* the official social monitor (MSS), 2013–2025 |
 | **Stack** | Hadoop · Hive SQL · Java · R · Weka | dbt · DuckDB · Python (scipy, scikit-learn) — free, open, local-first |
 | **Grain** | Planungsraum (≈2,000–5,000 residents) | Same, plus coarser scales for robustness checks |
 | **Scope** | One-shot analysis | Ongoing public statistics site, Berlin now, more cities later |
 
 The original thesis repository is left untouched as the historical record; Gentriduck is a
-from-scratch rebuild from open sources only. The single biggest methodological change: the thesis
+from-scratch rebuild from open sources only. Two methodological points matter here: the thesis
 blended everything into one score, while this project keeps **what we're trying to explain** (social
-status) strictly separate from **the commercial signal used to explain it** — see the
-[methodology page](/methodology) for why that matters.
+status) strictly separate from **the commercial signal used to explain it** (see the
+[methodology page](/methodology)); and this re-check (Run 1, faithful revival) now uses the thesis's
+actual predictor — the **Offering Advantage**, a location quotient of how over- or under-represented a
+business category is in a given area, exactly as the thesis computed it (its `oa_*`/`prev_oa_*`
+columns) — rather than a plain POI count. Both are shown below where they diverge.
 
 ## The six hypotheses, then and now
 
 Each hypothesis links commercial activity to social status. "Directional test passes" means the
 effect pointed the way the thesis predicted; "significant" means it was unlikely to be chance.
+Results below are from the thesis's own **Offering Advantage** predictor (OA, Run 1) where available;
+a raw-count comparison is noted where OA and raw count disagree, or where OA has not yet been tested
+(the EWR same-era panel — a documented scope boundary, see caveats).
 
-| # | The hypothesis | 2018 thesis | Our re-check | Verdict |
+| # | The hypothesis | 2018 thesis | Our re-check (OA, Run 1) | Verdict |
 |---|---|---|---|---|
-| **H1** | More businesses → higher social standing | Supported | Reproduces on the thesis's own (EWR) data | ✅ Holds |
-| **H1b** | More fast-food outlets → lower status / displacement pressure | Supported | Significant and correctly signed — even at coarser city scales | ✅✅ Robust |
-| **H2** | Today's commerce *predicts* tomorrow's social improvement (lead–lag) | Supported (core claim) | Reproduces on EWR (and *strengthens* over 1→4-year windows — the signature of a real lead–lag); survives weakly on modern official data | ⚠️ Holds, fragile |
-| **H3a** | Rapid commercial change *precedes* social-status change | Supported | Reproduces on EWR; points the wrong way on the official monitor | ⚠️ Data-dependent |
-| **H3b** | The reverse — social improvement *leads* commercial succession (the thesis's strongest finding) | Strongly supported | Replicates cleanly on EWR; **collapses in modern (2021–2025) official data** | ❌ Weakens sharply |
-| **H3c** | Commercial dynamism & social movement co-occur (same time) | Supported | Reproduces on EWR; not confirmed on the official monitor | ⚠️ Data-dependent |
+| **H1** | More businesses → higher social standing | Supported | Reproduces on raw POI counts (thesis-era EWR); the OA quotient itself points the *other* way on the modern official monitor (not significant either way) | ⚠️ Predictor-dependent |
+| **H1b** | More fast-food outlets → lower status / displacement pressure | Supported | Significant and correctly signed on both raw counts and OA — and **stronger under OA** (rho 0.42 vs 0.14) — even at coarser city scales | ✅✅ Robust, strengthens under the thesis's own predictor |
+| **H2** | Today's commerce *predicts* tomorrow's social improvement (lead–lag) | Supported (core claim) | Reproduces on EWR (thesis-era data, raw count; strengthens over 1→4-year windows); reproduces on the modern official monitor under **both** raw count and OA | ✅ Holds, EWR + modern OA agree |
+| **H3a** | Rapid commercial change *precedes* social-status change | Supported | Reproduces on EWR (raw count); on the modern monitor, raw count points the wrong way, but **OA is correctly signed at a 2-year lag** (significant) | ⚠️ Data- and predictor-dependent |
+| **H3b** | The reverse — social improvement *leads* commercial succession (the thesis's strongest finding) | Strongly supported | Replicates cleanly on EWR; on the modern official monitor a **raw-count classifier collapses**, but testing the same panel with the thesis's own OA predictor **revives the correct direction at a 2-year lag** (rho ‑0.14, p=0.001) | ⚠️ Partially revives under the thesis's own predictor |
+| **H3c** | Commercial dynamism & social movement co-occur (same time) | Supported | Reproduces on EWR (raw count); wrong-signed on the modern monitor under both raw count and OA | ❌ Data-dependent, not rescued by OA |
 
 ### Read the columns together, not alone
 
-The verdicts hinge almost entirely on **which data measures "social status":**
+The verdicts hinge on **two things at once: which data measures "social status," and which
+predictor measures "commerce."**
 
-- **On the welfare register the thesis used (EWR, 2014–2020):** the reproduction is unambiguous —
-  **all 15 directional tests pass, every one statistically significant.** When the inputs are held
-  constant, the modern pipeline reproduces the thesis's conclusions. This is the real "yes, it still
-  holds" result.
-- **On Berlin's *official* social monitor, same era (MSS, 2015–2019):** the signal weakens sharply —
-  only 2 of 8 directional tests pass, none significant. MSS is coarser and biennial; it is simply
-  harder to move with a commercial-activity signal, and it measures a related-but-distinct thing.
-- **On the official monitor, modern era (2021–2025):** the fast-food effect (H1b) and a short-lag
-  version of the lead–lag (H2) survive, but **H3b — the thesis's strongest finding — effectively
-  vanishes** (the classifier built to test it scores below chance). Whether that reflects the short
-  modern window, Berlin's Milieuschutz (social-preservation) zoning cooling inner-city pressure, or a
-  genuine shift in the city's gentrification dynamics is not resolvable from this data alone.
+- **On the welfare register the thesis used (EWR, 2014–2020, raw POI count):** the reproduction is
+  unambiguous — **all 15 directional tests pass, every one statistically significant.** This panel has
+  not yet been re-tested with the OA predictor (a documented scope boundary for this run, not a
+  defect — see caveats); it remains the strongest "yes, it still holds" result.
+- **On Berlin's *official* social monitor, same era (MSS, 2015–2019):** the signal weakens sharply
+  under both predictors — few directional tests pass, almost none significant. MSS is coarser and
+  biennial; it is simply harder to move with any commercial signal, and it measures a
+  related-but-distinct thing.
+- **On the official monitor, modern era (2021–2025), the thesis's own Offering-Advantage predictor:**
+  fast food (H1b) is the strongest signal of all — stronger under OA than under a raw count. The
+  lead–lag story is more nuanced than a flat "collapse": a raw-count classifier for H3b (the thesis's
+  strongest finding) does fail outright, but swapping in the OA quotient at a **two-year** lag brings
+  back a small, statistically significant match in the thesis's predicted direction — for H3a *and*
+  H3b symmetrically (the underlying test is the same correlation read both ways). H3c (same-time
+  co-movement) does not revive under either predictor. Whether the OA-driven partial revival reflects
+  a genuinely better predictor, the short modern window, or a coincidence of this particular lag is
+  not resolvable from this data alone, and should be read as suggestive rather than conclusive.
 
 ## What still matters for social science today
 
 For the **current** picture the six hypotheses take a back seat to the live typology on the
-[home page](/). But two threads remain genuinely interesting:
+[home page](/). But three threads remain genuinely interesting:
 
-- **Fast food as a durable down-signal (H1b).** Of everything tested, the fast-food association is
-  the most robust — it holds on official data *and* survives aggregation to district scale. It is the
-  one commercial indicator that behaves consistently as a status marker across data sources and
-  scales.
-- **The vanishing lead–lag (H3b).** That "social change leads commercial change" was strong in 2018
-  and on EWR data, yet collapses in 2021–2025 official data, is the most substantively interesting
-  modern result. If Berlin's inner-city commercial succession has saturated — or been dampened by
-  tenant-protection policy — the classic invasion–succession lead–lag may simply have less room to
-  run than it did a decade ago. That is a hypothesis worth watching as more editions arrive.
+- **Fast food as a durable down-signal, strengthened by the thesis's own predictor (H1b).** Of
+  everything tested, the fast-food association is the most robust — it holds on official data, it
+  survives aggregation to district scale, *and* it gets clearly stronger once measured the way the
+  thesis actually measured it (a location quotient, not a raw count). This is the one commercial
+  indicator that behaves consistently — and increasingly clearly — as a status marker.
+- **The lead–lag story is subtler than "vanished" (H3a/H3b).** The 2018 finding that "social change
+  leads commercial change" was strong on EWR data. A raw-count re-test on modern official data made it
+  look like the effect had disappeared entirely. Re-testing with the thesis's actual Offering-Advantage
+  predictor tells a more nuanced story: the correct-direction, significant relationship comes back at a
+  two-year lag. That is a meaningfully different conclusion from "this no longer holds," and a reminder
+  that *how* you operationalize "commercial change" matters as much as *when* you measure it.
+- **Not every hypothesis is rescued by the better predictor (H3c).** Same-time co-movement between
+  commercial dynamism and social-status change stays wrong-signed on the modern monitor whichever
+  predictor is used — a useful negative result, since it means the OA revival above isn't just "OA
+  always helps."
 
 ## Honest caveats
 
@@ -101,12 +126,21 @@ For the **current** picture the six hypotheses take a back seat to the live typo
   person, household, or building (the ecological fallacy).
 - EWR, MSS, and OSM measure different things on different schedules; a difference between the two
   social measures is a measurement story as much as a real-world one.
+- **The EWR same-era panel (thesis-era welfare register, 2014–2020) has not yet been re-tested with
+  the OA predictor** — it still uses the raw POI count/dynamism measures from earlier editions of this
+  page. This is a documented scope boundary for Run 1 (OA is currently built at PLR scale only), not a
+  result — a future run may close this gap.
+- The OA "revival" at H3a/H3b's two-year lag is one specific test on one specific panel (modern MSS,
+  k=2, n=534); it should be read as suggestive, not as overturning the k=1 null result on the same
+  panel.
 - Reproducing a 2018 result is a directional check, not a number-for-number replay — see the
   [Epic B framing](https://github.com/dhelweg/gentriduck/blob/main/docs/PROJECT_PLAN.md) for why.
 
 ## Further reading
 
 - [Epic B milestone write-up](https://github.com/dhelweg/gentriduck/blob/main/docs/epic-g/O4-milestone-B-narrative.md) — the full signed-off findings this page summarises
+- [E1 regression findings (OA-A.4, Run 1)](https://github.com/dhelweg/gentriduck/blob/main/docs/epic-e/E1-regression-findings.md) — the full H1–H3c results table this page draws from
+- [OA direct validation vs. the 2018 golden (OA-A.3)](https://github.com/dhelweg/gentriduck/blob/main/docs/epic-b/A3-oa-validation-findings.md) — confirms the recomputed Offering Advantage matches the thesis's own numbers directionally
 - [Methodology & data sources](/methodology) — what the current index measures and how it differs from the 2018 original
 - [Home page](/) and [maps](/maps) — the current, live picture of Berlin
 - [github.com/dhelweg/gentriduck](https://github.com/dhelweg/gentriduck) — all code, models, and decisions
