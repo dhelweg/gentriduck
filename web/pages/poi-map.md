@@ -89,6 +89,11 @@ for the full method, or the [methodology page](/methodology) for a plain-languag
 </ButtonGroup>
 
 ```sql poi_map_data
+-- #210: reads mart_poi_offering_advantage_map (domain-grain, ~1/3 the rows and
+-- 4 fewer columns than the leaf-grain mart_poi_offering_advantage) -- Evidence
+-- ships the whole referenced table to the client for any reactive query
+-- against it, so this page never needed the poi_category_h/poi_type_h leaf
+-- grain it doesn't read.
 -- density_delta / oa_delta: year-over-year change vs. the immediately preceding snapshot_year
 -- present in the mart for the same area + domain (window function over the full series, before
 -- the year filter below) -- "development" = movement, not a re-derived indicator.
@@ -105,7 +110,7 @@ with
             ) as density_delta,
             oa_domain
             - lag(oa_domain) over (partition by area_code order by snapshot_year) as oa_delta
-        from gentriduck_marts.mart_poi_offering_advantage
+        from gentriduck_marts.mart_poi_offering_advantage_map
         where
             city_code = 'BER'
             and area_vintage = 'lor_2021'
