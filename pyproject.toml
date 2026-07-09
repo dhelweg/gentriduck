@@ -47,6 +47,7 @@ dev = [
     "pre-commit>=4.0",
     # QA-1 (#176): pytest harness for ingestion/analysis pure functions (R-C3 extension).
     "pytest>=8.0",
+    "quarto-cli>=1.9.38",
 ]
 
 [tool.ruff]
@@ -196,3 +197,9 @@ refresh = { sequence = ["verify-data", "deps", "ingest", "build", "export-servin
 # least `export-serving` + `export-area-geojson`) to have populated `data/serving/` and
 # `web/static/geo/` first -- this task does not re-run the data pipeline.
 web-build = { sequence = ["npm ci", "npm run sources", "npm run build"], cwd = "web", default_item_type = "cmd" }
+# O2 (#82) / ADR-0013: single-command reproducible whitepaper build (Quarto + Typst,
+# quarto-cli installed into the repo-local .venv). Renders docs/whitepaper/whitepaper.qmd to
+# HTML + PDF under the gitignored data/whitepaper/. Content is a staged slice (see the
+# "Deferred content slice" notes in whitepaper.qmd) -- this task builds whatever content
+# currently exists, methodology-bearing sections included only once they clear R-C1.
+whitepaper = "quarto render docs/whitepaper"
