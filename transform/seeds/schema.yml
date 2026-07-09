@@ -288,6 +288,26 @@ seeds:
       pairs — as defined in seed_poi_tag_drift — to the (poi_domain, poi_category,
       poi_type, gentrification_proxy) classification used in the harmonized
       int_osm_poi_harmonized model.  4 rows; geo-data-scientist approved.
+
+      Bug fix (#199, 2026-07-09): poi_domain/poi_category/poi_type were originally
+      authored in a lower-case, underscore-separated stub convention that diverged
+      from the Title-Case convention seed_poi_mapping.csv (the C2 harmonization
+      target) uses everywhere else.  Since int_osm_poi_harmonized.sql's `final` CTE
+      does `coalesce(canonical_poi_domain, poi_domain)` (this seed's value wins when
+      it matches), any row where this seed matched was silently leaking lower-case
+      labels into poi_domain_h/poi_category_h/poi_type_h — confirmed materially
+      affecting the office/coworking row (327 real Berlin POIs mislabeled
+      'economy/workspace/coworking_space' instead of 'Other/Hipster/Coworking
+      Space', which also silently undercounted int_poi_features_pivot's
+      poi_type_coworking_space column, since that pivot filters on the Title-Case
+      value).  The office/coworking row is fixed to the Title-Case triple exactly
+      matching seed_poi_mapping.csv's `Other,Hipster,Coworking Space`.  The other 3
+      rows (shop/organic, leisure/yoga_studio, leisure/fitness_outdoor) share the
+      same latent bug pattern but currently match zero real Berlin POIs (verified
+      against the live warehouse) and have no existing Title-Case target in
+      seed_poi_mapping.csv to copy verbatim — assigning them a new harmonized triple
+      is a taxonomy decision, not a mechanical copy, and is tracked as a follow-up
+      (#201), not fixed here.
     meta:
       dbt_meta_owner: data-engineer
     columns:
@@ -300,15 +320,23 @@ seeds:
         tests:
           - not_null
       - name: poi_domain
-        description: Top-level POI domain label in the canonical classification (lower-case).
+        description: >
+          Top-level POI domain label in the canonical classification. Title-Case
+          for the office/coworking row (#199 fix, matches seed_poi_mapping.csv);
+          still lower-case for the 3 rows tracked by #201 (currently inactive --
+          match zero real Berlin POIs).
         tests:
           - not_null
       - name: poi_category
-        description: Mid-level POI category within the domain (lower-case).
+        description: >
+          Mid-level POI category within the domain. Same Title-Case-vs-lower-case
+          split as poi_domain -- see #199/#201.
         tests:
           - not_null
       - name: poi_type
-        description: Specific canonical POI type (lower-case, underscore-separated).
+        description: >
+          Specific canonical POI type. Same Title-Case-vs-lower-case split as
+          poi_domain -- see #199/#201.
         tests:
           - not_null
       - name: gentrification_proxy
