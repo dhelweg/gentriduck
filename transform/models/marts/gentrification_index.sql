@@ -165,8 +165,8 @@ inner join
     {{ ref("dim_area") }} as da
     on ts.city_code = da.city_code
     and ts.area_code = da.area_code
--- Berlin-only staging filter (#125) -- see header note.
-where ts.city_code = 'BER'
+-- Publication filter (QA-4b, #202): var('published_cities') -- see header note.
+where {{ published_cities_filter('ts.city_code') }}
 
 union all
 
@@ -202,4 +202,6 @@ inner join
     {{ ref("dim_area") }} as da
     on ts.city_code = da.city_code
     and ts.area_code = da.area_code
-where ts.city_code = 'BER' and ts.status_score_improved is not null
+where
+    {{ published_cities_filter('ts.city_code') }}
+    and ts.status_score_improved is not null

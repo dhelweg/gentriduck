@@ -29,6 +29,12 @@ canonical_city_code = "{% macro canonical_city_code(column) %}case when {{ colum
 # call sites without a dbt-macro loader. Returns a syntactically-valid dummy
 # path string; the real value is only needed at dbt-execute time.
 raw_path = "{% macro raw_path(relative_path) %}/tmp/raw/{{ relative_path }}{% endmacro %}"
+# QA-4b (#202): stub for the project's published_cities_filter() macro
+# (transform/macros/published_cities_filter.sql) so sqlfluff's plain-jinja
+# templater can parse call sites without a dbt-macro loader. Returns a
+# syntactically-valid single-value IN clause; the real published_cities var
+# list is only resolved at dbt-execute time.
+published_cities_filter = "{% macro published_cities_filter(column) %}{{ column }} in ('BER'){% endmacro %}"
 
 [sqlfluff:templater:jinja:context]
 # Default value for file_count used in stg_osm_poi.sql graceful-degradation logic.
