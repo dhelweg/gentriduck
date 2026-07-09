@@ -71,6 +71,14 @@
 -- depends_on: {{ ref('int_ewr_socioeco_pre2021') }}
 -- depends_on: {{ ref('int_hamburg_sozialmonitoring_index') }}
 -- depends_on: {{ ref('int_ewr_socioeco_hamburg') }}
+-- depends_on: {{ ref('int_poi_status_dynamism_improved') }}
+--
+-- OA-B.3 (#172): status_score_improved / dynamism_score_improved /
+-- disinvestment_score_improved columns carry the tier-weighted "improved" POI
+-- predictor (int_poi_status_dynamism_improved), joined into Branch A
+-- (lor_2021, Berlin) only -- NULL in Branch B (lor_pre2021) and Branch C
+-- (Hamburg). NEVER blended with the faithful status_score/dynamism_score
+-- above (ADR-0017 D3/D4 methodology_variant discriminator).
 {{ config(materialized="table", meta={"dbt_meta_owner": "data-engineer"}) }}
 
 {% set typology_case %}
@@ -118,6 +126,13 @@ with
     ),
     ewr_2021 as (select * from {{ ref("int_ewr_socioeco") }}),
 
+    -- OA-B.3 (#172): tier-weighted "improved" POI predictor, Berlin lor_2021
+    -- branch only (see int_poi_status_dynamism_improved header for scope note
+    -- -- seed_poi_offering_relevance is not validated for lor_pre2021 or
+    -- Hamburg's taxonomy). NOT joined into Branch B/C below; those columns are
+    -- NULL there (see joined_pre2021/joined_hamburg).
+    poi_improved_2021 as (select * from {{ ref("int_poi_status_dynamism_improved") }}),
+
     -- Branch B sources: lor_pre2021 (2015, 2017, 2019)
     poi_pre2021 as (select * from {{ ref("int_poi_status_dynamism_pre2021") }}),
     mss_pre2021 as (
@@ -158,7 +173,16 @@ with
             ewr.residence_duration_5y_share,
             ewr.residents_total,
             (poi.status_score + poi.dynamism_score - ewr.ewr_composite)
-            / 3.0 as legacy_gentrification_score
+            / 3.0 as legacy_gentrification_score,
+            -- OA-B.3 (#172): tier-weighted "improved" predictor variant, kept
+            -- as separate columns -- NEVER blended with the faithful
+            -- status_score/dynamism_score above (ADR-0017 D3/D4). NULL where
+            -- int_poi_status_dynamism_improved has no matching row (e.g. a
+            -- PLR/year the weighted composite could not compute, same
+            -- graceful-degradation convention as every other predictor here).
+            poi_improved.status_score_improved,
+            poi_improved.dynamism_score_improved,
+            poi_improved.disinvestment_score_improved
         from mss_2021 as mss
         inner join
             poi_2021 as poi
@@ -168,6 +192,10 @@ with
             ewr_2021 as ewr
             on mss.area_code = ewr.area_code
             and mss.edition = ewr.reference_year
+        left join
+            poi_improved_2021 as poi_improved
+            on mss.area_code = poi_improved.area_code
+            and mss.edition = poi_improved.snapshot_year
     ),
 
     -- Branch B: lor_pre2021 join (B7 #117).
@@ -208,7 +236,16 @@ with
             -- ADR-0004;
             -- DO NOT compare across vintages or use for new analysis.
             (poi.status_score + poi.dynamism_score - ewr.ewr_composite)
-            / 3.0 as legacy_gentrification_score
+            / 3.0 as legacy_gentrification_score,
+            -- OA-B.3 (#172): "improved" predictor not computed for the
+            -- lor_pre2021 branch (seed_poi_offering_relevance tier weights are
+            -- validated against Berlin's current taxonomy/literature review
+            -- only, not re-derived for the thesis-era 448-PLR system) --
+            -- NULL, never backfilled from the lor_2021 branch (no cross-vintage
+            -- comparison, same rule as every other z-score column here).
+            cast(null as double) as status_score_improved,
+            cast(null as double) as dynamism_score_improved,
+            cast(null as double) as disinvestment_score_improved
         from mss_pre2021 as mss
         inner join
             poi_pre2021 as poi
@@ -267,7 +304,12 @@ with
             -- Retained only for Hamburg-internal diagnostic parity with the
             -- Berlin branches' own column, per ADR-0004.
             (poi.status_score + poi.dynamism_score - ewr.ewr_composite)
-            / 3.0 as legacy_gentrification_score
+            / 3.0 as legacy_gentrification_score,
+            -- OA-B.3 (#172): "improved" predictor is Berlin-only (see
+            -- int_poi_status_dynamism_improved scope note) -- NULL for Hamburg.
+            cast(null as double) as status_score_improved,
+            cast(null as double) as dynamism_score_improved,
+            cast(null as double) as disinvestment_score_improved
         from mss_hamburg as mss
         inner join
             poi_hamburg as poi

@@ -396,6 +396,136 @@ models:
           'official_concordance', 'areal_pop_weighted', or 'identity' (from crosswalk).
           Not meaningful as an aggregate value.
 
+  - name: int_poi_amenity_weighted_base
+    description: >
+      OA-B.3 (#172) helper: pre-materializes the tier-weighted amenity composite
+      per (city_code, snapshot_year, area_code, area_vintage) before the
+      LAG/z-score pass (int_poi_status_dynamism_improved), mirroring
+      int_poi_share_base's role for the faithful total_poi_count pipeline.
+
+      amenity_weighted_count: SUM(poi_count * seed_poi_offering_relevance
+      offering_weight) over all domains EXCEPT Vacancy (ADR-0017 D-2).
+      vacancy_weighted_count: same weighted sum, Vacancy domain only -- kept
+      separate, never summed with the amenity composite.
+
+      Berlin only (city_code='BER') -- see model SQL header scope note.
+
+      Do not use directly for analysis; use int_poi_status_dynamism_improved.
+    meta:
+      dbt_meta_owner: data-engineer
+    tests:
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns:
+              - city_code
+              - snapshot_year
+              - area_code
+              - area_vintage
+          config:
+            where: "area_code is not null"
+    columns:
+      - name: city_code
+        description: City identifier (ADR-0005). Always 'BER'.
+        tests:
+          - accepted_values:
+              arguments:
+                values: ["BER"]
+              config:
+                where: "area_code is not null"
+      - name: amenity_weighted_count
+        description: >
+          Tier-weighted POI stock (Vacancy excluded), this PLR-year
+          (OA-B.1/B.2 causal-tier weights, #170/#171).
+      - name: vacancy_weighted_count
+        description: >
+          Tier-weighted Vacancy-domain stock (weight=1.0), this PLR-year --
+          the opposite-pole disinvestment marker, kept separate (ADR-0017 D-2).
+
+  - name: int_poi_amenity_weighted_base_2021
+    description: >
+      OA-B.3 (#172): crosswalk-remaps int_poi_amenity_weighted_base to the
+      unified lor_2021 PLR scheme (mirrors int_poi_share_base_2021's #63 fix)
+      so the improved-variant LAG window spans the 2020->2021 boundary.
+      Consumed exclusively by int_poi_status_dynamism_improved.
+    meta:
+      dbt_meta_owner: data-engineer
+    tests:
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns:
+              - city_code
+              - snapshot_year
+              - area_code
+              - area_vintage
+          config:
+            where: "area_code is not null"
+    columns:
+      - name: area_vintage
+        description: Always 'lor_2021' after the crosswalk remap (Berlin only).
+        tests:
+          - accepted_values:
+              arguments:
+                values: ["lor_2021"]
+              config:
+                where: "area_code is not null"
+
+  - name: int_poi_status_dynamism_improved
+    description: >
+      OA-B.3 (#172, ADR-0017 workstream 2): "improved" companion to
+      int_poi_status_dynamism -- status_score_improved / dynamism_score_improved
+      / disinvestment_score_improved, computed from the causality-first
+      tier-weighted amenity-OA composite (int_poi_amenity_weighted_base_2021)
+      instead of raw total_poi_count. methodology_variant='improved' throughout;
+      never blended with the faithful scores (ADR-0017 D3/D4). Berlin only.
+      See the model SQL header for the full construct and the R-C2 grounding
+      chain (docs/planning/oa-revival-and-methodology-improvement.md).
+    meta:
+      dbt_meta_owner: data-engineer
+    tests:
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns:
+              - city_code
+              - snapshot_year
+              - area_code
+              - area_vintage
+          config:
+            where: "area_code is not null"
+      - assert_not_empty:
+          config:
+            severity: error
+    columns:
+      - name: city_code
+        tests:
+          - accepted_values:
+              arguments:
+                values: ["BER"]
+              config:
+                where: "area_code is not null"
+      - name: methodology_variant
+        description: Always 'improved' (ADR-0017 D4).
+        tests:
+          - accepted_values:
+              arguments:
+                values: ["improved"]
+              config:
+                where: "area_code is not null"
+      - name: status_score_improved
+        description: >
+          D3 PREDICTOR (curated): z-score of amenity_weighted_count relative to
+          all PLRs that year. NOT an outcome; never blended with the faithful
+          status_score.
+      - name: dynamism_score_improved
+        description: >
+          D3 PREDICTOR (curated, C5-equivalent share-normalized): z-score of
+          amenity_share_yoy_change. NOT an outcome; never blended with the
+          faithful dynamism_score.
+      - name: disinvestment_score_improved
+        description: >
+          z-score of vacancy_weighted_count -- the opposite-pole disinvestment
+          marker (Smith 1979, ADR-0017 D-2). Kept separate from
+          status/dynamism_score_improved, never summed into one composite.
+
   - name: int_poi_status_dynamism
     description: >
       C4/C5 intermediate: per-PLR per-year POI status and dynamism scores.
@@ -1561,6 +1691,25 @@ models:
           This formula averaged predictors and outcomes with no theoretical grounding.
           DO NOT use for new analysis. Refer to D1/D2 columns for outcome analysis
           and D3 columns for predictor analysis (R-A1; ADR-0008).
+      - name: status_score_improved
+        description: >
+          OA-B.3 (#172): "improved" D3 PREDICTOR -- z-score of the causality-first
+          tier-weighted amenity-OA composite (int_poi_status_dynamism_improved),
+          Vacancy domain excluded (ADR-0017 D-2). Berlin lor_2021 rows only; NULL
+          for the lor_pre2021 and Hamburg branches. NEVER blended with the
+          faithful status_score above (ADR-0017 D3/D4 methodology_variant rule).
+      - name: dynamism_score_improved
+        description: >
+          OA-B.3 (#172): "improved" D3 PREDICTOR -- z-score of the YoY change in
+          the tier-weighted amenity-OA composite's city share (C5-equivalent
+          normalization). Berlin lor_2021 rows only; NULL elsewhere. NEVER
+          blended with the faithful dynamism_score above.
+      - name: disinvestment_score_improved
+        description: >
+          OA-B.3 (#172): z-score of the Vacancy-domain weighted stock -- the
+          theorised OPPOSITE-POLE disinvestment/rent-gap marker (Smith 1979;
+          ADR-0017 D-2). Kept SEPARATE from status/dynamism_score_improved --
+          never summed into one composite. Berlin lor_2021 rows only.
 
   - name: int_ewr_lead_lag
     description: >
