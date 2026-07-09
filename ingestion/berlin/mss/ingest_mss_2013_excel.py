@@ -116,9 +116,9 @@ PARQUET_SCHEMA = pa.schema(
 
 
 def _fetch_excel(url: str) -> bytes:
-    req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0 Gentriduck/1.0"})
+    req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0 Gentriduck/1.0"})  # noqa: S310
     try:
-        with urllib.request.urlopen(req, context=_SSL_CONTEXT, timeout=60) as resp:
+        with urllib.request.urlopen(req, context=_SSL_CONTEXT, timeout=60) as resp:  # noqa: S310
             return resp.read()
     except urllib.error.HTTPError as exc:
         raise RuntimeError(f"HTTP {exc.code} fetching {url}") from exc

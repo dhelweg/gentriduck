@@ -46,6 +46,35 @@ target-version = "py312"
 line-length = 100
 extend-exclude = [".venv", "transform/dbt_packages", "transform/target"]
 
+# QA-8 (#183): deliberate rule selection (previously only the ruff default E/F ran,
+# so the project's several `# noqa: S310`/`# noqa: BLE001` comments referenced
+# rule families ruff never actually checked -- dead noqa). `S` (flake8-bandit) is
+# now live; per-call-site noqa comments where the finding is a deliberate,
+# reviewed choice (fixed HTTPS-only URLs to known open-data endpoints, `git`
+# subprocess calls with a fixed argv, best-effort `LOAD spatial` fallback).
+[tool.ruff.lint]
+# QA-8 (#183): extend-select (not select!) -- this ADDS to ruff's existing
+# default rule set (E4/E7/E9/F: a curated pycodestyle+pyflakes subset, NOT the
+# full E family) rather than replacing it. A bare `select = ["E", ...]` was
+# tried here first and pulled in E501/E-whitespace/etc, surfacing ~170
+# unrelated pre-existing findings across the repo -- out of scope for a lint
+# *hygiene* ticket. `S` (flake8-bandit) is the one family this ticket asks
+# for, so the existing `# noqa: S310`/etc. comments (previously dead, since
+# ruff never checked S at all) now mean something.
+extend-select = ["S"]
+ignore = [
+    # S608 (SQL injection via string-built query): every hit here is an f-string
+    # building a query from our own model/column/path names against a local,
+    # single-user DuckDB file -- there is no untrusted-input surface (no web
+    # server, no external caller). Ignored project-wide rather than noqa'd at
+    # 10 call sites; revisit if this project ever accepts external query input.
+    "S608",
+]
+
+[tool.ruff.lint.per-file-ignores]
+# S101 (assert): idiomatic in pytest test files, not a security concern.
+"tests/**" = ["S101"]
+
 [tool.sqlfmt]
 # Exclude generated dbt artefacts; sqlfmt owns source models only.
 exclude = ["transform/target/**", "transform/dbt_packages/**"]

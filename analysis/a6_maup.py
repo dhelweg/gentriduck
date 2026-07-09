@@ -370,7 +370,7 @@ def main() -> None:
     con = duckdb.connect(DUCKDB_PATH, read_only=True)
     try:
         con.execute("LOAD spatial;")
-    except Exception:
+    except Exception:  # noqa: S110 -- best-effort load, absence handled downstream
         pass
 
     log.info("Running MAUP sensitivity analysis...")

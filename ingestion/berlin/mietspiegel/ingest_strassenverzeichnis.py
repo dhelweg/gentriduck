@@ -175,7 +175,7 @@ def download_pdf(url: str, dest: Path, timeout: int = 60) -> None:
     """Download a PDF to dest (atomic write via temp file)."""
     tmp = dest.with_suffix(".tmp.pdf")
     dest.parent.mkdir(parents=True, exist_ok=True)
-    req = urllib.request.Request(url, headers={"User-Agent": "gentriduck-ingest/1.0"})
+    req = urllib.request.Request(url, headers={"User-Agent": "gentriduck-ingest/1.0"})  # noqa: S310
     log.info("Downloading %s -> %s", url, dest)
     try:
         with urllib.request.urlopen(req, timeout=timeout, context=_SSL_CONTEXT) as resp:  # noqa: S310
