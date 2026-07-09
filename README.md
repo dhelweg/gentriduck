@@ -15,7 +15,7 @@ website of **gentrification & social-development statistics** for Berlin (and, l
 | `transform/` | dbt project (staging → intermediate → marts) |
 | `ingestion/` | Python data ingestion (OSM history, Berlin open data) |
 | `web/` | public [Evidence.dev](https://evidence.dev/) statistics website (landing, thesis re-check, time-series, maps, area drill-down, methodology) — see [`web/README.md`](web/README.md) |
-| `docs/` | project plan (`docs/PROJECT_PLAN.md`), architecture decision records (`docs/adr/`), and AI-assisted operating model + engineering retrospective (`docs/method/`) |
+| `docs/` | project plan (`docs/PROJECT_PLAN.md`), architecture decision records (`docs/adr/`), and AI-assisted operating model + engineering retrospective (`docs/process/`) |
 | `reference/` | original thesis SQL + golden output CSVs (read-only reference) |
 | `data/` | local data artefacts — **gitignored**, rebuilt from open sources |
 | `.claude/` | agent + skill definitions for the agent team |

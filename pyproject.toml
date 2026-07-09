@@ -176,3 +176,11 @@ ingest-osm-hamburg = "python ingestion/hamburg/osm/ingest_hamburg_osm.py --osh-p
 # ADR-0015's graceful degradation. Run `poe verify-data --strict` separately for a
 # gating check.
 refresh = { sequence = ["verify-data", "deps", "ingest", "build", "export-serving", "export-area-geojson"], default_item_type = "ref" }
+# QA-9 (#184): cheap smoke check that mart/schema changes haven't silently broken the Evidence
+# build -- today the weekly release routine's `cd web && npm ci && npm run sources && npm run
+# build` (see ops/README.md Deploy section) is the only place this is exercised, and only after
+# a `develop -> main` merge. `poe web-build` runs the same three steps locally/in the release
+# routine as an explicit, reusable task instead of hand-typed shell. Requires `poe refresh` (or at
+# least `export-serving` + `export-area-geojson`) to have populated `data/serving/` and
+# `web/static/geo/` first -- this task does not re-run the data pipeline.
+web-build = { sequence = ["npm ci", "npm run sources", "npm run build"], cwd = "web", default_item_type = "cmd" }

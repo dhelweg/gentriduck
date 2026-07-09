@@ -23,7 +23,7 @@ cluster (#163–#175) and the Hamburg publish wave (#158–#161) start touching 
 | dbt | Dead `int_ewr_series`; misfiled orphan `stg_berlin_mietspiegel_address_plr`; no exposures for analysis/web consumers; deprecated `tests:` keys; naming drift; 616-line price/rent mart (medium) | **#181** QA-6 |
 | analysis | cwd-dependent paths in 5 scripts; e1's dominant-PLR crosswalk bridge = methodology SQL outside the gated dbt surface; e3 scripts in no poe task (medium) | **#182** QA-7 |
 | deps | `h3` + `quackosm` declared but never imported; geopandas used as a transitive dep against ADR-0010 Amendment 1; ruff runs default rules only, dead `noqa: S310` (low, needs architect ruling) | **#183** QA-8 |
-| docs/ops | ADR index: broken 0013 link + stale 0016 status (file says Accepted 2026-07-06); 139 handoff files; ops deploy script undocumented; inert `_headers`; `docs/method/` vs `docs/methodology/` confusable; no web-build smoke signal (medium) | **#184** QA-9 |
+| docs/ops | ADR index: broken 0013 link + stale 0016 status (file says Accepted 2026-07-06); 139 handoff files; ops deploy script undocumented; inert `_headers`; `docs/process/` vs `docs/methodology/` confusable; no web-build smoke signal (medium) | **#184** QA-9 |
 | web/infra | `wrangler.toml` (Cloudflare) contradicts `web/evidence.config.yaml` basePath (GitHub Pages) | folded into **#146** |
 | board | #129's standing clustered-SE requirement now has its target ticket | written into **#160**; #129 commented |
 | dbt/OA | `int_poi_features_pivot` → `fct_poi_development` layering inversion (intermediate reads a mart) | folded into **#165** (OA-A.1) |
