@@ -134,7 +134,9 @@ def run_faithful(con: duckdb.DuckDBPyConnection) -> dict | None:
         return None
     r["anchor"] = "2018 golden (stg_thesis_2018_result_plr)"
     r["vintage"] = "lor_pre2021, snapshot_year=2018"
-    r["predictor"] = "oa_mean (faithful, all types, methodology_variant='faithful') -- reused from e1_regressions.py H1 (OA) test verbatim"
+    r["predictor"] = (
+        "oa_mean (faithful, all types, methodology_variant='faithful') -- reused from e1_regressions.py H1 (OA) test verbatim"
+    )
     return r
 
 
@@ -196,11 +198,15 @@ def render_report(faithful: dict | None, improved: dict | None) -> str:
     )
     lines.append("## Run 1 — Faithful (all types, uncurated OA) vs 2018 golden\n")
     if faithful is None or faithful["rho"] is None:
-        lines.append("- Insufficient data to compute (n < %d or required tables missing).\n" % MIN_N)
+        lines.append(
+            "- Insufficient data to compute (n < %d or required tables missing).\n" % MIN_N
+        )
     else:
         lines.append(f"- Predictor: {faithful['predictor']}")
         lines.append(f"- Outcome anchor: {faithful['anchor']} ({faithful['vintage']})")
-        lines.append(f"- {faithful['label']}: rho={faithful['rho']:.3f}, p={faithful['p']:.4f}, n={faithful['n']}")
+        lines.append(
+            f"- {faithful['label']}: rho={faithful['rho']:.3f}, p={faithful['p']:.4f}, n={faithful['n']}"
+        )
         lines.append(
             f"- Direction: {_dir(faithful['rho'])} "
             f"({'matches' if faithful['rho'] < 0 else 'DOES NOT match'} the H1 prior — "
@@ -209,18 +215,27 @@ def render_report(faithful: dict | None, improved: dict | None) -> str:
         lines.append(f"- Significant at alpha={ALPHA}: {faithful['sig']}\n")
     lines.append("## Run 2 — Improved (causality-tier-weighted OA) vs current live MSS\n")
     if improved is None or improved["rho"] is None:
-        lines.append("- Insufficient data to compute (n < %d or required tables missing).\n" % MIN_N)
+        lines.append(
+            "- Insufficient data to compute (n < %d or required tables missing).\n" % MIN_N
+        )
     else:
         lines.append(f"- Predictor: {improved['predictor']}")
         lines.append(f"- Outcome anchor: {improved['anchor']} ({improved['vintage']})")
-        lines.append(f"- {improved['label']}: rho={improved['rho']:.3f}, p={improved['p']:.4f}, n={improved['n']}")
+        lines.append(
+            f"- {improved['label']}: rho={improved['rho']:.3f}, p={improved['p']:.4f}, n={improved['n']}"
+        )
         lines.append(
             f"- Direction: {_dir(improved['rho'])} "
             f"({'matches' if improved['rho'] < 0 else 'DOES NOT match'} the H1 prior — expected negative)"
         )
         lines.append(f"- Significant at alpha={ALPHA}: {improved['sig']}\n")
     lines.append("## Run 3 — Comparison (structural, NOT a same-outcome ablation)\n")
-    if faithful and improved and faithful.get("rho") is not None and improved.get("rho") is not None:
+    if (
+        faithful
+        and improved
+        and faithful.get("rho") is not None
+        and improved.get("rho") is not None
+    ):
         f_matches = faithful["rho"] < 0
         i_matches = improved["rho"] < 0
         both_match = f_matches and i_matches
@@ -232,14 +247,18 @@ def render_report(faithful: dict | None, improved: dict | None) -> str:
             f"({'matches' if i_matches else 'does not match'})."
         )
         if both_match:
-            headline = "**Both** workstreams independently reproduce the H1-expected (negative) direction."
+            headline = (
+                "**Both** workstreams independently reproduce the H1-expected (negative) direction."
+            )
         elif neither_match:
             headline = (
                 "**Neither** workstream shows the H1-expected (negative) direction on its own "
                 "available outcome this pass."
             )
         else:
-            headline = "The two workstreams **disagree** on direction against their respective outcomes."
+            headline = (
+                "The two workstreams **disagree** on direction against their respective outcomes."
+            )
         lines.append(f"- {headline}")
         lines.append(
             f"- Statistical significance (alpha={ALPHA}): Run 1 {'significant' if faithful['sig'] else 'NOT significant'} "
@@ -268,7 +287,9 @@ def render_report(faithful: dict | None, improved: dict | None) -> str:
                 "from the H1 prior this pass (a significant, wrong-signed result, not a null result)"
             )
         else:
-            aggregate_summary = "Run 1's aggregate basket is not statistically significant this pass"
+            aggregate_summary = (
+                "Run 1's aggregate basket is not statistically significant this pass"
+            )
         if improved["sig"] and i_matches:
             improved_summary = (
                 "Run 2's aggregate basket shows a significant, H1-expected relationship this pass"
@@ -283,8 +304,8 @@ def render_report(faithful: dict | None, improved: dict | None) -> str:
         lines.append(
             "- **This is not evidence that curation 'improves' or 'worsens' prediction** — the two "
             "rho values are computed against different outcomes over different periods and cannot be "
-            "differenced into a predictive-performance delta without confounding \"the world/outcome "
-            "changed\" with \"the metric changed\" (exactly the confound ADR-0017 D3 exists to prevent). "
+            'differenced into a predictive-performance delta without confounding "the world/outcome '
+            'changed" with "the metric changed" (exactly the confound ADR-0017 D3 exists to prevent). '
             "The comparable, apples-to-apples ablation this ticket's acceptance criterion asks for "
             "requires the Run-1/Run-2 reconciliation follow-up (a lor_pre2021-era improved-variant "
             f"re-tiering) noted above. **As reported this pass: {aggregate_summary}; {improved_summary}.** "

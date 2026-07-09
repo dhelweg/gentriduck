@@ -113,7 +113,7 @@ select
     'bzr' as area_level
 from
     read_csv(
-        '{{ var("project_root") }}/reference/goldens/20180909_result_full_bzr.csv',
+        {{ source("thesis_2018", "result_full_bzr") }},
         encoding = 'latin-1',
         auto_detect = true
     )

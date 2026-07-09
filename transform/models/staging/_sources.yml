@@ -8,9 +8,16 @@ sources:
       These three CSV files are the directional comparison baseline for Epic B (B5/B6).
       The CSVs are latin-1 encoded; dbt-duckdb reads them via read_csv with
       encoding='latin-1'. ODbL-licensed (see reference/goldens/ODbL_LICENCE).
-      Staging models reference these as documentation / lineage anchors only;
-      the actual path is resolved in each staging model via the project variable
-      'project_root' (see dbt_project.yml vars).
+      QA-5 (#180): each table declares external_location (an env_var('PWD')-based
+      absolute path -- var('project_root') itself can't be used here; dbt's
+      source-config renderer does not recursively re-render a var's own
+      Jinja-templated value, so it must be built directly from env_var('PWD')
+      as dbt_project.yml's project_root var definition does) so staging
+      models read them via source() -- dbt docs
+      generate now shows real source-node lineage instead of the old
+      documentation-only anchors resolved ad hoc via var('project_root'). The
+      raw_path() macro (transform/macros/raw_path.sql) builds the equivalent
+      path for the /data/raw/ glob-count pre-checks inside each staging model.
     meta:
       source_type: reference_golden
       licence: ODbL
@@ -25,12 +32,19 @@ sources:
           generated 2018-09-09. Contains every index metric the paper reports; columns
           are prefixed 'r.' from the original Hive SELECT *. Area level: bzr.
           Read by stg_thesis_2018_result_bzr via read_csv with encoding='latin-1'.
+        meta:
+          external_location: "{{ env_var('PWD', '.') }}/reference/goldens/20180909_result_full_bzr.csv"
 
       - name: result_full_plr
         description: >
           Per-PLR (Planungsraum, 436 rows) golden output from the 2018 thesis,
-          generated 2018-09-09. Columns prefixed 'r.'. Area level: plr.
-          Read by stg_thesis_2018_result_plr via read_csv with encoding='latin-1'.
+          generated 2018-09-09. Columns prefixed 'r.'. Area level: plr. Also the
+          source for the OA (offering-advantage) golden columns consumed by
+          stg_thesis_2018_result_plr_oa (same physical file).
+          Read by stg_thesis_2018_result_plr / stg_thesis_2018_result_plr_oa via
+          read_csv with encoding='latin-1'.
+        meta:
+          external_location: "{{ env_var('PWD', '.') }}/reference/goldens/20180909_result_full_plr.csv"
 
       - name: result_full_plr_distcalc
         description: >
@@ -38,6 +52,168 @@ sources:
           variant from the 2018 thesis). 436 rows. Columns prefixed 'r.'. Area level: plr.
           Exposes the 'distance_weighted' variant of the gentrification index.
           Read by stg_thesis_2018_result_plr_distcalc via read_csv with encoding='latin-1'.
+        meta:
+          external_location: "{{ env_var('PWD', '.') }}/reference/goldens/20180909_result_full_plr_distcalc.csv"
+
+  - name: raw_berlin
+    description: >
+      QA-5 (#180): Berlin raw ingestion artefacts (Parquet), gitignored per
+      ADR-0008 and rebuilt by the ingestion/berlin/* scripts. Each table's
+      external_location is a glob pattern (a var('project_root')-based
+      absolute path, equivalent to what the raw_path() macro builds for the
+      in-model pre-check) so dbt-duckdb's source() resolves directly to
+      read_parquet() over
+      however many yearly/edition files currently exist on disk -- the same
+      glob-based union_by_name pattern the staging models already used
+      ad hoc, now declared once as real dbt source lineage.
+    meta:
+      source_type: parquet_glob
+
+    tables:
+      - name: ewr
+        description: >
+          Annual EWR (Einwohnerregister) per-PLR snapshots. Amt fuer Statistik
+          Berlin-Brandenburg, CC BY 3.0 DE. Read by stg_berlin_ewr.
+        meta:
+          external_location: "{{ env_var('PWD', '.') }}/data/raw/berlin/ewr/*.parquet"
+        loaded_at_field: reference_date
+        freshness:
+          warn_after: {count: 400, period: day}
+          error_after: {count: 800, period: day}
+
+      - name: lor_plr
+        description: >
+          LOR PLR-grain geometries (GDI Berlin WFS, CC BY 3.0 DE). Read by
+          stg_berlin_lor.
+        meta:
+          external_location: "{{ env_var('PWD', '.') }}/data/raw/berlin/lor/*_plr.parquet"
+
+      - name: lor_bzr
+        description: >
+          LOR BZR-grain geometries (GDI Berlin WFS, CC BY 3.0 DE). Read by
+          stg_berlin_lor_bzr.
+        meta:
+          external_location: "{{ env_var('PWD', '.') }}/data/raw/berlin/lor/*_bzr.parquet"
+
+      - name: mss
+        description: >
+          MSS (Monitoring Soziale Stadtentwicklung) biennial editions,
+          Status/Dynamik/Gesamtindex at PLR grain. dl-de-zero-2.0. Read by
+          stg_berlin_mss.
+        meta:
+          external_location: "{{ env_var('PWD', '.') }}/data/raw/berlin/mss/mss_????.parquet"
+
+      - name: mss_indicators
+        description: >
+          MSS indexind WFS -- continuous SES indicator inputs per PLR
+          edition. dl-de-zero-2.0. Read by stg_berlin_mss_indicators.
+        meta:
+          external_location: "{{ env_var('PWD', '.') }}/data/raw/berlin/mss/*_indicators.parquet"
+
+      - name: bodenrichtwert
+        description: >
+          Bodenrichtwerte (land reference values) back-series 2017-2024.
+          GDI Berlin WFS, dl-de-zero-2.0. Read by stg_berlin_bodenrichtwert.
+        meta:
+          external_location: "{{ env_var('PWD', '.') }}/data/raw/berlin/price_rent/bodenrichtwert_*.parquet"
+        loaded_at_field: reference_date
+        freshness:
+          warn_after: {count: 400, period: day}
+          error_after: {count: 800, period: day}
+
+      - name: wohnlage
+        description: >
+          Wohnlagen nach Adressen zum Berliner Mietspiegel, vintages 2017,
+          2019, 2021, 2023, 2026. GDI Berlin WFS, dl-de-zero-2.0. Read by
+          stg_berlin_wohnlage.
+        meta:
+          external_location: "{{ env_var('PWD', '.') }}/data/raw/berlin/price_rent/wohnlage_*.parquet"
+
+      - name: kauffaelle
+        description: >
+          Kauffaelle (Verkaufte Grundstuecke) transactions, 2024-2025 only
+          (no WFS endpoint for earlier years). GDI Berlin WFS,
+          DL-Zero-2.0. Read by stg_berlin_verkaufte_grundstuecke.
+        meta:
+          external_location: "{{ env_var('PWD', '.') }}/data/raw/berlin/price_rent/kauffaelle_*.parquet"
+        loaded_at_field: reference_date
+        freshness:
+          warn_after: {count: 400, period: day}
+          error_after: {count: 800, period: day}
+
+  - name: raw_hamburg
+    description: >
+      QA-5 (#180): Hamburg raw ingestion artefacts (Parquet), gitignored per
+      ADR-0008 and rebuilt by the ingestion/hamburg/* scripts (ADR-0014).
+      Same glob-based external_location pattern as raw_berlin.
+    meta:
+      source_type: parquet_glob
+
+    tables:
+      - name: displacement_zones
+        description: >
+          Soziale Erhaltungsverordnungen -- Gebiete in Hamburg
+          (dl-de/by-2.0). Read by stg_hamburg_displacement_zones.
+        meta:
+          external_location: "{{ env_var('PWD', '.') }}/data/raw/hamburg/displacement/*.parquet"
+
+      - name: ewr_stadtteil
+        description: >
+          Regionalstatistische Daten der Stadtteile (Stadtteil grain).
+          dl-de/by-2.0. Read by stg_hamburg_ewr_stadtteil.
+        meta:
+          external_location: "{{ env_var('PWD', '.') }}/data/raw/hamburg/ewr_stadtteil/*.parquet"
+
+      - name: geo
+        description: >
+          Hamburg geometry parquets (statistische Gebiete, Stadtteile,
+          Bezirke). LGV Hamburg WFS, dl-de/by-2.0. Read by stg_hamburg_geo.
+        meta:
+          external_location: "{{ env_var('PWD', '.') }}/data/raw/hamburg/geo/*.parquet"
+
+      - name: mietenspiegel
+        description: >
+          Hamburger Mietenspiegel rent-table matrix. dl-de/by-2.0. Read by
+          stg_hamburg_mietenspiegel.
+        meta:
+          external_location: "{{ env_var('PWD', '.') }}/data/raw/hamburg/rent/mietenspiegel.parquet"
+
+      - name: wohnlage
+        description: >
+          Hamburg Wohnlagenverzeichnis (address/street -> Wohnlage
+          crosswalk). dl-de/by-2.0. Read by stg_hamburg_wohnlage.
+        meta:
+          external_location: "{{ env_var('PWD', '.') }}/data/raw/hamburg/rent/wohnlage.parquet"
+
+      - name: sozialmonitoring
+        description: >
+          Sozialmonitoring Integrierte Stadtteilentwicklung, annual
+          2013-2025. dl-de/by-2.0. Read by stg_hamburg_sozialmonitoring.
+        meta:
+          external_location: "{{ env_var('PWD', '.') }}/data/raw/hamburg/sozialmonitoring/*.parquet"
+
+  - name: raw_osm
+    description: >
+      QA-5 (#180): OSM POI history snapshots (GeoParquet), gitignored per
+      ADR-0008, produced by Geofabrik full-history .osh.pbf + osmium
+      (ADR-0002 Option B / ADR-0014 Pillar 6). One table per city; each
+      city's parquet set is independently optional (see stg_osm_poi's
+      graceful-degradation note).
+    meta:
+      source_type: parquet_glob
+      licence: ODbL
+      attribution: "OpenStreetMap contributors / ODbL -- https://www.openstreetmap.org/copyright"
+
+    tables:
+      - name: berlin
+        description: Annual Berlin OSM POI snapshots. Read by stg_osm_poi.
+        meta:
+          external_location: "{{ env_var('PWD', '.') }}/data/raw/osm/berlin/*.parquet"
+
+      - name: hamburg
+        description: Annual Hamburg OSM POI snapshots. Read by stg_osm_poi.
+        meta:
+          external_location: "{{ env_var('PWD', '.') }}/data/raw/osm/hamburg/*.parquet"
 
   - name: price_rent
     description: >
@@ -47,6 +223,10 @@ sources:
       and require attribution. Raw data is gitignored (ADR-0008) and rebuilt from
       open source WFS endpoints by the ingestion scripts in
       ingestion/berlin/price_rent/.
+      NOTE: this is a documentation-only source block (single-vintage snapshot
+      description); the actual multi-year Parquet globs are declared under the
+      raw_berlin source above (tables bodenrichtwert / wohnlage / kauffaelle),
+      which staging models read via source() per QA-5 (#180).
     meta:
       source_type: wfs_parquet
       licence: dl-de-zero-2.0

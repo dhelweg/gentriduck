@@ -19,6 +19,12 @@
 -- data/raw/berlin/price_rent/bodenrichtwert_2023.parquet
 -- data/raw/berlin/price_rent/bodenrichtwert_2024.parquet
 --
+-- QA-5 (#180): declared as source('raw_berlin', 'bodenrichtwert') -- see
+-- models/staging/_sources.yml. read_parquet() natively handles a glob
+-- matching however many yearly files exist (equivalent to the old
+-- per-year enumerate-and-UNION-ALL logic, since a missing year's file is
+-- simply absent from the glob match rather than erroring).
+--
 -- Graceful-degradation: returns zero rows with the target schema when no parquet
 -- files have been ingested, so downstream models and uv run poe build pass before
 -- data is downloaded.
@@ -40,86 +46,27 @@
     )
 }}
 
-{% set parquet_2017 = var("project_root") ~ "/data/raw/berlin/price_rent/bodenrichtwert_2017.parquet" %}
-{% set parquet_2018 = var("project_root") ~ "/data/raw/berlin/price_rent/bodenrichtwert_2018.parquet" %}
-{% set parquet_2019 = var("project_root") ~ "/data/raw/berlin/price_rent/bodenrichtwert_2019.parquet" %}
-{% set parquet_2020 = var("project_root") ~ "/data/raw/berlin/price_rent/bodenrichtwert_2020.parquet" %}
-{% set parquet_2021 = var("project_root") ~ "/data/raw/berlin/price_rent/bodenrichtwert_2021.parquet" %}
-{% set parquet_2022 = var("project_root") ~ "/data/raw/berlin/price_rent/bodenrichtwert_2022.parquet" %}
-{% set parquet_2023 = var("project_root") ~ "/data/raw/berlin/price_rent/bodenrichtwert_2023.parquet" %}
-{% set parquet_2024 = var("project_root") ~ "/data/raw/berlin/price_rent/bodenrichtwert_2024.parquet" %}
+{% set brw_glob = raw_path("berlin/price_rent/bodenrichtwert_*.parquet") %}
+{%- set _src_raw_berlin_bodenrichtwert = source("raw_berlin", "bodenrichtwert") -%}
 
 {% if execute %}
-    {%- set result_2017 = run_query("SELECT count(*) FROM glob('" ~ parquet_2017 ~ "')") -%}
-    {%- set cnt_2017 = result_2017.columns[0][0] -%}
-    {%- set result_2018 = run_query("SELECT count(*) FROM glob('" ~ parquet_2018 ~ "')") -%}
-    {%- set cnt_2018 = result_2018.columns[0][0] -%}
-    {%- set result_2019 = run_query("SELECT count(*) FROM glob('" ~ parquet_2019 ~ "')") -%}
-    {%- set cnt_2019 = result_2019.columns[0][0] -%}
-    {%- set result_2020 = run_query("SELECT count(*) FROM glob('" ~ parquet_2020 ~ "')") -%}
-    {%- set cnt_2020 = result_2020.columns[0][0] -%}
-    {%- set result_2021 = run_query("SELECT count(*) FROM glob('" ~ parquet_2021 ~ "')") -%}
-    {%- set cnt_2021 = result_2021.columns[0][0] -%}
-    {%- set result_2022 = run_query("SELECT count(*) FROM glob('" ~ parquet_2022 ~ "')") -%}
-    {%- set cnt_2022 = result_2022.columns[0][0] -%}
-    {%- set result_2023 = run_query("SELECT count(*) FROM glob('" ~ parquet_2023 ~ "')") -%}
-    {%- set cnt_2023 = result_2023.columns[0][0] -%}
-    {%- set result_2024 = run_query("SELECT count(*) FROM glob('" ~ parquet_2024 ~ "')") -%}
-    {%- set cnt_2024 = result_2024.columns[0][0] -%}
-{% else %}
-    {%- set cnt_2017 = 0 -%}
-    {%- set cnt_2018 = 0 -%}
-    {%- set cnt_2019 = 0 -%}
-    {%- set cnt_2020 = 0 -%}
-    {%- set cnt_2021 = 0 -%}
-    {%- set cnt_2022 = 0 -%}
-    {%- set cnt_2023 = 0 -%}
-    {%- set cnt_2024 = 0 -%}
+    {%- set file_count_result = run_query("SELECT count(*) FROM glob('" ~ brw_glob ~ "')") -%}
+    {%- set file_count = file_count_result.columns[0][0] -%}
+{% else %} {%- set file_count = 0 -%}
 {% endif %}
 
-{% if cnt_2017 > 0 or cnt_2018 > 0 or cnt_2019 > 0 or cnt_2020 > 0 or cnt_2021 > 0 or cnt_2022 > 0 or cnt_2023 > 0 or cnt_2024 > 0 %}
+{% if file_count > 0 %}
 
-    {% set sources = [] %}
-    {% if cnt_2017 > 0 %}
-        {%- do sources.append("read_parquet('" ~ parquet_2017 ~ "')") -%}
-    {% endif %}
-    {% if cnt_2018 > 0 %}
-        {%- do sources.append("read_parquet('" ~ parquet_2018 ~ "')") -%}
-    {% endif %}
-    {% if cnt_2019 > 0 %}
-        {%- do sources.append("read_parquet('" ~ parquet_2019 ~ "')") -%}
-    {% endif %}
-    {% if cnt_2020 > 0 %}
-        {%- do sources.append("read_parquet('" ~ parquet_2020 ~ "')") -%}
-    {% endif %}
-    {% if cnt_2021 > 0 %}
-        {%- do sources.append("read_parquet('" ~ parquet_2021 ~ "')") -%}
-    {% endif %}
-    {% if cnt_2022 > 0 %}
-        {%- do sources.append("read_parquet('" ~ parquet_2022 ~ "')") -%}
-    {% endif %}
-    {% if cnt_2023 > 0 %}
-        {%- do sources.append("read_parquet('" ~ parquet_2023 ~ "')") -%}
-    {% endif %}
-    {% if cnt_2024 > 0 %}
-        {%- do sources.append("read_parquet('" ~ parquet_2024 ~ "')") -%}
-    {% endif %}
-
-    {% for src in sources %}
-        select
-            reference_date,
-            'berlin' as city_code,
-            geometry_wkb,
-            brw_id,
-            value_eur_per_m2,
-            nutzung,
-            source_attribution
-        from {{ src }}
-        where brw_id is not null
-        {% if not loop.last %}
-            union all
-        {% endif %}
-    {% endfor %}
+    select
+        reference_date,
+        'berlin' as city_code,
+        geometry_wkb,
+        brw_id,
+        value_eur_per_m2,
+        nutzung,
+        source_attribution
+    from read_parquet({{ _src_raw_berlin_bodenrichtwert }}, union_by_name = true)
+    where brw_id is not null
 
 {% else %}
 

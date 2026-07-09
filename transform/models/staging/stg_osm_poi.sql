@@ -42,8 +42,10 @@
     )
 }}
 
-{% set berlin_osm_glob = var("project_root") ~ "/data/raw/osm/berlin/*.parquet" %}
-{% set hamburg_osm_glob = var("project_root") ~ "/data/raw/osm/hamburg/*.parquet" %}
+{% set berlin_osm_glob = raw_path("osm/berlin/*.parquet") %}
+{% set hamburg_osm_glob = raw_path("osm/hamburg/*.parquet") %}
+{%- set _src_raw_osm_berlin = source("raw_osm", "berlin") -%}
+{%- set _src_raw_osm_hamburg = source("raw_osm", "hamburg") -%}
 
 {% if execute %}
     {%- set berlin_count_result = run_query("SELECT count(*) FROM glob('" ~ berlin_osm_glob ~ "')") -%}
@@ -71,7 +73,7 @@
                     source_attribution
                 from
                     read_parquet(
-                        '{{ berlin_osm_glob }}',
+                        {{ _src_raw_osm_berlin }},
                         hive_partitioning = false,
                         union_by_name = true
                     )
@@ -93,7 +95,7 @@
                     source_attribution
                 from
                     read_parquet(
-                        '{{ hamburg_osm_glob }}',
+                        {{ _src_raw_osm_hamburg }},
                         hive_partitioning = false,
                         union_by_name = true
                     )

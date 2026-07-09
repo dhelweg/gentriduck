@@ -18,6 +18,11 @@
 -- data/raw/berlin/price_rent/kauffaelle_2024.parquet
 -- data/raw/berlin/price_rent/kauffaelle_2025.parquet
 --
+-- QA-5 (#180): declared as source('raw_berlin', 'kauffaelle') -- see
+-- models/staging/_sources.yml. read_parquet() natively handles a glob
+-- matching however many yearly files exist (equivalent to the old
+-- per-year enumerate-and-UNION-ALL logic).
+--
 -- Graceful-degradation: returns zero rows with the target schema when no parquet
 -- files have been ingested, so downstream models and uv run poe build pass before
 -- data is downloaded.
@@ -48,45 +53,30 @@
     )
 }}
 
-{% set parquet_2024 = var("project_root") ~ "/data/raw/berlin/price_rent/kauffaelle_2024.parquet" %}
-{% set parquet_2025 = var("project_root") ~ "/data/raw/berlin/price_rent/kauffaelle_2025.parquet" %}
+{% set kauffaelle_glob = raw_path("berlin/price_rent/kauffaelle_*.parquet") %}
+{%- set _src_raw_berlin_kauffaelle = source("raw_berlin", "kauffaelle") -%}
 
 {% if execute %}
-    {%- set result_2024 = run_query("SELECT count(*) FROM glob('" ~ parquet_2024 ~ "')") -%}
-    {%- set cnt_2024 = result_2024.columns[0][0] -%}
-    {%- set result_2025 = run_query("SELECT count(*) FROM glob('" ~ parquet_2025 ~ "')") -%}
-    {%- set cnt_2025 = result_2025.columns[0][0] -%}
-{% else %} {%- set cnt_2024 = 0 -%} {%- set cnt_2025 = 0 -%}
+    {%- set file_count_result = run_query("SELECT count(*) FROM glob('" ~ kauffaelle_glob ~ "')") -%}
+    {%- set file_count = file_count_result.columns[0][0] -%}
+{% else %} {%- set file_count = 0 -%}
 {% endif %}
 
-{% if cnt_2024 > 0 or cnt_2025 > 0 %}
+{% if file_count > 0 %}
 
-    {% set sources = [] %}
-    {% if cnt_2024 > 0 %}
-        {%- do sources.append("read_parquet('" ~ parquet_2024 ~ "')") -%}
-    {% endif %}
-    {% if cnt_2025 > 0 %}
-        {%- do sources.append("read_parquet('" ~ parquet_2025 ~ "')") -%}
-    {% endif %}
-
-    {% for src in sources %}
-        select
-            reference_date,
-            city_code,
-            teilmarkt,
-            geometry_wkb,
-            transaction_id,
-            kaufpreis_eur,
-            flaeche_m2,
-            kauftyp,
-            raw_properties_json,
-            source_attribution
-        from {{ src }}
-        where transaction_id is not null
-        {% if not loop.last %}
-            union all
-        {% endif %}
-    {% endfor %}
+    select
+        reference_date,
+        city_code,
+        teilmarkt,
+        geometry_wkb,
+        transaction_id,
+        kaufpreis_eur,
+        flaeche_m2,
+        kauftyp,
+        raw_properties_json,
+        source_attribution
+    from read_parquet({{ _src_raw_berlin_kauffaelle }}, union_by_name = true)
+    where transaction_id is not null
 
 {% else %}
 
