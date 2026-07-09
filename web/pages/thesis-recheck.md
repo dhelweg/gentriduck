@@ -67,7 +67,7 @@ a raw-count comparison is noted where OA and raw count disagree, or where OA has
 
 | # | The hypothesis | 2018 thesis | Our re-check (OA, Run 1) | Verdict |
 |---|---|---|---|---|
-| **H1** | More businesses → higher social standing | Supported | Reproduces on raw POI counts (thesis-era EWR); the OA quotient itself points the *other* way on the modern official monitor (not significant either way) | ⚠️ Predictor-dependent |
+| **H1** | More businesses → higher social standing | Supported | Reproduces on raw POI counts (thesis-era EWR); the OA quotient itself points the *other* way (statistically significant, n=435, after a #200 data-quality fix restored the full sample) | ⚠️ Predictor-dependent, significant in the wrong direction |
 | **H1b** | More fast-food outlets → lower status / displacement pressure | Supported | Significant and correctly signed on both raw counts and OA — and **stronger under OA** (rho 0.42 vs 0.14) — even at coarser city scales | ✅✅ Robust, strengthens under the thesis's own predictor |
 | **H2** | Today's commerce *predicts* tomorrow's social improvement (lead–lag) | Supported (core claim) | Reproduces on EWR (thesis-era data, raw count; strengthens over 1→4-year windows); reproduces on the modern official monitor under **both** raw count and OA | ✅ Holds, EWR + modern OA agree |
 | **H3a** | Rapid commercial change *precedes* social-status change | Supported | Reproduces on EWR (raw count); on the modern monitor, raw count points the wrong way, but **OA is correctly signed at a 2-year lag** (significant) | ⚠️ Data- and predictor-dependent |
@@ -135,6 +135,11 @@ For the **current** picture the six hypotheses take a back seat to the live typo
   panel.
 - Reproducing a 2018 result is a directional check, not a number-for-number replay — see the
   [Epic B framing](https://github.com/dhelweg/gentriduck/blob/main/docs/PROJECT_PLAN.md) for why.
+- **Data correction (2026-07-09, #200):** the H1 (OA) test's sample was previously understated
+  (n=92 instead of the correct n=435) by an area-code join bug that silently dropped most PLRs;
+  fixing it changed the H1 (OA) result from "not significant either way" to "statistically
+  significant, in the direction opposite the thesis's prior" — a more decisive, not a more
+  favourable, finding. No other hypothesis in this table was affected.
 
 ## Further reading
 

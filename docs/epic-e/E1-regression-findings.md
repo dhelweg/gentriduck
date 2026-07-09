@@ -39,9 +39,9 @@ The primary validation criterion is directional agreement (same sign as thesis e
 | H1 | Spearman | 436 | rho | -0.0463 | 0.3348 | No | negative | negative | PASS | POI stock (total_poi_count) ~ MSS social status (status_index) |
 | H1 | OLS | 436 | beta | -3.97e-04 R2=0.0044 | 0.1670 | No | negative | negative | PASS | POI stock (total_poi_count) ~ MSS social status (status_index) |
 | H1b | Spearman | 436 | rho | 0.1364 | 0.0043 | Yes | positive | positive | PASS | Fast-food POI count ~ MSS social status (status_index) |
-| H1 | Spearman (OA) | 92 | rho | 0.1350 | 0.1996 | No | negative | positive | FAIL | OA-quotient basket (mean of 4 upscaling-relevant domain OAs) ~ MSS social status |
-| H1 | OLS (OA) | 92 | beta | 0.4561 R2=0.0227 | 0.1515 | No | negative | positive | FAIL | OA-quotient basket (mean of 4 upscaling-relevant domain OAs) ~ MSS social status |
-| H1b | Spearman (OA) | 70 | rho | 0.4189 | 0.0003 | Yes | positive | positive | PASS | Fast-food OA quotient ~ MSS social status (status_index) |
+| H1 | Spearman (OA) | 435 | rho | 0.1482 | 0.0019 | Yes | negative | positive | FAIL | OA-quotient basket (mean of 4 upscaling-relevant domain OAs) ~ MSS social status |
+| H1 | OLS (OA) | 435 | beta | 0.1960 R2=0.0100 | 0.0372 | Yes | negative | positive | FAIL | OA-quotient basket (mean of 4 upscaling-relevant domain OAs) ~ MSS social status |
+| H1b | Spearman (OA) | 359 | rho | 0.3698 | 0.0000 | Yes | positive | positive | PASS | Fast-food OA quotient ~ MSS social status (status_index) |
 
 ## Results — Section 2: H2/H3 MSS Panel (modern era, 2021–2025)
 
@@ -163,9 +163,9 @@ The primary validation criterion is directional agreement (same sign as thesis e
 
 ## Overall Scorecard
 
-**Total directional agreement: 41/75. Significant: 33/75.**
+**Total directional agreement: 41/75. Significant: 35/75.**
 
-**MSS modern panel (H1+H2+H3, 2021–2025): 12/22 direction, 11/22 significant.**
+**MSS modern panel (H1+H2+H3, 2021–2025): 12/22 direction, 13/22 significant.**
 **MSS pre-2021 panel (H2+H3 only, 2015–2019): 5/16 direction, 2/16 significant.**
 **EWR same-era (H2+H3 only): 15/15 direction, 15/15 significant.**
 
