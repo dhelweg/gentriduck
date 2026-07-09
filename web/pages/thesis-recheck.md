@@ -14,12 +14,38 @@ sidebar_position: 10
   claims) — see docs/epic-g/A5-thesis-recheck-refresh-*-signoff.md.
 -->
 
-# The 2018 thesis, re-checked
+<div class="hero hero-compact">
+  <div class="hero-eyebrow">The historical reproduction study</div>
+  <h1>The 2018 thesis, re-checked</h1>
+  <p class="hero-lede">Gentriduck began as a question: an
+  <a href="https://github.com/dhelweg/masterthesis2018_gentrification">award-era master's thesis</a>
+  from 2018 claimed that the churn of shops, cafés and restaurants in a Berlin neighbourhood
+  tracks — and partly <i>predicts</i> — its social change. Eight years and a completely rebuilt,
+  open-source stack later: <b>does that result still hold?</b></p>
+</div>
 
-Gentriduck began as a question: an [award-era master's thesis](https://github.com/dhelweg/masterthesis2018_gentrification)
-from 2018 claimed that the churn of shops, cafés and restaurants in a Berlin neighbourhood tracks —
-and partly *predicts* — its social change. Eight years and a completely rebuilt, open-source stack
-later: **does that result still hold?**
+<style>
+.hero-compact {
+  margin: -0.5rem -0.25rem 1.5rem;
+  padding: 1.5rem 1.6rem;
+  border-radius: 1rem;
+  background:
+    radial-gradient(circle at 12% 18%, rgba(37, 99, 235, 0.16), transparent 55%),
+    radial-gradient(circle at 88% 82%, rgba(194, 65, 12, 0.13), transparent 55%),
+    rgba(127, 127, 127, 0.04);
+  border: 1px solid rgba(127, 127, 127, 0.16);
+}
+.hero-compact .hero-eyebrow {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  font-weight: 700;
+  color: #2563eb;
+  margin-bottom: 0.45rem;
+}
+.hero-compact h1 { margin: 0 0 0.55rem 0; font-size: 1.9rem; line-height: 1.15; }
+.hero-compact .hero-lede { max-width: 46rem; font-size: 0.98rem; line-height: 1.5; opacity: 0.92; margin: 0; }
+</style>
 
 This page answers that hypothesis by hypothesis. It is deliberately about the *reproduction* — the
 historical check. For what Berlin looks like **today**, start with the [home page](/), the
