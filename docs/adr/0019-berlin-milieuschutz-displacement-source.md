@@ -106,6 +106,12 @@ independently-reviewable slices (the same pattern ADR-0006/0007 used ahead of R-
 #70's third candidate (residential-fluctuation proxy from EWR) needs coordination with R-A5's (#68)
 EWR indicator-semantics audit and is left for a later #70 slice; no source decision is made here.
 
+**Update (2026-07-09):** #68 closed with `docs/methodology/indicator-semantics.md`, confirming
+`residence_duration_5y_share` (EWR DAU5) semantics and the thesis's own negated-change convention.
+No new source was needed — the proxy (`int_berlin_turnover_proxy`) reuses the already-sourced EWR
+`residence_duration_5y_share` field. See `docs/methodology/B1-turnover-geo-signoff.md` and
+`docs/methodology/B1-turnover-domain-signoff.md` (both `PASS`) for the gated methodology review.
+
 ## Alternatives considered
 
 ### A — `erhaltgeb_em` WFS layer (GDI Berlin) — **CHOSEN** for Milieuschutz areas
