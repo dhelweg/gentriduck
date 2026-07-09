@@ -152,6 +152,61 @@ models:
         tests:
           - not_null
 
+  - name: stg_thesis_2018_result_plr_oa
+    description: >
+      OA-A.3 (#167): staging over the SAME 2018 thesis golden CSV as
+      stg_thesis_2018_result_plr, unpivoting the 170 oa_*/prev_oa_* columns
+      (85 current + 85 lagged) into long format -- one row per (PLR,
+      thesis_oa_suffix), grain = (raum_id, thesis_oa_suffix). Dense (every
+      suffix zero-filled per PLR, matching the golden CSV's own convention).
+      Resolved to our (poi_domain_h/category_h/type_h) taxonomy via the
+      separate seed_poi_thesis_taxonomy_crosswalk seed (kept out of this
+      purely-mechanical unpivot). ODbL-licensed.
+    meta:
+      dbt_meta_owner: data-engineer
+    columns:
+      - name: raum_id
+        description: PLR area code as it appears in the golden CSV (may drop leading zero).
+        tests:
+          - not_null
+      - name: area_code
+        description: raum_id zero-padded to 8 chars (LPAD convention, matches WFS PLR area_code).
+        tests:
+          - not_null
+      - name: thesis_oa_suffix
+        description: >
+          Raw thesis OA column suffix (e.g. 'total_d_tourismus_stock',
+          'gastro_t_restaurant_italiener_stock') -- the single static source
+          shared with seed_poi_thesis_taxonomy_crosswalk.csv.
+        tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('seed_poi_thesis_taxonomy_crosswalk')
+                field: thesis_oa_suffix
+      - name: oa_value
+        description: Current-period OA (thesis zeit=201612, snapshot_year=2016).
+      - name: prev_oa_value
+        description: Lagged-period OA (thesis prev_zeit=201412, snapshot_year=2014).
+      - name: city_code
+        description: City identifier, always 'BER'.
+        tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ["BER"]
+      - name: area_level
+        description: Area level identifier, always 'plr'.
+        tests:
+          - not_null
+      - name: area_vintage
+        description: Always 'lor_pre2021' (golden predates the 2021 LOR reform).
+        tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ["lor_pre2021"]
+
   # --- C1: OSM POI history (real model; data populated by ingestion script) ---
 
   - name: stg_osm_poi
