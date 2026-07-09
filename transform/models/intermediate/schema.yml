@@ -2556,6 +2556,76 @@ models:
           absorb it) -- an affordability-stress signal, not a measured
           displacement event and not a rent-to-income ratio.
 
+  - name: int_berlin_turnover_proxy
+    description: >
+      #70 [B1], third slice: turnover / Wohndauer (residence-duration) proxy.
+      Year-over-year change in residence_duration_5y_share (EWR DAU5), negated per
+      the thesis sign convention (indicator-semantics.md 65-66: falling long-tenure
+      share = turnover-positive), then per-(city_code, reference_year) z-scored
+      across PLRs. A single-indicator change score (not a multi-indicator
+      composite) -- complements the static vulnerability level already consumed by
+      int_ewr_socioeco's composite. Explicit year_t/year_t-1 self-join (not LAG())
+      so a real gap in the annual EWR panel yields NULL rather than a
+      silently-wrong multi-year delta. Uninhabited-PLR guard applied (residents_total
+      IS NULL or = 0 excluded).
+
+      Zero consumers as of this model -- not yet wired into any mart or the
+      governed gentrification_index (same staged-slice pattern as
+      int_berlin_rent_pressure_proxy). See
+      docs/methodology/B1-turnover-geo-signoff.md and
+      docs/methodology/B1-turnover-domain-signoff.md.
+
+      Known gap (#197): residence_duration_5y_share is entirely NULL for
+      reference_year 2024/2025 as ingested (upstream EWR CSV parse failures), so
+      turnover_proxy is NULL for reference_year=2025 by honest NULL propagation,
+      not imputation.
+
+      Source: int_ewr_socioeco.
+    meta:
+      dbt_meta_owner: data-engineer
+    data_tests:
+
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns:
+              - city_code
+              - area_code
+              - area_vintage
+              - reference_year
+    columns:
+      - name: city_code
+        description: City identifier (ADR-0005), normalised to 'BER'.
+        data_tests:
+
+          - not_null
+      - name: area_code
+        description: PLR identifier (matches int_ewr_socioeco).
+      - name: area_vintage
+        description: LOR boundary vintage (lor_2021 throughout, inherited from int_ewr_socioeco).
+      - name: reference_year
+        description: EWR reference year (year_t; the later of the two years differenced).
+      - name: residence_duration_5y_share
+        description: DAU5 share at year_t, carried through from int_ewr_socioeco.
+      - name: residence_duration_5y_share_prev
+        description: DAU5 share at year_t-1 (matched via explicit self-join, not LAG()).
+      - name: turnover_raw
+        description: >
+          -1 * (residence_duration_5y_share - residence_duration_5y_share_prev) --
+          thesis sign convention; positive = long-tenure share fell (turnover signal).
+      - name: turnover_proxy
+        description: >
+          Per-(city_code, reference_year) z-score of turnover_raw across PLRs
+          (NULLIF(stddev_pop,0) degenerate-year guard). High = long-tenure
+          residents leaving faster than being replaced by other long-tenure
+          residents relative to other PLRs that year -- a turnover/displacement
+          signal, not a measured displacement event.
+      - name: any_endpoint_partial
+        description: >
+          TRUE when either year_t or year_t-1 falls in the pre-2014 partial-EWR-composite
+          era (B9b). residence_duration_5y_share itself is present in both eras, so this
+          flag is informational (cross-era caution carried through, not enforced) rather
+          than a null-producing condition.
+
   - name: int_price_rent_brw_wohnlage_combined
     description: >
       QA-6b (#204): extracted from mart_price_rent_dimension.sql -- aligns the BRW
