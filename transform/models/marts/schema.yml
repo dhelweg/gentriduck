@@ -1123,3 +1123,99 @@ models:
         description: >
           poi_count / area_km2 for this taxonomy leaf (e.g. "Gastronomy POIs per
           km2"). NULL when area_km2 is NULL or zero.
+  - name: mart_poi_offering_advantage_map
+    description: >
+      #210 (perf follow-up to #208/#209): slim, domain-grain companion to
+      mart_poi_offering_advantage built for the /poi-map page's reactive
+      query -- Evidence.dev ships the full referenced source table to the
+      client for any reactive query, so shipping leaf-grain rows to answer a
+      domain-grain question was the actual driver of that page's ~14MB
+      bundle. Pure re-aggregation of an already-signed-off mart (SUM of an
+      unweighted count + a location quotient proven constant within a
+      domain) -- not methodology-bearing, not on the R-C1 gated-file list.
+
+      Grain: one row per (city_code, snapshot_year, area_code, area_vintage,
+      weight_variant, methodology_variant, poi_domain_h) -- a
+      (poi_category_h, poi_type_h)-collapsed subset of
+      mart_poi_offering_advantage's grain.
+    meta:
+      dbt_meta_owner: data-engineer
+    data_tests:
+
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns:
+              - city_code
+              - snapshot_year
+              - area_code
+              - area_vintage
+              - poi_domain_h
+              - weight_variant
+              - methodology_variant
+          config:
+            where: "area_code is not null"
+    columns:
+      - name: city_code
+        description: City identifier (ADR-0005).
+        data_tests:
+
+          - not_null
+      - name: snapshot_year
+        description: Calendar year of the OSM snapshot.
+        data_tests:
+
+          - not_null
+      - name: area_code
+        description: PLR area code (Berlin) / subarea_l2 code (Hamburg). Vintage-specific.
+        data_tests:
+
+          - not_null
+      - name: area_vintage
+        description: >
+          Spatial-join vintage. 'lor_pre2021'/'lor_2021' for Berlin LOR; 'current'
+          for Hamburg statistische Gebiete.
+        data_tests:
+
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ["lor_pre2021", "lor_2021", "current"]
+      - name: weight_variant
+        description: >
+          'standard' (hard point-in-polygon count) or 'gaussian_<bandwidth>'
+          (mass-conserving kernel-weighted count).
+        data_tests:
+
+          - not_null
+      - name: methodology_variant
+        description: "'faithful' or 'improved' (see mart_poi_offering_advantage)."
+        data_tests:
+
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ["faithful", "improved"]
+      - name: poi_domain_h
+        description: Harmonized POI domain (top level of the 3-level taxonomy).
+        data_tests:
+
+          - not_null
+      - name: oa_domain
+        description: >
+          Domain-level Offering Advantage (location quotient), carried through
+          unchanged from mart_poi_offering_advantage (constant within this
+          group by construction -- see model header).
+      - name: poi_count
+        description: >
+          SUM(poi_count) across this domain's (poi_category_h, poi_type_h)
+          leaves -- the domain-level POI count, from mart_poi_offering_advantage.
+      - name: area_km2
+        description: >
+          Area of the (city_code, area_code, area_vintage) polygon in km^2,
+          carried through unchanged (area-keyed, not leaf-keyed, so identical
+          across leaves being collapsed).
+      - name: poi_density_per_km2
+        description: >
+          SUM(poi_count) / area_km2 for this domain (e.g. "all Gastronomy
+          POIs per km2") -- recomputed at domain grain, not an average of
+          leaf-level densities. NULL when area_km2 is NULL or zero.
