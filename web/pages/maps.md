@@ -9,6 +9,14 @@ sidebar_position: 12
   // (served under /gentriduck) a bare "/geo/..." would 404 and the map renders empty. Prepend
   // SvelteKit's `base` (= deployment.basePath in the build; "" when served at root in dev).
   import { base } from '$app/paths';
+
+  // #152: fixed, intuitive "worse -> red" ramp for the six-stage typology. EvidenceMap assigns
+  // categorical colours positionally by first-occurrence order in the query result (see AreaMap's
+  // underlying EvidenceMap.js handleLegendValues/initializeData) -- the `areas` query below is
+  // ordered by `stage_sort` (most acute gentrification-pressure stage first) precisely so that
+  // ordering lines up with this palette. Display-only: does not touch the D1xD2 typology_stage
+  // classification or its thresholds (int_gentrification_ts.sql, ADR-0008).
+  const stageColorPalette = ['#dc2626', '#f97316', '#f4b548', '#eab308', '#a3e635', '#16a34a'];
 </script>
 
 # Maps — gentrification pressure by area
@@ -23,10 +31,13 @@ underlying index doesn't have real Hamburg numbers yet
 for now.
 
 <Alert status="info">
-  <b>How to read the map:</b> "Social status" is ordinal — higher shading means <b>more deprived</b>,
-  not more prosperous. "Dynamism" — higher means the area's status is improving <b>faster</b>. A
-  <b>negative</b> pressure trend (see the table below the map) means <b>higher</b> gentrification
-  pressure. See the
+  <b>How to read the map:</b> The <b>"Gentrification stage"</b> option is the easiest to read at a
+  glance — it colours each area by one of six plain-language stages (red = highest pressure /
+  earliest displacement risk, green = most stable), no decoder needed. The <b>"Social status"</b>
+  and <b>"Dynamism"</b> options show the raw ordinal inputs behind that stage: "Social status" is
+  ordinal — higher shading means <b>more deprived</b>, not more prosperous. "Dynamism" — higher
+  means the area's status is improving <b>faster</b>. A <b>negative</b> pressure trend (see the
+  table below the map) means <b>higher</b> gentrification pressure. See the
   <a href="https://github.com/dhelweg/gentriduck/blob/main/docs/adr/0004-data-governance-and-index-definition.md">index definition</a>
   for the full methodology, or the <a href="/methodology">methodology & data sources</a> page for a
   plain-language walkthrough. Areas without a value (e.g. uninhabited planning areas) are drawn but
@@ -51,19 +62,61 @@ for now.
 </Alert>
 {/if}
 
-<Dropdown name="indicator" title="Indicator" defaultValue="status_index">
+<Dropdown name="indicator" title="Indicator" defaultValue="status_class">
+  <DropdownOption value="status_class" valueLabel="Gentrification stage — plain-language, colour-coded (Live data + Planungsraum only)"/>
   <DropdownOption value="status_index" valueLabel="Social status — how deprived or affluent (current snapshot)"/>
   <DropdownOption value="dynamism_index" valueLabel="Dynamism — how fast that status is changing"/>
 </Dropdown>
 
+{#if inputs.indicator.value === 'status_class' && (inputs.variant.value !== 'live_data' || inputs.area_level.value !== 'plr')}
+<Alert status="warning">
+  "Gentrification stage" is only available for "Live data" at the Planungsraum level — the six-stage
+  typology isn't computed for the 2018 thesis reproduction or the Bezirksregion aggregate. Switch
+  "Data" to Live data and "Area level" to Planungsraum to use it, or pick "Social status" /
+  "Dynamism" above.
+</Alert>
+{/if}
+
 ```sql areas
+-- #152: stage_label is the de-jargoned, human-readable form of status_class (typology_stage
+-- from int_gentrification_ts's D1xD2 matrix, ADR-0008 -- no thresholds touched here, just a
+-- friendlier string). stage_sort orders rows by gentrification-pressure severity (most acute
+-- first) so EvidenceMap's categorical legend -- which assigns colours positionally by
+-- first-occurrence order in `data` (see AreaMap's underlying EvidenceMap.js
+-- handleLegendValues/initializeData) -- lines up with the fixed "worse -> red" colorPalette
+-- passed to <AreaMap> below, regardless of DuckDB's natural row order. Ordering rationale
+-- (Dangschat 1988 double invasion-succession cycle; Döring & Ulbricht 2016 vulnerability
+-- framework -- both cited in int_gentrification_ts.sql):
+--   1 active-gentrification  -- mid-status area improving fastest: gentrification in motion.
+--   2 pioneer-signal         -- low-status area improving fast: earliest displacement signal.
+--   3 improving-vulnerable   -- most-deprived area improving: vulnerable population, watch.
+--   4 pre-gentrification     -- early/mixed signals (filtering-down or nascent upgrading).
+--   5 consolidation-pressure -- already-affluent area still intensifying: lower urgency.
+--   6 stable-established     -- no material status change: least pressure.
 select
     city_code,
     area_code,
     area_name,
     status_index,
     dynamism_index,
-    period_yyyymm,
+    status_class,
+    case status_class
+        when 'active-gentrification' then 'Active gentrification'
+        when 'pioneer-signal' then 'Early pioneer signal'
+        when 'improving-vulnerable' then 'Improving, vulnerable area'
+        when 'pre-gentrification' then 'Pre-gentrification watch'
+        when 'consolidation-pressure' then 'Consolidated, still intensifying'
+        when 'stable-established' then 'Stable, established'
+    end as stage_label,
+    case status_class
+        when 'active-gentrification' then 1
+        when 'pioneer-signal' then 2
+        when 'improving-vulnerable' then 3
+        when 'pre-gentrification' then 4
+        when 'consolidation-pressure' then 5
+        when 'stable-established' then 6
+        else 99
+    end as stage_sort,
     -- Drill-down click-through target (#133 G1d, exact-code fix #150): only wire the link for
     -- `live_data`, since /area/[code] queries fct_gentrification_change etc. on lor_2021 (current,
     -- 542-PLR) area codes -- the `standard` (2018 thesis, 447-PLR pre-2021) variant's codes don't
@@ -78,6 +131,7 @@ where variant = '${inputs.variant.value}'
       from gentriduck_marts.gentrification_index
       where variant = '${inputs.variant.value}' and area_level = '${inputs.area_level.value}'
   )
+order by stage_sort
 ```
 
 {#if inputs.area_level.value === 'plr'}
@@ -90,8 +144,9 @@ where variant = '${inputs.variant.value}'
     geoJsonUrl={`${base}/geo/plr_${inputs.variant.value}.geojson`}
     geoId="area_code"
     areaCol="area_code"
-    value={inputs.indicator.value}
-    legendType="scalar"
+    value={inputs.indicator.value === 'status_class' ? 'stage_label' : inputs.indicator.value}
+    legendType={inputs.indicator.value === 'status_class' ? 'categorical' : 'scalar'}
+    colorPalette={inputs.indicator.value === 'status_class' ? stageColorPalette : undefined}
     title="Berlin Planungsraum (PLR) — {inputs.indicator.label}, latest period"
     startingLat={52.52}
     startingLong={13.405}
@@ -122,8 +177,9 @@ district on the [area detail page](/area-detail).
     geoJsonUrl={`${base}/geo/bzr_standard.geojson`}
     geoId="area_code"
     areaCol="area_code"
-    value={inputs.indicator.value}
-    legendType="scalar"
+    value={inputs.indicator.value === 'status_class' ? 'stage_label' : inputs.indicator.value}
+    legendType={inputs.indicator.value === 'status_class' ? 'categorical' : 'scalar'}
+    colorPalette={inputs.indicator.value === 'status_class' ? stageColorPalette : undefined}
     title="Berlin Bezirksregion (BZR) — {inputs.indicator.label}, latest period"
     startingLat={52.52}
     startingLong={13.405}
@@ -138,7 +194,15 @@ district on the [area detail page](/area-detail).
 select
     area_name,
     status_index,
-    dynamism_index
+    dynamism_index,
+    case status_class
+        when 'active-gentrification' then 'Active gentrification'
+        when 'pioneer-signal' then 'Early pioneer signal'
+        when 'improving-vulnerable' then 'Improving, vulnerable area'
+        when 'pre-gentrification' then 'Pre-gentrification watch'
+        when 'consolidation-pressure' then 'Consolidated, still intensifying'
+        when 'stable-established' then 'Stable, established'
+    end as stage_label
 from gentriduck_marts.gentrification_index
 where variant = '${inputs.variant.value}'
   and area_level = '${inputs.area_level.value}'
@@ -155,6 +219,7 @@ order by dynamism_index desc
     <Column id=area_name title="Area"/>
     <Column id=status_index title="Social status (1=least deprived … 4=most deprived)"/>
     <Column id=dynamism_index title="Speed of change (higher = faster upward change)"/>
+    <Column id=stage_label title="Gentrification stage (Live data + Planungsraum only)"/>
 </DataTable>
 
 Want to see how one specific area has changed over the years? Use the
@@ -167,4 +232,3 @@ Bezirksregion map above is view-only for now, and browsing by district still wor
 ---
 
 <sub>[Home](/) · [Methodology & data sources](/methodology) · [About this project](/about) · [GitHub repository](https://github.com/dhelweg/gentriduck)</sub>
-
