@@ -11,6 +11,13 @@ models:
       Area names (raum_desc) are Berlin proper nouns and are kept in German.
     meta:
       dbt_meta_owner: data-engineer
+    # QA-3 (#178): grain test -- one row per BZR per reporting period.
+    tests:
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns:
+              - raum_id
+              - zeit
     columns:
       - name: raum_id
         description: BZR area code (string; e.g. '010111').
@@ -67,6 +74,13 @@ models:
       Area names are Berlin proper nouns and are kept in German.
     meta:
       dbt_meta_owner: data-engineer
+    # QA-3 (#178): grain test -- one row per PLR per reporting period.
+    tests:
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns:
+              - raum_id
+              - zeit
     columns:
       - name: raum_id
         description: PLR area code (string).
@@ -118,6 +132,13 @@ models:
       ODbL-licensed. Area names are Berlin proper nouns and are kept in German.
     meta:
       dbt_meta_owner: data-engineer
+    # QA-3 (#178): grain test -- one row per PLR per reporting period.
+    tests:
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns:
+              - raum_id
+              - zeit
     columns:
       - name: raum_id
         description: PLR area code (string).
@@ -164,6 +185,13 @@ models:
       purely-mechanical unpivot). ODbL-licensed.
     meta:
       dbt_meta_owner: data-engineer
+    # QA-3 (#178): grain test per the model's own stated grain (see description).
+    tests:
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns:
+              - raum_id
+              - thesis_oa_suffix
     columns:
       - name: raum_id
         description: PLR area code as it appears in the golden CSV (may drop leading zero).
@@ -334,6 +362,8 @@ models:
     meta:
       dbt_meta_owner: data-engineer
     # Data-presence gate (docs/lessons/local-first-data-presence.md):
+    # QA-3 (#178): grain test -- one row per PLR per vintage (both vintages
+    # UNIONed here; dim_area collapses them downstream, see dim_area.sql header).
     tests:
       - assert_not_empty:
           config:
@@ -343,6 +373,13 @@ models:
             min_rows: 400
           config:
             severity: warn
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns:
+              - area_vintage
+              - area_code
+          config:
+            where: "area_code is not null"
 
   - name: stg_berlin_lor_bzr
     description: >
@@ -359,6 +396,7 @@ models:
     meta:
       dbt_meta_owner: data-engineer
     # Data-presence gate (docs/lessons/local-first-data-presence.md):
+    # QA-3 (#178): grain test -- one row per BZR per vintage (mirrors stg_berlin_lor).
     tests:
       - assert_not_empty:
           config:
@@ -368,6 +406,13 @@ models:
             min_rows: 100
           config:
             severity: warn
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns:
+              - area_vintage
+              - area_code
+          config:
+            where: "area_code is not null"
 
   - name: stg_hamburg_geo
     description: >
@@ -387,6 +432,10 @@ models:
     meta:
       dbt_meta_owner: data-engineer
     # Data-presence gate (docs/lessons/local-first-data-presence.md):
+    # QA-3 (#178): grain test -- one row per area per level (single 'current'
+    # vintage for this first Hamburg slice; area_code is a natural key within
+    # area_level, e.g. Bezirk/Stadtteil/statistisches-Gebiet codes don't collide
+    # across levels, see column description below).
     tests:
       - assert_not_empty:
           config:
@@ -396,6 +445,13 @@ models:
             min_rows: 1000
           config:
             severity: warn
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns:
+              - area_level
+              - area_code
+          config:
+            where: "area_code is not null"
     columns:
       - name: city_code
         description: Canonical city code 'HH' (ADR-0005; matches dim_city.city_code).
@@ -572,6 +628,7 @@ models:
     meta:
       dbt_meta_owner: data-engineer
     # Data-presence gate (docs/lessons/local-first-data-presence.md):
+    # QA-3 (#178): grain test -- one row per designated Erhaltungsverordnung area.
     tests:
       - assert_not_empty:
           config:
@@ -580,6 +637,14 @@ models:
           arguments:
             min_rows: 10
           config:
+            severity: warn
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns:
+              - city_code
+              - area_code
+          config:
+            where: "area_code is not null"
             severity: warn
     columns:
       - name: city_code
@@ -741,9 +806,20 @@ models:
     meta:
       dbt_meta_owner: data-engineer
     # Data-presence gate (docs/lessons/local-first-data-presence.md):
+    # QA-3 (#178): grain test on address_id -- WARN severity only, since the
+    # source schema is UNCONFIRMED live (see description); re-tighten to a hard
+    # failure once the real WFS schema is verified at first live ingestion.
     tests:
       - assert_not_empty:
           config:
+            severity: warn
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns:
+              - city_code
+              - address_id
+          config:
+            where: "address_id is not null"
             severity: warn
     columns:
       - name: city_code
@@ -803,9 +879,22 @@ models:
     meta:
       dbt_meta_owner: data-engineer
     # Data-presence gate (docs/lessons/local-first-data-presence.md):
+    # QA-3 (#178): grain test mirroring stg_berlin_mietspiegel's rent-table grain
+    # -- WARN severity since the source schema is UNCONFIRMED live (see description).
     tests:
       - assert_not_empty:
           config:
+            severity: warn
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns:
+              - edition_year
+              - city_code
+              - year_built_bucket
+              - size_bucket
+              - wohnlage
+          config:
+            where: "edition_year is not null"
             severity: warn
     columns:
       - name: edition_year
@@ -1208,6 +1297,8 @@ models:
       2017 vintage complete (92 rows); 2019/2021/2023/2024 pending transcription.
     meta:
       dbt_meta_owner: data-engineer
+    # QA-3 (#178): grain test -- one row per (vintage, year-built bucket, size
+    # bucket, wohnlage), mirroring the seed's own row-uniqueness contract.
     tests:
       - dbt_utils.expression_is_true:
           arguments:
@@ -1220,6 +1311,16 @@ models:
             expression: "rent_mid <= rent_high"
           config:
             severity: warn
+            where: "vintage is not null"
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns:
+              - vintage
+              - city_code
+              - year_built_bucket
+              - size_bucket
+              - wohnlage
+          config:
             where: "vintage is not null"
     columns:
       - name: vintage
