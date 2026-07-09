@@ -1384,6 +1384,75 @@ models:
           consumer (mirrors int_berlin_milieuschutz_plr_flag's
           milieuschutz_overlap_frac).
 
+  - name: int_hamburg_wohnlage_mietenspiegel
+    description: >
+      #215 [H-C6]: Mietenspiegel rent-VALUE join, Hamburg analogue of
+      int_price_rent_wohnlage_mietspiegel (Berlin D1). Follow-up to #203,
+      which deferred this join because of an unreconciled `ausstattung`
+      (fitting-standard) dimension -- investigated and resolved here: the
+      live 2025 edition carries exactly one ausstattung value ('mit Bad und
+      Sammelheizung'), Hamburg's own standard-equipment baseline, directly
+      analogous to Berlin's fixed "standard equipment" assumption (see model
+      SQL header for the full reconciliation). Fixed representative profile:
+      size_bucket='66m² bis unter 91m²', year_built_bucket='1968 bis 1977',
+      ausstattung='mit Bad und Sammelheizung' -- caveat: verified against a
+      SINGLE ingested edition (2025), unlike Berlin's cross-edition bucket
+      stability check; flagged on G2 as a limitation to revisit at the next
+      Hamburg Mietenspiegel edition. No vintage-matching join (Wohnlage side
+      has no vintage dimension) -- joins against MAX(edition_year). Not wired
+      into gentrification_index (disclosure-only, mirrors #203). geo-DS +
+      domain-expert sign-off: PASS (docs/epic-h/215-hc6-geo-signoff.md,
+      docs/epic-h/215-hc6-domain-signoff.md).
+      Graceful degradation: returns zero rows when int_hamburg_wohnlage_stadtteil
+      or stg_hamburg_mietenspiegel return zero rows.
+    meta:
+      dbt_meta_owner: data-engineer
+    data_tests:
+
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns:
+              - city_code
+              - area_code
+              - area_vintage
+          config:
+            where: "area_code is not null"
+      - dbt_utils.expression_is_true:
+          arguments:
+            expression: "pct_gute_wohnlage + pct_normale_wohnlage between 0.999 and 1.001"
+          config:
+            where: "not wohnlage_low_n"
+    columns:
+      - name: city_code
+        description: City identifier (ADR-0005), always 'HH'.
+        data_tests:
+
+          - not_null
+      - name: area_code
+        description: Stadtteil identifier (matches stg_hamburg_geo, area_level='subarea_l1').
+      - name: area_vintage
+        description: "Hamburg geometry vintage ('current' -- ADR-0014)."
+      - name: pct_gute_wohnlage
+        description: Share of addresses in 'Gute Wohnlage' tier per Stadtteil.
+      - name: pct_normale_wohnlage
+        description: Share of addresses in 'Normale Wohnlage' tier per Stadtteil.
+      - name: wohnlage_low_n
+        description: >
+          Inherited from int_hamburg_wohnlage_stadtteil: TRUE when
+          SUM(n_addresses) for the Stadtteil < 10. est_rent_* are NULL when
+          TRUE.
+      - name: est_rent_mid
+        description: >
+          Modelled net cold rent (EUR/sqm/month) at the fixed representative
+          dwelling profile -- NOT observed rent paid (Holm 2010
+          Bestandsmiete-lagging-bias). NULL when wohnlage_low_n = TRUE.
+      - name: est_rent_low
+        description: Lower-bound modelled rent estimate, same profile as est_rent_mid.
+      - name: est_rent_high
+        description: Upper-bound modelled rent estimate, same profile as est_rent_mid.
+      - name: mietenspiegel_edition_used
+        description: Mietenspiegel edition_year the rent values were sourced from.
+
   - name: int_hamburg_sozialmonitoring_index
     description: >
       #40 H1 methodology-gated integration slice: numeric-ordinal mapping of Hamburg
