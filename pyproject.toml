@@ -99,6 +99,10 @@ test  = "dbt test --project-dir transform --profiles-dir transform"
 # dependency -- pure Python, runs on all OSes, wired into the pre-commit push stage.
 test-py = "pytest tests/ -v"
 docs  = "dbt docs generate --project-dir transform --profiles-dir transform"
+# CV-3 (#188) / ADR-0020 §3: community-voting-board triage, run as a step in the devmode
+# PM loop's re-scan, or manually. Defaults to a dry run; pass -- --apply to actually post
+# comments / create issues. See ops/triage_community.py for the gh-api deny-list caveat.
+triage-community = "python ops/triage_community.py"
 # F2 (#34) / ADR-0012: export the published marts to parquet (data/serving/, gitignored).
 # Run after `poe build`. Future web build (G0/G1) consumes this parquet snapshot.
 export-serving = "python transform/export_serving_parquet.py"
