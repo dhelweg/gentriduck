@@ -999,3 +999,127 @@ models:
           ST_Transform(..., always_xy := true), mirroring int_osm_poi_plr's
           native-CRS<->WGS84 convention. Text (JSON-encoded), not parsed.
         data_type: varchar
+
+  - name: mart_poi_offering_advantage
+    description: >
+      #208 (split from #207, maintainer-requested): surfaces the already-computed,
+      already-signed-off POI Offering Advantage (OA) location-quotient values
+      (int_poi_offering_advantage, ADR-0017/0018) plus per-area POI density through
+      a mart, so the site can query them (Evidence pages bundle gentriduck_marts.*
+      only). Not methodology-bearing -- pure pass-through/join, no new
+      indicator/weight/normalization.
+
+      Grain: one row per (city_code, snapshot_year, area_code, area_vintage,
+      weight_variant, methodology_variant, poi_domain_h, poi_category_h,
+      poi_type_h) -- identical to int_poi_offering_advantage's own grain.
+      poi_count / poi_density_per_km2 are joined in from fct_poi_development at
+      the same taxonomy leaf; area_km2 from ST_Area in each city's native
+      (metres-based) CRS.
+    meta:
+      dbt_meta_owner: data-engineer
+    data_tests:
+
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns:
+              - city_code
+              - snapshot_year
+              - area_code
+              - area_vintage
+              - poi_domain_h
+              - poi_category_h
+              - poi_type_h
+              - weight_variant
+              - methodology_variant
+          config:
+            where: "area_code is not null"
+    columns:
+      - name: city_code
+        description: City identifier (ADR-0005).
+        data_tests:
+
+          - not_null
+      - name: snapshot_year
+        description: Calendar year of the OSM snapshot.
+        data_tests:
+
+          - not_null
+      - name: area_code
+        description: PLR area code (Berlin) / subarea_l2 code (Hamburg). Vintage-specific.
+        data_tests:
+
+          - not_null
+      - name: area_vintage
+        description: >
+          Spatial-join vintage. 'lor_pre2021'/'lor_2021' for Berlin LOR; 'current'
+          for Hamburg statistische Gebiete.
+        data_tests:
+
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ["lor_pre2021", "lor_2021", "current"]
+      - name: weight_variant
+        description: >
+          'standard' (hard point-in-polygon count) or 'gaussian_<bandwidth>'
+          (mass-conserving kernel-weighted count). See int_poi_offering_advantage
+          for the C-1 mass-conservation invariance this depends on.
+        data_tests:
+
+          - not_null
+      - name: methodology_variant
+        description: >
+          'faithful' (Run 1, thesis-fidelity, all types, no curation; ADR-0017 D3).
+          The causal-tier curated 'improved' variant (OA-B.1..B.4, #170-173) will
+          append rows here without a grain migration once built.
+        data_tests:
+
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ["faithful", "improved"]
+      - name: poi_domain_h
+        description: Harmonized POI domain (top level of the 3-level taxonomy).
+        data_tests:
+
+          - not_null
+      - name: poi_category_h
+        description: Harmonized POI category (mid level of the 3-level taxonomy).
+        data_tests:
+
+          - not_null
+      - name: poi_type_h
+        description: Harmonized POI type (finest level of the 3-level taxonomy).
+        data_tests:
+
+          - not_null
+      - name: oa_domain
+        description: >
+          Domain-level Offering Advantage (location quotient). 1.0 = represented
+          at the city-wide compositional rate; >1 over-represented; <1
+          under-represented. See int_poi_offering_advantage for the formula and
+          the D-1/D-2 interpretation guardrails (descriptive, not causal;
+          multi-signed bundle -- never sum across domains).
+      - name: oa_category
+        description: Category-level Offering Advantage, parent-relative to its domain.
+      - name: oa_type
+        description: Type-level Offering Advantage, parent-relative to its domain.
+      - name: poi_count
+        description: >
+          Count of POIs in this (city, year, area, vintage, domain, category,
+          type) cell, from fct_poi_development (unweighted hard count). NULL
+          for a small share (~5%) of 'gaussian_*' weight_variant rows: the
+          Gaussian kernel can spread weighted mass into a PLR/leaf with zero
+          hard-count POIs of that exact type (kernel smoothing crosses PLR
+          boundaries; fct_poi_development is point-in-polygon only), so that
+          leaf has no fct_poi_development row to join. area_km2 is unaffected
+          (area-keyed, not leaf-keyed).
+      - name: area_km2
+        description: >
+          Area of the (city_code, area_code, area_vintage) polygon in km^2,
+          computed via ST_Area in the city's native (metres-based) CRS
+          (dim_city.native_crs_epsg) before any WGS84 reprojection.
+      - name: poi_density_per_km2
+        description: >
+          poi_count / area_km2 for this taxonomy leaf (e.g. "Gastronomy POIs per
+          km2"). NULL when area_km2 is NULL or zero.
