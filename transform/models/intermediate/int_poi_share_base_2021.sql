@@ -35,6 +35,13 @@
 -- branch below should not be read as a general "any non-lor_pre2021 vintage never
 -- needs a crosswalk" rule.
 --
+-- GUARD (#161 / H-C4, resolved as documentation + tripwire, ADR-0005 addendum
+-- 2026-07-10): the enforced guard for this question is the `area_vintage`
+-- accepted_values test below in schema.yml -- a future city's new vintage tag will
+-- fail that test until someone decides (and, if needed, builds a crosswalk seed
+-- mirroring seed_lor_crosswalk_2006_to_2021) rather than reflexively widening the
+-- list. See docs/adr/0005-city-agnostic-data-model.md for the full checklist.
+--
 -- Derived columns:
 -- - berlin_total_poi_count: city-wide total POI count per (city, year, vintage); does
 -- not change when we remap Berlin's PLRs (same city, same year, same POIs), so we
