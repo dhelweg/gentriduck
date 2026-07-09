@@ -63,10 +63,11 @@ select
     status_index,
     dynamism_index,
     period_yyyymm,
-    -- Drill-down click-through target (#133 G1d); area-detail only covers PLR-level areas
-    -- (fct_gentrification_change has no area_level split), so only the PLR branch below
-    -- actually wires this up as a link.
-    '/area-detail?area=' || area_code as link
+    -- Drill-down click-through target (#133 G1d, exact-code fix #150): only wire the link for
+    -- `live_data`, since /area/[code] queries fct_gentrification_change etc. on lor_2021 (current,
+    -- 542-PLR) area codes -- the `standard` (2018 thesis, 447-PLR pre-2021) variant's codes don't
+    -- resolve there. Only the PLR branch below actually renders this as a link.
+    case when '${inputs.variant.value}' = 'live_data' then '/area/' || area_code end as link
 from gentriduck_marts.gentrification_index
 where variant = '${inputs.variant.value}'
   and area_level = '${inputs.area_level.value}'
@@ -97,7 +98,18 @@ where variant = '${inputs.variant.value}'
     link="link"
 />
 
-Click a Planungsraum on the map to open its [detailed breakdown](/area-detail).
+{#if inputs.variant.value === 'live_data'}
+
+Click a Planungsraum on the map to open its exact neighbourhood page.
+
+{/if}
+{#if inputs.variant.value !== 'live_data'}
+
+Click-through is only available for "Live data" — the 2018 thesis reproduction uses Berlin's
+pre-2021 area codes, which the per-area page doesn't cover. Switch "Data" above, or browse by
+district on the [area detail page](/area-detail).
+
+{/if}
 
 {:else}
 
@@ -146,6 +158,7 @@ order by dynamism_index desc
 
 Want to see how one specific area has changed over the years? Use the
 [time series page](/time-series). Clicking a Planungsraum (PLR) on the map above opens its
-[detailed breakdown](/area-detail) pre-selected on that area
-([#133](https://github.com/dhelweg/gentriduck/issues/133)); that detail page only covers
-Planungsräume, so the Bezirksregion map above is view-only for now.
+exact neighbourhood page ([#133](https://github.com/dhelweg/gentriduck/issues/133),
+[#150](https://github.com/dhelweg/gentriduck/issues/150)) when viewing "Live data"; the
+Bezirksregion map above is view-only for now, and browsing by district still works on the
+[area detail page](/area-detail).
