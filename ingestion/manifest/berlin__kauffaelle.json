@@ -1,0 +1,29 @@
+{
+  "source_id": "berlin__kauffaelle",
+  "source_class": "pinned",
+  "city": "berlin",
+  "upstream": {
+    "url": "https://gdi.berlin.de/services/wfs/kauffaelle_{year}",
+    "vintage": "2024,2025",
+    "retrieved_at": "2026-07-09T16:06:22Z"
+  },
+  "outputs": [
+    {
+      "path": "data/raw/berlin/price_rent/kauffaelle_2024.parquet",
+      "row_count": 20012,
+      "schema_fingerprint": "sha256:805ad2944f354dc6e8f10f31cdf6ee8fc294c0406dc1ce2f16de5be3a014ca95",
+      "content_hash": "sha256:e0f4c4b5e1fd1a32aa89bf02d3a1a5ae61c6626ae79dd0e94133b78fa197d43f"
+    },
+    {
+      "path": "data/raw/berlin/price_rent/kauffaelle_2025.parquet",
+      "row_count": 21928,
+      "schema_fingerprint": "sha256:805ad2944f354dc6e8f10f31cdf6ee8fc294c0406dc1ce2f16de5be3a014ca95",
+      "content_hash": "sha256:723cf53fe208e33534fd82c0ffa9adbebbb4f7c233b1cf41e6d57c015d504757"
+    }
+  ],
+  "ingest_script": {
+    "module": "ingestion.berlin.price_rent.ingest_kauffaelle",
+    "git_sha": "f879e422e41c1a0d457bff01c41b6eb9baa08c94"
+  },
+  "manifest_schema_version": 1
+}
