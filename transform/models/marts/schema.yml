@@ -70,13 +70,17 @@ models:
         description: >
           Index variant. 'standard' uses non-distance-weighted POI features;
           'distance_weighted' uses POI inverse-distance weighting;
-          'live_data' uses the C4 time-series pipeline (OSM + EWR, all years).
+          'live_data' uses the C4 time-series pipeline (OSM + EWR, all years);
+          'improved' (OA-B.3 #172) carries the causality-first tier-weighted OA
+          predictor (int_poi_status_dynamism_improved), Berlin lor_2021 rows
+          only -- a separate, never-blended methodology_variant from
+          'live_data' (ADR-0017 D3/D4).
         data_type: varchar
         tests:
           - not_null
           - accepted_values:
               arguments:
-                values: ["standard", "distance_weighted", "live_data"]
+                values: ["standard", "distance_weighted", "live_data", "improved"]
       - name: population
         description: Area population (Einwohner) at the reporting period.
         data_type: double
@@ -86,6 +90,12 @@ models:
           (cast to DOUBLE: 1.0=hoch/best … 4.0=sehr_niedrig/worst; NULL=uninhabited PLR).
           For thesis variants (standard/distance_weighted): z-score of POI-based status features
           (original 2018 definition unchanged).
+          For 'improved' (OA-B.3 #172): status_score_improved, a z-score of the
+          tier-weighted amenity-OA composite (NOT the MSS ordinal -- this
+          variant swaps in the curated POI PREDICTOR, the D1 social-status
+          OUTCOME is not recomputed here; see int_gentrification_ts /
+          int_poi_status_dynamism_improved for the full construct). NOT
+          comparable in scale to the live_data ordinal.
           POLARITY of live_data values: INVERSE numeric vs 2018 thesis status_summe; same
           deprivation gradient. Cross-variant comparison requires explicit D1 flip (index §5).
         data_type: double
@@ -97,6 +107,9 @@ models:
           'active-gentrification', 'consolidation-pressure', 'improving-vulnerable'.
           NULL for uninhabited PLRs (is_uninhabited=true).
           For thesis variants: original projected status class (three values; unchanged).
+          For 'improved' (OA-B.3 #172): always NULL -- this variant carries a
+          continuous predictor score (status_index above), not an MSS-derived
+          typology stage (no outcome recomputation here).
           PLR-level aggregate; not an individual/building-level statement (G-2 guardrail;
           ecological-inference disclaimer: index-definition.md §1.2).
         data_type: varchar
@@ -119,6 +132,10 @@ models:
           R-A1 update (#64): for live_data variant, now carries D2 MSS Dynamik ordinal
           (cast to DOUBLE: 1.0=positiv/improving … 3.0=negativ/worsening; NULL=uninhabited PLR).
           For thesis variants (standard/distance_weighted): z-score of POI-based dynamism features.
+          For 'improved' (OA-B.3 #172): dynamism_score_improved, a z-score of the
+          tier-weighted amenity-OA composite's YoY share change (curated POI
+          PREDICTOR only, not a recomputed D2 outcome). NOT comparable in scale
+          to the live_data ordinal.
           D2 is already vulnerability-positive in numeric order (3=worsening=most vulnerable).
         data_type: double
       - name: dynamism_class
