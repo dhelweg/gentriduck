@@ -2374,6 +2374,192 @@ models:
           and estimated rent for low-N PLR-vintages. Never zero-filled (geo condition 7).
           Low-N PLRs largely coincide with the BRW-NULL/uninhabited set — QA cross-check.
 
+  - name: int_price_rent_wohnlage_mietspiegel
+    description: >
+      QA-6b (#204): extracted from mart_price_rent_dimension.sql -- merges Wohnlage
+      tier composition (Signal 2) with the modelled Mietspiegel rent estimate at a
+      fixed representative dwelling profile (Signal 3; 60-90 sqm, 1950-1964 construction
+      year -- geo condition 9). Pure mechanical extraction, no logic change; see
+      mart_price_rent_dimension.sql header for the full R-C2 citations and geo/domain
+      sign-off references (docs/epic-d/d3-price-rent-geo-signoff.md,
+      d3-price-rent-domain-signoff.md).
+
+      Vintage matching (geo condition 8): joins each Wohnlage vintage (2017, 2019,
+      2021, 2023, 2026) to the nearest Mietspiegel vintage <= the Wohnlage year (all
+      current Wohnlage vintages have an exact Mietspiegel match).
+
+      wohnlage_score and est_rent_* are NULL when wohnlage_low_n = TRUE (< 10 address
+      points; geo condition 7).
+
+      Source: int_berlin_wohnlage_plr + stg_berlin_mietspiegel.
+    meta:
+      dbt_meta_owner: data-engineer
+    data_tests:
+
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns:
+              - city_code
+              - snapshot_year
+              - area_code
+              - area_vintage
+          config:
+            where: "area_code is not null"
+    columns:
+      - name: city_code
+        description: City identifier (ADR-0005), normalised to 'BER'.
+        data_tests:
+
+          - not_null:
+              config:
+                where: "area_code is not null"
+      - name: snapshot_year
+        description: Wohnlage WFS edition year (2017, 2019, 2021, 2023, 2026).
+        data_tests:
+
+          - not_null:
+              config:
+                where: "area_code is not null"
+      - name: area_code
+        description: PLR area code (vintage-specific scheme).
+        data_tests:
+
+          - not_null
+      - name: area_vintage
+        description: LOR geometry vintage ('lor_pre2021' or 'lor_2021').
+        data_tests:
+
+          - not_null:
+              config:
+                where: "area_code is not null"
+          - accepted_values:
+              arguments:
+                values: ["lor_pre2021", "lor_2021"]
+              config:
+                where: "area_code is not null"
+      - name: pct_einfach
+        description: Share of Wohnlage addresses in the 'einfach' (simple) tier for this PLR-vintage.
+      - name: pct_mittel
+        description: Share of Wohnlage addresses in the 'mittel' (medium) tier for this PLR-vintage.
+      - name: pct_gut
+        description: Share of Wohnlage addresses in the 'gut' (good) tier for this PLR-vintage.
+      - name: total_n_addresses
+        description: Total Wohnlage address points across all tiers for this PLR-vintage.
+      - name: wohnlage_low_n
+        description: >
+          Flag: TRUE when total_n_addresses < 10 (unstable composition). wohnlage_score
+          and est_rent_* are NULL when this is TRUE (geo condition 7).
+      - name: wohnlage_score
+        description: >
+          Ordinal-mean approximation: pct_einfach*1 + pct_mittel*2 + pct_gut*3.
+          Tiers are ordered but NOT equidistant -- this is an approximation, not an
+          interval measure. NULL when wohnlage_low_n = TRUE.
+      - name: est_rent_mid
+        description: >
+          Modelled/estimated net cold rent (EUR) at the fixed reference dwelling
+          profile (60-90 sqm, 1950-1964 construction year) -- NOT observed rent paid
+          (domain D6). Bestandsmiete/ortsübliche Vergleichsmiete basis (Holm 2010):
+          lagging, conservative proxy (domain D7). NULL when wohnlage_low_n = TRUE.
+      - name: est_rent_low
+        description: Low estimate of the modelled rent range; same profile/caveats as est_rent_mid.
+      - name: est_rent_high
+        description: High estimate of the modelled rent range; same profile/caveats as est_rent_mid.
+      - name: mietspiegel_vintage_used
+        description: >
+          The Mietspiegel vintage year actually matched to this Wohnlage vintage
+          (nearest-<= rule, geo condition 8) -- audit trail for the vintage match.
+
+  - name: int_price_rent_brw_wohnlage_combined
+    description: >
+      QA-6b (#204): extracted from mart_price_rent_dimension.sql -- aligns the BRW
+      land-value series (Signal 1, yearly 2017-2024, from int_berlin_brw_plr) with
+      the Wohnlage+modelled-rent series (Signals 2+3, from
+      int_price_rent_wohnlage_mietspiegel, biennial 2017/2019/2021/2023/2026) via
+      nearest-<= vintage matching, then UNIONs in Wohnlage-only rows for vintages with
+      no BRW companion (e.g. 2026). Pure mechanical extraction, no logic change; see
+      mart_price_rent_dimension.sql header for the full R-C2 citations and geo/domain
+      sign-off references.
+
+      Output grain: one row per (city_code, snapshot_year, area_code, area_vintage) --
+      this is the mart's final published grain; mart_price_rent_dimension.sql adds
+      only the winsorized normalization (z-score/rank/percentile) on top.
+
+      Source: int_berlin_brw_plr + int_price_rent_wohnlage_mietspiegel.
+    meta:
+      dbt_meta_owner: data-engineer
+    data_tests:
+
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns:
+              - city_code
+              - snapshot_year
+              - area_code
+              - area_vintage
+          config:
+            where: "area_code is not null"
+    columns:
+      - name: city_code
+        description: City identifier (ADR-0005), normalised to 'BER'.
+        data_tests:
+
+          - not_null:
+              config:
+                where: "area_code is not null"
+      - name: snapshot_year
+        description: >
+          BRW reference year (2017-2024) when a BRW row exists; otherwise the
+          Wohnlage-only vintage year (e.g. 2026).
+        data_tests:
+
+          - not_null:
+              config:
+                where: "area_code is not null"
+      - name: area_code
+        description: PLR area code (lor_2021 scheme -- see int_berlin_brw_plr header).
+        data_tests:
+
+          - not_null
+      - name: area_vintage
+        description: LOR geometry vintage. Always 'lor_2021' (inherited from int_berlin_brw_plr).
+        data_tests:
+
+          - not_null:
+              config:
+                where: "area_code is not null"
+      - name: brw_weighted_avg_eur_m2
+        description: >
+          Area-weighted mean Bodenrichtwert (EUR/m2); see int_berlin_brw_plr. NULL for
+          Wohnlage-only rows (no BRW companion for that year).
+      - name: n_brw_zones
+        description: Count of contributing BRW zones; see int_berlin_brw_plr. NULL for Wohnlage-only rows.
+      - name: brw_residential_coverage_frac
+        description: Residential BRW coverage fraction; see int_berlin_brw_plr. NULL for Wohnlage-only rows.
+      - name: pct_einfach
+        description: Wohnlage 'einfach' tier share, matched via nearest-<= vintage; see int_price_rent_wohnlage_mietspiegel.
+      - name: pct_mittel
+        description: Wohnlage 'mittel' tier share, matched via nearest-<= vintage; see int_price_rent_wohnlage_mietspiegel.
+      - name: pct_gut
+        description: Wohnlage 'gut' tier share, matched via nearest-<= vintage; see int_price_rent_wohnlage_mietspiegel.
+      - name: total_n_addresses
+        description: Total Wohnlage address points for the matched vintage; see int_price_rent_wohnlage_mietspiegel.
+      - name: wohnlage_low_n
+        description: Low-N flag for the matched Wohnlage vintage; see int_price_rent_wohnlage_mietspiegel.
+      - name: wohnlage_score
+        description: Ordinal-mean Wohnlage score for the matched vintage; see int_price_rent_wohnlage_mietspiegel.
+      - name: est_rent_mid
+        description: Modelled rent estimate (mid) for the matched vintage; see int_price_rent_wohnlage_mietspiegel.
+      - name: est_rent_low
+        description: Modelled rent estimate (low) for the matched vintage; see int_price_rent_wohnlage_mietspiegel.
+      - name: est_rent_high
+        description: Modelled rent estimate (high) for the matched vintage; see int_price_rent_wohnlage_mietspiegel.
+      - name: mietspiegel_vintage_used
+        description: Mietspiegel vintage matched within int_price_rent_wohnlage_mietspiegel; passthrough audit trail.
+      - name: wohnlage_vintage_matched
+        description: >
+          The Wohnlage vintage year matched to this BRW snapshot_year (nearest-<= rule).
+          For Wohnlage-only rows, equals snapshot_year itself.
+
   - name: int_osm_poi_plr_weighted
     description: >
       A6 (#69): Distance-weighted PLR POI counts — Gaussian kernel variant.
