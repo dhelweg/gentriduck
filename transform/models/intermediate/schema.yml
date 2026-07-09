@@ -1770,6 +1770,14 @@ models:
               config:
                 where: "area_code is not null"
           - accepted_values:
+              # GUARD (#161 / H-C4, ADR-0005 addendum 2026-07-10): this list is the
+              # enforced tripwire for the city-onboarding checklist. A red build here
+              # means a new vintage tag showed up -- STOP and decide whether the new
+              # city needs its own crosswalk seed (mirroring
+              # seed_lor_crosswalk_2006_to_2021) before widening this list; passthrough
+              # is only exact for a single-vintage city (see the model's SQL header and
+              # docs/epic-h/125-multi-city-lineage-geo-signoff.md Condition C4). Do not
+              # widen this list as a reflexive fix without that decision.
               arguments:
                 values: ["lor_2021", "current"]
               config:
