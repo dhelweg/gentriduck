@@ -151,6 +151,14 @@ order by area_count desc
     yAxisTitle="Stage"
 />
 
+**What to notice:** most of the city sits in `stable-established` — Berlin is not one giant
+gentrification wave. The neighbourhoods to watch are the smaller `pioneer-signal` and
+`active-gentrification` bars: those are areas where status is currently deprived *and* the
+official trend is moving fast, the two-part signature this project's typology is built to catch.
+`improving-vulnerable` is deliberately ambiguous (see the [methodology page](/methodology)) —
+rising status in an area that started out deprived reads as good news and displacement risk at
+once.
+
 ### Highest-pressure neighbourhoods
 
 The ten planning areas currently showing the strongest gentrification-pressure signal (a
@@ -175,6 +183,40 @@ limit 10
     <Column id=status_class title="Stage / classification"/>
     <Column id=dynamism_class title="Pressure trend"/>
 </DataTable>
+
+**What to notice:** this table re-sorts itself every time the underlying MSS/EWR editions update —
+it is not a fixed watch-list, it is whatever the latest official data currently flags. Areas that
+combine a deprived `status_class` with a fast `dynamism_class` trend are the ones under the most
+pressure right now; areas already `stable-established` rarely appear here even with a strong trend,
+because they started from a position with less room to fall.
+
+### Does this agree with what we already know?
+
+Before trusting a headline like the one above, it is worth asking: does this index actually
+recognise the Berlin neighbourhoods that housing researchers and the Senate's own monitoring
+already agree are under gentrification pressure — or coasting along as stable, affluent areas?
+The project runs a dedicated back-test against both kinds of independently sourced ground truth
+(`docs/methodology/backtest.md`), and re-runs it whenever the index changes:
+
+- **8 literature-documented gentrification hotspots** — Neukölln's Rollberg, Wartheplatz and
+  Silbersteinstraße (the Reuterkiez/Schillerkiez area), Mitte's Koloniestraße and Soldiner Straße
+  (Wedding/Gesundbrunnen), and Friedrichshain-Kreuzberg's Wassertorplatz and Prinzenstraße — drawn
+  from Döring & Ulbricht (2016), Holm & Schulz (2016), and official MSS 2023 status classes.
+  **All 8 of 8 (100% recall)** land in the index's top decile of gentrification-pressure status,
+  well above the 50% pass bar.
+- **6 stable, affluent outer-city PLRs** — Alt-Gatow, Wannsee, Nikolassee, Dahlem, and similar
+  areas — used as a negative control. **All 6 of 6 (100% recall)** land in the bottom decile, where
+  a stable area should sit.
+- A third, independent cross-check compares the index's own status column against the raw MSS
+  ordinal it is built from (Spearman rho = 1.00): the pipeline is not silently drifting from the
+  official source it claims to encode.
+
+In short: run the index today and it puts the Reuterkiez/Schillerkiez area's well-documented
+gentrification hotspots — plus Wedding and Kreuzberg PLRs the housing-research literature and the
+Senate's own monitoring flag the same way — exactly where those independent sources say they
+belong, and it does not mistake Wannsee for a hotspot. That is the credibility check behind the
+headline numbers on this page; the full methodology, thresholds, and PLR-by-PLR detail are in
+[`docs/methodology/backtest.md`](https://github.com/dhelweg/gentriduck/blob/main/docs/methodology/backtest.md).
 
 ---
 
