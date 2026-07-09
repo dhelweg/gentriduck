@@ -9,9 +9,9 @@ sidebar_position: 23
   workflow" + "tooling philosophy" sections, CLAUDE.md's methodology-gate rules, ADR-0011) for a
   public audience -- no new indicator, weight, method, or data source is introduced here, so no
   methodology gate. Pairs with /how-its-built (data-engineer audience) and productionizes the
-  "🤖 You design AI systems" door on the home page. The pipeline diagram here is a text/markdown
-  restatement of the same flow already sketched in pages/index.md's "flow" blockquote; a fully
-  designed visual version is tracked separately as #151 (visual identity).
+  "🤖 You design AI systems" door on the home page. The pipeline diagram below reuses the same
+  `.agent-pipeline` visual component introduced on the home page (#151 visual identity) for
+  consistent theming across pages.
 -->
 
 # How it's organised — the multi-agent workflow
@@ -37,17 +37,55 @@ Each agent has one narrow job and works from a shared backlog on a public GitHub
 
 ## The pipeline that ships a change
 
-> **project manager** picks the next task →
-> **coder** (data-engineer / web-engineer) implements ↔ **independent reviewer** checks
-> (changes requested loop back to the coder) →
-> *only for methodology-bearing changes:* **geo-data-scientist** AND
-> **gentrification-domain-expert** each record a documented "PASS" verdict — not advisory,
-> enforced →
-> **project manager** self-integrates the reviewed, gated work onto `develop`
-> (an internal integration branch — not yet public) →
-> once a week, a **human-reviewed pull request** moves `develop` → `main`; the **human
-> maintainer merges it by hand** — the only way `main` changes →
-> the published site you're reading rebuilds from `main`
+<div class="agent-pipeline">
+  <div class="pipe-step"><span class="pipe-icon">🗂️</span><b>Project manager</b><small>picks the next task</small></div>
+  <div class="pipe-arrow">→</div>
+  <div class="pipe-step"><span class="pipe-icon">🛠️</span><b>Coder</b><small>data-engineer / web-engineer implements</small></div>
+  <div class="pipe-arrow">↔</div>
+  <div class="pipe-step"><span class="pipe-icon">🔍</span><b>Reviewer</b><small>checks — changes requested loop back</small></div>
+  <div class="pipe-arrow">→</div>
+  <div class="pipe-step pipe-gate"><span class="pipe-icon">⚖️</span><b>Dual methodology gate</b><small>geo-data-scientist &amp; domain expert — both PASS, only for methodology-bearing changes</small></div>
+  <div class="pipe-arrow">→</div>
+  <div class="pipe-step"><span class="pipe-icon">🔀</span><b>PM self-integrates</b><small>onto <code>develop</code> (internal, not yet public)</small></div>
+  <div class="pipe-arrow">→</div>
+  <div class="pipe-step pipe-human"><span class="pipe-icon">🧑</span><b>Human maintainer</b><small>weekly reviewed PR merges <code>develop</code> → <code>main</code>, by hand</small></div>
+</div>
+
+<style>
+.agent-pipeline {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4rem;
+  margin: 1.1rem 0 1.4rem;
+  padding: 1rem;
+  border-radius: 0.75rem;
+  background: linear-gradient(135deg, rgba(37, 99, 235, 0.06), rgba(194, 65, 12, 0.06));
+  border: 1px solid rgba(37, 99, 235, 0.16);
+}
+.pipe-step {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  min-width: 7rem;
+  padding: 0.55rem 0.6rem;
+  border-radius: 0.6rem;
+  background: rgba(127, 127, 127, 0.06);
+  border: 1px solid rgba(127, 127, 127, 0.18);
+  font-size: 0.8rem;
+}
+.pipe-step b { font-size: 0.82rem; margin-top: 0.2rem; }
+.pipe-step small { opacity: 0.75; font-size: 0.68rem; margin-top: 0.15rem; line-height: 1.25; }
+.pipe-icon { font-size: 1.3rem; line-height: 1; }
+.pipe-gate { border-color: #c2410c; background: rgba(194, 65, 12, 0.08); }
+.pipe-human { border-color: #16a34a; background: rgba(22, 163, 74, 0.1); }
+.pipe-arrow { font-size: 1.1rem; opacity: 0.55; padding: 0 0.05rem; }
+@media (max-width: 640px) {
+  .agent-pipeline { flex-direction: column; align-items: stretch; }
+  .pipe-arrow { transform: rotate(90deg); align-self: center; }
+}
+</style>
 
 That last step is the point: agents self-integrate finished work onto an internal branch
 continuously, but the **published** site only ever advances through a pull request a human

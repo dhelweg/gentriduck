@@ -3,28 +3,29 @@ title: Gentriduck — Berlin Gentrification Index
 ---
 
 <!--
-  PROTOTYPE landing redesign (narrative iteration N1/N3) — foregrounds the "how it's built"
+  Landing redesign (narrative iteration N1/N3/N5) — foregrounds the "how it's built"
   (AI-architecture) story per maintainer direction, then the finding, then routes to three
-  audiences. Preserves the working SQL blocks from the previous index. The agent-workflow "flow"
-  below is intentionally plain markdown; turning it into a real diagram + audience cards is the
-  web-engineer's polish step. Nothing here changes any indicator/weight/method (no methodology gate).
+  audiences. Preserves the working SQL blocks from the previous index. #151 (visual identity)
+  turned the agent-workflow flow into the `.agent-pipeline` diagram, "Pick your path" into the
+  `.audience-cards` grid, and added the `.hero` treatment below — nothing here changes any
+  indicator/weight/method (no methodology gate).
 -->
 
-# Gentriduck
-
-**A live, public statistics project tracking gentrification pressure across Berlin's
-neighbourhoods — reviving a 2018 master's thesis on a free, open, local-first data stack, and
-built and maintained by a supervised team of AI agents.**
-
-Everything here runs on open, official data — Berlin's own social-monitoring reports, the
-population register, OpenStreetMap, and official land-value/rent references — and every figure
-describes a small area of a few thousand residents, never a person, household, or building.
-
-<div style="display:flex; gap:0.75rem; flex-wrap:wrap; margin:0.5rem 0 1.5rem 0;">
-  <a href="/how-its-organised"><b>How it's organised →</b></a>
-  <a href="#the-finding"><b>What we found →</b></a>
-  <a href="/methodology"><b>How we measure it →</b></a>
+<div class="hero">
+  <div class="hero-eyebrow">A 2018 Berlin master's thesis, revived — built by a supervised team of AI agents</div>
+  <h1>Gentriduck</h1>
+  <p class="hero-lede">A live, public statistics project tracking gentrification pressure across
+  Berlin's neighbourhoods, on a free, open, local-first data stack. Everything here runs on open,
+  official data — Berlin's own social-monitoring reports, the population register, OpenStreetMap,
+  and official land-value/rent references — and every figure describes a small area of a few
+  thousand residents, never a person, household, or building.</p>
+  <div class="hero-links">
+    <a href="/how-its-organised" class="primary">How it's organised →</a>
+    <a href="#the-finding" class="secondary">What we found →</a>
+    <a href="/methodology" class="secondary">How we measure it →</a>
+  </div>
 </div>
+
 
 ---
 
@@ -37,11 +38,20 @@ Nobody grades their own homework, and nothing sensitive ships without a person l
 
 The work flows through a deliberately adversarial pipeline:
 
-> **Project-manager agent** picks the next task →
-> **data-engineer** builds it ↔ an independent **reviewer** checks it →
-> a **dual methodology gate** (a geo-data-scientist *and* a gentrification-domain-expert) must
-> *both* record a `PASS` on anything touching the index →
-> the **human maintainer** merges to the live site by hand, once a week.
+<div class="agent-pipeline">
+  <div class="pipe-step"><span class="pipe-icon">🗂️</span><b>Project manager</b><small>picks the next task</small></div>
+  <div class="pipe-arrow">→</div>
+  <div class="pipe-step"><span class="pipe-icon">🛠️</span><b>Data engineer</b><small>builds it</small></div>
+  <div class="pipe-arrow">↔</div>
+  <div class="pipe-step"><span class="pipe-icon">🔍</span><b>Reviewer</b><small>independently checks</small></div>
+  <div class="pipe-arrow">→</div>
+  <div class="pipe-step pipe-gate"><span class="pipe-icon">⚖️</span><b>Dual methodology gate</b><small>geo-data-scientist &amp; domain expert — both must PASS</small></div>
+  <div class="pipe-arrow">→</div>
+  <div class="pipe-step"><span class="pipe-icon">🔀</span><b>PM self-integrates</b><small>onto <code>develop</code></small></div>
+  <div class="pipe-arrow">→</div>
+  <div class="pipe-step pipe-human"><span class="pipe-icon">🧑</span><b>Human maintainer</b><small>merges to the live site — once a week, by hand</small></div>
+</div>
+
 
 That last step is the point: the agents self-integrate onto an internal branch, but the published
 site only ever advances through a **weekly pull request a human reviews and merges**. It is
@@ -172,25 +182,36 @@ limit 10
 
 Gentriduck is three projects in one. Start wherever you fit:
 
-**🏙 You study cities & gentrification** — start with [the methodology & data sources](/methodology)
-for what "gentrification pressure" means here and the theory behind the six-stage typology, see
-[the 2018 thesis re-checked](/thesis-recheck) for the hypothesis-by-hypothesis reproduction, then
-the [maps](/maps) and [area detail](/area-detail) to explore specific neighbourhoods, or the
-[time-series view](/time-series) for how the city has moved over the years.
+<div class="audience-cards">
+  <a href="/methodology" class="audience-card">
+    <div class="audience-icon">🏙️</div>
+    <h3>You study cities &amp; gentrification</h3>
+    <p>What "gentrification pressure" means here and the theory behind the six-stage typology, the
+    <a href="/thesis-recheck">2018 thesis re-checked</a> hypothesis by hypothesis, then the
+    <a href="/maps">maps</a>, <a href="/area-detail">area detail</a>, and
+    <a href="/time-series">time series</a>.</p>
+    <span class="audience-cta">Start with methodology →</span>
+  </a>
+  <a href="/how-its-built" class="audience-card">
+    <div class="audience-icon">⚙️</div>
+    <h3>You build data pipelines</h3>
+    <p>dbt + DuckDB, local-first, rebuilt from open sources with a full OpenStreetMap history back
+    to 2008. The stack, the data sources, and a worked completeness-bias correction; every model,
+    seed, and test lives in the
+    <a href="https://github.com/dhelweg/gentriduck">GitHub repository</a>.</p>
+    <span class="audience-cta">Start with how it's built →</span>
+  </a>
+  <a href="/how-its-organised" class="audience-card">
+    <div class="audience-icon">🤖</div>
+    <h3>You design AI systems</h3>
+    <p>A supervised multi-agent workflow with an enforced, adversarial methodology gate. The agent
+    team, the pipeline that ships a change, then the
+    <a href="https://github.com/dhelweg/gentriduck/tree/main/.claude/agents">agent definitions</a>
+    and <a href="https://github.com/dhelweg/gentriduck/tree/main/docs/adr">ADRs</a>.</p>
+    <span class="audience-cta">Start with how it's organised →</span>
+  </a>
+</div>
 
-**⚙️ You build data pipelines** — the whole thing is dbt + DuckDB, local-first, rebuilt from open
-sources with a full OpenStreetMap history back to 2008. Start with
-[how it's built](/how-its-built) for the stack, the data sources, and a worked example of the
-completeness-bias correction; the
-[GitHub repository](https://github.com/dhelweg/gentriduck) has every model, seed, and test.
-
-**🤖 You design AI systems** — this site is built by a supervised multi-agent workflow with an
-enforced, adversarial methodology gate. Start with
-[how it's organised](/how-its-organised) for the agent team and the pipeline that ships a change,
-then the
-[agent definitions](https://github.com/dhelweg/gentriduck/tree/main/.claude/agents) and
-[architecture decision records](https://github.com/dhelweg/gentriduck/tree/main/docs/adr) in the
-repository.
 
 <Alert status="info">
   <b>How to read the numbers on this site:</b> a <b>negative</b> trend means an area's official
@@ -206,3 +227,97 @@ repository.
 
 <sub>[Home](/) · [Methodology & data sources](/methodology) · [About this project](/about) · [GitHub repository](https://github.com/dhelweg/gentriduck)</sub>
 
+<style>
+.hero {
+  margin: -0.5rem -0.25rem 1.75rem;
+  padding: 2.1rem 1.6rem;
+  border-radius: 1rem;
+  background:
+    radial-gradient(circle at 12% 18%, rgba(37, 99, 235, 0.18), transparent 55%),
+    radial-gradient(circle at 88% 82%, rgba(194, 65, 12, 0.15), transparent 55%),
+    rgba(127, 127, 127, 0.04);
+  border: 1px solid rgba(127, 127, 127, 0.16);
+}
+.hero-eyebrow {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  font-weight: 700;
+  color: #2563eb;
+  margin-bottom: 0.5rem;
+}
+.hero h1 { margin: 0 0 0.65rem 0; font-size: 2.5rem; line-height: 1.1; }
+.hero-lede { max-width: 46rem; font-size: 1.02rem; line-height: 1.55; opacity: 0.92; margin: 0 0 1.1rem 0; }
+.hero-links a {
+  display: inline-block;
+  margin: 0 0.55rem 0.4rem 0;
+  padding: 0.45rem 0.85rem;
+  border-radius: 0.5rem;
+  text-decoration: none !important;
+  font-weight: 600;
+  font-size: 0.85rem;
+}
+.hero-links a.primary { background: #2563eb; color: #fff !important; }
+.hero-links a.secondary { background: transparent; border: 1px solid #2563eb; color: #2563eb !important; }
+.hero-links a.primary:hover { background: #1d4ed8; }
+.hero-links a.secondary:hover { background: rgba(37, 99, 235, 0.08); }
+.agent-pipeline {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4rem;
+  margin: 1.1rem 0 1.4rem;
+  padding: 1rem;
+  border-radius: 0.75rem;
+  background: linear-gradient(135deg, rgba(37, 99, 235, 0.06), rgba(194, 65, 12, 0.06));
+  border: 1px solid rgba(37, 99, 235, 0.16);
+}
+.pipe-step {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  min-width: 7rem;
+  padding: 0.55rem 0.6rem;
+  border-radius: 0.6rem;
+  background: rgba(127, 127, 127, 0.06);
+  border: 1px solid rgba(127, 127, 127, 0.18);
+  font-size: 0.8rem;
+}
+.pipe-step b { font-size: 0.82rem; margin-top: 0.2rem; }
+.pipe-step small { opacity: 0.75; font-size: 0.68rem; margin-top: 0.15rem; line-height: 1.25; }
+.pipe-icon { font-size: 1.3rem; line-height: 1; }
+.pipe-gate { border-color: #c2410c; background: rgba(194, 65, 12, 0.08); }
+.pipe-human { border-color: #16a34a; background: rgba(22, 163, 74, 0.1); }
+.pipe-arrow { font-size: 1.1rem; opacity: 0.55; padding: 0 0.05rem; }
+@media (max-width: 640px) {
+  .agent-pipeline { flex-direction: column; align-items: stretch; }
+  .pipe-arrow { transform: rotate(90deg); align-self: center; }
+}
+.audience-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+  gap: 1rem;
+  margin: 1.1rem 0 1.5rem;
+}
+.audience-card {
+  display: block;
+  text-decoration: none !important;
+  color: inherit;
+  padding: 1.15rem 1.15rem 1rem;
+  border-radius: 0.75rem;
+  border: 1px solid rgba(127, 127, 127, 0.25);
+  background: rgba(127, 127, 127, 0.04);
+  transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
+}
+.audience-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
+  border-color: #2563eb;
+}
+.audience-icon { font-size: 1.7rem; margin-bottom: 0.4rem; }
+.audience-card h3 { margin: 0 0 0.4rem 0; font-size: 1rem; }
+.audience-card p { margin: 0 0 0.7rem 0; font-size: 0.85rem; opacity: 0.85; line-height: 1.4; }
+.audience-card p a { text-decoration: underline; }
+.audience-cta { font-size: 0.82rem; font-weight: 700; color: #2563eb; }
+</style>
