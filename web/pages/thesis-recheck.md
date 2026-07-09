@@ -141,6 +141,7 @@ For the **current** picture the six hypotheses take a back seat to the live typo
 - [Epic B milestone write-up](https://github.com/dhelweg/gentriduck/blob/main/docs/epic-g/O4-milestone-B-narrative.md) — the full signed-off findings this page summarises
 - [E1 regression findings (OA-A.4, Run 1)](https://github.com/dhelweg/gentriduck/blob/main/docs/epic-e/E1-regression-findings.md) — the full H1–H3c results table this page draws from
 - [OA direct validation vs. the 2018 golden (OA-A.3)](https://github.com/dhelweg/gentriduck/blob/main/docs/epic-b/A3-oa-validation-findings.md) — confirms the recomputed Offering Advantage matches the thesis's own numbers directionally
+- [Faithful vs improved methodology comparison](/methodology-comparison) — does curating which business types count sharpen the signal? (OA-C.2)
 - [Methodology & data sources](/methodology) — what the current index measures and how it differs from the 2018 original
 - [Home page](/) and [maps](/maps) — the current, live picture of Berlin
 - [github.com/dhelweg/gentriduck](https://github.com/dhelweg/gentriduck) — all code, models, and decisions
