@@ -609,6 +609,13 @@ seeds:
           - not_null
       - name: data_corr
         description: >
-          Placeholder for the OA-B.2 (#171) data-driven confirmation pass (correlation of
-          this node's offering-advantage with the outcome). Null until #171 fills it;
-          never used to promote a tier-0 node (non-circularity rule, ADR-0017 D3).
+          OA-B.2 (#171) data-driven confirmation pass: Spearman rho of this node's
+          faithful-variant Offering Advantage (int_poi_offering_advantage,
+          weight_variant='standard', snapshot_year=2016) against the 2018 thesis
+          outcome status_index (int_thesis_2018_area_index), computed by
+          analysis/c_offering_relevance_validation.py. Blank where n < 10 PLR pairs
+          (insufficient data, typically near-zero-stock leaf types). Diagnostic only
+          -- never used to promote a tier-0 node or demote a causally-plausible
+          (tier >= 1) node (non-circularity rule, ADR-0017 D3); see
+          docs/epic-c/B2-offering-relevance-validation-findings.md for the full
+          crosstab and flagged direction-mismatch findings.
