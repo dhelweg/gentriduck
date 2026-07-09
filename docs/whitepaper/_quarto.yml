@@ -1,0 +1,28 @@
+# Quarto project config for the O2 (#82) reproducible methodology whitepaper.
+# ADR-0013: Quarto + Typst, installed as `quarto-cli` in the repo-local .venv (uv).
+#
+# Scope of this file (infra scaffolding slice, #82): defines the single-command build
+# (`uv run poe whitepaper`) and output targets. Section CONTENT (methodology claims,
+# figures/tables regenerated from the marts) is a separate, methodology-bearing slice
+# that requires its own geo-DS + domain-expert sign-off (R-C1) before landing — see the
+# "Content (deferred)" note in whitepaper.qmd.
+
+project:
+  type: default
+  output-dir: ../../data/whitepaper # gitignored build output (data/** is gitignored)
+
+format:
+  html:
+    toc: true
+    number-sections: true
+    theme: cosmo
+    embed-resources: true
+  typst:
+    toc: true
+    number-sections: true
+
+bibliography: references.bib
+
+execute:
+  freeze: auto
+  echo: false # a reader-facing whitepaper shows figures/tables, not code cells
