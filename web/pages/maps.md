@@ -227,7 +227,9 @@ Want to see how one specific area has changed over the years? Use the
 exact neighbourhood page ([#133](https://github.com/dhelweg/gentriduck/issues/133),
 [#150](https://github.com/dhelweg/gentriduck/issues/150)) when viewing "Live data"; the
 Bezirksregion map above is view-only for now, and browsing by district still works on the
-[area detail page](/area-detail).
+[area detail page](/area-detail). Want the commercial-mix (shops/cafés) view instead of the
+social-status index -- POI density and Offering Advantage by domain -- see the
+[POI & Offering Advantage map](/poi-map).
 
 ---
 

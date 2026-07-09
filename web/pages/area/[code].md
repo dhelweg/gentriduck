@@ -106,6 +106,90 @@ order by snapshot_year
     emptySet="warn"
 />
 
+## Offering Advantage profile
+
+<!--
+  #209 (web slice of #207): radar/spider chart of this area's Offering Advantage (OA,
+  ADR-0017/0018) by POI domain, latest available snapshot_year -- reads the already-signed-off
+  `oa_domain` column from `mart_poi_offering_advantage` (pure pass-through, not methodology-
+  bearing). Reference ring at OA = 1.0 is the citywide baseline by construction of OA (a location
+  quotient), not a newly-introduced threshold. Uses Evidence's bundled `<ECharts>` component
+  (`@evidence-dev/core-components`, confirmed present -- no new-tool ADR needed) since Evidence
+  does not ship a radar chart primitive.
+-->
+
+Which kinds of places are over- or under-represented here compared to the citywide average?
+<b>OA = 1.0</b> (the dashed ring) is the citywide baseline for each domain; further out means
+more concentrated here than the city as a whole, further in means less. See the
+[POI & Offering Advantage map](/poi-map) to explore this across all of Berlin.
+
+```sql poi_oa_radar
+select
+    poi_domain_h,
+    oa_domain
+from gentriduck_marts.mart_poi_offering_advantage
+where
+    city_code = 'BER'
+    and area_vintage = 'lor_2021'
+    and weight_variant = 'standard'
+    and methodology_variant = 'faithful'
+    and area_code = '${params.code}'
+    and snapshot_year = (
+        select max(snapshot_year)
+        from gentriduck_marts.mart_poi_offering_advantage
+        where
+            city_code = 'BER'
+            and area_vintage = 'lor_2021'
+            and weight_variant = 'standard'
+            and methodology_variant = 'faithful'
+            and area_code = '${params.code}'
+            and oa_domain is not null
+    )
+order by poi_domain_h
+```
+
+<script>
+  $: radarDomains = Array.isArray(poi_oa_radar) ? poi_oa_radar : Array.from(poi_oa_radar ?? []);
+  $: radarMaxScale = Math.max(2, ...radarDomains.map((r) => Number(r.oa_domain) || 0), 1.2);
+  $: radarIndicator = radarDomains.map((r) => ({ name: r.poi_domain_h, max: radarMaxScale, min: 0 }));
+  $: radarConfig = {
+    tooltip: {},
+    radar: {
+      indicator: radarIndicator,
+      splitNumber: 4,
+      axisName: { fontSize: 10 }
+    },
+    series: [
+      {
+        type: 'radar',
+        data: [
+          {
+            value: radarDomains.map((r) => r.oa_domain),
+            name: area_info[0] ? area_info[0].area_name : 'Selected area',
+            areaStyle: { opacity: 0.15 }
+          },
+          {
+            value: radarDomains.map(() => 1),
+            name: 'Citywide baseline (OA = 1.0)',
+            lineStyle: { type: 'dashed', width: 1 },
+            areaStyle: { opacity: 0 },
+            symbol: 'none'
+          }
+        ]
+      }
+    ]
+  };
+</script>
+
+{#if radarDomains.length > 0}
+<ECharts config={radarConfig} data={poi_oa_radar} height="360px" downloadableData downloadableImage />
+{:else}
+<Alert status="warning">
+  No Offering Advantage data for this area (e.g. an uninhabited planning area, or no POIs mapped
+  for any domain here yet).
+</Alert>
+{/if}
+
 ## Land value & estimated rent
 
 <Alert status="info">
@@ -147,6 +231,7 @@ order by snapshot_year
 ## Further reading
 
 See [methodology & data sources](/methodology) for what the index means, the
+[POI & Offering Advantage map](/poi-map) for this area's commercial-mix signal citywide, the
 [citywide POI & price/rent overview](/poi-price-overview) for these signals across all of Berlin,
 [browse by district](/area-detail) for other neighbourhoods, or the
 [time-series view](/time-series) for how the whole city has moved.
@@ -154,4 +239,3 @@ See [methodology & data sources](/methodology) for what the index means, the
 ---
 
 <sub>[Home](/) · [Methodology & data sources](/methodology) · [About this project](/about) · [GitHub repository](https://github.com/dhelweg/gentriduck)</sub>
-
