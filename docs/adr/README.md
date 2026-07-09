@@ -22,6 +22,7 @@ ADR before adopting a new tool, library, or data source** (no "first tool that w
 | [0015](0015-data-refresh-orchestration.md) | Data refresh / orchestration (`uv run poe refresh`) | Accepted |
 | [0016](0016-ingested-data-drift-detection.md) | Ingested-data drift detection across local instances | Proposed (awaiting maintainer sign-off) |
 | [0017](0017-poi-offering-advantage-revival.md) | POI offering-advantage (OA) revival — 3-level LQ, faithful/improved separation, `methodology_variant` | Accepted |
+| [0018](0018-causal-tiered-poi-selection.md) | Causality-first-with-data-confirmation POI selection rule (Workstream 2 / improved OA) | Accepted |
 
 Format: each ADR has **Status**, **Context**, **Decision**, **Consequences**. Supersede rather
 than edit accepted ADRs.
