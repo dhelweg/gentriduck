@@ -23,6 +23,8 @@ ADR before adopting a new tool, library, or data source** (no "first tool that w
 | [0016](0016-ingested-data-drift-detection.md) | Ingested-data drift detection across local instances | Accepted (2026-07-06) |
 | [0017](0017-poi-offering-advantage-revival.md) | POI offering-advantage (OA) revival — 3-level LQ, faithful/improved separation, `methodology_variant` | Accepted |
 | [0018](0018-causal-tiered-poi-selection.md) | Causality-first-with-data-confirmation POI selection rule (Workstream 2 / improved OA) | Accepted |
+| [0019](0019-berlin-milieuschutz-displacement-source.md) | Berlin displacement/affordability dimension — Milieuschutz source + rent-pressure proxy scope | Accepted |
+| [0020](0020-community-contribution-governance-voting-board.md) | Community-contribution governance — voting board (GitHub Discussions) & autonomous triage | Accepted |
 
 Format: each ADR has **Status**, **Context**, **Decision**, **Consequences**. Supersede rather
 than edit accepted ADRs.
