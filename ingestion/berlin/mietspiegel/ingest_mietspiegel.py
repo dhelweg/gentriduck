@@ -72,19 +72,9 @@ from __future__ import annotations
 import argparse
 import logging
 import re
-import ssl
 import sys
-import urllib.request
 from pathlib import Path
 from typing import Optional
-
-# macOS Python does not ship CA certs; use certifi's bundle when available.
-try:
-    import certifi as _certifi
-
-    _SSL_CONTEXT = ssl.create_default_context(cafile=_certifi.where())
-except ImportError:
-    _SSL_CONTEXT = ssl.create_default_context()
 
 try:
     import pdfplumber  # noqa: F401 — checked at import time; used in parse functions
@@ -95,7 +85,6 @@ except ImportError as exc:
     ) from exc
 
 import pyarrow as pa
-import pyarrow.parquet as pq
 
 # ADR-0016: shared drift-detection manifest helper (sys.path pattern matches
 # ingest_hamburg_osm.py's existing cross-module import convention; see
@@ -104,6 +93,10 @@ _INGESTION_ROOT = Path(__file__).resolve().parents[2]
 if str(_INGESTION_ROOT) not in sys.path:
     sys.path.insert(0, str(_INGESTION_ROOT))
 from manifest import existing_outputs, write_manifest_entry  # noqa: E402
+
+# QA-2 (#177): shared retry+backoff PDF download and atomic-write helpers.
+from common.http import FetchError, download_pdf  # noqa: E402
+from common.io import atomic_write_parquet  # noqa: E402
 
 # ---------------------------------------------------------------------------
 # Known vintages and PDF URLs
@@ -198,27 +191,6 @@ logging.basicConfig(
     datefmt="%Y-%m-%dT%H:%M:%S",
 )
 log = logging.getLogger("mietspiegel_ingest")
-
-# ---------------------------------------------------------------------------
-# PDF download
-# ---------------------------------------------------------------------------
-
-
-def download_pdf(url: str, dest: Path, timeout: int = 60) -> None:
-    """Download a PDF to dest (atomic write via temp file)."""
-    tmp = dest.with_suffix(".tmp.pdf")
-    dest.parent.mkdir(parents=True, exist_ok=True)
-    req = urllib.request.Request(url, headers={"User-Agent": "gentriduck-ingest/1.0"})  # noqa: S310
-    log.info("Downloading %s -> %s", url, dest)
-    try:
-        with urllib.request.urlopen(req, timeout=timeout, context=_SSL_CONTEXT) as resp:  # noqa: S310
-            data = resp.read()
-    except urllib.error.URLError as exc:
-        raise RuntimeError(f"Network error downloading {url}: {exc}") from exc
-    tmp.write_bytes(data)
-    tmp.rename(dest)
-    log.info("Saved %d bytes -> %s", len(data), dest)
-
 
 # ---------------------------------------------------------------------------
 # Helpers: value parsing
@@ -515,7 +487,98 @@ def _parse_single_table_2017_2023(table: list[list], vintage: int) -> list[dict]
 
 
 # ---------------------------------------------------------------------------
-# Bucket aggregation
+# Per-vintage extraction dispatch
+# ---------------------------------------------------------------------------
+
+
+def _extract_2017_to_2023(pdf_path: Path, vintage: int) -> list[dict]:
+    """
+    Extract rows from 2017–2023 PDFs.
+
+    Layout detection:
+    - >= 3 tables: one table per wohnlage (same as 2024/2026 format) — use
+      _parse_granular_rows per table.
+    - 1 table: single unified table with transposed orientation (rows =
+      size/wohnlage pairs, columns = year-built buckets) — use
+      _parse_single_table_2017_2023 which is the correct parser for this layout.
+      This was previously a broken fallback; now fully implemented.
+    - 2 tables or other counts: iterate tables and assign wohnlage in order
+      (fallback; covers partial-parse artefacts from some PDF renderers).
+    """
+    import pdfplumber  # noqa: PLC0415
+
+    wohnlage_order = ["einfach", "mittel", "gut"]
+    granular: list[dict] = []
+
+    with pdfplumber.open(str(pdf_path)) as pdf:
+        all_tables: list[list] = []
+        for page in pdf.pages:
+            all_tables.extend(page.extract_tables())
+
+    log.debug("vintage=%d: found %d raw tables in PDF", vintage, len(all_tables))
+
+    if len(all_tables) >= 3:
+        # One table per wohnlage (same as 2024/2026 layout)
+        for i, wohnlage in enumerate(wohnlage_order):
+            if i < len(all_tables):
+                granular.extend(_parse_granular_rows(all_tables[i], wohnlage))
+    elif len(all_tables) == 1:
+        # Single unified table: rows = (size, wohnlage) pairs,
+        # columns = year-built buckets.  This is the primary layout for 2017–2023.
+        log.info(
+            "vintage=%d: 1-table layout detected — using single-table parser "
+            "(rows=size+wohnlage, cols=year-built)",
+            vintage,
+        )
+        granular.extend(_parse_single_table_2017_2023(all_tables[0], vintage))
+    elif len(all_tables) == 2:
+        # 2 tables — covers cases where einfach+mittel merge into one table and
+        # gut is a second table, or other renderer artefacts.  Assign in order.
+        log.warning(
+            "vintage=%d: 2 tables detected; assigning first 2 wohnlage in order. "
+            "Output may be incomplete.",
+            vintage,
+        )
+        for i, table in enumerate(all_tables):
+            w = wohnlage_order[i]
+            granular.extend(_parse_granular_rows(table, w))
+    else:
+        # 0 tables — nothing to parse
+        log.warning("vintage=%d: no tables detected in PDF", vintage)
+
+    return granular
+
+
+def _extract_2024_to_present(pdf_path: Path, vintage: int) -> list[dict]:
+    """
+    Extract rows from 2024 and later PDFs.
+    Layout: exactly 3 tables per page (einfache / mittlere / gute Wohnlage).
+    """
+    import pdfplumber  # noqa: PLC0415
+
+    wohnlage_order = ["einfach", "mittel", "gut"]
+    granular: list[dict] = []
+
+    with pdfplumber.open(str(pdf_path)) as pdf:
+        for page in pdf.pages:
+            tables = page.extract_tables()
+            log.debug("vintage=%d: page has %d tables", vintage, len(tables))
+            for i, wohnlage in enumerate(wohnlage_order):
+                if i < len(tables):
+                    granular.extend(_parse_granular_rows(tables[i], wohnlage))
+
+    return granular
+
+
+def _extract_granular(pdf_path: Path, vintage: int) -> list[dict]:
+    """Dispatch to the correct layout extractor for the given vintage."""
+    if vintage <= 2023:
+        return _extract_2017_to_2023(pdf_path, vintage)
+    return _extract_2024_to_present(pdf_path, vintage)
+
+
+# ---------------------------------------------------------------------------
+# Aggregation: granular -> standard buckets
 # ---------------------------------------------------------------------------
 
 
@@ -632,102 +695,6 @@ def _normalise_year_label(raw: str) -> Optional[str]:
     return _YEAR_LABEL_MAP.get(cleaned)
 
 
-# ---------------------------------------------------------------------------
-# Per-vintage extraction dispatch
-# ---------------------------------------------------------------------------
-
-
-def _extract_2017_to_2023(pdf_path: Path, vintage: int) -> list[dict]:
-    """
-    Extract rows from 2017–2023 PDFs.
-
-    Layout detection:
-    - >= 3 tables: one table per wohnlage (same as 2024/2026 format) — use
-      _parse_granular_rows per table.
-    - 1 table: single unified table with transposed orientation (rows =
-      size/wohnlage pairs, columns = year-built buckets) — use
-      _parse_single_table_2017_2023 which is the correct parser for this layout.
-      This was previously a broken fallback; now fully implemented.
-    - 2 tables or other counts: iterate tables and assign wohnlage in order
-      (fallback; covers partial-parse artefacts from some PDF renderers).
-    """
-    import pdfplumber  # noqa: PLC0415
-
-    wohnlage_order = ["einfach", "mittel", "gut"]
-    granular: list[dict] = []
-
-    with pdfplumber.open(str(pdf_path)) as pdf:
-        all_tables: list[list] = []
-        for page in pdf.pages:
-            all_tables.extend(page.extract_tables())
-
-    log.debug("vintage=%d: found %d raw tables in PDF", vintage, len(all_tables))
-
-    if len(all_tables) >= 3:
-        # One table per wohnlage (same as 2024/2026 layout)
-        for i, wohnlage in enumerate(wohnlage_order):
-            if i < len(all_tables):
-                granular.extend(_parse_granular_rows(all_tables[i], wohnlage))
-    elif len(all_tables) == 1:
-        # Single unified table: rows = (size, wohnlage) pairs,
-        # columns = year-built buckets.  This is the primary layout for 2017–2023.
-        log.info(
-            "vintage=%d: 1-table layout detected — using single-table parser "
-            "(rows=size+wohnlage, cols=year-built)",
-            vintage,
-        )
-        granular.extend(_parse_single_table_2017_2023(all_tables[0], vintage))
-    elif len(all_tables) == 2:
-        # 2 tables — covers cases where einfach+mittel merge into one table and
-        # gut is a second table, or other renderer artefacts.  Assign in order.
-        log.warning(
-            "vintage=%d: 2 tables detected; assigning first 2 wohnlage in order. "
-            "Output may be incomplete.",
-            vintage,
-        )
-        for i, table in enumerate(all_tables):
-            w = wohnlage_order[i]
-            granular.extend(_parse_granular_rows(table, w))
-    else:
-        # 0 tables — nothing to parse
-        log.warning("vintage=%d: no tables detected in PDF", vintage)
-
-    return granular
-
-
-def _extract_2024_to_present(pdf_path: Path, vintage: int) -> list[dict]:
-    """
-    Extract rows from 2024 and later PDFs.
-    Layout: exactly 3 tables per page (einfache / mittlere / gute Wohnlage).
-    """
-    import pdfplumber  # noqa: PLC0415
-
-    wohnlage_order = ["einfach", "mittel", "gut"]
-    granular: list[dict] = []
-
-    with pdfplumber.open(str(pdf_path)) as pdf:
-        for page in pdf.pages:
-            tables = page.extract_tables()
-            log.debug("vintage=%d: page has %d tables", vintage, len(tables))
-            for i, wohnlage in enumerate(wohnlage_order):
-                if i < len(tables):
-                    granular.extend(_parse_granular_rows(tables[i], wohnlage))
-
-    return granular
-
-
-def _extract_granular(pdf_path: Path, vintage: int) -> list[dict]:
-    """Dispatch to the correct layout extractor for the given vintage."""
-    if vintage <= 2023:
-        return _extract_2017_to_2023(pdf_path, vintage)
-    return _extract_2024_to_present(pdf_path, vintage)
-
-
-# ---------------------------------------------------------------------------
-# Aggregation: granular -> standard buckets
-# ---------------------------------------------------------------------------
-
-
 def _aggregate_rows(granular: list[dict], vintage: int) -> list[dict]:
     """
     Aggregate granular size-range rows into the 4 standard size buckets.
@@ -777,9 +744,8 @@ def _aggregate_rows(granular: list[dict], vintage: int) -> list[dict]:
 
 
 def write_parquet(rows: list[dict], out_path: Path, vintage: int, attribution: str) -> None:
-    """Write extracted rows to Parquet using the Mietspiegel schema."""
+    """Write extracted rows to Parquet using the Mietspiegel schema (atomic write)."""
     n = len(rows)
-    tmp_path = out_path.with_suffix(".tmp.parquet")
     table = pa.table(
         {
             "vintage": pa.array([vintage] * n, type=pa.int32()),
@@ -793,10 +759,9 @@ def write_parquet(rows: list[dict], out_path: Path, vintage: int, attribution: s
         },
         schema=MIETSPIEGEL_SCHEMA,
     )
-    out_path.parent.mkdir(parents=True, exist_ok=True)
-    pq.write_table(table, tmp_path, compression="snappy")
-    tmp_path.rename(out_path)
-    log.info("Wrote %d rows -> %s", n, out_path)
+    # QA-2 (#177): atomic write -- a crash mid-write must never leave a
+    # partial/corrupt file where dbt or verify_data.py expects a complete one.
+    atomic_write_parquet(table, out_path)
 
 
 # ---------------------------------------------------------------------------
@@ -887,7 +852,7 @@ def main(argv: Optional[list[str]] = None) -> int:
         else:
             try:
                 download_pdf(url, pdf_path)
-            except RuntimeError as exc:
+            except FetchError as exc:
                 log.error("Failed to download vintage %d: %s", year, exc)
                 errors += 1
                 continue

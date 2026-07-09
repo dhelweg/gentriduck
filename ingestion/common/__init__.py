@@ -5,19 +5,22 @@ QA-2 (#177) — shared, stdlib-only ingestion utilities.
 
 This package factors out the pieces of the 18 ingest scripts that were
 independently duplicated (SSL context construction, retrying HTTP GET,
-GeoJSON fetch/validate, atomic Parquet writes) so new/edited scripts have
-one place to get retry+backoff and atomic-write correctness for free.
+GeoJSON fetch/validate, PDF download, atomic writes) so new/edited scripts
+have one place to get retry+backoff and atomic-write correctness for free.
 
-Scope note (QA-2 first slice): this initial cut ships `http.py` (SSL
-context, bounded retry+backoff, `fetch_bytes`/`fetch_json`/`fetch_geojson`)
-and `io.py` (`atomic_write_parquet`), and migrates two representative
-scripts (`ingest_lor_geometries.py`, `ingest_hamburg_geo.py`) as a proof
-of concept. Migrating the remaining ~12 scripts, unifying the source
-registry, and hardening `verify_data.py`'s manifest-load validation are
-tracked as a follow-up (see the QA-2 issue thread) rather than attempted
-in one pass, per CLAUDE.md's "prefer right-sized, safely-verifiable work"
-guidance — live-network fetch behaviour across 18 scripts can't be safely
-regression-tested without live upstream access in one sitting.
+Scope note (QA-2, second slice, #177): the first slice shipped `http.py`
+(SSL context, bounded retry+backoff, `fetch_bytes`/`fetch_json`/
+`fetch_geojson`) and `io.py` (`atomic_write_parquet`), migrating two
+representative scripts as a proof of concept. This slice adds
+`download_pdf` (retry+backoff PDF fetch, replacing the duplicated
+unretried `download_pdf` in the Mietspiegel scripts) and
+`atomic_write_bytes`, and migrates three more scripts
+(`ingest_mietspiegel.py`, `ingest_strassenverzeichnis.py`,
+`ingest_lor_crosswalk.py`). Migrating the remaining scripts, unifying the
+source registry, and hardening `verify_data.py`'s manifest-load validation
+are tracked as a follow-up (see the QA-2 issue thread) rather than
+attempted in one pass, per CLAUDE.md's "prefer right-sized,
+safely-verifiable work" guidance.
 
 Pure stdlib + the existing `certifi`/`pyarrow` deps already in
 pyproject.toml. No new tool/library (golden rule #1/#2 — untouched).
@@ -35,17 +38,20 @@ from __future__ import annotations
 from .http import (
     FetchError,
     build_ssl_context,
+    download_pdf,
     fetch_bytes,
     fetch_geojson,
     fetch_json,
 )
-from .io import atomic_write_parquet
+from .io import atomic_write_bytes, atomic_write_parquet
 
 __all__ = [
     "FetchError",
     "build_ssl_context",
+    "download_pdf",
     "fetch_bytes",
     "fetch_geojson",
     "fetch_json",
+    "atomic_write_bytes",
     "atomic_write_parquet",
 ]
