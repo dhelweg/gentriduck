@@ -141,6 +141,14 @@ sources:
           warn_after: {count: 400, period: day}
           error_after: {count: 800, period: day}
 
+      - name: milieuschutz
+        description: >
+          R-B1 (#70) / ADR-0019: Milieuschutz (soziale Erhaltungsverordnung,
+          Sec. 172 Abs. 1 Nr. 2 BauGB) designated-area polygons. GDI Berlin
+          WFS, dl-de-zero-2.0. Read by stg_berlin_milieuschutz.
+        meta:
+          external_location: "{{ env_var('PWD', '.') }}/data/raw/berlin/displacement/milieuschutz.parquet"
+
   - name: raw_hamburg
     description: >
       QA-5 (#180): Hamburg raw ingestion artefacts (Parquet), gitignored per
