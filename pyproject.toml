@@ -37,6 +37,8 @@ dev = [
     "sqlfluff>=3.2",
     "ruff>=0.7",
     "pre-commit>=4.0",
+    # QA-1 (#176): pytest harness for ingestion/analysis pure functions (R-C3 extension).
+    "pytest>=8.0",
 ]
 
 [tool.ruff]
@@ -55,6 +57,10 @@ debug = "dbt debug --project-dir transform --profiles-dir transform"
 deps  = "dbt deps --project-dir transform"
 build = "dbt build --project-dir transform --profiles-dir transform"
 test  = "dbt test --project-dir transform --profiles-dir transform"
+# QA-1 (#176): pytest for ingestion/analysis pure functions (crosswalk math,
+# ADR-0016 drift-guard severity classification, PDF-parser regexes). No dbt/DB
+# dependency -- pure Python, runs on all OSes, wired into the pre-commit push stage.
+test-py = "pytest tests/ -v"
 docs  = "dbt docs generate --project-dir transform --profiles-dir transform"
 # F2 (#34) / ADR-0012: export the published marts to parquet (data/serving/, gitignored).
 # Run after `poe build`. Future web build (G0/G1) consumes this parquet snapshot.
