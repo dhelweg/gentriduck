@@ -2113,6 +2113,62 @@ models:
           True if area_vintage = 'lor_pre2021' (the 447-PLR series; thesis universe; longest
           MSS time series). Epic B headline analysis uses this series (index-definition.md §6.2).
 
+  - name: int_berlin_lor_crosswalk_dominant_2021
+    description: >
+      QA-7b (#205): dominant (max-weight) pre-2021 <-> 2021 PLR crosswalk, extracted from the
+      inline `xw_dominant` CTE previously embedded in analysis/e1_regressions.py's
+      load_ewr_lead_lag_data. Used to bridge lor_2021 EWR lead-lag rows (int_ewr_lead_lag) to
+      lor_pre2021 POI-count rows (int_poi_features_pivot, years < 2021) via a single
+      representative pre-2021 PLR per lor_2021 PLR -- not an areal-weighted apportionment (see
+      int_berlin_ewr_plr2021 for that; POI counts are area-level integers that cannot be validly
+      split across multiple pre-2021 PLRs the way EWR shares/counts can).
+
+      Pseudo-replication caveat (R-C2 grounding): ~78 pre-2021 PLRs are the dominant match for
+      2+ lor_2021 PLRs (up to 6 each) -- ~35% of lor_2021 PLRs share their bridged poi_count with
+      at least one neighbour. Consumers (e1_regressions.py H2/H3 EWR comparison) must treat
+      results as directional evidence, not independent-observation p-values.
+
+      Grain: one row per plr_id_2021 (all 542 lor_2021 PLRs resolve to exactly one dominant
+      pre-2021 PLR).
+    meta:
+      dbt_meta_owner: data-engineer
+    data_tests:
+
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns:
+              - plr_id_2021
+      - assert_not_empty:
+          config:
+            severity: error
+    columns:
+      - name: city_code
+        description: City identifier (ADR-0005). Always 'BER' (Berlin-specific LOR crosswalk).
+        data_tests:
+
+          - not_null
+      - name: plr_id_2021
+        description: PLR area code in the LOR 2021 reform scheme (8-digit string, zero-padded).
+        data_tests:
+
+          - not_null
+          - unique
+      - name: plr_id_pre2021
+        description: >
+          The dominant (largest-overlap-share) pre-2021 PLR area code for this plr_id_2021.
+        data_tests:
+
+          - not_null
+      - name: dominant_weight
+        description: >
+          The crosswalk weight (share of the pre-2021 PLR's area falling in this plr_id_2021)
+          for the selected dominant row. Not an apportionment factor here -- informational only
+          (records how confident the "dominant" pick is; low values indicate a close second
+          candidate).
+        data_tests:
+
+          - not_null
+
   - name: int_berlin_brw_plr
     description: >
       D3 (#29): Area-weighted spatial join of BRW land value zones → LOR 2021 PLR boundaries.
