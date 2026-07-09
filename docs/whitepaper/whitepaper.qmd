@@ -12,57 +12,362 @@ abstract: |
 ---
 
 <!--
-STATUS (2026-07-09, #82 infra-scaffolding slice): this is the Quarto project skeleton, not the
-final content. It builds (`uv run poe whitepaper`) and renders the document structure below, but
-the section bodies are intentionally stubs / pointers to already-accepted sign-off documents
-rather than new prose. Populating each section with citable methodology claims and marts-driven
-figures/tables is METHODOLOGY-BEARING (ADR-0013 Consequences) and requires its own geo-DS +
-domain-expert sign-off (R-C1) before it can be integrated — tracked as the next #82 slice. Do not
-treat anything below as an authoritative methodology statement; the canonical, already-signed-off
-methodology documents live in `docs/methodology/**` and `docs/adr/**` and are cited here by
-reference.
+STATUS (2026-07-09, #82 content-population slice): this section restates -- it does not
+re-derive -- methodology already governed and signed off under the R-C1 gate. Every claim below
+carries a pointer to its canonical source document (`docs/methodology/**`, `docs/adr/**`); those
+documents remain authoritative if any wording here diverges. The one live computation (Validation
+section) queries the same governed marts the public site and `analysis/*.py` scripts use -- no
+separately-maintained numbers.
 -->
 
 ## Introduction
 
 Gentriduck revives a 2018 Berlin gentrification thesis [@helweg2018] on a modern, free,
-local-first stack and extends it into a public, multi-city statistics product. See
-`docs/PROJECT_PLAN.md` for the full project scope and `docs/adr/` for every architectural
-decision.
+local-first stack and extends it into a public, multi-city statistics product. It answers a
+directional question -- *does the 2018 thesis's central finding still hold, and does it
+generalize?* -- rather than attempting a number-for-number reproduction (CLAUDE.md "Epic B
+framing"). See `docs/PROJECT_PLAN.md` for the full project scope and `docs/adr/` for every
+architectural decision.
+
+The index rests on two theoretical frameworks, both operationalized in the governed index
+definition (`docs/methodology/index-definition.md` §0.4):
+
+- **Dangschat's (1988) double invasion-succession cycle** [@dangschat1988]: gentrification
+  proceeds as two coupled cycles -- a *social* invasion-succession (pioneers, then gentrifiers,
+  then a settled high-status population displace incumbents) and a *commercial*
+  invasion-succession (the amenity landscape turns over to serve the incoming population). The
+  thesis confirmed (p. 91, hypothesis H3b) that the social cycle **leads** the commercial cycle,
+  which is why the index is architected as a lead-lag model rather than a contemporaneous one
+  (ADR-0008 §2).
+- **D\"oring & Ulbricht's (2016) Berlin-specific reading** [@doeringulbricht2016]: a high share of
+  welfare recipients, young adults, and migrants, and a low share of long-tenure residents, marks
+  a Planungsraum (PLR) as susceptible to gentrification -- a *precondition*, not an ongoing outcome
+  signal. This grounds the socio-demographic dimension's polarity and levels-vs-changes discipline
+  (index-definition.md §4).
+
+Smith's rent-gap theory -- the capital/economic driver of gentrification -- is **not** represented
+in the current four active dimensions; the model captures the *social outcome* and its
+*commercial/demographic correlates*, not the economic driver, until the displacement/affordability
+dimension (D5, Epic D) lands (index-definition.md §0.4).
 
 ## Data Sources & Licences
 
-*(Deferred content slice.)* Canonical source: `docs/methodology/indicator-semantics.md` and the
-per-source ADRs (0003, 0006, 0007, 0014, 0019). This section will enumerate each ingested source,
-its licence, and its update cadence, citing the relevant ADR for each.
+All Gentriduck inputs are free, openly licensed, and pullable without login or paid access
+(CLAUDE.md Golden rule 1); every source's licence and access mechanism is recorded in its own ADR
+before ingestion. The active pillars, by city:
+
+**Berlin**
+
+| Source | Content | Licence | ADR |
+|---|---|---|---|
+| MSS (Monitoring Soziale Stadtentwicklung), Senate | D1 Status-Index / D2 Dynamik-Index classes (biennial, PLR grain) | `dl-de-zero-2.0` | ADR-0006 |
+| MSS SES indicator battery | Socio-economic sub-indicators (`indexind`) feeding D4 | Same `dl-de-zero-2.0` family | ADR-0007 |
+| OpenStreetMap (via `quackosm`) | POI counts/taxonomy for the commercial/amenity dimension (D3) | ODbL | ADR-0008, ADR-0011 (H-C6) |
+| GDI Berlin WFS (LOR geometries, Wohnlage, BRW) | PLR/BZR/LOR boundaries; land-value and locational-quality context | `dl-de/by-2.0` (attribution) | ADR-0003 |
+| Berlin EWR (Einwohnerregister)-equivalent demographic tables | D4 socio-demographic composite | `dl-de-zero-2.0` | ADR-0003, ADR-0007 |
+| Milieuschutz (Soziale Erhaltungsgebiete) register | Displacement-risk overlay attribute (not a typology stage) | Senate open-data terms | ADR-0019 |
+
+**Hamburg** (multi-city extension, ADR-0005 city-agnostic core)
+
+| Source | Content | Licence | ADR |
+|---|---|---|---|
+| Hamburg Statistikamt Nord Stadtteil-Profile | D1/D2-equivalent socio-economic indicators, annual cadence | `dl-de/by-2.0` family | ADR-0014 |
+| Hamburg GDI / geometries | Stadtteil boundaries | `dl-de/by-2.0` | ADR-0014 |
+| OpenStreetMap (via `quackosm`) | Same POI pipeline as Berlin | ODbL | ADR-0014 |
+
+The `dl-de-zero-2.0` and `dl-de/by-2.0` licence families are Germany's standard public-sector
+open-data licences (the former requiring no attribution, the latter requiring it); ODbL (OSM)
+requires share-alike attribution for derived data products. Every ingestion adapter records its
+source's licence string in the corresponding ADR (ADR-0003, ADR-0006, ADR-0007, ADR-0014,
+ADR-0019); no paid or proprietary source has been adopted (CLAUDE.md Golden rule 1). Update cadence
+varies by source: MSS is biennial (Berlin), Hamburg's Stadtteil-Profile are annual (the basis of
+the Hamburg-specific H-C1..C4 lead-lag redesign track), and OSM POI extracts are refreshed on each
+pipeline run.
 
 ## Methods
 
-*(Deferred content slice.)* Canonical source: `docs/methodology/index-definition.md` (the governed
-index definition, ADR-0004/ADR-0008), `docs/methodology/spatial-methods.md` (ADR-0010 spatial
-weighting), and the R-A1/R-A3/R-A4/R-A8/R-A9 sign-off documents in `docs/methodology/`. This
-section will restate — not re-derive — the accepted methodology, with every claim carrying the
-R-C2 citation already present in the source model's SQL comment.
+*(Restated from the governed methodology; canonical sources:
+`docs/methodology/index-definition.md`, `docs/methodology/spatial-methods.md`, ADR-0004,
+ADR-0008, ADR-0010.)*
+
+### Multi-dimensional model
+
+The index (ADR-0008) separates **outcome** from **predictor** dimensions -- the defect it corrects
+in the 2018 thesis's legacy model was averaging predictors and outcome into one collapsed number
+(index-definition.md §0.2, §8.4):
+
+| Dim | Construct | Role | Berlin source | Grain |
+|---|---|---|---|---|
+| D1 | Social status | Outcome (state) | MSS Status-Index | (edition, PLR) |
+| D2 | Social change | Outcome (direction) | MSS Dynamik-Index | (edition, PLR) |
+| D3 | Commercial / amenity | Predictor | OSM POI status + dynamism | (year, PLR) |
+| D4 | Socio-demographic vulnerability | Baseline covariate | EWR-equivalent composite | (year, PLR) |
+| D5 | Displacement / affordability | Predictor -- deferred (Epic D) | reserved slot | (year, PLR) |
+
+Every feature is oriented **vulnerability-positive** (higher = more pre-gentrification
+vulnerability), following the common-polarity-before-aggregation principle
+[@oecdjrc2008]; index-definition.md §5 carries the full polarity table and a worked sign example
+for D1, whose numeric direction is the *inverse* of the 2018 thesis's `status_summe`.
+
+### Typology
+
+The six-stage typology (`stable-established`, `pre-gentrification`, `pioneer-signal`,
+`active-gentrification`, `consolidation-pressure`, `improving-vulnerable`) is derived from the
+Status x Dynamik matrix -- the Senate's own governed classification -- refined by a secondary D3
+axis, never from a pre-collapsed composite (index-definition.md §1). Two guardrails bind every
+stage name (§1.2): no stage may assert an unobserved displacement *event* (only risk/pressure
+framing is permitted -- "post-displacement" is a prohibited name), and every stage is a
+Planungsraum-level aggregate, never an individual- or building-level statement (the ecological-
+inference guard, carried into every public rendering). Milieuschutz designation is a **separate
+overlay attribute**, not a stage, because designation is simultaneously a risk signal and an
+intervention that suppresses the risk it flags (§1.8).
+
+### Lead-lag specification
+
+The single most important architectural correction over the legacy model (ADR-0008 Decision 2):
+rather than a contemporaneous mean, the model fits change-on-change at temporal offsets `k in
+{1,2,3}`, testing both directions --
+
+```
+H3a (POI leads status -- thesis REJECTED, tested anyway): Δstatus[t+k] ~ Δamenity[t]
+H3b (status leads POI -- thesis CONFIRMED, expected to dominate): Δamenity[t+k] ~ Δstatus[t]
+```
+
+-- with the headline result (H3b dominance) reported as a *test outcome*, never hard-coded
+(index-definition.md §2.1). Both sides must be *deltas*, never a level-vs-level comparison
+(§2.2); every coefficient uses spatial-autocorrelation-robust inference, because adjacent PLRs are
+not independent observations (Tobler's first law; §2.3, §8 below); the OSM completeness-bias
+correction (C5, ADR-0008 Decision 5) is applied *before* the lead-lag, because raw POI counts rise
+partly from mapping-coverage growth, not neighbourhood change (§2.4); and no delta crosses the
+2019-to-2021 Berlin LOR (Lebensweltlich orientierte R\"aume) boundary without the areal-weighted
+crosswalk (§2.5, §6).
+
+### Spatial methods
+
+POI-to-PLR aggregation uses a mass-conserving Gaussian kernel (bandwidth 500 m default, EPSG:25833)
+[@fotheringham2002; @silverman1986] rather than the thesis's un-normalized centroid-to-centroid
+spread, composed *after* the C5 completeness correction (spatial-methods.md §1-§5). Hot/cold-spot
+detection uses Getis-Ord Gi* [@getisord1992; @ordgetis1995] on Queen-contiguity weights, the direct
+operationalization of D\"oring & Ulbricht's "Gentrification-Hotspots" reading
+[@doeringulbricht2016]; the internal "Gi* hotspot" statistic name is never surfaced verbatim in
+public output -- public labels use hedged qualifiers such as "amenity-change hotspot" carrying the
+ecological-inference disclaimer (§6). Regression inference upgrades from naive OLS to a
+spatial-lag or spatial-error model via the Anselin-Florax Lagrange-multiplier decision rule
+[@anselin1988] whenever residual Moran's I [@moran1950] is significant; naive and spatial-robust
+inference are always reported side by side (§8). The modifiable areal unit problem (MAUP)
+[@openshaw1984] is addressed by comparing PLR- and BZR-scale index rankings (Pearson r; publish
+gate r > 0.7, §7), with an optional H3-hexagon robustness lens. All permutation-based statistics
+(Gi*, Moran's I) use a fixed `permutations=999, seed=42` on every call for reproducibility (R-C3).
+
+### Offering Advantage (OA)
+
+The 2018 thesis's location-quotient "Offering Advantage" construct is revived as a nested
+parent-relative ratio across domain/category/type levels of the POI taxonomy
+[@isard1960]. On the distance-weighted POI stock, the kernel is applied *before* the ratio is
+formed -- computing weighted stock first, aggregating up the taxonomy, then forming the location
+quotient last (spatial-methods.md §11.1); reversing this order would let a high-OA neighbour bleed
+a spurious "advantage" across a PLR border. Because OA measures a retail/service catchment rather
+than a walkable-amenity radius, its bandwidth sweep is widened to {500, 1000, 1500} m with a 1000 m
+headline, following retail-gravitation theory [@reilly1931; @huff1964; @berry1967] rather than the
+density layers' 500 m default (§11.2).
+
+### Ordinal treatment
+
+D1 (Status, 1-4) and D2 (Dynamik, 1-3) are ordered classes with non-interval cut-points; averaging
+class codes or running OLS on the raw code as a metric response is forbidden (index-definition.md
+§3.1-§3.2). Permitted methods are ordered-logit/proportional-odds models, rank correlation
+(Spearman/Kendall), ordinal transitions for `Δstatus`, and frequency/contingency tables. For the
+Epic B headline "did the 2018 finding hold" test, D1 is collapsed to a binary
+(`high-status-loss`) and reported via AUC and F-weighted metrics within a single LOR vintage
+(§3.3).
 
 ## Validation
 
-*(Deferred content slice.)* Canonical source: `docs/methodology/backtest.md`, generated by
-`uv run poe backtest` (R-B2). This section will embed the back-test results as a live,
-regenerated table via a Quarto executable Python chunk querying the governed marts, rather than a
-static copy.
+*(Canonical source: `docs/methodology/backtest.md`, generated by `uv run poe backtest`, R-B2.
+This table is a live re-execution of the same three tests against the currently ingested marts --
+not a static copy.)*
+
+The back-test harness validates the live `gentrification_index` mart against two independent
+references: (A) MSS Status/Dynamik classes flowing through an independent model path
+(`int_gentrification_ts`), via Spearman rank correlation; and (B/C) a curated seed of ~20
+literature-labelled hotspot/coldspot PLRs [@doeringulbricht2016; @holmschulz2016; @holm2010],
+checking recall in the expected tail of the `status_index` distribution.
+
+```{python}
+#| echo: false
+#| label: tbl-backtest
+#| tbl-cap: "Live back-test: index status_index vs. MSS ground truth and known hotspot/coldspot recall"
+import os
+from pathlib import Path
+
+import duckdb
+import pandas as pd
+from scipy import stats as _stats
+
+db_path = os.environ.get("GENTRIDUCK_DB")
+if not db_path:
+    # Walk up from the working directory to find the repo root (pyproject.toml), robust
+    # to Quarto's execution cwd (docs/whitepaper) vs. `uv run poe whitepaper`'s cwd (repo root).
+    _here = Path.cwd().resolve()
+    _repo_root = next(
+        (p for p in [_here, *_here.parents] if (p / "pyproject.toml").exists()), _here
+    )
+    db_path = str(_repo_root / "data" / "gentriduck.duckdb")
+
+rows = []
+if Path(db_path).exists():
+    con = duckdb.connect(str(db_path), read_only=True)
+
+    # Mirrors analysis/backtest_index.py load_data() + test_mss_agreement() /
+    # test_hotspot_recall() / test_coldspot_recall() (R-B2); this chunk re-executes the
+    # same three tests live against whatever DuckDB is populated in this environment.
+    index_df = con.execute("""
+        SELECT area_code, area_name, period_yyyymm, status_index, dynamism_index, status_class
+        FROM main.gentrification_index
+        WHERE area_level = 'plr' AND variant = 'live_data'
+          AND period_yyyymm = (
+              SELECT MAX(period_yyyymm) FROM main.gentrification_index
+              WHERE area_level = 'plr' AND variant = 'live_data'
+          )
+          AND status_index IS NOT NULL
+    """).df()
+
+    mss_df = con.execute("""
+        SELECT area_code, area_vintage, snapshot_year, mss_edition,
+               status_index AS mss_status_index
+        FROM main.int_gentrification_ts
+        WHERE area_vintage = 'lor_2021'
+          AND mss_edition = (
+              SELECT MAX(mss_edition) FROM main.int_gentrification_ts
+              WHERE area_vintage = 'lor_2021'
+          )
+          AND status_index IS NOT NULL AND is_uninhabited = false
+    """).df()
+
+    gt_df = con.execute("""
+        SELECT plr_id, label FROM main_seeds.seed_gentrification_ground_truth
+    """).df()
+
+    # Test A: Spearman rank correlation, index_df vs mss_df on area_code.
+    merged = index_df[["area_code", "status_index"]].merge(
+        mss_df[["area_code", "mss_status_index"]], on="area_code", how="inner"
+    ).dropna()
+    if len(merged) >= 10:
+        rho, p = _stats.spearmanr(
+            merged["status_index"].astype(float), merged["mss_status_index"].astype(float)
+        )
+        rows.append({
+            "Test": "A: MSS agreement (Spearman rho)",
+            "Result": f"rho={rho:.4f}, p={p:.4f}, n={len(merged)}",
+            "Threshold": "rho > 0.3, p < 0.05",
+            "Pass": "YES" if (rho > 0.3 and p < 0.05) else "NO",
+        })
+
+    # Tests B/C: hotspot/coldspot recall @ top/bottom decile of status_index, joined on
+    # plr_id = area_code against the same index_df snapshot.
+    gt = gt_df.merge(
+        index_df[["area_code", "status_index"]], left_on="plr_id", right_on="area_code", how="inner"
+    ).dropna(subset=["status_index"])
+    if len(gt) > 0 and len(index_df) > 0:
+        q_hi = index_df["status_index"].astype(float).quantile(0.9)
+        q_lo = index_df["status_index"].astype(float).quantile(0.1)
+        hot = gt[gt["label"] == "hotspot"]
+        cold = gt[gt["label"] == "coldspot"]
+        if len(hot) > 0:
+            recall_hot = (hot["status_index"].astype(float) >= q_hi).mean()
+            rows.append({
+                "Test": "B: Hotspot recall @ top decile",
+                "Result": f"{recall_hot:.2f} ({int((hot['status_index'].astype(float) >= q_hi).sum())}/{len(hot)})",
+                "Threshold": "recall >= 0.5",
+                "Pass": "YES" if recall_hot >= 0.5 else "NO",
+            })
+        if len(cold) > 0:
+            recall_cold = (cold["status_index"].astype(float) <= q_lo).mean()
+            rows.append({
+                "Test": "C: Coldspot recall @ bottom decile",
+                "Result": f"{recall_cold:.2f} ({int((cold['status_index'].astype(float) <= q_lo).sum())}/{len(cold)})",
+                "Threshold": "recall >= 0.5",
+                "Pass": "YES" if recall_cold >= 0.5 else "NO",
+            })
+
+from IPython.display import display
+
+if rows:
+    display(pd.DataFrame(rows))
+else:
+    print("DuckDB not found or marts not populated -- run `uv run poe build` first. "
+          "See docs/methodology/backtest.md for the last recorded run.")
+```
+
+At the last recorded static run (`docs/methodology/backtest.md`, 2026-06-29), all three tests
+passed: Test A rho = 1.0000 (p < 0.0001, n = 535, the mart and the intermediate model agreeing on
+the same MSS D1 ordinal via two independent paths); Test B hotspot recall = 1.00 (8/8); Test C
+coldspot recall = 1.00 (6/6). The live table above re-executes the same query logic against
+whatever DuckDB file is currently populated in this environment; a "DuckDB not found" message
+means the pipeline has not been built locally (`uv run poe build`), not that validation failed --
+consult the static record in that case.
 
 ## Limitations
 
-*(Deferred content slice.)* Draws on the "Known limitations" sections already accumulated across
-`web/pages/methodology.md` (the public-facing G2 page) and each sign-off document's stated
-conditions/caveats (e.g. the B1 displacement signals' "policy marker / proxy / compositional-change
-signal, not a measured outcome" framing).
+*(Draws on the "Known limitations" accumulated across `web/pages/methodology.md`, the public G2
+page, and each sign-off document's stated conditions.)*
+
+- **Displacement is inferred, never measured, in D1-D4.** Open data (MSS, EWR-equivalent, OSM) can
+  observe socio-economic upgrading and demographic recomposition; it cannot observe that a specific
+  household was involuntarily displaced. Stage names carry risk/pressure framing
+  (`consolidation-pressure`, not "post-displacement") until D5 (Milieuschutz + rent-burden +
+  turnover, Epic D, tracked in #70) provides a genuine displacement-risk signal
+  (index-definition.md §1.2, G-1).
+- **Ecological-inference guard.** Every stage, hotspot label, and cluster classification is a
+  property of a small-area aggregate (a Planungsraum of thousands of residents), never a statement
+  about an individual or a building. Inferring an individual's situation from a PLR-level stage is
+  an ecological fallacy (index-definition.md §1.2, G-2; carried into every public label,
+  spatial-methods.md §6).
+- **MAUP / vintage discontinuities.** Berlin's 2019-to-2021 LOR redistricting changed the PLR
+  universe (447 to 542 units); no delta crosses that boundary without the areal-weighted crosswalk,
+  and cross-boundary comparisons carry crosswalk-induced approximation error, especially for the
+  ordinal D1/D2 classes which can only carry a dominant-weight (not blended) class across the
+  break (index-definition.md §6). The PLR-vs-BZR MAUP check (spatial-methods.md §7) is a publish
+  gate: below r = 0.7 the index would be flagged MAUP-fragile.
+- **OSM completeness bias.** OpenStreetMap POI coverage in Berlin is estimated at roughly 40%
+  complete and grew unevenly over time; the C5 share-normalization correction mitigates, but cannot
+  fully eliminate, category-differential mapping-completeness drift, which is a residual caveat on
+  lagged OA predictors specifically (spatial-methods.md §11.1; index-definition.md §2.4).
+  Bandwidth/kernel/scale choices are defaults validated by a mandatory sensitivity sweep, not
+  fixed assumptions -- divergence across the sweep is reported, not hidden.
+  Mietspiegel-derived rent figures are a lagging, conservative estimate of the standing stock's
+  affordability and understate leading-edge new-letting pressure that drives displacement
+  (index-definition.md §5, D3-price note).
+- **Small-area statistical uncertainty.** PLR observations are not spatially independent (Tobler's
+  first law); every coefficient reported without a spatial-robust standard error should be treated
+  as provisional (spatial-methods.md §8).
+- **Smith's rent-gap theory is not yet represented.** The economic/capital driver of gentrification
+  is absent from D1-D4; the model captures the social outcome and its commercial/demographic
+  correlates only, until D5 lands.
+- **Epic B is a directional revival, not an exact reproduction.** Divergences from the 2018
+  thesis's point estimates are expected and documented rather than reconciled to numeric identity
+  (CLAUDE.md "Epic B framing").
 
 ## Ethics & Scope of Claims
 
-*(Deferred content slice.)* Canonical source: the `gentrification-domain-expert` agent's mandate
-(public methodology & ethics framing, `docs/PROJECT_PLAN.md`) and any ethics notes already
-recorded in domain sign-off documents.
+Gentriduck's public output must never assert an unobserved individual- or household-level
+displacement event; every stage, hotspot, and cluster label is a small-area *signal of elevated
+risk or pressure*, framed with the ecological-inference disclaimer, never a confirmed outcome
+(index-definition.md §1.2, G-1/G-2; carried verbatim into public map legends, tooltips, and mart
+column comments per `spatial-methods.md` §6/§A9.2). The Milieuschutz overlay is presented as a
+policy marker showing where the Senate has itself identified upgrading/displacement pressure and
+intervened -- not as an independent proxy measurement or a confirmed outcome -- because the
+designation is simultaneously a risk signal and its own suppressive intervention
+(index-definition.md §1.8).
+
+The index is built entirely from public administrative and crowd-sourced open data
+(`dl-de-zero-2.0`, `dl-de/by-2.0`, ODbL), never from paid, proprietary, or personally identifiable
+data (CLAUDE.md Golden rule 1); every model column and public map legend must carry its polarity
+and grounding citation (R-C2) so a reader can trace any claim back to its thesis section, official
+codebook, or peer-reviewed source. The project's scope-of-claims discipline is enforced jointly by
+the `geo-data-scientist` (statistical/spatial soundness) and `gentrification-domain-expert`
+(theory grounding and public framing) methodology gate (R-C1) before any methodology-bearing change
+is integrated.
 
 ## Reproducibility
 
@@ -73,10 +378,11 @@ uv run poe whitepaper
 ```
 
 which renders `docs/whitepaper/whitepaper.qmd` (this file) via Quarto (ADR-0013) into HTML and
-Typst-engine PDF under the gitignored `data/whitepaper/` output directory. Figures and tables in
-the (forthcoming) content slice are Quarto executable Python chunks that query the same governed
-dbt marts (`transform/models/marts/`) the public site and `analysis/*.py` scripts use — no
-separately-maintained numbers.
+Typst-engine PDF under the gitignored `data/whitepaper/` output directory. The Validation section's
+table is a Quarto executable Python chunk that queries the same governed dbt marts
+(`transform/models/marts/`) the public site and `analysis/*.py` scripts use -- no
+separately-maintained numbers. It requires a populated local DuckDB (`uv run poe build`); when run
+without one, it degrades gracefully to a note pointing at the last recorded static run.
 
 ## Citation
 
