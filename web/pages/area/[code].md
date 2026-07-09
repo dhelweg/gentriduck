@@ -150,3 +150,8 @@ See [methodology & data sources](/methodology) for what the index means, the
 [citywide POI & price/rent overview](/poi-price-overview) for these signals across all of Berlin,
 [browse by district](/area-detail) for other neighbourhoods, or the
 [time-series view](/time-series) for how the whole city has moved.
+
+---
+
+<sub>[Home](/) · [Methodology & data sources](/methodology) · [About this project](/about) · [GitHub repository](https://github.com/dhelweg/gentriduck)</sub>
+

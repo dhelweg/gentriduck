@@ -1,5 +1,6 @@
 ---
 title: Citywide POI & price/rent overview
+sidebar_position: 15
 ---
 
 # Berlin, citywide: shops & amenities, land value & rent
@@ -125,3 +126,8 @@ order by snapshot_year
 For a single-neighbourhood breakdown of these same two signals alongside the governed
 gentrification index, see the [area detail page](/area-detail). For the citywide index headline
 and map, see the [home page](/) and the [maps page](/maps).
+
+---
+
+<sub>[Home](/) · [Methodology & data sources](/methodology) · [About this project](/about) · [GitHub repository](https://github.com/dhelweg/gentriduck)</sub>
+

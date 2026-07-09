@@ -1,5 +1,6 @@
 ---
 title: Time series — how Berlin has moved
+sidebar_position: 11
 ---
 
 <!--
@@ -145,3 +146,8 @@ Click any row above to open that exact neighbourhood's full breakdown — status
 commercial mix, and price/rent. To browse by district instead, use the
 [area detail page](/area-detail), or see the citywide [maps](/maps) and the
 [home page](/) for the current index and stage typology.
+
+---
+
+<sub>[Home](/) · [Methodology & data sources](/methodology) · [About this project](/about) · [GitHub repository](https://github.com/dhelweg/gentriduck)</sub>
+

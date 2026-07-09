@@ -1,5 +1,6 @@
 ---
 title: All neighbourhoods (Planungsräume)
+sidebar_position: 14
 ---
 
 # All neighbourhoods (Planungsräume)
@@ -40,3 +41,8 @@ order by area_name
     <Column id=stage title="Stage"/>
     <Column id=pressure_trend title="Pressure trend"/>
 </DataTable>
+
+---
+
+<sub>[Home](/) · [Methodology & data sources](/methodology) · [About this project](/about) · [GitHub repository](https://github.com/dhelweg/gentriduck)</sub>
+

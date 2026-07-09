@@ -1,5 +1,6 @@
 ---
 title: About this project
+sidebar_position: 30
 ---
 
 # About this project
@@ -83,3 +84,8 @@ above, and the complete history of architecture decisions are all public:
 Start with the [methodology & data sources](/methodology) page for what the numbers mean, or browse
 the repository's `docs/adr/` folder for the project's architecture decisions and `.claude/agents/`
 for the agent definitions described above.
+
+---
+
+<sub>[Home](/) · [Methodology & data sources](/methodology) · [About this project](/about) · [GitHub repository](https://github.com/dhelweg/gentriduck)</sub>
+
