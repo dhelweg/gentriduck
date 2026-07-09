@@ -53,25 +53,12 @@ from __future__ import annotations
 
 import argparse
 import logging
-import ssl
 import sys
 import urllib.parse
-import urllib.request
 from pathlib import Path
 from typing import Optional
 
-# macOS Python does not ship CA certs; use certifi's bundle when available.
-try:
-    import certifi as _certifi
-
-    _SSL_CONTEXT = ssl.create_default_context(cafile=_certifi.where())
-except ImportError:
-    _SSL_CONTEXT = ssl.create_default_context()
-
-import json
-
 import pyarrow as pa
-import pyarrow.parquet as pq
 
 try:
     from shapely.geometry import shape as shapely_shape
@@ -90,6 +77,10 @@ _INGESTION_ROOT = Path(__file__).resolve().parents[2]
 if str(_INGESTION_ROOT) not in sys.path:
     sys.path.insert(0, str(_INGESTION_ROOT))
 from manifest import existing_outputs, write_manifest_entry  # noqa: E402
+
+# QA-2 (#177): shared retry+backoff fetch and atomic-write helpers.
+from common.http import fetch_geojson  # noqa: E402
+from common.io import atomic_write_parquet  # noqa: E402
 
 # ---------------------------------------------------------------------------
 # Constants
@@ -169,35 +160,6 @@ def build_wfs_url(base_url: str, type_names: str) -> str:
         "outputFormat": "application/json",
     }
     return base_url + "?" + urllib.parse.urlencode(params)
-
-
-def fetch_geojson(url: str, timeout: int = 120) -> dict:
-    """
-    Fetch GeoJSON from a WFS URL.
-
-    Returns the parsed JSON dict. Raises on network / HTTP errors.
-    """
-    log.info("Fetching WFS GeoJSON from: %s", url)
-    try:
-        with urllib.request.urlopen(url, timeout=timeout, context=_SSL_CONTEXT) as resp:  # noqa: S310
-            raw = resp.read()
-    except urllib.error.URLError as exc:
-        raise RuntimeError(f"Network error fetching {url}: {exc}") from exc
-    except Exception as exc:
-        raise RuntimeError(f"Unexpected error fetching {url}: {exc}") from exc
-
-    try:
-        data = json.loads(raw)
-    except json.JSONDecodeError as exc:
-        raise RuntimeError(f"Invalid JSON response from {url}: {exc}") from exc
-
-    if data.get("type") != "FeatureCollection":
-        raise RuntimeError(
-            f"Expected GeoJSON FeatureCollection from {url}, "
-            f"got type={data.get('type')!r}. Response excerpt: {str(raw[:200])}"
-        )
-
-    return data
 
 
 # ---------------------------------------------------------------------------
@@ -319,7 +281,7 @@ def parse_features(
 
 
 def write_parquet(rows: list[dict], out_path: Path) -> None:
-    """Write parsed rows to a Parquet file using the LOR schema."""
+    """Write parsed rows to a Parquet file using the LOR schema (atomic write)."""
     vintages = [r["vintage"] for r in rows]
     area_levels = [r["area_level"] for r in rows]
     area_codes = [r["area_code"] for r in rows]
@@ -339,9 +301,9 @@ def write_parquet(rows: list[dict], out_path: Path) -> None:
         schema=LOR_PARQUET_SCHEMA,
     )
 
-    out_path.parent.mkdir(parents=True, exist_ok=True)
-    pq.write_table(table, out_path, compression="snappy")
-    log.info("Wrote %d rows to %s", len(rows), out_path)
+    # QA-2 (#177): atomic write -- a crash mid-write must never leave a
+    # partial/corrupt file where dbt or verify_data.py expects a complete one.
+    atomic_write_parquet(table, out_path)
 
 
 # ---------------------------------------------------------------------------
