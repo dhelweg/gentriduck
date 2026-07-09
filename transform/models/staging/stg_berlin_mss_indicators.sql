@@ -40,7 +40,8 @@
     )
 }}
 
-{% set ind_glob = var("project_root") ~ "/data/raw/berlin/mss/*_indicators.parquet" %}
+{% set ind_glob = raw_path("berlin/mss/*_indicators.parquet") %}
+{%- set _src_raw_berlin_mss_indicators = source("raw_berlin", "mss_indicators") -%}
 
 {% if execute %}
     {%- set file_count_result = run_query("SELECT count(*) FROM glob('" ~ ind_glob ~ "')") -%}
@@ -59,7 +60,7 @@
         cast(indicator as varchar) as indicator,
         cast(value as double) as indicator_value,
         cast(source_attribution as varchar) as source_attribution
-    from read_parquet('{{ ind_glob }}', union_by_name = true)
+    from read_parquet({{ _src_raw_berlin_mss_indicators }}, union_by_name = true)
     where plr_id is not null
 
 {% else %}

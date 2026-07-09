@@ -59,7 +59,8 @@
     )
 }}
 
-{% set hh_sozmon_glob = var("project_root") ~ "/data/raw/hamburg/sozialmonitoring/*.parquet" %}
+{% set hh_sozmon_glob = raw_path("hamburg/sozialmonitoring/*.parquet") %}
+{%- set _src_raw_hamburg_sozialmonitoring = source("raw_hamburg", "sozialmonitoring") -%}
 
 {% if execute %}
     {%- set file_count_result = run_query("SELECT count(*) FROM glob('" ~ hh_sozmon_glob ~ "')") -%}
@@ -79,7 +80,7 @@
         cast(dynamik_index as varchar) as dynamik_index,
         cast(gesamtindex_label as varchar) as gesamtindex_label,
         cast(source_attribution as varchar) as source_attribution
-    from read_parquet('{{ hh_sozmon_glob }}', union_by_name = true)
+    from read_parquet({{ _src_raw_hamburg_sozialmonitoring }}, union_by_name = true)
     where area_code is not null
 
 {% else %}

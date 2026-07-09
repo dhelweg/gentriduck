@@ -58,7 +58,8 @@
     )
 }}
 
-{% set hh_ewr_glob = var("project_root") ~ "/data/raw/hamburg/ewr_stadtteil/*.parquet" %}
+{% set hh_ewr_glob = raw_path("hamburg/ewr_stadtteil/*.parquet") %}
+{%- set _src_raw_hamburg_ewr_stadtteil = source("raw_hamburg", "ewr_stadtteil") -%}
 
 {% if execute %}
     {%- set file_count_result = run_query("SELECT count(*) FROM glob('" ~ hh_ewr_glob ~ "')") -%}
@@ -94,7 +95,9 @@
             select *
             from
                 read_parquet(
-                    '{{ hh_ewr_glob }}', hive_partitioning = false, union_by_name = true
+                    {{ _src_raw_hamburg_ewr_stadtteil }},
+                    hive_partitioning = false,
+                    union_by_name = true
                 )
             where area_code is not null and city_code = 'HH'
         )

@@ -30,7 +30,8 @@
     )
 }}
 
-{% set lor_glob = var("project_root") ~ "/data/raw/berlin/lor/*_plr.parquet" %}
+{% set lor_glob = raw_path("berlin/lor/*_plr.parquet") %}
+{%- set _src_raw_berlin_lor_plr = source("raw_berlin", "lor_plr") -%}
 
 {% if execute %}
     {%- set file_count_result = run_query("SELECT count(*) FROM glob('" ~ lor_glob ~ "')") -%}
@@ -49,7 +50,7 @@
         cast(null as varchar) as parent_area_code,
         geometry_wkb,
         source_attribution
-    from read_parquet('{{ lor_glob }}', union_by_name = true)
+    from read_parquet({{ _src_raw_berlin_lor_plr }}, union_by_name = true)
     where area_code is not null and area_code ~ '^\d{8}$'
 
 {% else %}

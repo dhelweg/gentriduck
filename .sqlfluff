@@ -24,6 +24,11 @@ run_query = "{% macro run_query(q) %}{% set ns = namespace() %}{% set ns.result 
 # (transform/macros/canonical_city_code.sql) so sqlfluff's plain-jinja templater
 # (no dbt compile) can parse call sites without a dbt-macro loader.
 canonical_city_code = "{% macro canonical_city_code(column) %}case when {{ column }} = 'berlin' then 'BER' else {{ column }} end{% endmacro %}"
+# QA-5 (#180): stub for the project's raw_path() macro
+# (transform/macros/raw_path.sql) so sqlfluff's plain-jinja templater can parse
+# call sites without a dbt-macro loader. Returns a syntactically-valid dummy
+# path string; the real value is only needed at dbt-execute time.
+raw_path = "{% macro raw_path(relative_path) %}/tmp/raw/{{ relative_path }}{% endmacro %}"
 
 [sqlfluff:templater:jinja:context]
 # Default value for file_count used in stg_osm_poi.sql graceful-degradation logic.

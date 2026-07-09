@@ -16,6 +16,11 @@
 -- data/raw/berlin/price_rent/wohnlage_2023.parquet  (Stichtag 01.09.2022)
 -- data/raw/berlin/price_rent/wohnlage_2026.parquet  (Stichtag 01.09.2025)
 --
+-- QA-5 (#180): declared as source('raw_berlin', 'wohnlage') -- see
+-- models/staging/_sources.yml. read_parquet() natively handles a glob
+-- matching however many vintage files exist (equivalent to the old
+-- per-vintage enumerate-and-UNION-ALL logic).
+--
 -- Graceful-degradation: returns zero rows with the target schema when no parquet
 -- files have been ingested, so downstream models and uv run poe build pass before
 -- data is downloaded.
@@ -36,64 +41,26 @@
     )
 }}
 
-{% set parquet_2017 = var("project_root") ~ "/data/raw/berlin/price_rent/wohnlage_2017.parquet" %}
-{% set parquet_2019 = var("project_root") ~ "/data/raw/berlin/price_rent/wohnlage_2019.parquet" %}
-{% set parquet_2021 = var("project_root") ~ "/data/raw/berlin/price_rent/wohnlage_2021.parquet" %}
-{% set parquet_2023 = var("project_root") ~ "/data/raw/berlin/price_rent/wohnlage_2023.parquet" %}
-{% set parquet_2026 = var("project_root") ~ "/data/raw/berlin/price_rent/wohnlage_2026.parquet" %}
+{% set wohnlage_glob = raw_path("berlin/price_rent/wohnlage_*.parquet") %}
+{%- set _src_raw_berlin_wohnlage = source("raw_berlin", "wohnlage") -%}
 
 {% if execute %}
-    {%- set result_2017 = run_query("SELECT count(*) FROM glob('" ~ parquet_2017 ~ "')") -%}
-    {%- set cnt_2017 = result_2017.columns[0][0] -%}
-    {%- set result_2019 = run_query("SELECT count(*) FROM glob('" ~ parquet_2019 ~ "')") -%}
-    {%- set cnt_2019 = result_2019.columns[0][0] -%}
-    {%- set result_2021 = run_query("SELECT count(*) FROM glob('" ~ parquet_2021 ~ "')") -%}
-    {%- set cnt_2021 = result_2021.columns[0][0] -%}
-    {%- set result_2023 = run_query("SELECT count(*) FROM glob('" ~ parquet_2023 ~ "')") -%}
-    {%- set cnt_2023 = result_2023.columns[0][0] -%}
-    {%- set result_2026 = run_query("SELECT count(*) FROM glob('" ~ parquet_2026 ~ "')") -%}
-    {%- set cnt_2026 = result_2026.columns[0][0] -%}
-{% else %}
-    {%- set cnt_2017 = 0 -%}
-    {%- set cnt_2019 = 0 -%}
-    {%- set cnt_2021 = 0 -%}
-    {%- set cnt_2023 = 0 -%}
-    {%- set cnt_2026 = 0 -%}
+    {%- set file_count_result = run_query("SELECT count(*) FROM glob('" ~ wohnlage_glob ~ "')") -%}
+    {%- set file_count = file_count_result.columns[0][0] -%}
+{% else %} {%- set file_count = 0 -%}
 {% endif %}
 
-{% if cnt_2017 > 0 or cnt_2019 > 0 or cnt_2021 > 0 or cnt_2023 > 0 or cnt_2026 > 0 %}
+{% if file_count > 0 %}
 
-    {% set sources = [] %}
-    {% if cnt_2017 > 0 %}
-        {%- do sources.append({"parquet": parquet_2017, "year": 2017}) -%}
-    {% endif %}
-    {% if cnt_2019 > 0 %}
-        {%- do sources.append({"parquet": parquet_2019, "year": 2019}) -%}
-    {% endif %}
-    {% if cnt_2021 > 0 %}
-        {%- do sources.append({"parquet": parquet_2021, "year": 2021}) -%}
-    {% endif %}
-    {% if cnt_2023 > 0 %}
-        {%- do sources.append({"parquet": parquet_2023, "year": 2023}) -%}
-    {% endif %}
-    {% if cnt_2026 > 0 %}
-        {%- do sources.append({"parquet": parquet_2026, "year": 2026}) -%}
-    {% endif %}
-
-    {% for src in sources %}
-        select
-            vintage,
-            'berlin' as city_code,
-            geometry_wkb,
-            wohnlage,
-            address_id,
-            source_attribution
-        from read_parquet('{{ src.parquet }}')
-        where wohnlage is not null
-        {% if not loop.last %}
-            union all
-        {% endif %}
-    {% endfor %}
+    select
+        vintage,
+        'berlin' as city_code,
+        geometry_wkb,
+        wohnlage,
+        address_id,
+        source_attribution
+    from read_parquet({{ _src_raw_berlin_wohnlage }}, union_by_name = true)
+    where wohnlage is not null
 
 {% else %}
 

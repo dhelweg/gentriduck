@@ -600,7 +600,7 @@ with
             ) as prev_oa_waren_c_werkstatt_stock
         from
             read_csv(
-                '{{ var("project_root") }}/reference/goldens/20180909_result_full_plr.csv',
+                {{ source("thesis_2018", "result_full_plr") }},
                 encoding = 'latin-1',
                 auto_detect = true
             )

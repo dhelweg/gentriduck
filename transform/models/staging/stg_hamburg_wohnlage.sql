@@ -54,7 +54,8 @@
     )
 }}
 
-{% set hh_wohnlage_glob = var("project_root") ~ "/data/raw/hamburg/rent/wohnlage.parquet" %}
+{% set hh_wohnlage_glob = raw_path("hamburg/rent/wohnlage.parquet") %}
+{%- set _src_raw_hamburg_wohnlage = source("raw_hamburg", "wohnlage") -%}
 
 {% if execute %}
     {%- set file_count_result = run_query("SELECT count(*) FROM glob('" ~ hh_wohnlage_glob ~ "')") -%}
@@ -66,7 +67,7 @@
 
     select
         city_code, address_id, street_name, wohnlage, geometry_wkb, source_attribution
-    from read_parquet('{{ hh_wohnlage_glob }}', union_by_name = true)
+    from read_parquet({{ _src_raw_hamburg_wohnlage }}, union_by_name = true)
     where wohnlage is not null and city_code = 'HH'
 
 {% else %}

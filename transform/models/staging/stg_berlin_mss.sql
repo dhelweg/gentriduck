@@ -32,7 +32,8 @@
     )
 }}
 
-{% set mss_glob = var("project_root") ~ "/data/raw/berlin/mss/mss_????.parquet" %}
+{% set mss_glob = raw_path("berlin/mss/mss_????.parquet") %}
+{%- set _src_raw_berlin_mss = source("raw_berlin", "mss") -%}
 
 {% if execute %}
     {%- set file_count_result = run_query("SELECT count(*) FROM glob('" ~ mss_glob ~ "')") -%}
@@ -52,7 +53,7 @@
         cast(dynamik_index as integer) as dynamik_index,
         cast(gesamtindex as integer) as gesamtindex,
         cast(source_attribution as varchar) as source_attribution
-    from read_parquet('{{ mss_glob }}', union_by_name = true)
+    from read_parquet({{ _src_raw_berlin_mss }}, union_by_name = true)
     where plr_id is not null
 
 {% else %}

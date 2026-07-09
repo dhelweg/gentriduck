@@ -57,7 +57,8 @@
     )
 }}
 
-{% set hh_geo_glob = var("project_root") ~ "/data/raw/hamburg/geo/*.parquet" %}
+{% set hh_geo_glob = raw_path("hamburg/geo/*.parquet") %}
+{%- set _src_raw_hamburg_geo = source("raw_hamburg", "geo") -%}
 
 {% if execute %}
     {%- set file_count_result = run_query("SELECT count(*) FROM glob('" ~ hh_geo_glob ~ "')") -%}
@@ -76,7 +77,7 @@
         parent_area_code,
         geometry_wkb,
         source_attribution
-    from read_parquet('{{ hh_geo_glob }}', union_by_name = true)
+    from read_parquet({{ _src_raw_hamburg_geo }}, union_by_name = true)
     where area_code is not null and city_code = 'HH'
     qualify
         row_number() over (

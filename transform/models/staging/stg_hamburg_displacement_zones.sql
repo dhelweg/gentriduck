@@ -51,7 +51,8 @@
     )
 }}
 
-{% set hh_displacement_glob = var("project_root") ~ "/data/raw/hamburg/displacement/*.parquet" %}
+{% set hh_displacement_glob = raw_path("hamburg/displacement/*.parquet") %}
+{%- set _src_raw_hamburg_displacement_zones = source("raw_hamburg", "displacement_zones") -%}
 
 {% if execute %}
     {%- set file_count_result = run_query("SELECT count(*) FROM glob('" ~ hh_displacement_glob ~ "')") -%}
@@ -69,7 +70,7 @@
         in_force_date,
         geometry_wkb,
         source_attribution
-    from read_parquet('{{ hh_displacement_glob }}', union_by_name = true)
+    from read_parquet({{ _src_raw_hamburg_displacement_zones }}, union_by_name = true)
     where area_code is not null and city_code = 'HH'
 
 {% else %}
