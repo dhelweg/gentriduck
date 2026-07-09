@@ -36,6 +36,29 @@
 -- distance_weighted variant honestly comparable to the standard hard count (ADR-0010
 -- §4).
 --
+-- MASS-LEAKAGE GUARD (spatial-methods.md §11.3; ADR-0017 D5 condition C-1;
+-- docs/epic-b/P0.1-oa-variant-geo-signoff.md §2.5,
+-- docs/epic-b/P0.1-oa-variant-domain-signoff.md §3):
+-- At finite bandwidth b, a POI whose home PLR is large/low-density (Tempelhofer Feld,
+-- Grunewald, Flughafensee) can be > b from EVERY PLR's ST_PointOnSurface, including its
+-- own. Such a POI matched no row in poi_plr_distances/poi_weight_sums and was silently
+-- dropped -- mass was NOT conserved, contrary to this section's own contract, and the
+-- PLR's local base was distorted. This is blocking for OA-A.2 (#166) on cross-time (H3
+-- change-on-change under the 2021 LOR re-cut) and cross-city (ADR-0005) comparability
+-- grounds, not only mass conservation -- but the fix is general and benefits every
+-- consumer of this model (density layer, dynamism, hotspots), so it is implemented here
+-- rather than duplicated in a second model. Guard: any POI with a non-null hard home
+-- PLR
+-- (`hard_area_code`, from the C3 hard join) that matched zero PLRs within bandwidth is
+-- fall-back-assigned to that hard home PLR at weight 1 (see leakage_guard_contributions
+-- below). This makes Σ_a weighted_count = hard city total hold exactly (§11.1
+-- invariance), enforced by test_c1_oa_weighted_mass_conservation_invariance.sql via
+-- int_poi_offering_advantage. POIs with a NULL hard_area_code (outside all PLR polygons
+-- -- water bodies, airport perimeter) have no fallback and are correctly excluded
+-- either
+-- way, matching fct_poi_development's `where area_code is not null` filter on the hard
+-- variant.
+--
 -- CRS (spatial-methods.md §3; ADR-0010 Amendment 3):
 -- All distance/bandwidth computations in EPSG:25833 (ETRS89 / UTM zone 33N), Berlin's
 -- native LOR CRS. POI points transformed once via ST_Transform(..., true) (always_xy).
@@ -196,10 +219,69 @@
                 and d.osm_id = s.osm_id
         ),
 
+        -- Mass-leakage guard (spatial-methods.md §11.3; ADR-0017 D5 C-1; see file
+        -- header). A POI is "leaked" when it matched zero PLR representative points
+        -- within bandwidth b, i.e. it has no row in poi_weight_sums at all -- not a
+        -- row with total_weight = 0 (ST_DWithin already excludes those pairs upstream,
+        -- so poi_weight_sums simply never gains a row for a fully-isolated POI).
+        -- Only POIs with a non-null hard home PLR get a fallback; NULL-hard_area_code
+        -- POIs (outside every PLR polygon) are correctly left out, same as the hard
+        -- variant.
+        leaked_pois as (
+            select
+                p.city_code,
+                p.snapshot_year,
+                p.osm_id,
+                p.poi_domain_h,
+                p.poi_category_h,
+                p.poi_type_h,
+                p.hard_area_code as area_code,
+                p.hard_area_vintage as area_vintage
+            from poi_points as p
+            left join
+                poi_weight_sums as s
+                on p.snapshot_year = s.snapshot_year
+                and p.osm_id = s.osm_id
+            where s.osm_id is null and p.hard_area_code is not null
+        ),
+
+        -- Unified per-POI-PLR weight contribution: mass-conserving Gaussian weights
+        -- for matched POIs, plus weight-1 fallback contributions for leaked POIs.
+        -- Union (not union-of-aggregates) so a PLR/taxonomy cell that receives both
+        -- kernel-matched and leakage-guard mass in the same group re-aggregates
+        -- correctly in weighted_agg below (a leaked POI's fallback PLR could in
+        -- principle coincide with a cell also fed by other, non-leaked POIs).
+        poi_contributions as (
+            select
+                city_code,
+                snapshot_year,
+                osm_id,
+                poi_domain_h,
+                poi_category_h,
+                poi_type_h,
+                area_code,
+                area_vintage,
+                normalized_weight as contribution_weight
+            from normalized_weights
+            union all
+            select
+                city_code,
+                snapshot_year,
+                osm_id,
+                poi_domain_h,
+                poi_category_h,
+                poi_type_h,
+                area_code,
+                area_vintage,
+                1.0 as contribution_weight
+            from leaked_pois
+        ),
+
         -- Aggregate weighted POI fractional counts per (PLR, year, category).
-        -- Each POI contributes ŵ_ij to PLR i; summed = weighted_count.
-        -- Σ_j ŵ_ij = total distance-weighted POI mass for PLR i in this year.
-        -- City-wide sum of weighted_count = total POI count (mass conservation).
+        -- Each POI contributes ŵ_ij (or 1.0 if leakage-guarded) to PLR i; summed =
+        -- weighted_count. Σ_j ŵ_ij = total distance-weighted POI mass for PLR i in
+        -- this year. City-wide sum of weighted_count = total POI count (mass
+        -- conservation; §11.1 invariance once the leakage guard is applied).
         weighted_agg as (
             select
                 city_code,
@@ -209,11 +291,12 @@
                 poi_domain_h,
                 poi_category_h,
                 poi_type_h,
-                -- Weighted fractional count: sum of normalized weights for this
-                -- POI category in this PLR. Replaces integer count from hard join.
-                sum(normalized_weight) as weighted_count,
+                -- Weighted fractional count: sum of normalized (+ leakage-guard)
+                -- weights for this POI category in this PLR. Replaces integer count
+                -- from hard join.
+                sum(contribution_weight) as weighted_count,
                 count(*) as contributing_poi_count
-            from normalized_weights
+            from poi_contributions
             group by
                 city_code,
                 snapshot_year,
