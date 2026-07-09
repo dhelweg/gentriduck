@@ -293,9 +293,11 @@ def load_ewr_lead_lag_data(con: duckdb.DuckDBPyConnection) -> object:
     POI join strategy (vintage bridge):
     int_poi_features_pivot for years < 2021 uses lor_pre2021 area_codes (448 PLRs).
     int_ewr_lead_lag uses lor_2021 area_codes (542 PLRs, crosswalked).
-    To bridge: use seed_lor_crosswalk_2006_to_2021 with the dominant (max-weight) pre-2021
-    PLR for each lor_2021 PLR. All 542 lor_2021 PLRs resolve to a dominant pre-2021 PLR
-    and receive a non-zero poi_count — no PLR falls through to the COALESCE(0) sentinel.
+    QA-7b (#205): the dominant (max-weight) pre-2021↔2021 PLR crosswalk previously computed
+    inline here now lives in the gated dbt intermediate int_berlin_lor_crosswalk_dominant_2021
+    (R-C1; geo-DS + domain-expert sign-off in docs/epic-c/QA-7b-crosswalk-bridge-*-signoff.md).
+    All 542 lor_2021 PLRs resolve to a dominant pre-2021 PLR and receive a non-zero
+    poi_count — no PLR falls through to the COALESCE(0) sentinel.
 
     Pseudo-replication caveat: ~78 pre-2021 PLRs are the dominant match for 2+ lor_2021
     PLRs (up to 6 each), meaning ~35% of lor_2021 PLRs share their poi_count_t with at
@@ -304,20 +306,6 @@ def load_ewr_lead_lag_data(con: duckdb.DuckDBPyConnection) -> object:
     p-values.
     """
     df = con.execute("""
-        WITH
-        -- Dominant pre-2021 PLR for each 2021 PLR (max-weight crosswalk entry).
-        -- Used to bridge POI data (lor_pre2021) to EWR data (lor_2021).
-        xw_dominant AS (
-            SELECT plr_id_2021, plr_id_pre2021
-            FROM (
-                SELECT plr_id_2021, plr_id_pre2021,
-                       ROW_NUMBER() OVER (
-                           PARTITION BY plr_id_2021 ORDER BY weight DESC
-                       ) AS rn
-                FROM main_seeds.seed_lor_crosswalk_2006_to_2021
-            )
-            WHERE rn = 1
-        )
         SELECT
             ll.area_code,
             ll.lag_k,
@@ -333,7 +321,7 @@ def load_ewr_lead_lag_data(con: duckdb.DuckDBPyConnection) -> object:
             COALESCE(p_tk_pre.total_poi_count, 0)  AS poi_count_tk,
             COALESCE(p_tk_pre.total_poi_count, 0) - COALESCE(p_t_pre.total_poi_count, 0) AS delta_poi
         FROM main.int_ewr_lead_lag ll
-        LEFT JOIN xw_dominant xw ON ll.area_code = xw.plr_id_2021
+        LEFT JOIN main.int_berlin_lor_crosswalk_dominant_2021 xw ON ll.area_code = xw.plr_id_2021
         -- lor_pre2021 crosswalk join: maps lor_2021 EWR area_code → lor_pre2021 POI area_code
         LEFT JOIN main.int_poi_features_pivot p_t_pre
             ON xw.plr_id_pre2021 = p_t_pre.area_code
