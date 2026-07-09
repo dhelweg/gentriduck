@@ -2626,6 +2626,79 @@ models:
           flag is informational (cross-era caution carried through, not enforced) rather
           than a null-producing condition.
 
+  - name: int_berlin_milieuschutz_plr_flag
+    description: >
+      #70 [B1], fourth slice (first integration slice): spatially resolves
+      stg_berlin_milieuschutz (current-state Sec. 172 Abs. 1 Nr. 2 BauGB
+      designated-area polygons) onto the PLR grain via ST_Intersects (not
+      ST_Within -- Milieuschutz boundaries do not align with PLR boundaries;
+      see docs/methodology/B1-milieuschutz-geo-signoff.md), covering both LOR
+      vintages independently. Produces a disclosure-only binary flag +
+      overlap fraction; deliberately NOT blended with rent_pressure_proxy or
+      turnover_proxy (three different, honestly-incompatible time grains --
+      see model header) and NOT wired into the contract-enforced
+      gentrification_index mart. Intended as the "parallel published layer"
+      satisfying #70's acceptance-criteria fallback option.
+
+      Current-state only: the WFS exposes only the current designation set
+      (no per-year edition endpoint), so this is not a time-series panel --
+      earliest_in_force_date is carried through for a coarse before/after cut
+      only.
+
+      See docs/methodology/B1-milieuschutz-geo-signoff.md and
+      docs/methodology/B1-milieuschutz-domain-signoff.md.
+
+      Source: stg_berlin_milieuschutz + stg_berlin_lor.
+    meta:
+      dbt_meta_owner: data-engineer
+    data_tests:
+
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns:
+              - city_code
+              - area_code
+              - area_vintage
+    columns:
+      - name: city_code
+        description: City identifier (ADR-0005), normalised to 'BER'.
+        data_tests:
+
+          - not_null
+      - name: area_code
+        description: PLR identifier (matches stg_berlin_lor).
+      - name: area_vintage
+        description: LOR boundary vintage (lor_pre2021 or lor_2021).
+      - name: under_milieuschutz
+        description: >
+          TRUE when the PLR spatially intersects at least one current
+          Milieuschutz (soziale Erhaltungsverordnung) designation. A policy
+          marker of displacement risk the city already recognizes, not a
+          measured displacement outcome -- PLRs without the flag are not
+          thereby "safe from displacement," only "not (yet) formally
+          protected" (ADR-0019 Consequences).
+        data_tests:
+
+          - not_null
+      - name: milieuschutz_designation_count
+        description: Count of distinct Milieuschutz designations overlapping this PLR (0 if none).
+      - name: milieuschutz_area_codes
+        description: >
+          Comma-separated list of overlapping Milieuschutz area_codes
+          (schluessel, e.g. "EM0105"), NULL when under_milieuschutz is FALSE.
+      - name: earliest_in_force_date
+        description: >
+          Earliest in_force_date among the PLR's overlapping designations, if
+          any -- a coarse "protected since at least this date" marker, NOT a
+          reconstructed status panel (see model header).
+      - name: milieuschutz_overlap_frac
+        description: >
+          Sum of intersection area across all overlapping designations,
+          divided by the PLR's own area, clipped to [0,1]. 0 when
+          under_milieuschutz is FALSE. Lets a consumer distinguish
+          marginal-boundary-touch from near-total-coverage without this
+          model imposing a materiality threshold itself.
+
   - name: int_price_rent_brw_wohnlage_combined
     description: >
       QA-6b (#204): extracted from mart_price_rent_dimension.sql -- aligns the BRW

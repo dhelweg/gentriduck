@@ -1328,9 +1328,9 @@ models:
       WFS (erhaltungsverordnungsgebiete:erhaltgeb_em), CRS EPSG:25833,
       dl-de-zero-2.0. PLUMBING, not methodology (R-C1): straight
       polygon-attribute staging, no weighting/scoring/index-construction
-      logic. Zero consumers as of this writing -- the consuming
-      intermediate/sub-index slice (rent-pressure proxy, ADR-0019 Decision 2)
-      is a separate, gated follow-up. Populated by
+      logic. Consumed by int_berlin_milieuschutz_plr_flag (#70 fourth
+      slice, PLR-grain spatial flag; docs/methodology/B1-milieuschutz-*-signoff.md).
+      Populated by
       ingestion/berlin/displacement/ingest_milieuschutz.py. Returns zero rows
       (typed stub) until data/raw/berlin/displacement/milieuschutz.parquet
       exists. 82 designated areas confirmed live 2026-07-09.
@@ -1357,7 +1357,10 @@ models:
             severity: warn
     columns:
       - name: city_code
-        description: Canonical city code 'berlin' (ADR-0005; matches dim_city.city_code).
+        description: >
+          Canonical city code 'BER' (ADR-0005; matches dim_city.city_code).
+          Source parquet carries the legacy lowercase 'berlin'; normalised
+          here via canonical_city_code() (QA-4/#179).
         data_tests:
 
           - not_null:
@@ -1365,7 +1368,7 @@ models:
                 where: "area_code is not null"
           - accepted_values:
               arguments:
-                values: ["berlin"]
+                values: ["BER"]
               config:
                 where: "area_code is not null"
       - name: area_code
