@@ -1,5 +1,6 @@
 ---
 title: Area detail — neighbourhood drill-down
+sidebar_position: 13
 ---
 
 # Area detail — one neighbourhood, full picture
@@ -251,3 +252,8 @@ See [methodology & data sources](/methodology) for what the index means, the
 [citywide POI & price/rent overview](/poi-price-overview) for these signals across all of Berlin, the
 [time-series view](/time-series) for how the whole city has moved, or the
 [full neighbourhood list](/area) to search for a specific area directly.
+
+---
+
+<sub>[Home](/) · [Methodology & data sources](/methodology) · [About this project](/about) · [GitHub repository](https://github.com/dhelweg/gentriduck)</sub>
+

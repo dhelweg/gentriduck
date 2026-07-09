@@ -1,5 +1,6 @@
 ---
 title: The 2018 thesis, re-checked
+sidebar_position: 10
 ---
 
 <!--
@@ -150,3 +151,8 @@ For the **current** picture the six hypotheses take a back seat to the live typo
 - [Methodology & data sources](/methodology) — what the current index measures and how it differs from the 2018 original
 - [Home page](/) and [maps](/maps) — the current, live picture of Berlin
 - [github.com/dhelweg/gentriduck](https://github.com/dhelweg/gentriduck) — all code, models, and decisions
+
+---
+
+<sub>[Home](/) · [Methodology & data sources](/methodology) · [About this project](/about) · [GitHub repository](https://github.com/dhelweg/gentriduck)</sub>
+

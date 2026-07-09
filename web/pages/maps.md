@@ -1,5 +1,6 @@
 ---
 title: Maps — gentrification pressure by area
+sidebar_position: 12
 ---
 
 <script>
@@ -162,3 +163,8 @@ exact neighbourhood page ([#133](https://github.com/dhelweg/gentriduck/issues/13
 [#150](https://github.com/dhelweg/gentriduck/issues/150)) when viewing "Live data"; the
 Bezirksregion map above is view-only for now, and browsing by district still works on the
 [area detail page](/area-detail).
+
+---
+
+<sub>[Home](/) · [Methodology & data sources](/methodology) · [About this project](/about) · [GitHub repository](https://github.com/dhelweg/gentriduck)</sub>
+
