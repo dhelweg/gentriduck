@@ -129,7 +129,7 @@ tickets and code merges stay maintainer- and agent-controlled (ADR-0011, ADR-002
 upvote ones you support; requests crossing a vote threshold are screened and, if they pass,
 promoted into the backlog as a normal ticket — subject to every existing engineering gate (no
 vote count ever buys a bypass). See [ADR-0020](docs/adr/0020-community-contribution-governance-voting-board.md)
-for the full governance model.
+for the full governance model. Full policy + how-to: **[CONTRIBUTING.md](CONTRIBUTING.md)**.
 
 ## Licence
 
