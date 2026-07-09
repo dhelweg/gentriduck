@@ -121,8 +121,10 @@ zones, Wohnlagen/Mietenspiegel)
 ## 5. Software / tooling attribution (informational, not a data-licence obligation)
 
 Listed for completeness — none of these carry a data-attribution requirement for site visitors, but
-are credited here per open-source courtesy: `ohsome-py` (Apache-2.0, HeiGIT), `osmium-tool`
-(BSL-1.0), `quackosm` (Apache-2.0), PySAL (BSD-3-Clause), `shapely` (BSD-3-Clause).
+are credited here per open-source courtesy: `ohsome-py` (Apache-2.0, HeiGIT), `osmium`
+(BSL-1.0 — the C1 OSM full-history reader; ADR-0002 Amendment 2026-07-09 supersedes the
+originally-listed `quackosm`, dropped as unused, QA-8b #206), PySAL (BSD-3-Clause), `shapely`
+(BSD-3-Clause).
 
 ---
 
