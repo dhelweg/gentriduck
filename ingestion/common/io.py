@@ -1,7 +1,7 @@
 """
 ingestion/common/io.py
 ========================
-QA-2 (#177) — shared atomic-Parquet-write helper.
+QA-2 (#177) — shared atomic-write helpers (Parquet + raw bytes).
 
 Factors out the tmp-path + rename pattern that only `ingest_kauffaelle.py`
 and `ingest_wohnlage.py` used previously (the QA-2 issue's "non-atomic
@@ -43,3 +43,22 @@ def atomic_write_parquet(
         raise
     tmp_path.replace(out_path)
     log.info("Wrote %d rows to %s", table.num_rows, out_path)
+
+
+def atomic_write_bytes(data: bytes, out_path: Path) -> None:
+    """Write raw `data` to `out_path` atomically (tmp file + rename).
+
+    Companion to `atomic_write_parquet` for non-Parquet artefacts (e.g. the
+    downloaded PDFs `common.http.download_pdf` writes). On any write failure
+    the tmp file is removed and the exception re-raised; `out_path` is left
+    untouched.
+    """
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+    tmp_path = out_path.with_suffix(out_path.suffix + ".tmp")
+    try:
+        tmp_path.write_bytes(data)
+    except Exception:
+        tmp_path.unlink(missing_ok=True)
+        raise
+    tmp_path.replace(out_path)
+    log.info("Wrote %d bytes to %s", len(data), out_path)

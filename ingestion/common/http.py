@@ -9,6 +9,11 @@ Factors out the pattern that was duplicated across ~15 ingest scripts:
   2. A single `urllib.request.urlopen` call with no retry, so one
      transient WFS/CKAN hiccup aborted the whole `poe ingest`/`poe
      refresh` sequence mid-way (the QA-2 issue's core complaint).
+  3. PDF downloads (`download_pdf`, duplicated in the Mietspiegel/
+     Strassenverzeichnis scripts) — same retry semantics as `fetch_bytes`,
+     plus the `User-Agent` header those scripts send and an atomic write
+     to disk (QA-2's "non-atomic writes" finding covers PDF artefacts too,
+     not just Parquet).
 
 Deliberately stdlib + `certifi` only (already a pyproject.toml dependency)
 — no new tool/library per CLAUDE.md golden rule #1/#2.
@@ -22,6 +27,7 @@ import ssl
 import time
 import urllib.error
 import urllib.request
+from pathlib import Path
 from typing import Any, Optional
 
 log = logging.getLogger(__name__)
@@ -34,6 +40,7 @@ _RETRYABLE_HTTP_STATUSES = {429, 500, 502, 503, 504}
 DEFAULT_TIMEOUT = 120
 DEFAULT_MAX_RETRIES = 3
 DEFAULT_BACKOFF_BASE = 1.0  # seconds; attempt N sleeps backoff_base * 2**(N-1)
+DEFAULT_USER_AGENT = "gentriduck-ingest/1.0"
 
 
 class FetchError(RuntimeError):
@@ -68,6 +75,7 @@ def fetch_bytes(
     max_retries: int = DEFAULT_MAX_RETRIES,
     backoff_base: float = DEFAULT_BACKOFF_BASE,
     sleep_fn=time.sleep,
+    headers: Optional[dict[str, str]] = None,
 ) -> bytes:
     """Fetch raw bytes from `url` with bounded retry+backoff.
 
@@ -76,6 +84,9 @@ def fetch_bytes(
     `backoff_base * 2**(attempt-1)` seconds between attempts (attempt 1
     has no prior sleep). Does NOT retry on other HTTP errors (e.g. 404) —
     those are permanent for a given URL within a run.
+
+    `headers` (optional) are sent on every attempt via `urllib.request.Request`
+    — e.g. a `User-Agent` some upstream hosts require (see `download_pdf`).
 
     Raises `FetchError` if all attempts are exhausted.
     """
@@ -93,7 +104,8 @@ def fetch_bytes(
             )
             sleep_fn(delay)
         try:
-            with urllib.request.urlopen(url, timeout=timeout, context=_SSL_CONTEXT) as resp:  # noqa: S310
+            req = urllib.request.Request(url, headers=headers or {})  # noqa: S310
+            with urllib.request.urlopen(req, timeout=timeout, context=_SSL_CONTEXT) as resp:  # noqa: S310
                 return resp.read()
         except urllib.error.HTTPError as exc:
             last_exc = exc
@@ -155,3 +167,41 @@ def fetch_geojson(
             f"got type={data.get('type')!r}. Response excerpt: {str(raw[:200])}"
         )
     return data
+
+
+def download_pdf(
+    url: str,
+    dest: Path,
+    *,
+    timeout: int = 60,
+    max_retries: int = DEFAULT_MAX_RETRIES,
+    backoff_base: float = DEFAULT_BACKOFF_BASE,
+    sleep_fn=time.sleep,
+    user_agent: str = DEFAULT_USER_AGENT,
+) -> int:
+    """Download a PDF (or any binary) from `url` to `dest`, atomically.
+
+    Replaces the identical `download_pdf` duplicated in
+    `ingest_mietspiegel.py` and `ingest_strassenverzeichnis.py`: same
+    `User-Agent` header and tmp-file-then-rename atomic write, but now with
+    `fetch_bytes`' bounded retry+backoff instead of a single unretried
+    `urlopen` call.
+
+    Returns the number of bytes written. Raises `FetchError` on failure
+    (network error after exhausting retries, or a non-retryable HTTP error);
+    `dest` is left untouched on failure.
+    """
+    data = fetch_bytes(
+        url,
+        timeout=timeout,
+        max_retries=max_retries,
+        backoff_base=backoff_base,
+        sleep_fn=sleep_fn,
+        headers={"User-Agent": user_agent},
+    )
+    dest.parent.mkdir(parents=True, exist_ok=True)
+    tmp = dest.with_suffix(dest.suffix + ".tmp")
+    tmp.write_bytes(data)
+    tmp.replace(dest)
+    log.info("Saved %d bytes -> %s", len(data), dest)
+    return len(data)
