@@ -73,9 +73,11 @@ log = logging.getLogger(__name__)
 # Configurable DB path (ADR-0010 Amendment 7: configurable, not hard-coded)
 # ---------------------------------------------------------------------------
 _env_db = os.environ.get("GENTRIDUCK_DB")
-DUCKDB_PATH = _env_db if _env_db else "data/gentriduck.duckdb"
+# QA-7 (#182): __file__-anchored so this script runs from any cwd.
+_repo_root = Path(__file__).parent.parent
+DUCKDB_PATH = Path(_env_db) if _env_db else _repo_root / "data" / "gentriduck.duckdb"
 
-OUT_DIR = Path("data/analysis")
+OUT_DIR = _repo_root / "data" / "analysis"
 
 # spatial-methods.md §8: α=0.05 for all significance tests (Moran's I, LISA, regression).
 ALPHA = 0.05
@@ -267,7 +269,10 @@ def run_moran(
     """Compute global Moran's I for a single variable vector.
 
     Moran (1950) Biometrika 37(1); spatial-methods.md §8.
-    esda.Moran(y, w, permutations=999, seed=42) — explicit per-call seed (R-C3).
+    QA-7 (#182): docstring fix -- this esda version's Moran() has no per-call
+    seed kwarg; reproducibility is achieved by setting the global
+    np.random.seed(SEED) immediately before each call (see below), which is
+    deterministic in practice but is a global, not a per-call, seed (R-C3).
 
     Returns dict with I, EI, z_norm, p_norm, p_sim, significant, label.
     """

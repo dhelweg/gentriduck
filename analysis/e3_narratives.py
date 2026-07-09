@@ -25,8 +25,11 @@ from pathlib import Path
 import duckdb
 import pandas as pd
 
-DB_PATH = os.environ.get("GENTRIDUCK_DB", "data/gentriduck.duckdb")
-OUT_DIR = Path("data/analysis")
+# QA-7 (#182): __file__-anchored so this script runs from any cwd.
+_repo_root = Path(__file__).parent.parent
+_env_db = os.environ.get("GENTRIDUCK_DB")
+DB_PATH = Path(_env_db) if _env_db else _repo_root / "data" / "gentriduck.duckdb"
+OUT_DIR = _repo_root / "data" / "analysis"
 
 
 def connect(path: str) -> duckdb.DuckDBPyConnection:

@@ -88,6 +88,11 @@ analysis = { sequence = [
     "python analysis/a6_hotspots.py",
     "python analysis/a6_maup.py",
     "python analysis/a9_spatial_dynamic.py",
+    # QA-7 (#182): e3_* were previously omitted from this sequence with no
+    # documented reason -- both are runnable, __file__-anchored, deterministic
+    # (no RNG) analysis scripts, so they belong here like their siblings.
+    "python analysis/e3_maps.py",
+    "python analysis/e3_narratives.py",
 ], default_item_type = "cmd" }
 # B2: back-test harness — validates live index against MSS classes and known hotspot/coldspot PLRs.
 # Run after `poe build`. Results written to docs/methodology/backtest.md.

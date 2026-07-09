@@ -29,9 +29,12 @@ import pandas as pd
 logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
 log = logging.getLogger(__name__)
 
-DB_PATH = os.environ.get("GENTRIDUCK_DB", "data/gentriduck.duckdb")
-LOR_PARQUET = Path("data/raw/berlin/lor/lor_2021.parquet")
-OUT_DIR = Path("data/analysis")
+# QA-7 (#182): __file__-anchored so this script runs from any cwd.
+_repo_root = Path(__file__).parent.parent
+_env_db = os.environ.get("GENTRIDUCK_DB")
+DB_PATH = Path(_env_db) if _env_db else _repo_root / "data" / "gentriduck.duckdb"
+LOR_PARQUET = _repo_root / "data" / "raw" / "berlin" / "lor" / "lor_2021.parquet"
+OUT_DIR = _repo_root / "data" / "analysis"
 
 # D1×D2 stage colour palette (colourblind-accessible diverging scheme)
 STAGE_COLOURS: dict[str, str] = {
