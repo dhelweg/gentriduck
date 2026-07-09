@@ -53,27 +53,14 @@ Usage:
 from __future__ import annotations
 
 import argparse
+import datetime
 import logging
-import ssl
 import sys
 import urllib.parse
-import urllib.request
 from pathlib import Path
 from typing import Optional
 
-# macOS Python does not ship CA certs; use certifi's bundle when available.
-try:
-    import certifi as _certifi
-
-    _SSL_CONTEXT = ssl.create_default_context(cafile=_certifi.where())
-except ImportError:
-    _SSL_CONTEXT = ssl.create_default_context()
-
-import datetime
-import json
-
 import pyarrow as pa
-import pyarrow.parquet as pq
 
 try:
     from shapely.geometry import shape as shapely_shape
@@ -91,6 +78,10 @@ _INGESTION_ROOT = Path(__file__).resolve().parents[2]
 if str(_INGESTION_ROOT) not in sys.path:
     sys.path.insert(0, str(_INGESTION_ROOT))
 from manifest import existing_outputs, write_manifest_entry  # noqa: E402
+
+# QA-2 (#177): shared retry+backoff fetch and atomic-write helpers.
+from common.http import FetchError, fetch_geojson  # noqa: E402
+from common.io import atomic_write_parquet  # noqa: E402
 
 # ---------------------------------------------------------------------------
 # Constants
@@ -161,28 +152,17 @@ def build_wfs_url(base_url: str, type_name: str, offset: int) -> str:
 
 
 def fetch_page(base_url: str, type_name: str, offset: int, timeout: int = 120) -> dict:
-    """Fetch one WFS page as a parsed GeoJSON dict."""
+    """Fetch one WFS page as a parsed GeoJSON dict.
+
+    QA-2 (#177): delegates to `common.http.fetch_geojson` for the bounded
+    retry+backoff + FeatureCollection validation previously duplicated here.
+    """
     url = build_wfs_url(base_url, type_name, offset)
     log.info("Fetching BRW WFS page: startIndex=%d  url=%s", offset, url)
     try:
-        with urllib.request.urlopen(url, timeout=timeout, context=_SSL_CONTEXT) as resp:  # noqa: S310
-            raw = resp.read()
-    except urllib.error.URLError as exc:
-        raise RuntimeError(f"Network error fetching offset={offset}: {exc}") from exc
-    except Exception as exc:
-        raise RuntimeError(f"Unexpected error fetching offset={offset}: {exc}") from exc
-
-    try:
-        data = json.loads(raw)
-    except json.JSONDecodeError as exc:
-        raise RuntimeError(f"Invalid JSON at offset={offset}: {exc}") from exc
-
-    if data.get("type") != "FeatureCollection":
-        raise RuntimeError(
-            f"Expected GeoJSON FeatureCollection at offset={offset}, "
-            f"got type={data.get('type')!r}. Excerpt: {str(raw[:200])}"
-        )
-    return data
+        return fetch_geojson(url, timeout=timeout)
+    except FetchError as exc:
+        raise RuntimeError(f"Failed fetching offset={offset}: {exc}") from exc
 
 
 def fetch_all_features(base_url: str, type_name: str) -> list[dict]:
@@ -316,7 +296,7 @@ def parse_features(
 
 
 def write_parquet(rows: list[dict], out_path: Path) -> None:
-    """Write parsed rows to Parquet using the BRW schema."""
+    """Write parsed rows to Parquet using the BRW schema (atomic write, QA-2/#177)."""
     table = pa.table(
         {
             "reference_date": pa.array([r["reference_date"] for r in rows], type=pa.date32()),
@@ -331,15 +311,7 @@ def write_parquet(rows: list[dict], out_path: Path) -> None:
         },
         schema=BRW_PARQUET_SCHEMA,
     )
-    tmp_path = out_path.with_suffix(".tmp.parquet")
-    out_path.parent.mkdir(parents=True, exist_ok=True)
-    try:
-        pq.write_table(table, tmp_path, compression="snappy")
-        tmp_path.rename(out_path)
-    except Exception:
-        tmp_path.unlink(missing_ok=True)
-        raise
-    log.info("Wrote %d rows to %s", len(rows), out_path)
+    atomic_write_parquet(table, out_path)
 
 
 # ---------------------------------------------------------------------------
