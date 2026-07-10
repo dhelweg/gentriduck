@@ -4,10 +4,13 @@ sidebar_position: 12
 ---
 
 <script>
-  // basePath-aware asset URL (#144): AreaMap fetches `geoJsonUrl` verbatim — unlike Evidence's
-  // nav/data links it does NOT prepend the base path — so on the GitHub Pages project site
-  // (served under /gentriduck) a bare "/geo/..." would 404 and the map renders empty. Prepend
-  // SvelteKit's `base` (= deployment.basePath in the build; "" when served at root in dev).
+  // basePath-aware asset URL (#144): AreaMap fetches `geoJsonUrl` verbatim, and its click-through
+  // `link` column does a raw `window.location.href = link` (EvidenceMap.js) -- unlike Evidence's
+  // own nav/DataTable links, NEITHER prepends the base path -- so on the GitHub Pages project site
+  // (served under /gentriduck) a bare "/geo/..." 404s (empty map) and a bare "/area/..." 404s on
+  // click-through. Prepend SvelteKit's `base` (= deployment.basePath in the build; "" when served
+  // at root in dev) to both -- `${base}` is interpolated directly into the `link` column's SQL
+  // literal below, the same templating mechanism used for `${inputs...}`.
   import { base } from '$app/paths';
 
   // #152: fixed, intuitive "worse -> red" ramp for the six-stage typology. EvidenceMap assigns
@@ -121,7 +124,9 @@ select
     -- `live_data`, since /area/[code] queries fct_gentrification_change etc. on lor_2021 (current,
     -- 542-PLR) area codes -- the `standard` (2018 thesis, 447-PLR pre-2021) variant's codes don't
     -- resolve there. Only the PLR branch below actually renders this as a link.
-    case when '${inputs.variant.value}' = 'live_data' then '/area/' || area_code end as link
+    case
+        when '${inputs.variant.value}' = 'live_data' then '${base}/area/' || area_code
+    end as link
 from gentriduck_marts.gentrification_index
 where variant = '${inputs.variant.value}'
   and area_level = '${inputs.area_level.value}'

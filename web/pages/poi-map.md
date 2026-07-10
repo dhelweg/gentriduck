@@ -130,7 +130,11 @@ select
     b.oa_domain,
     b.density_delta,
     b.oa_delta,
-    '/area/' || b.area_code as link
+    -- basePath-aware click-through (see /maps' `<script>` header comment): AreaMap's link column
+    -- does a raw `window.location.href = link` (EvidenceMap.js), unlike Evidence's own
+    -- nav/DataTable links, so `${base}` (SvelteKit's deployment.basePath) must be interpolated
+    -- into the link literal here, or click-through 404s on the GitHub Pages project site.
+    '${base}/area/' || b.area_code as link
 from base as b
 left join names as n on b.area_code = n.area_code
 where b.snapshot_year = ${inputs.year.value}
