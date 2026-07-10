@@ -16,6 +16,9 @@ title: Gentriduck — Berlin Gentrification Index
   own header comment for what changed there. This page's own audience-card markup was further
   re-platformed onto the shared `<LinkCard>`/`<LinkCards>` components in that same pass (see
   the "Pick your path" section below).
+  I4 (#221) added the `/timeline` page and links to it from here (Chapter 2's Alert, and the
+  "You design AI systems" audience card) -- per the ticket's "linked from the home page and footer
+  nav" acceptance criterion.
 -->
 
 <Hero
@@ -51,7 +54,8 @@ agent definition, every architecture decision, and every line of SQL that produc
 <Alert status="info">
   Curious how a multi-agent system builds this statistics site under an enforced methodology gate? The
   <a href="/about">about page</a> walks through the full workflow, the enforced "free & open only"
-  rules, and the methodology gate — or read the agent definitions and Architecture Decision Records
+  rules, and the methodology gate — the <a href="/timeline">project timeline</a> lays out every
+  milestone, dated and source-cited — or read the agent definitions and Architecture Decision Records
   directly in the <a href="https://github.com/dhelweg/gentriduck">GitHub repository</a>.
 </Alert>
 
@@ -281,7 +285,8 @@ Gentriduck speaks to five audiences. Start wherever you fit:
   </LinkCard>
   <LinkCard href="/how-its-organised" icon="🤖" title="You design AI systems" cta="Start with how it's organised →">
     A supervised multi-agent workflow with an enforced, adversarial methodology gate. The agent
-    team, the pipeline that ships a change, then the
+    team, the pipeline that ships a change, the <a href="/timeline">project timeline</a> from
+    thesis to today, then the
     <a href="https://github.com/dhelweg/gentriduck/tree/main/.claude/agents">agent definitions</a>
     and <a href="https://github.com/dhelweg/gentriduck/tree/main/docs/adr">ADRs</a>.
   </LinkCard>

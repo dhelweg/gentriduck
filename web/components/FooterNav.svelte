@@ -22,6 +22,7 @@
 
 <sub class="footer-nav">
 	<a href="{base}/">Home</a> ·
+	<a href="{base}/timeline">Timeline</a> ·
 	<a href="{base}/methodology">Methodology &amp; data sources</a> ·
 	<a href="{base}/about">About this project</a> ·
 	<a href="https://github.com/dhelweg/gentriduck">GitHub repository</a>
