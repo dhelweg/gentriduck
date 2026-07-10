@@ -3,33 +3,33 @@ title: Gentriduck — Berlin Gentrification Index
 ---
 
 <!--
-  Landing redesign (narrative iteration N1/N3/N5) — foregrounds the "how it's built"
-  (AI-architecture) story per maintainer direction, then the finding, then routes to three
-  audiences. Preserves the working SQL blocks from the previous index. #151 (visual identity)
-  turned the agent-workflow flow into the `.agent-pipeline` diagram, "Pick your path" into the
-  `.audience-cards` grid, and added the `.hero` treatment below — nothing here changes any
-  indicator/weight/method (no methodology gate).
+  I1 (#218) story-spine conversion: this is the exemplar page the storytelling guide
+  (docs/epic-i/storytelling-guide.md) asks I1 to prove the shared template against --
+  hero -> story -> evidence -> honest caveats -> where next (guide §4), with explicit chapter
+  labels (guide §1's four-chapter arc) and the 5-audience "Pick your path" router (guide §5).
+  The `.hero` and `.agent-pipeline` markup/CSS that used to be duplicated inline here and on
+  other pages now live in web/components/Hero.svelte and web/components/AgentPipeline.svelte
+  (Evidence auto-imports project components -- see those files' header comments); the footer nav
+  now lives in web/components/FooterNav.svelte. No indicator/weight/method changes here (no
+  methodology gate) -- all evidence queries below are unchanged from the previous revision.
+  Other pages keep their own inline hero/pipeline/footer copies until I3 converts them one by one.
 -->
 
-<div class="hero">
-  <div class="hero-eyebrow">A 2018 Berlin master's thesis, revived — built by a supervised team of AI agents</div>
-  <h1>Gentriduck</h1>
-  <p class="hero-lede">A live, public statistics project tracking gentrification pressure across
-  Berlin's neighbourhoods, on a free, open, local-first data stack. Everything here runs on open,
-  official data — Berlin's own social-monitoring reports, the population register, OpenStreetMap,
-  and official land-value/rent references — and every figure describes a small area of a few
-  thousand residents, never a person, household, or building.</p>
-  <div class="hero-links">
-    <a href="/how-its-organised" class="primary">How it's organised →</a>
-    <a href="#the-finding" class="secondary">What we found →</a>
-    <a href="/methodology" class="secondary">How we measure it →</a>
-  </div>
-</div>
-
+<Hero
+  eyebrow="A 2018 Berlin master's thesis, revived — built by a supervised team of AI agents"
+  title="Gentriduck"
+  lede="A live, public statistics project tracking gentrification pressure across Berlin's neighbourhoods, on a free, open, local-first data stack. Everything here runs on open, official data — Berlin's own social-monitoring reports, the population register, OpenStreetMap, and official land-value/rent references — and every figure describes a small area of a few thousand residents, never a person, household, or building."
+>
+  <a href="/how-its-organised" class="primary">How it's organised →</a>
+  <a href="#the-finding" class="secondary">What we found →</a>
+  <a href="/methodology" class="secondary">How we measure it →</a>
+</Hero>
 
 ---
 
 ## Built by a team of AI agents — with a human at the wheel
+
+<p class="chapter-label">Chapter 2 — The Revival</p>
 
 Gentriduck is unusual: the data pipeline, the models, and this website are built and maintained
 largely by a **team of specialised AI agents** (running on
@@ -38,20 +38,7 @@ Nobody grades their own homework, and nothing sensitive ships without a person l
 
 The work flows through a deliberately adversarial pipeline:
 
-<div class="agent-pipeline">
-  <div class="pipe-step"><span class="pipe-icon">🗂️</span><b>Project manager</b><small>picks the next task</small></div>
-  <div class="pipe-arrow">→</div>
-  <div class="pipe-step"><span class="pipe-icon">🛠️</span><b>Data engineer</b><small>builds it</small></div>
-  <div class="pipe-arrow">↔</div>
-  <div class="pipe-step"><span class="pipe-icon">🔍</span><b>Reviewer</b><small>independently checks</small></div>
-  <div class="pipe-arrow">→</div>
-  <div class="pipe-step pipe-gate"><span class="pipe-icon">⚖️</span><b>Dual methodology gate</b><small>geo-data-scientist &amp; domain expert — both must PASS</small></div>
-  <div class="pipe-arrow">→</div>
-  <div class="pipe-step"><span class="pipe-icon">🔀</span><b>PM self-integrates</b><small>onto <code>develop</code></small></div>
-  <div class="pipe-arrow">→</div>
-  <div class="pipe-step pipe-human"><span class="pipe-icon">🧑</span><b>Human maintainer</b><small>merges to the live site — once a week, by hand</small></div>
-</div>
-
+<AgentPipeline />
 
 That last step is the point: the agents self-integrate onto an internal branch, but the published
 site only ever advances through a **weekly pull request a human reviews and merges**. It is
@@ -59,7 +46,7 @@ supervised autonomy, not a black box — and because the project is fully open, 
 agent definition, every architecture decision, and every line of SQL that produces a number here.
 
 <Alert status="info">
-  Curious how a multi-agent system builds a peer-review-grade statistics site? The
+  Curious how a multi-agent system builds this statistics site under an enforced methodology gate? The
   <a href="/about">about page</a> walks through the full workflow, the enforced "free & open only"
   rules, and the methodology gate — or read the agent definitions and Architecture Decision Records
   directly in the <a href="https://github.com/dhelweg/gentriduck">GitHub repository</a>.
@@ -68,6 +55,8 @@ agent definition, every architecture decision, and every line of SQL that produc
 ---
 
 ## The finding
+
+<p class="chapter-label">Chapter 3 — The Evidence</p>
 
 **Does the 2018 thesis's result still hold in 2025? Partly — and that's the interesting part.**
 
@@ -220,11 +209,54 @@ headline numbers on this page; the full methodology, thresholds, and PLR-by-PLR 
 
 ---
 
+## Honest caveats
+
+- A **negative** trend is the one this project reads as **higher** gentrification pressure; a
+  **positive** trend means **lower** pressure. A **low** status class means **lower** deprivation
+  (a wealthier area) — so "low" is not the same as "bad." The
+  [methodology & data sources](/methodology) page is the full decoder;
+  [ADR-0004](https://github.com/dhelweg/gentriduck/blob/main/docs/adr/0004-data-governance-and-index-definition.md)
+  is the technical spec.
+- **"Improving" is not automatically good news.** Rising status is also the signature of
+  gentrification — that is exactly why the `improving-vulnerable` stage above is deliberately
+  ambiguous rather than a straightforward "good" result (see [methodology](/methodology) §3).
+- Open data can observe socio-economic upgrading and demographic recomposition; **it cannot
+  observe that a specific household was involuntarily displaced.** Every figure on this page
+  describes an aggregate area of a few thousand residents, never a person, household, or building,
+  and the project uses risk/pressure language throughout rather than a claim that displacement has
+  occurred (full statement: [methodology](/methodology) §6).
+- The commerce ↔ social-status relationship above is real but fragile — sensitive to which social
+  measure and which period you use. [The 2018 thesis, re-checked](/thesis-recheck) shows that
+  tension hypothesis by hypothesis rather than behind one headline number.
+
+---
+
 ## Pick your path
 
-Gentriduck is three projects in one. Start wherever you fit:
+<p class="chapter-label">Chapter 4 — What it means for you</p>
 
+Gentriduck speaks to five audiences. Start wherever you fit:
+
+<!--
+  I1 (#218): 5 cards per docs/epic-i/storytelling-guide.md §5's target order. Two of the five
+  (policy/initiatives -> takeaways, open-data -> open-data) point to pages I5/I6 haven't built
+  yet -- building placeholder routes for those pages is out of I1's scope (that's I5/I6's job).
+  Evidence's static build prerenders and crawls every <a href>, and fails the whole build on a
+  404 for an internal link (confirmed locally: `npm run build` hard-errors on a link to
+  `/takeaways`) -- so, until those pages exist, these two cards are non-linking `<div>`s (same
+  `.audience-card` look, `.audience-card-planned` modifier) rather than `<a href>`s, so the
+  router is honestly 5 cards wide without a dead link or a broken build. Swap each to an `<a>`
+  once its page lands (I5, I6).
+-->
 <div class="audience-cards">
+  <div class="audience-card audience-card-planned">
+    <div class="audience-icon">🏛️</div>
+    <h3>You work in housing policy or a local initiative</h3>
+    <p>Plain-language, honestly caveated takeaways on gentrification pressure — each with a
+    "what the data shows" link and an explicit "what this can NOT tell you" boundary — plus the
+    <a href="/maps">maps</a> and per-neighbourhood profiles behind them.</p>
+    <span class="audience-cta">Takeaways page — coming soon</span>
+  </div>
   <a href="/methodology" class="audience-card">
     <div class="audience-icon">🏙️</div>
     <h3>You study cities &amp; gentrification</h3>
@@ -234,6 +266,14 @@ Gentriduck is three projects in one. Start wherever you fit:
     <a href="/time-series">time series</a>.</p>
     <span class="audience-cta">Start with methodology →</span>
   </a>
+  <div class="audience-card audience-card-planned">
+    <div class="audience-icon">🔓</div>
+    <h3>You care about open data</h3>
+    <p>What open data enabled here, the concrete friction encountered building on it, and
+    standardization recommendations for data publishers — grounded in the same pipeline documented on
+    <a href="/how-its-built">how it's built</a>.</p>
+    <span class="audience-cta">Open-data report — coming soon</span>
+  </div>
   <a href="/how-its-built" class="audience-card">
     <div class="audience-icon">⚙️</div>
     <h3>You build data pipelines</h3>
@@ -254,87 +294,19 @@ Gentriduck is three projects in one. Start wherever you fit:
   </a>
 </div>
 
-
-<Alert status="info">
-  <b>How to read the numbers on this site:</b> a <b>negative</b> trend means an area's official
-  classification is moving toward <b>higher</b> gentrification pressure (fast upward change); a
-  <b>positive</b> trend means <b>lower</b> pressure. A <b>low</b> status class means <b>lower</b>
-  deprivation (a wealthier area) — so "low" is not the same as "bad." The
-  <a href="/methodology">methodology & data sources</a> page is the full decoder;
-  <a href="https://github.com/dhelweg/gentriduck/blob/main/docs/adr/0004-data-governance-and-index-definition.md">ADR-0004</a>
-  is the technical spec.
-</Alert>
-
 ---
 
-<sub>[Home](/) · [Methodology & data sources](/methodology) · [About this project](/about) · [GitHub repository](https://github.com/dhelweg/gentriduck)</sub>
+<FooterNav />
 
 <style>
-.hero {
-  margin: -0.5rem -0.25rem 1.75rem;
-  padding: 2.1rem 1.6rem;
-  border-radius: 1rem;
-  background:
-    radial-gradient(circle at 12% 18%, rgba(37, 99, 235, 0.18), transparent 55%),
-    radial-gradient(circle at 88% 82%, rgba(194, 65, 12, 0.15), transparent 55%),
-    rgba(127, 127, 127, 0.04);
-  border: 1px solid rgba(127, 127, 127, 0.16);
-}
-.hero-eyebrow {
-  font-size: 0.75rem;
+.chapter-label {
+  font-size: 0.72rem;
   text-transform: uppercase;
-  letter-spacing: 0.07em;
+  letter-spacing: 0.06em;
   font-weight: 700;
   color: #2563eb;
-  margin-bottom: 0.5rem;
-}
-.hero h1 { margin: 0 0 0.65rem 0; font-size: 2.5rem; line-height: 1.1; }
-.hero-lede { max-width: 46rem; font-size: 1.02rem; line-height: 1.55; opacity: 0.92; margin: 0 0 1.1rem 0; }
-.hero-links a {
-  display: inline-block;
-  margin: 0 0.55rem 0.4rem 0;
-  padding: 0.45rem 0.85rem;
-  border-radius: 0.5rem;
-  text-decoration: none !important;
-  font-weight: 600;
-  font-size: 0.85rem;
-}
-.hero-links a.primary { background: #2563eb; color: #fff !important; }
-.hero-links a.secondary { background: transparent; border: 1px solid #2563eb; color: #2563eb !important; }
-.hero-links a.primary:hover { background: #1d4ed8; }
-.hero-links a.secondary:hover { background: rgba(37, 99, 235, 0.08); }
-.agent-pipeline {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 0.4rem;
-  margin: 1.1rem 0 1.4rem;
-  padding: 1rem;
-  border-radius: 0.75rem;
-  background: linear-gradient(135deg, rgba(37, 99, 235, 0.06), rgba(194, 65, 12, 0.06));
-  border: 1px solid rgba(37, 99, 235, 0.16);
-}
-.pipe-step {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  text-align: center;
-  min-width: 7rem;
-  padding: 0.55rem 0.6rem;
-  border-radius: 0.6rem;
-  background: rgba(127, 127, 127, 0.06);
-  border: 1px solid rgba(127, 127, 127, 0.18);
-  font-size: 0.8rem;
-}
-.pipe-step b { font-size: 0.82rem; margin-top: 0.2rem; }
-.pipe-step small { opacity: 0.75; font-size: 0.68rem; margin-top: 0.15rem; line-height: 1.25; }
-.pipe-icon { font-size: 1.3rem; line-height: 1; }
-.pipe-gate { border-color: #c2410c; background: rgba(194, 65, 12, 0.08); }
-.pipe-human { border-color: #16a34a; background: rgba(22, 163, 74, 0.1); }
-.pipe-arrow { font-size: 1.1rem; opacity: 0.55; padding: 0 0.05rem; }
-@media (max-width: 640px) {
-  .agent-pipeline { flex-direction: column; align-items: stretch; }
-  .pipe-arrow { transform: rotate(90deg); align-self: center; }
+  opacity: 0.85;
+  margin: -0.4rem 0 0.9rem 0;
 }
 .audience-cards {
   display: grid;
@@ -356,6 +328,16 @@ Gentriduck is three projects in one. Start wherever you fit:
   transform: translateY(-2px);
   box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
   border-color: #2563eb;
+}
+.audience-card-planned {
+  cursor: default;
+  opacity: 0.8;
+  border-style: dashed;
+}
+.audience-card-planned:hover {
+  transform: none;
+  box-shadow: none;
+  border-color: rgba(127, 127, 127, 0.25);
 }
 .audience-icon { font-size: 1.7rem; margin-bottom: 0.4rem; }
 .audience-card h3 { margin: 0 0 0.4rem 0; font-size: 1rem; }
