@@ -77,8 +77,55 @@
 -- unmodified, or does "status_delta >= 1 within the panel" mean something
 -- different when editions are 1 year apart instead of 2? Not decided here.
 --
+-- H-C2 (#159) matched year-span classification window (geo-DS spike
+-- docs/epic-h/159-hc2-geo-spike.md): the METHODOLOGY QUESTION above is answered
+-- for the panel-length dimension by bounding the `ts` CTE's input to each
+-- (city_code, area_vintage)'s most recent `trajectory_window_years` (dbt var,
+-- default 6, transform/dbt_project.yml) years, rather than every ingested
+-- edition. Rationale (panel-length vs rate-of-change conflation): the
+-- `status_delta >= 1` first-to-last check integrates over however many years
+-- the panel spans, so an unbounded 12-year Hamburg panel (13 annual editions)
+-- encodes a ~3x slower per-year rate than Berlin's 4-6 year panels for the
+-- identical "+/-1 ordinal step" threshold, inflating Hamburg's improving+
+-- declining share from ~14-16% (Berlin-length window) to 21.5% (full panel) --
+-- see the spike's evidence (2). The spike separately confirmed (evidence
+-- section 2 of the same doc) that the `status_range <= 1` stability check does
+-- NOT need a matching cadence fix: Hamburg's status_index is sticky (64% of
+-- areas never move, only 4.3% exceed range 1, across all 13 annual editions),
+-- so "more editions -> more wobble" does not materialize and the range
+-- tolerance is left unchanged.
+-- A year-span window (not an edition-count window) is used because it is
+-- cadence-agnostic -- correct for any future city regardless of annual,
+-- biennial, or other cadence -- per the spike's R1. `trajectory_window_years =
+-- 6` is chosen because it equals Berlin's longest single-vintage span
+-- (lor_pre2021, 2013-2019), which makes the window a PROVABLE NO-OP FOR
+-- BERLIN: lor_pre2021 (max=2019, span 6yr, 4 editions) and lor_2021 (max=2025,
+-- span 4yr, 3 editions) both already fall within a 6-year window, so every
+-- edition is retained and Berlin's published trajectory_type classifications
+-- are unchanged -- verified by direct before/after warehouse comparison (see
+-- H-C2 #159 PR). This is why the fix needs no R-B2 re-calibration. For Hamburg
+-- (city_code='HH', area_vintage='current', max=2025) the window trims the
+-- input to snapshot_year >= 2019, i.e. ~7 of the 13 annual editions (2019-2025,
+-- a 6-year span) -- Berlin-comparable, though Hamburg rows are already excluded
+-- before this window logic even runs: `ts_with_vintage_max`'s WHERE clause
+-- applies published_cities_filter (#125) upstream of the `ts` window-trim CTE,
+-- so under the current default (published_cities: ["BER"]) Hamburg rows never
+-- reach this window filter in a normal build.
+-- Left out of scope (spike R2, Berlin-affecting): endpoint-only status_delta
+-- (first vs last edition only, ignoring interior years) is fragile --
+-- ~19-25% of Hamburg's full-panel trend calls flip under 3-edition-smoothed
+-- endpoints -- but fixing that (smoothing or a regression slope) would change
+-- Berlin's output too and would reopen the R-B2 back-test; deferred to a
+-- future issue if pursued, and would need its own fresh dual sign-off.
+-- This window fix does NOT widen accepted_values beyond ["BER"] (spike R4) --
+-- it is Berlin-output-preserving groundwork, not a Hamburg-publication
+-- decision; publishing Hamburg trajectories needs a separate fresh geo-DS +
+-- domain-expert dual sign-off referencing this spike, per the #125/#158
+-- precedent.
+--
 -- dbt_meta_owner: data-engineer
 -- geo-ds-sign-off: docs/methodology/R-B2-geo-signoff.md (R-B2 #71 PASS used as basis)
+-- geo-ds-spike: docs/epic-h/159-hc2-geo-spike.md (H-C2 #159, matched-window fix)
 -- depends_on: {{ ref('int_gentrification_ts') }}
 {{
     config(
@@ -94,7 +141,39 @@
 }}
 
 with
-    -- Raw panel from int_gentrification_ts (all editions, inhabited PLRs only)
+    -- Raw panel from int_gentrification_ts (all editions, inhabited PLRs only),
+    -- annotated with each (city_code, area_vintage)'s most recent edition year
+    -- so the H-C2 (#159) window filter below can bound the classification
+    -- input to a matched year-span (see header note).
+    -- Window function is materialized here, then filtered in the next CTE,
+    -- because a window function cannot be referenced in the WHERE clause of
+    -- the SELECT that defines it (same two-layer pattern as
+    -- int_poi_status_dynamism.sql's header note on DuckDB's window-function
+    -- restrictions).
+    ts_with_vintage_max as (
+        select
+            city_code,
+            area_code,
+            area_vintage,
+            snapshot_year,
+            status_index,
+            dynamik_index,
+            typology_stage,
+            is_uninhabited,
+            max(snapshot_year) over (
+                partition by city_code, area_vintage
+            ) as vintage_max_year
+        from {{ ref("int_gentrification_ts") }}
+        -- Berlin-only staging filter (#125) -- see header note.
+        where is_uninhabited = false and {{ published_cities_filter('city_code') }}
+    ),
+
+    -- H-C2 (#159): restrict the classification input to each
+    -- (city_code, area_vintage)'s most recent `trajectory_window_years` (var,
+    -- default 6) years -- a matched year-span window, not an edition-count
+    -- window (cadence-agnostic; see header note). Provable no-op for Berlin:
+    -- lor_pre2021 (max=2019) keeps snapshot_year >= 2013 = all 4 editions;
+    -- lor_2021 (max=2025) keeps snapshot_year >= 2019 = all 3 editions.
     ts as (
         select
             city_code,
@@ -105,9 +184,10 @@ with
             dynamik_index,
             typology_stage,
             is_uninhabited
-        from {{ ref("int_gentrification_ts") }}
-        -- Berlin-only staging filter (#125) -- see header note.
-        where is_uninhabited = false and {{ published_cities_filter('city_code') }}
+        from ts_with_vintage_max
+        where
+            snapshot_year
+            >= (vintage_max_year - {{ var('trajectory_window_years', 6) }})
     ),
 
     -- Pivot to per-PLR per-vintage aggregate statistics
