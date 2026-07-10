@@ -6,7 +6,7 @@ website of **gentrification & social-development statistics** for Berlin (and, l
 
 - **Stack:** [dbt](https://www.getdbt.com/) + [DuckDB](https://duckdb.org/) (local) · Python ([uv](https://docs.astral.sh/uv/)), analysis in scipy / scikit-learn · [Evidence.dev](https://evidence.dev/) static site reading published marts via in-browser DuckDB-WASM, hosted free on GitHub / Cloudflare Pages ([ADR-0012](docs/adr/0012-serving-and-hosting-stack.md))
 - **Data:** OpenStreetMap history (© OpenStreetMap contributors, ODbL) + Berlin open data — LOR geographies, EWR population register, Bodenrichtwerte / Mietspiegel price & rent — **free & open only**
-- **Status:** Epics **A–F** substantially complete; the Berlin statistics **website (Epic G) is built and soft-launched** (noindex) on GitHub Pages while the Cloudflare Pages primary host is finalised; **multi-city (Epic H)** underway — Hamburg is ingested and wired through the pipeline but **staged (not yet published)** pending methodology validation. Most of the tracked backlog is done (as of 2026-07). See the roadmap below.
+- **Status:** Epics **A–F** substantially complete; the Berlin statistics **website (Epic G) is built and soft-launched** (noindex) on GitHub Pages while the Cloudflare Pages primary host is finalised; **multi-city (Epic H)** underway — Hamburg is ingested and wired through the pipeline, and its city-specific methodology re-fits (OSM completeness-bias correction, trajectory thresholds, an independent annual-cadence lead-lag re-test) are dual-signed-off and landed as groundwork, but Hamburg numbers remain **staged (not yet published)** pending a separate publish-scope decision. Most of the tracked backlog is done (as of 2026-07). See the roadmap below.
 
 ## Repository layout (monorepo)
 
@@ -28,7 +28,7 @@ recorded in [`docs/adr/`](docs/adr/README.md) (ADR-0001 … ADR-0016); the live 
 **Gentriduck** GitHub Project board. Epics (✓ = substantially complete): **A** foundations ✓ ·
 **B** revive the 2018 concept ✓ · **C** longitudinal OSM POI history ✓ · **D** price/rent dimension ✓ ·
 **E** analysis & ML ✓ · **F** serving layer ✓ · **G** public website ✓ (built, soft-launched) ·
-**H** multi-city (Hamburg ingested + wired through the pipeline, staged/unpublished pending validation).
+**H** multi-city (Hamburg ingested + wired through the pipeline; city-specific methodology re-fits landed, staged/unpublished pending a publish-scope decision).
 
 ## Setup on macOS / Windows / Linux
 
