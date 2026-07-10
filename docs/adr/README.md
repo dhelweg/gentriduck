@@ -25,6 +25,7 @@ ADR before adopting a new tool, library, or data source** (no "first tool that w
 | [0018](0018-causal-tiered-poi-selection.md) | Causality-first-with-data-confirmation POI selection rule (Workstream 2 / improved OA) | Accepted |
 | [0019](0019-berlin-milieuschutz-displacement-source.md) | Berlin displacement/affordability dimension — Milieuschutz source + rent-pressure proxy scope | Accepted |
 | [0020](0020-community-contribution-governance-voting-board.md) | Community-contribution governance — voting board (GitHub Discussions) & autonomous triage | Accepted |
+| [0021](0021-public-communication-surface-channel-policy.md) | Public communication surface & channel policy | Proposed (awaiting maintainer acceptance) |
 
 Format: each ADR has **Status**, **Context**, **Decision**, **Consequences**. Supersede rather
 than edit accepted ADRs.
