@@ -613,16 +613,22 @@ seeds:
     description: >
       OA-B.1 (#170): causality-first POI relevance/tier seed curating which POI types
       count toward the **improved** (Workstream 2, `methodology_variant='improved'`)
-      offering-advantage signal (ADR-0017 D3). One row per (level, domain, category,
+      offering-advantage signal (ADR-0017 D3; ADR-0018 -- the standalone decision record
+      that formalizes this exact rule's mechanics, non-circularity proof, and boundary
+      against causal inference). One row per (level, domain, category,
       type) node of the existing 3-level taxonomy (seed_poi_mapping.csv) -- 231 rows
       (13 domain + 55 category + 163 type). Tiers are set from **urban-sociology/retail-
       gentrification theory alone**, before any correlation with an outcome is looked at
-      (ADR-0017 D3 2x2: causally-plausible-and-correlated is kept, non-causal correlates
-      are dropped as spurious even if correlated; theory can never be overridden upward
-      by data). `data_corr` is a placeholder, filled by OA-B.2 (#171) with the data-driven
-      confirmation pass; it can only corroborate or down-weight within a tier, never
-      promote a tier-0 ('drop') node -- the non-circularity rule (ADR-0017 D3, plan
-      "POI relevance model").
+      (ADR-0017 D3 2x2, formalized by ADR-0018 D1/D2: causally-plausible-and-correlated
+      is kept, non-causal correlates are dropped as spurious even if correlated; theory
+      can never be overridden upward by data). `data_corr` is a placeholder, filled by
+      OA-B.2 (#171) with the data-driven confirmation pass; it can only corroborate or
+      down-weight within a tier, never promote a tier-0 ('drop') node -- the
+      non-circularity rule (ADR-0017 D3; ADR-0018 D1/D3, plan "POI relevance model").
+      I15 (#232) review note: as of this ticket, no model consumes offering_weight into
+      a `methodology_variant='improved'` OA row yet (that build is OA-B.3 #172, not yet
+      implemented) -- this seed is tiering-only, correctly not yet wired into
+      int_poi_offering_advantage (which emits 'faithful' only).
 
       Grounding: Zukin 2009 *Naked City* (boutique/artisanal "third wave" retail);
       Ley 1996 *The New Middle Class* (cultural-intermediary consumption); Lees, Slater
@@ -674,7 +680,8 @@ seeds:
           Causality-first relevance tier in {0,1,2,3}: 0=drop (not causally plausible),
           1=keep low weight (ambiguous/incumbent-serving), 2=keep medium weight
           (plausible, not headline), 3=keep full weight (headline literature signature).
-          Set from theory alone, before any outcome correlation is examined (ADR-0017 D3).
+          Set from theory alone, before any outcome correlation is examined (ADR-0017 D3;
+          ADR-0018 D1 Step 1).
         data_tests:
 
           - not_null
@@ -702,6 +709,6 @@ seeds:
           analysis/c_offering_relevance_validation.py. Blank where n < 10 PLR pairs
           (insufficient data, typically near-zero-stock leaf types). Diagnostic only
           -- never used to promote a tier-0 node or demote a causally-plausible
-          (tier >= 1) node (non-circularity rule, ADR-0017 D3); see
-          docs/epic-c/B2-offering-relevance-validation-findings.md for the full
+          (tier >= 1) node (non-circularity rule, ADR-0017 D3; ADR-0018 D1 Step 2/D2);
+          see docs/epic-c/B2-offering-relevance-validation-findings.md for the full
           crosstab and flagged direction-mismatch findings.
