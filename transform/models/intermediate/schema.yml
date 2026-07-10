@@ -1139,6 +1139,10 @@ models:
       non-matches are legitimate data-coverage gaps (uninhabited/harbor
       Stadtteile below Sozialmonitoring's scoring threshold), not
       normalization bugs.
+      H-C3 (#160, #129): stadtteil_code is now also exposed as a passthrough
+      output column (no new join, no method change) so int_hamburg_lead_lag
+      can carry the Stadtteil-grain SE-clustering key required by
+      H1-geo-signoff.md Condition 2.
       Graceful degradation: returns zero rows when any upstream has no rows.
     meta:
       dbt_meta_owner: data-engineer
@@ -1164,6 +1168,14 @@ models:
         description: >
           Always TRUE -- every row's indicator values are inherited unchanged from
           the matched parent Stadtteil (see model description).
+      - name: stadtteil_code
+        description: >
+          The resolved Stadtteil natural code this Gebiet maps to (subarea_l1 grain),
+          via the name-matched crosswalk described above. NULL for Gebiete with no
+          crosswalk match (legitimate data-coverage gaps, see model description).
+          Constant per Gebiet across all reference_year rows. Consumed by
+          int_hamburg_lead_lag (#160) as the Stadtteil-grain SE-clustering key
+          required by #129 / H1-geo-signoff.md Condition 2.
 
   - name: int_ewr_socioeco_hamburg
     description: >
@@ -2340,6 +2352,211 @@ models:
         description: >
           True if area_vintage = 'lor_pre2021' (the 447-PLR series; thesis universe; longest
           MSS time series). Epic B headline analysis uses this series (index-definition.md §6.2).
+
+  - name: int_hamburg_lead_lag
+    description: >
+      H-C3 (#160): mirror-image of int_mss_lead_lag for Hamburg -- independently
+      re-tests whether POI commercial activity at t predicts Sozialmonitoring status
+      change at t+k (H3a) or vice versa (H3b) on Hamburg's ANNUAL series. Does NOT
+      assume the Berlin thesis's H3b-dominance finding replicates.
+
+      ANNUAL-CADENCE REDESIGN (binding; ADR-0014; H1-geo-signoff.md Condition 2; #160):
+      edition_tk = edition_t + lag_k * 1 (lag_k in {1,2,3} => 1/2/3 real years), NOT
+      Berlin's `lag_k * 2` (2/4/6 real years). Same edition-step range as Berlin
+      (1,2,3) for structural comparability, but a DIFFERENT real-time horizon --
+      Hamburg lag_k=1 is a 1-year gap, Berlin lag_k=1 is a 2-year gap. Cross-city
+      lag_k comparison must be read as "same step count, different real-year window",
+      never as "same real-time horizon".
+
+      Theory: Dangschat (1988) double invasion-succession cycle -- social cycle LEADS
+      commercial cycle in Berlin's thesis (p. 91, p. 55-56). Whether this replicates on
+      Hamburg is the open methodology question this model's grain enables
+      analysis/e5_hamburg_lead_lag.py to test; results are reported honestly, whichever
+      direction they turn out to be.
+
+      Grain: one row per (city_code, area_code, area_vintage, edition_t, lag_k).
+      city_code is always 'HH'; area_vintage is always 'current' (single Hamburg
+      geometry edition, ADR-0014 Pillar 1).
+
+      Exclusions applied (mirrors int_mss_lead_lag structurally; both are
+      structural no-ops for Hamburg's data shape today, see SQL header):
+        - is_uninhabited = true rows excluded (no-op: Hamburg has no such rows by
+          construction, int_gentrification_ts Branch C).
+        - Cross-vintage deltas blocked: area_vintage must match between base and
+          lagged row (no-op: Hamburg has a single vintage today).
+        - Only rows where the lagged outcome (status_index_tk) exists are retained.
+
+      D4 discipline: ewr_composite_t is the ONLY D4 column (level at time t as
+      baseline covariate). No D4 delta columns -- same rule as Berlin's model.
+
+      C5 correction: dynamism_score (C5-corrected, independently re-validated on
+      Hamburg's own OSM coverage-growth curve, H-C1 #158,
+      docs/epic-h/158-hc1-geo-signoff.md) is used throughout, never raw count deltas.
+
+      stadtteil_code (#129, binding acceptance criterion): carried on every row,
+      joined from int_ewr_socioeco_hamburg_disagg's own Gebiet->Stadtteil crosswalk
+      (unchanged method, new passthrough column). Required so
+      analysis/e5_hamburg_lead_lag.py can cluster standard errors at Stadtteil grain
+      for any regression using ewr_composite_t (D4) as a covariate, per
+      H1-geo-signoff.md Condition 2 (D4's effective N is Stadtteil count, ~104-105,
+      not Gebiet count, ~941-945 -- a change-of-support problem, Gotway & Young 2002).
+
+      Hamburg-only scope, purely additive (mirror of int_mss_lead_lag's Berlin-only
+      scope, #125): filtered to city_code='HH'; int_mss_lead_lag.sql (Berlin) is
+      untouched. Does NOT widen any published mart's `accepted_values` beyond
+      `["BER"]` (#158/#159 precedent) -- feeds only analysis/e5_hamburg_lead_lag.py.
+
+      Graceful degradation: returns zero rows when int_gentrification_ts has no
+      Hamburg rows.
+    meta:
+      dbt_meta_owner: data-engineer
+    data_tests:
+
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns:
+              - city_code
+              - area_code
+              - area_vintage
+              - edition_t
+              - lag_k
+          config:
+            where: "area_code is not null"
+      - dbt_utils.expression_is_true:
+          arguments:
+            expression: "delta_status_ordinal between -3 and 3"
+          config:
+            where: "delta_status_ordinal is not null"
+      # Data-presence gate (docs/lessons/local-first-data-presence.md):
+      - assert_not_empty:
+          config:
+            severity: error
+    columns:
+      - name: city_code
+        description: City identifier (ADR-0005). Always 'HH'.
+        data_tests:
+
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ["HH"]
+      - name: area_code
+        description: statistisches-Gebiet area code (subarea_l2 grain).
+        data_tests:
+
+          - not_null
+      - name: area_vintage
+        description: Always 'current' (single Hamburg geometry edition, ADR-0014 Pillar 1).
+        data_tests:
+
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ["current"]
+      - name: edition_t
+        description: Base Sozialmonitoring edition year (time t; the predictor side).
+        data_tests:
+
+          - not_null
+      - name: lag_k
+        description: >
+          Sozialmonitoring edition offset (1, 2, or 3 steps; each step = 1 year,
+          ANNUAL cadence -- NOT Berlin's 2-year step, see model description).
+          edition_tk = edition_t + lag_k * 1.
+        data_tests:
+
+          - not_null
+          - accepted_values:
+              arguments:
+                values: [1, 2, 3]
+      - name: edition_tk
+        description: Outcome Sozialmonitoring edition year (t+k; edition_t + lag_k * 1).
+        data_tests:
+
+          - not_null
+      - name: status_index_t
+        description: >
+          D1 Sozialmonitoring social status at time t (ordinal 1-4; 1=hoch best,
+          4=sehr niedrig worst -- same scale/polarity as Berlin's MSS status_index).
+          Predictor side for H3a; baseline for H3b.
+        data_tests:
+
+          - not_null
+          - accepted_values:
+              arguments:
+                values: [1, 2, 3, 4]
+      - name: dynamik_index_t
+        description: >
+          D2 Sozialmonitoring Dynamik at time t (ordinal 1-3; 1=positiv, 2=stabil,
+          3=negativ). CAVEAT (ADR-0014 Pillar 2): computed over a 3-year window in
+          Hamburg vs Berlin's 2-year window -- category comparable, magnitude is not.
+        data_tests:
+
+          - not_null
+          - accepted_values:
+              arguments:
+                values: [1, 2, 3]
+      - name: typology_stage_t
+        description: Typology stage at time t (from D1xD2 matrix; index-definition.md §1.5).
+      - name: status_index_tk
+        description: >
+          D1 social status at time t+k (outcome for H3a; ordinal 1-4). Only present
+          for rows where this exists (inner join on lag).
+        data_tests:
+
+          - not_null
+          - accepted_values:
+              arguments:
+                values: [1, 2, 3, 4]
+      - name: dynamik_index_tk
+        description: D2 Dynamik at time t+k (outcome direction; ordinal 1-3).
+        data_tests:
+
+          - accepted_values:
+              arguments:
+                values: [1, 2, 3]
+              config:
+                where: "dynamik_index_tk is not null"
+      - name: delta_status_ordinal
+        description: >
+          status_index_tk - status_index_t. ORDINAL transition; do NOT treat as metric.
+          Positive = status worsened (more deprived). Negative = status improved (less
+          deprived). Range: -3 to +3 (bounded by the 4-class ordinal scale).
+      - name: status_transition
+        description: >
+          Ordinal transition direction: 'improved' (status_index fell), 'stable'
+          (unchanged), 'worsened' (status_index rose).
+        data_tests:
+
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ["improved", "stable", "worsened"]
+      - name: dynamism_score_t
+        description: >
+          D3 C5-corrected dynamism score at time t (z-score of share_yoy_change).
+          Commercial succession signal; PREDICTOR for H3a (amenity at t -> status at
+          t+k).
+      - name: delta_dynamism_t
+        description: >
+          Change in D3 dynamism_score at t vs t-1 (within-vintage LAG, 1-year gap --
+          annual cadence). Predictor for H3b. C5-corrected; NULL for first
+          Sozialmonitoring edition available for that Gebiet.
+      - name: dynamism_score_tk
+        description: >
+          D3 C5-corrected dynamism score at time t+k. Outcome for H3b.
+      - name: ewr_composite_t
+        description: >
+          D4 baseline vulnerability covariate at time t (cross-sectional LEVEL only;
+          3-indicator Hamburg composite, §4.3-equivalent). Higher = more
+          socio-economically vulnerable. NO D4 delta columns in this model.
+      - name: stadtteil_code
+        description: >
+          Stadtteil-grain SE-clustering key (#129, H1-geo-signoff.md Condition 2,
+          binding). NULL where the Gebiet has no crosswalk match (legitimate
+          data-coverage gap, see int_ewr_socioeco_hamburg_disagg). Any regression
+          using ewr_composite_t as a covariate MUST cluster standard errors on this
+          column.
 
   - name: int_berlin_lor_crosswalk_dominant_2021
     description: >

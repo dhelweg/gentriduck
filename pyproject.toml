@@ -142,6 +142,9 @@ analysis = { sequence = [
     # (no RNG) analysis scripts, so they belong here like their siblings.
     "python analysis/e3_maps.py",
     "python analysis/e3_narratives.py",
+    # H-C3 (#160): independent Hamburg annual-cadence lead-lag H3a/H3b re-test.
+    # Deterministic (no RNG); requires int_hamburg_lead_lag from `poe build`.
+    "python analysis/e5_hamburg_lead_lag.py",
 ], default_item_type = "cmd" }
 # B2: back-test harness — validates live index against MSS classes and known hotspot/coldspot PLRs.
 # Run after `poe build`. Results written to docs/methodology/backtest.md.
