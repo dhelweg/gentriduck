@@ -904,11 +904,17 @@ models:
           (schema TBC at live probe).
       - name: street_name
         description: Street name, if published at street rather than address grain.
+      - name: stadtteil
+        description: >
+          Publisher-supplied Stadtteil name for this address (raw passthrough
+          attribute). Matched 1:1 against stg_hamburg_geo.area_name
+          (area_level='subarea_l1') at 100% row coverage in
+          int_hamburg_wohnlage_stadtteil (#203) -- not a computed join.
       - name: wohnlage
         description: >
           Hamburg's own location-quality tier label (NOT assumed identical
-          to Berlin's einfach/mittel/gut scheme). UNCONFIRMED against the
-          real source schema — re-verify at first live ingestion.
+          to Berlin's einfach/mittel/gut scheme). Live schema confirmed a
+          two-tier scheme ('Gute Wohnlage', 'Normale Wohnlage') -- #203.
         data_tests:
 
           - not_null
@@ -965,6 +971,7 @@ models:
               - year_built_bucket
               - size_bucket
               - wohnlage
+              - ausstattung
           config:
             where: "edition_year is not null"
             severity: warn
@@ -991,6 +998,14 @@ models:
         description: Apartment-size bucket, preserved as-published.
       - name: wohnlage
         description: Location tier, matching stg_hamburg_wohnlage's label scheme.
+      - name: ausstattung
+        description: >
+          Fitting-standard dimension (#215 [H-C6]). Live 2025 edition carries
+          exactly one value ('mit Bad und Sammelheizung' -- with bath and
+          central/collective heating). Selection of a representative value for
+          a rent-VALUE join is made downstream in
+          int_hamburg_wohnlage_mietenspiegel, not here (this staging model is
+          plumbing only, R-C1).
       - name: rent_low
         description: Lower rent-range bound (EUR/sqm/month).
       - name: rent_mid
@@ -1294,7 +1309,11 @@ models:
       - name: geometry_wkb
         description: Address point in WKB (MultiPoint), CRS EPSG:25833.
       - name: wohnlage
-        description: Wohnlage classification (wol WFS attribute; einfach/mittel/gut).
+        description: >
+          Wohnlage classification (wol WFS attribute; einfach/mittel/gut, plus 'ohne'
+          -- addresses the WFS assigns no simple/middle/good location grade, predominantly
+          non-residential/uninhabited addresses (#212). int_berlin_wohnlage_plr excludes
+          'ohne' from the residential tier-share denominator (R-C2).
         data_tests:
 
           - not_null:
@@ -1302,7 +1321,7 @@ models:
                 where: "city_code is not null"
           - accepted_values:
               arguments:
-                values: ["einfach", "mittel", "gut"]
+                values: ["einfach", "mittel", "gut", "ohne"]
               config:
                 where: "city_code is not null"
       - name: address_id
@@ -1324,9 +1343,9 @@ models:
       WFS (erhaltungsverordnungsgebiete:erhaltgeb_em), CRS EPSG:25833,
       dl-de-zero-2.0. PLUMBING, not methodology (R-C1): straight
       polygon-attribute staging, no weighting/scoring/index-construction
-      logic. Zero consumers as of this writing -- the consuming
-      intermediate/sub-index slice (rent-pressure proxy, ADR-0019 Decision 2)
-      is a separate, gated follow-up. Populated by
+      logic. Consumed by int_berlin_milieuschutz_plr_flag (#70 fourth
+      slice, PLR-grain spatial flag; docs/methodology/B1-milieuschutz-*-signoff.md).
+      Populated by
       ingestion/berlin/displacement/ingest_milieuschutz.py. Returns zero rows
       (typed stub) until data/raw/berlin/displacement/milieuschutz.parquet
       exists. 82 designated areas confirmed live 2026-07-09.
@@ -1353,7 +1372,10 @@ models:
             severity: warn
     columns:
       - name: city_code
-        description: Canonical city code 'berlin' (ADR-0005; matches dim_city.city_code).
+        description: >
+          Canonical city code 'BER' (ADR-0005; matches dim_city.city_code).
+          Source parquet carries the legacy lowercase 'berlin'; normalised
+          here via canonical_city_code() (QA-4/#179).
         data_tests:
 
           - not_null:
@@ -1361,7 +1383,7 @@ models:
                 where: "area_code is not null"
           - accepted_values:
               arguments:
-                values: ["berlin"]
+                values: ["BER"]
               config:
                 where: "area_code is not null"
       - name: area_code

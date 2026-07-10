@@ -13,15 +13,16 @@
 -- staging model).
 --
 -- PLUMBING, not methodology: a straight address/street-attribute staging
--- pull (Wohnlage classification label + optional geometry). No weighting,
--- scoring, index-construction, or cross-grain join to statistische
--- Gebiete/Stadtteile -- not methodology-bearing under CLAUDE.md's R-C1.
--- Any future use as a rent-index or affordability sub-index input is an
--- explicitly separate, gated slice (mirrors the displacement-zone and
--- EWR-stadtteil pillars' own scoping calls).
+-- pull (Wohnlage classification label, publisher-supplied Stadtteil name,
+-- and optional geometry). No weighting, scoring, or index-construction
+-- logic -- not methodology-bearing under CLAUDE.md's R-C1. The `stadtteil`
+-- passthrough column below is a raw source attribute (the publisher
+-- already stamps each address with its containing Stadtteil name), not a
+-- computed cross-grain join -- exposing it here stays plumbing; USING it
+-- to key a spatial/statistical composite is the methodology-bearing step,
+-- done downstream in int_hamburg_wohnlage_stadtteil (#203).
 --
--- QA-6 (#181): zero consumers as of this writing -- the consuming slice is
--- tracked as #203 (Hamburg rent/Wohnlage + displacement-zone integration).
+-- QA-6 (#181): #203 [H-C5] is the first consumer (int_hamburg_wohnlage_stadtteil).
 --
 -- Deliberately preserves Hamburg's own Wohnlage label scheme as-published
 -- rather than remapping onto Berlin's einfach/mittel/gut scale in this
@@ -41,9 +42,17 @@
 -- or street segment (schema TBC at live probe)
 -- street_name           varchar, nullable -- street name, if published at
 -- street rather than address grain
+-- stadtteil             varchar -- publisher-supplied Stadtteil name for this
+-- address (raw passthrough attribute; matched
+-- 1:1 against stg_hamburg_geo.area_name for
+-- area_level='subarea_l1' at 100% row coverage
+-- -- verified #203). Not a computed join.
 -- wohnlage              varchar -- Hamburg's own location-quality tier label
 -- (NOT assumed identical to Berlin's
--- einfach/mittel/gut scheme)
+-- einfach/mittel/gut scheme). Live schema
+-- confirmed two-tier ('Gute Wohnlage',
+-- 'Normale Wohnlage'), not Berlin's three-tier
+-- einfach/mittel/gut scheme (#203).
 -- geometry_wkb          blob, nullable -- address/street geometry WKB, native
 -- CRS EPSG:25832 (NOT reprojected; matches
 -- stg_hamburg_geo's convention)
@@ -69,7 +78,13 @@
 {% if file_count > 0 %}
 
     select
-        city_code, address_id, street_name, wohnlage, geometry_wkb, source_attribution
+        city_code,
+        address_id,
+        street_name,
+        stadtteil,
+        wohnlage,
+        geometry_wkb,
+        source_attribution
     from read_parquet({{ _src_raw_hamburg_wohnlage }}, union_by_name = true)
     where wohnlage is not null and city_code = 'HH'
 
@@ -82,6 +97,7 @@
         cast(null as varchar) as city_code,
         cast(null as varchar) as address_id,
         cast(null as varchar) as street_name,
+        cast(null as varchar) as stadtteil,
         cast(null as varchar) as wohnlage,
         cast(null as blob) as geometry_wkb,
         cast(null as varchar) as source_attribution

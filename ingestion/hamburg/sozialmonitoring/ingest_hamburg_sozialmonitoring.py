@@ -109,25 +109,13 @@ Hamburg (dl-de/by-2.0), Behörde für Stadtentwicklung und Wohnen (BSW).
 from __future__ import annotations
 
 import argparse
-import json
 import logging
-import ssl
 import sys
-import urllib.error
 import urllib.parse
-import urllib.request
 from pathlib import Path
 from typing import Optional
 
-try:
-    import certifi as _certifi
-
-    _SSL_CONTEXT = ssl.create_default_context(cafile=_certifi.where())
-except ImportError:
-    _SSL_CONTEXT = ssl.create_default_context()
-
 import pyarrow as pa
-import pyarrow.parquet as pq
 
 # ADR-0016: shared drift-detection manifest helper (sys.path pattern matches
 # ingest_hamburg_osm.py's existing cross-module import convention; see
@@ -136,6 +124,10 @@ _INGESTION_ROOT = Path(__file__).resolve().parents[2]
 if str(_INGESTION_ROOT) not in sys.path:
     sys.path.insert(0, str(_INGESTION_ROOT))
 from manifest import existing_outputs, write_manifest_entry  # noqa: E402
+
+# QA-2 (#177): shared retry+backoff fetch and atomic-write helpers.
+from common.http import fetch_geojson  # noqa: E402
+from common.io import atomic_write_parquet  # noqa: E402
 
 # ---------------------------------------------------------------------------
 # Constants
@@ -209,35 +201,6 @@ def build_wfs_url() -> str:
         "outputFormat": "application/geo+json",
     }
     return WFS_BASE_URL + "?" + urllib.parse.urlencode(params)
-
-
-def fetch_geojson(url: str, timeout: int = 180) -> dict:
-    """Fetch GeoJSON from the WFS URL. Returns parsed JSON dict; raises on error."""
-    log.info("Fetching WFS GeoJSON: %s", url)
-    try:
-        with urllib.request.urlopen(url, timeout=timeout, context=_SSL_CONTEXT) as resp:  # noqa: S310
-            raw = resp.read()
-    except urllib.error.HTTPError as exc:
-        raise RuntimeError(f"HTTP {exc.code} from {url}") from exc
-    except urllib.error.URLError as exc:
-        raise RuntimeError(f"Network error fetching {url}: {exc}") from exc
-    except Exception as exc:
-        raise RuntimeError(f"Unexpected error fetching {url}: {exc}") from exc
-
-    try:
-        data = json.loads(raw)
-    except json.JSONDecodeError as exc:
-        raise RuntimeError(f"Invalid JSON response from {url}: {exc}") from exc
-
-    if data.get("type") != "FeatureCollection":
-        raise RuntimeError(
-            f"Expected GeoJSON FeatureCollection, got type={data.get('type')!r}. "
-            f"Excerpt: {str(raw[:200])}"
-        )
-
-    n_features = len(data.get("features", []))
-    log.info("Received %d features", n_features)
-    return data
 
 
 # ---------------------------------------------------------------------------
@@ -365,9 +328,9 @@ def write_parquet(rows: list[dict], out_path: Path) -> None:
         schema=SOZIALMONITORING_PARQUET_SCHEMA,
     )
 
-    out_path.parent.mkdir(parents=True, exist_ok=True)
-    pq.write_table(table, out_path, compression="snappy")
-    log.info("Wrote %d rows to %s", len(rows), out_path)
+    # QA-2 (#177): atomic write -- a crash mid-write must never leave a
+    # partial/corrupt file where dbt or verify_data.py expects a complete one.
+    atomic_write_parquet(table, out_path)
 
 
 # ---------------------------------------------------------------------------
@@ -422,7 +385,7 @@ def main(argv: Optional[list[str]] = None) -> int:
 
     url = build_wfs_url()
     try:
-        geojson = fetch_geojson(url)
+        geojson = fetch_geojson(url, timeout=180)
     except RuntimeError as exc:
         log.error("GetFeature failed: %s", exc)
         return 1

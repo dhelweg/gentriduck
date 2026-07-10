@@ -31,16 +31,12 @@ from __future__ import annotations
 
 import argparse
 import logging
-import ssl
 import sys
-import urllib.error
-import urllib.request
 from io import BytesIO
 from pathlib import Path
 
 import pandas as pd
 import pyarrow as pa
-import pyarrow.parquet as pq
 
 # ADR-0016: shared drift-detection manifest helper (sys.path pattern matches
 # ingest_hamburg_osm.py's existing cross-module import convention; see
@@ -54,13 +50,9 @@ if str(_INGESTION_ROOT) not in sys.path:
     sys.path.insert(0, str(_INGESTION_ROOT))
 from manifest import existing_outputs, write_manifest_entry  # noqa: E402
 
-# macOS Python does not ship CA certs; use certifi's bundle when available.
-try:
-    import certifi as _certifi
-
-    _SSL_CONTEXT = ssl.create_default_context(cafile=_certifi.where())
-except ImportError:
-    _SSL_CONTEXT = ssl.create_default_context()
+# QA-2 (#177): shared retry+backoff fetch and atomic-write helpers.
+from common.http import FetchError, fetch_bytes  # noqa: E402
+from common.io import atomic_write_parquet  # noqa: E402
 
 log = logging.getLogger("mss_2013_excel")
 logging.basicConfig(
@@ -116,14 +108,14 @@ PARQUET_SCHEMA = pa.schema(
 
 
 def _fetch_excel(url: str) -> bytes:
-    req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0 Gentriduck/1.0"})  # noqa: S310
     try:
-        with urllib.request.urlopen(req, context=_SSL_CONTEXT, timeout=60) as resp:  # noqa: S310
-            return resp.read()
-    except urllib.error.HTTPError as exc:
-        raise RuntimeError(f"HTTP {exc.code} fetching {url}") from exc
-    except urllib.error.URLError as exc:
-        raise RuntimeError(f"Network error fetching {url}: {exc}") from exc
+        return fetch_bytes(
+            url,
+            timeout=60,
+            headers={"User-Agent": "Mozilla/5.0 Gentriduck/1.0"},
+        )
+    except FetchError as exc:
+        raise RuntimeError(f"Failed to fetch {url}: {exc}") from exc
 
 
 def _parse_excel(raw: bytes) -> pd.DataFrame:
@@ -234,7 +226,9 @@ def main() -> int:
     )
 
     table = pa.Table.from_pandas(df, schema=PARQUET_SCHEMA, preserve_index=False)
-    pq.write_table(table, out_path, compression="snappy")
+    # QA-2 (#177): atomic write -- a crash mid-write must never leave a
+    # partial/corrupt file where dbt or verify_data.py expects a complete one.
+    atomic_write_parquet(table, out_path)
     log.info("Written: %s (%d rows)", out_path, len(df))
 
     _write_manifest(out_dir)

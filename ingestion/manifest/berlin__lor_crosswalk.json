@@ -5,7 +5,7 @@
   "upstream": {
     "url": "derived (areal-weighted intersection of pre2021/2021 LOR geometries; GDI Berlin WFS upstream)",
     "vintage": "derived from lor_pre2021 + lor_2021",
-    "retrieved_at": "2026-07-06T19:50:40Z"
+    "retrieved_at": "2026-07-09T16:03:51Z"
   },
   "outputs": [
     {
@@ -17,7 +17,7 @@
   ],
   "ingest_script": {
     "module": "ingestion.berlin.lor.ingest_lor_crosswalk",
-    "git_sha": "2f6b2f6853967d004d6942592bb52d4740e6cc97"
+    "git_sha": "f879e422e41c1a0d457bff01c41b6eb9baa08c94"
   },
   "manifest_schema_version": 1
 }

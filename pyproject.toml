@@ -47,6 +47,7 @@ dev = [
     "pre-commit>=4.0",
     # QA-1 (#176): pytest harness for ingestion/analysis pure functions (R-C3 extension).
     "pytest>=8.0",
+    "quarto-cli>=1.9.38",
 ]
 
 [tool.ruff]
@@ -99,6 +100,10 @@ test  = "dbt test --project-dir transform --profiles-dir transform"
 # dependency -- pure Python, runs on all OSes, wired into the pre-commit push stage.
 test-py = "pytest tests/ -v"
 docs  = "dbt docs generate --project-dir transform --profiles-dir transform"
+# CV-3 (#188) / ADR-0020 §3: community-voting-board triage, run as a step in the devmode
+# PM loop's re-scan, or manually. Defaults to a dry run; pass -- --apply to actually post
+# comments / create issues. See ops/triage_community.py for the gh-api deny-list caveat.
+triage-community = "python ops/triage_community.py"
 # F2 (#34) / ADR-0012: export the published marts to parquet (data/serving/, gitignored).
 # Run after `poe build`. Future web build (G0/G1) consumes this parquet snapshot.
 export-serving = "python transform/export_serving_parquet.py"
@@ -125,11 +130,21 @@ analysis = { sequence = [
     "python analysis/a6_hotspots.py",
     "python analysis/a6_maup.py",
     "python analysis/a9_spatial_dynamic.py",
+    # A10-P1 (#80): out-of-time-validated early-warning displacement-risk
+    # indicator. Imports build_queen_weights from a9_spatial_dynamic.py (must
+    # run after it in this list only in the sense that both need `poe build`
+    # first; there is no runtime ordering dependency between the two scripts
+    # themselves -- the import is a pure function reuse, not a shared-state
+    # dependency).
+    "python analysis/e4_early_warning.py",
     # QA-7 (#182): e3_* were previously omitted from this sequence with no
     # documented reason -- both are runnable, __file__-anchored, deterministic
     # (no RNG) analysis scripts, so they belong here like their siblings.
     "python analysis/e3_maps.py",
     "python analysis/e3_narratives.py",
+    # H-C3 (#160): independent Hamburg annual-cadence lead-lag H3a/H3b re-test.
+    # Deterministic (no RNG); requires int_hamburg_lead_lag from `poe build`.
+    "python analysis/e5_hamburg_lead_lag.py",
 ], default_item_type = "cmd" }
 # B2: back-test harness — validates live index against MSS classes and known hotspot/coldspot PLRs.
 # Run after `poe build`. Results written to docs/methodology/backtest.md.
@@ -192,3 +207,9 @@ refresh = { sequence = ["verify-data", "deps", "ingest", "build", "export-servin
 # least `export-serving` + `export-area-geojson`) to have populated `data/serving/` and
 # `web/static/geo/` first -- this task does not re-run the data pipeline.
 web-build = { sequence = ["npm ci", "npm run sources", "npm run build"], cwd = "web", default_item_type = "cmd" }
+# O2 (#82) / ADR-0013: single-command reproducible whitepaper build (Quarto + Typst,
+# quarto-cli installed into the repo-local .venv). Renders docs/whitepaper/whitepaper.qmd to
+# HTML + PDF under the gitignored data/whitepaper/. Content is a staged slice (see the
+# "Deferred content slice" notes in whitepaper.qmd) -- this task builds whatever content
+# currently exists, methodology-bearing sections included only once they clear R-C1.
+whitepaper = "quarto render docs/whitepaper"

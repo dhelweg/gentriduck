@@ -28,6 +28,13 @@
 -- QA-6 (#181): zero consumers as of this writing -- the consuming slice is
 -- tracked as #203 (Hamburg rent/Wohnlage + displacement-zone integration).
 --
+-- #215 [H-C6]: added `ausstattung` (fitting-standard) column selection --
+-- plumbing only (R-C1); the live parquet carries exactly one value ('mit Bad
+-- und Sammelheizung' -- "with bath and central/collective heating") in the
+-- currently-ingested 2025 edition. Deciding WHICH ausstattung value is the
+-- representative profile for a rent-VALUE join is methodology-bearing and is
+-- made in the consuming model (int_hamburg_wohnlage_mietenspiegel), not here.
+--
 -- Deliberately preserves Hamburg's own year_built_bucket/size_bucket/
 -- wohnlage labels as-published rather than remapping onto Berlin's
 -- bucket keys in this staging layer (mirrors stg_hamburg_wohnlage's and
@@ -51,6 +58,8 @@
 -- as-published
 -- wohnlage                varchar -- location tier, matching
 -- stg_hamburg_wohnlage's label scheme
+-- ausstattung              varchar -- fitting-standard dimension (e.g. "mit Bad
+-- und Sammelheizung"); #215, plumbing only
 -- rent_low                 double, nullable -- lower rent-range bound
 -- (EUR/sqm/month)
 -- rent_mid                  double, nullable -- Mittelwert (EUR/sqm/month)
@@ -85,6 +94,7 @@
         year_built_bucket,
         size_bucket,
         wohnlage,
+        ausstattung,
         rent_low,
         rent_mid,
         rent_high,
@@ -103,6 +113,7 @@
         cast(null as varchar) as year_built_bucket,
         cast(null as varchar) as size_bucket,
         cast(null as varchar) as wohnlage,
+        cast(null as varchar) as ausstattung,
         cast(null as double) as rent_low,
         cast(null as double) as rent_mid,
         cast(null as double) as rent_high,

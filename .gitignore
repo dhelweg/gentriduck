@@ -33,6 +33,11 @@ web/build/
 # generated GeoJSON export (G1c #132), rebuilt via web/scripts/export_area_geojson.py
 web/static/geo/
 
+# --- whitepaper (O2 #82, ADR-0013) --- Quarto build output + local render cache
+data/whitepaper/
+docs/whitepaper/.quarto/
+docs/whitepaper/_book/
+
 # --- local session transcripts (kept on-machine for continuity; never published) ---
 .sessions/
 

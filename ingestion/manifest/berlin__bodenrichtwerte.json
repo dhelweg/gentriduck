@@ -4,20 +4,62 @@
   "city": "berlin",
   "upstream": {
     "url": "https://gdi.berlin.de/services/wfs/brw{year} (brw_{year}_vector feature type)",
-    "vintage": "2024",
-    "retrieved_at": "2026-06-18T00:20:10Z"
+    "vintage": "2017,2018,2019,2020,2021,2022,2023,2024",
+    "retrieved_at": "2026-07-09T16:06:02Z"
   },
   "outputs": [
     {
+      "path": "data/raw/berlin/price_rent/bodenrichtwert_2017.parquet",
+      "row_count": 1142,
+      "schema_fingerprint": "sha256:14348ffb63387d35162d42102f48dbe843b4f702fe19c6689316f093af334a69",
+      "content_hash": "sha256:6e3b35bb0f750bac04bb0515e6825197aad467d00200b705bb70e8988d176a36"
+    },
+    {
+      "path": "data/raw/berlin/price_rent/bodenrichtwert_2018.parquet",
+      "row_count": 1144,
+      "schema_fingerprint": "sha256:14348ffb63387d35162d42102f48dbe843b4f702fe19c6689316f093af334a69",
+      "content_hash": "sha256:3f5921419a72542948c0400b849649ba7083e6aa1b3c8de344015816e4f05933"
+    },
+    {
+      "path": "data/raw/berlin/price_rent/bodenrichtwert_2019.parquet",
+      "row_count": 1129,
+      "schema_fingerprint": "sha256:14348ffb63387d35162d42102f48dbe843b4f702fe19c6689316f093af334a69",
+      "content_hash": "sha256:fe2be9b6d0a0a8da94260fc55ba1e5cb8bbba181a38d523fa2845bce5a8dca0b"
+    },
+    {
+      "path": "data/raw/berlin/price_rent/bodenrichtwert_2020.parquet",
+      "row_count": 1133,
+      "schema_fingerprint": "sha256:14348ffb63387d35162d42102f48dbe843b4f702fe19c6689316f093af334a69",
+      "content_hash": "sha256:4d052a6e8698320e03ce7863a3e631473f54b841e2e7b410087603387abe2536"
+    },
+    {
+      "path": "data/raw/berlin/price_rent/bodenrichtwert_2021.parquet",
+      "row_count": 1149,
+      "schema_fingerprint": "sha256:14348ffb63387d35162d42102f48dbe843b4f702fe19c6689316f093af334a69",
+      "content_hash": "sha256:4415987cbd7dddc1a50b0c65057ba94e24cb911a4cf49b04994bdbbd66620a2d"
+    },
+    {
+      "path": "data/raw/berlin/price_rent/bodenrichtwert_2022.parquet",
+      "row_count": 2231,
+      "schema_fingerprint": "sha256:14348ffb63387d35162d42102f48dbe843b4f702fe19c6689316f093af334a69",
+      "content_hash": "sha256:9f301b8eac6efce348ef254359b4feb49c80681aa0683b061f9950483cecac1b"
+    },
+    {
+      "path": "data/raw/berlin/price_rent/bodenrichtwert_2023.parquet",
+      "row_count": 1598,
+      "schema_fingerprint": "sha256:14348ffb63387d35162d42102f48dbe843b4f702fe19c6689316f093af334a69",
+      "content_hash": "sha256:8b56e4359c8c461b9cc8a4cc99f6a089d9e80a68dcac45f2a40405c1f84ea879"
+    },
+    {
       "path": "data/raw/berlin/price_rent/bodenrichtwert_2024.parquet",
       "row_count": 1621,
-      "schema_fingerprint": "sha256:75dcb66eb7f8d01a074487fa8dfa1538b3bc37e635b9f252427ddb7a10d7d1e8",
-      "content_hash": "sha256:8771165c89a4ee146efd2af6d069e5dab626fde67f4d92a7a8dc94a5e7bf361b"
+      "schema_fingerprint": "sha256:14348ffb63387d35162d42102f48dbe843b4f702fe19c6689316f093af334a69",
+      "content_hash": "sha256:a4bcec0f5e43d0da16d591941db30e190331c0b867d01488e6eadcfbdb532390"
     }
   ],
   "ingest_script": {
     "module": "ingestion.berlin.price_rent.ingest_bodenrichtwerte",
-    "git_sha": "9cf6028ab6d493ea675cc31ff03be957e928c616"
+    "git_sha": "f879e422e41c1a0d457bff01c41b6eb9baa08c94"
   },
   "manifest_schema_version": 1
 }

@@ -104,6 +104,36 @@ any displacement-pressure reading, and even then only as one part of the still-u
 dimension (§6). These figures are shown on the [area detail](/area-detail) and
 [citywide POI & price/rent overview](/poi-price-overview) pages.
 
+### Milieuschutz / rent-pressure / turnover — disclosed, not yet in the index
+
+Three further signals exist as of mid-2026, each independently computed and gated
+(R-C1 sign-off: geo-data-scientist + gentrification-domain-expert, both `PASS`), but **not yet
+blended into the governed index** — they are separate, queryable, disclosure-only layers, published
+here for transparency rather than folded into any score:
+
+- **Milieuschutz** (`under_milieuschutz`, `milieuschutz_overlap_frac`) — whether a Planungsraum
+  intersects one of Berlin's 82 active *Erhaltungsverordnungsgebiete* (social-preservation zoning
+  areas), and by how much of its area. This is a **policy marker, not a measurement of displacement
+  pressure**: a designation reflects the Senate's administrative capacity and political
+  prioritization as much as underlying risk, and a PLR *without* the flag is not thereby "safe from
+  displacement" — only "not (yet) formally protected."
+- **Rent-pressure proxy** — a per-PLR, per-Wohnlage-snapshot-year composite of relative Mietspiegel
+  rent level and MSS transfer-receipt share. This is a **point-in-time affordability-stress /
+  risk-exposure signal, not a rent-burden ratio** (no PLR-grain income series exists to compute a
+  literal rent-to-income figure), and not, by itself, evidence that rent is *rising* — it should be
+  read alongside an area's Status/Dynamik trajectory, not in isolation.
+- **Turnover proxy** — the year-over-year change in the EWR long-tenure (5+ year) resident share,
+  sign-negated so a rising value means faster turnover. This is a **compositional-change signal, not
+  a measured displacement event** — it cannot distinguish displacement-driven turnover from ordinary
+  demographic churn (student housing, short lets, an aging cohort moving to care facilities).
+
+None of the three is averaged with the others or with the governed index: doing so would require
+inventing an untested weighting rule across three genuinely different time grains (a static
+current-state designation, a Wohnlage-snapshot-year composite, and an EWR-annual delta). See
+[ADR-0019](https://github.com/dhelweg/gentriduck/blob/main/docs/adr/0019-berlin-milieuschutz-displacement-source.md)
+and the B1 sign-offs (§7) for the full reasoning. A grounded, gated integration of these signals into
+a fifth index dimension remains planned but not yet built (§6).
+
 ## 3. The governed index definition, in plain terms
 
 The single biggest change from the 2018 thesis is this: the current model keeps **what changed** and
@@ -115,7 +145,7 @@ The single biggest change from the 2018 thesis is this: the current model keeps 
 | **Social change** | The official Dynamik-Index class (improving / stable / worsening) | **Outcome** — its direction |
 | **Commercial / amenity mix** | OSM point-of-interest density and its year-over-year change | **Predictor** |
 | **Socio-demographic baseline** | The EWR-derived composite (age, migration, tenure) at a fixed starting year | **Baseline covariate** |
-| *(Displacement / affordability)* | *Not yet built* — planned: Milieuschutz zoning, rent burden, tenant turnover | Predictor (planned) |
+| *(Displacement / affordability)* | Milieuschutz zoning flag, rent-pressure proxy, turnover proxy — computed and disclosed (§2) but **not yet blended into the index** | Predictor (planned integration) |
 
 The four active dimensions are never averaged into a single number as an input to each other — a
 social-status class and a POI count are fundamentally different kinds of measurement, and averaging
@@ -198,8 +228,10 @@ We would rather state these plainly than have you discover them by surprise.
   socio-economic upgrading and demographic recomposition; it cannot observe that a specific household
   was involuntarily displaced. The site therefore uses risk/signal language throughout ("pressure",
   "signal") and deliberately avoids any stage name that would assert displacement as a completed fact.
-  A planned fifth dimension (Milieuschutz protected-zone status, rent burden, tenant turnover) would
-  add a genuine displacement-*risk* signal but is not yet built.
+  The Milieuschutz flag, rent-pressure proxy, and turnover proxy (§2) are a first step toward a
+  genuine displacement-*risk* dimension, but each is disclosed individually with its own
+  "policy marker / risk-exposure signal / compositional-change signal, not a measured outcome"
+  caveat (§2) and none is yet integrated into a fifth index dimension.
 - **The 2016-anchored `standard` baseline vs. the `live_data` variant (§5).** These use different area
   boundaries, different definitions, and different eras of demographic data. Treating a `standard`
   score and a `live_data` stage as interchangeable, or comparing them across Berlin's 2021 boundary
@@ -229,6 +261,8 @@ project's public GitHub repository:
 - [ADR-0003 — Berlin geographies & price/rent sources](https://github.com/dhelweg/gentriduck/blob/main/docs/adr/0003-berlin-geographies-and-open-price-rent-sources.md)
 - [Spatial methods](https://github.com/dhelweg/gentriduck/blob/main/docs/methodology/spatial-methods.md) — how points of interest are assigned to areas
 - [OSM completeness-bias correction sign-off](https://github.com/dhelweg/gentriduck/blob/main/docs/epic-c/C5-geo-signoff.md)
+- [ADR-0019 — Berlin Milieuschutz displacement source](https://github.com/dhelweg/gentriduck/blob/main/docs/adr/0019-berlin-milieuschutz-displacement-source.md)
+- B1 displacement/affordability sign-offs (§2): [Milieuschutz geo](https://github.com/dhelweg/gentriduck/blob/main/docs/methodology/B1-milieuschutz-geo-signoff.md) / [domain](https://github.com/dhelweg/gentriduck/blob/main/docs/methodology/B1-milieuschutz-domain-signoff.md), [rent-pressure geo](https://github.com/dhelweg/gentriduck/blob/main/docs/methodology/B1-rent-pressure-geo-signoff.md) / [domain](https://github.com/dhelweg/gentriduck/blob/main/docs/methodology/B1-rent-pressure-domain-signoff.md), [turnover geo](https://github.com/dhelweg/gentriduck/blob/main/docs/methodology/B1-turnover-geo-signoff.md) / [domain](https://github.com/dhelweg/gentriduck/blob/main/docs/methodology/B1-turnover-domain-signoff.md)
 
 See also the [home page](/) for the current index, [time-series](/time-series) for per-area
 trajectories, [maps](/maps) for a citywide choropleth, [area detail](/area-detail) for a full per-area

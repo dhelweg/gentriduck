@@ -1,0 +1,6 @@
+# CV-1 (#186), per ADR-0020: code merges stay maintainer/agent-controlled. This file names the
+# maintainer as owner of the whole tree so any PR from a fork requests their review by default.
+# It does not by itself block merges (that requires a "Require review from Code Owners" branch
+# ruleset — see SEC-1 / #190, which is a maintainer-only repo-settings action); this file is the
+# code-adjacent half of the CV-1 scope that a PM session CAN ship without repo-settings UI access.
+* @dhelweg

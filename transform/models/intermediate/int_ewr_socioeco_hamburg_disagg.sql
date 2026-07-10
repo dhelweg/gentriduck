@@ -60,8 +60,46 @@
 -- (scored by Sozialmonitoring, not a distinct polygon in this geometry
 -- edition) remains a genuine data-coverage gap, not a normalization bug.
 --
+-- Two-stage Stadtteil attrition, verified end-to-end (H-C3 #160 findings-doc
+-- review): of the ~104-105 Stadtteile ADR-0014 expects (104 in the currently
+-- ingested geometry), only 99 have a stadtteil_code appearing in this model's
+-- output at all (crosswalk-matched, i.e. at least one Gebiet resolves to
+-- them), and of THOSE 99, only 95 actually carry non-NULL EWR-equivalent
+-- indicator values (residents_total not null) -- the remaining 4 crosswalk
+-- successfully to Gebiete but stg_hamburg_ewr_stadtteil has zero rows for
+-- them, so every Gebiet under them gets a NULL sw.residents_total etc. via
+-- the Step 6 LEFT JOIN. Confirmed by direct query against
+-- stg_hamburg_ewr_stadtteil (not a join-key/name-matching bug -- these 4
+-- codes are simply absent from the Sozialmonitoring EWR source table),
+-- consistent with the same >300-resident scoring-threshold rationale as the
+-- 5 documented above (all four are industrial/harbor/airport districts):
+--   Stage 1 (104/105 -> 99, Sozialmonitoring has NO score at all -- documented
+--   above): 02712 Altenwerder, 02703 Gut Moor, 02121 Neuwerk, 02118
+--   Steinwerder, 02119 Waltershof.
+--   Stage 2 (99 -> 95, crosswalk match exists but stg_hamburg_ewr_stadtteil
+--   has zero rows for the Stadtteil): 02117 Kleiner Grasbrook (Elbe-island
+--   harbor terminal), 02120 Finkenwerder (Airbus works / airport), 02702
+--   Neuland (industrial estate), 02711 Moorburg (industrial / former power
+--   plant site).
+-- H-C3 #160's Stadtteil-clustered D4-covariate regression (int_hamburg_lead_
+-- lag.sql, analysis/e5_hamburg_lead_lag.py) therefore observes n_clusters=95
+-- distinct Stadtteile, not the ~104-105 ADR-0014 baseline -- this is the full
+-- accounting for that gap (documented previously only as the 5-Stadtteil
+-- Stage-1 non-match; the further 99->95 Stage-2 drop was undisclosed prior to
+-- this note).
+--
 -- Output grain: (city_code='HH', area_code=Gebiet statgeb id,
 -- area_vintage='current', reference_year).
+--
+-- stadtteil_code (H-C3 #160, #129, additive, no method change): the resolved
+-- Gebiet->Stadtteil crosswalk key (xw.stadtteil_code from Step 4 below) is
+-- also exposed on the output, unchanged from the join already computed here
+-- for the disaggregation itself -- this is not a new derivation, only a new
+-- passthrough column. int_hamburg_lead_lag.sql (#160) reads it so that any
+-- Hamburg regression using the D4 (ewr_composite) covariate can cluster
+-- standard errors at Stadtteil grain, per H1-geo-signoff.md Condition 2 /
+-- #129's binding acceptance criterion. It is constant per Gebiet across all
+-- reference_year rows (the crosswalk does not vary by year).
 --
 -- Graceful degradation: returns zero rows when any upstream has no rows.
 --
@@ -187,7 +225,10 @@ select
     sw.age_under18_share,
     sw.foreigners_share,
     sw.unemployment_share,
-    true as is_disaggregated_from_stadtteil
+    true as is_disaggregated_from_stadtteil,
+    -- H-C3 (#160) / #129: passthrough of the already-computed crosswalk key
+    -- (see header) -- no new join, no method change.
+    xw.stadtteil_code
 from all_gebiete as g
 left join gebiet_to_stadtteil_code as xw on g.gebiet_code = xw.gebiet_code
 left join

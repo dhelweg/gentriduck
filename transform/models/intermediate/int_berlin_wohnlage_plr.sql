@@ -107,6 +107,18 @@ with
         where
             geometry_wkb is not null
             and wohnlage is not null
+            -- #212 / R-C2: exclude 'ohne' (WFS wol attribute value meaning "no
+            -- simple/middle/good grade assigned" -- predominantly non-residential /
+            -- uninhabited addresses) from the residential Wohnlage tier composition.
+            -- Without this, 'ohne' addresses inflate total_n_addresses (the
+            -- pct_wohnlage denominator) while contributing zero share to any of the
+            -- three named tiers downstream (int_price_rent_wohnlage_mietspiegel), which
+            -- silently dilutes wohnlage_score toward "einfach" for PLRs with many
+            -- non-residential addresses -- a normalization bug, not a data-quality
+            -- rejection. Mirrors the D3 sign-off's "composition, not modal class" +
+            -- "non-residential PLRs transparently NULL, not zero" framing
+            -- (docs/epic-d/d3-price-rent-geo-signoff.md Sec.2).
+            and wohnlage != 'ohne'
             -- Sanity: Berlin EPSG:25833 y in [5.79e6, 5.84e6]
             -- stg_berlin_wohnlage stores geometry as MultiPoint WKB (native WFS type);
             -- ST_Centroid returns a Point regardless of geometry type, so ST_Y is

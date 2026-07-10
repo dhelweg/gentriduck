@@ -1,0 +1,53 @@
+{
+  "source_id": "berlin__strassenverzeichnis",
+  "source_class": "pinned",
+  "city": "berlin",
+  "upstream": {
+    "url": "https://mietspiegel.berlin.de/wp-content/uploads/.../strassenverzeichnis{year}.pdf",
+    "vintage": "2017,2019,2021,2023,2024,2026",
+    "retrieved_at": "2026-07-09T16:33:00Z"
+  },
+  "outputs": [
+    {
+      "path": "data/raw/berlin/mietspiegel/strassenverzeichnis_2017.parquet",
+      "row_count": 31646,
+      "schema_fingerprint": "sha256:56ac795991d85cff952e1665ee704576a5fa593744a6d242fcfa5826cde1d09e",
+      "content_hash": "sha256:d22d824f784845bdec9d75e9339ef16f0debd886c222299182ffabed209d0a88"
+    },
+    {
+      "path": "data/raw/berlin/mietspiegel/strassenverzeichnis_2019.parquet",
+      "row_count": 32384,
+      "schema_fingerprint": "sha256:56ac795991d85cff952e1665ee704576a5fa593744a6d242fcfa5826cde1d09e",
+      "content_hash": "sha256:bdea8ee2f5f4069d5c02cf44d64b74411a513ceaa80da6cfa50d39c3d087df4a"
+    },
+    {
+      "path": "data/raw/berlin/mietspiegel/strassenverzeichnis_2021.parquet",
+      "row_count": 32551,
+      "schema_fingerprint": "sha256:56ac795991d85cff952e1665ee704576a5fa593744a6d242fcfa5826cde1d09e",
+      "content_hash": "sha256:b6ba429607fd98abf6618a501cf6c2c015e5a25e1d89ad894b31b63b9e41086e"
+    },
+    {
+      "path": "data/raw/berlin/mietspiegel/strassenverzeichnis_2023.parquet",
+      "row_count": 32551,
+      "schema_fingerprint": "sha256:56ac795991d85cff952e1665ee704576a5fa593744a6d242fcfa5826cde1d09e",
+      "content_hash": "sha256:2e9f796519d818c96cc71cb98273ebc25ce377e97f0e699b5fa18187d25b2a90"
+    },
+    {
+      "path": "data/raw/berlin/mietspiegel/strassenverzeichnis_2024.parquet",
+      "row_count": 13369,
+      "schema_fingerprint": "sha256:56ac795991d85cff952e1665ee704576a5fa593744a6d242fcfa5826cde1d09e",
+      "content_hash": "sha256:8cbb5c259a72061f924074bd6dc30b295ac408d2b58dbe3e94f980ca6fe19710"
+    },
+    {
+      "path": "data/raw/berlin/mietspiegel/strassenverzeichnis_2026.parquet",
+      "row_count": 13043,
+      "schema_fingerprint": "sha256:56ac795991d85cff952e1665ee704576a5fa593744a6d242fcfa5826cde1d09e",
+      "content_hash": "sha256:002ae92d71091b17e89515932264a00398a1504a53cf074f5c2279c8382cc009"
+    }
+  ],
+  "ingest_script": {
+    "module": "ingestion.berlin.mietspiegel.ingest_strassenverzeichnis",
+    "git_sha": "f879e422e41c1a0d457bff01c41b6eb9baa08c94"
+  },
+  "manifest_schema_version": 1
+}

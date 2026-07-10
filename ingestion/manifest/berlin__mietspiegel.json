@@ -5,7 +5,7 @@
   "upstream": {
     "url": "https://mietspiegel.berlin.de/wp-content/uploads/.../mietspiegeltabelle{year}.pdf",
     "vintage": "2024,2026",
-    "retrieved_at": "2026-06-18T06:24:17Z"
+    "retrieved_at": "2026-07-09T16:33:21Z"
   },
   "outputs": [
     {
@@ -23,7 +23,7 @@
   ],
   "ingest_script": {
     "module": "ingestion.berlin.mietspiegel.ingest_mietspiegel",
-    "git_sha": "9cf6028ab6d493ea675cc31ff03be957e928c616"
+    "git_sha": "f879e422e41c1a0d457bff01c41b6eb9baa08c94"
   },
   "manifest_schema_version": 1
 }

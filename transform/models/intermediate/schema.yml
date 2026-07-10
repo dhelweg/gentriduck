@@ -1139,6 +1139,10 @@ models:
       non-matches are legitimate data-coverage gaps (uninhabited/harbor
       Stadtteile below Sozialmonitoring's scoring threshold), not
       normalization bugs.
+      H-C3 (#160, #129): stadtteil_code is now also exposed as a passthrough
+      output column (no new join, no method change) so int_hamburg_lead_lag
+      can carry the Stadtteil-grain SE-clustering key required by
+      H1-geo-signoff.md Condition 2.
       Graceful degradation: returns zero rows when any upstream has no rows.
     meta:
       dbt_meta_owner: data-engineer
@@ -1164,6 +1168,14 @@ models:
         description: >
           Always TRUE -- every row's indicator values are inherited unchanged from
           the matched parent Stadtteil (see model description).
+      - name: stadtteil_code
+        description: >
+          The resolved Stadtteil natural code this Gebiet maps to (subarea_l1 grain),
+          via the name-matched crosswalk described above. NULL for Gebiete with no
+          crosswalk match (legitimate data-coverage gaps, see model description).
+          Constant per Gebiet across all reference_year rows. Consumed by
+          int_hamburg_lead_lag (#160) as the Stadtteil-grain SE-clustering key
+          required by #129 / H1-geo-signoff.md Condition 2.
 
   - name: int_ewr_socioeco_hamburg
     description: >
@@ -1232,6 +1244,226 @@ models:
           foreigners_share, unemployment_share). Higher = more socio-economically
           vulnerable (same sign convention as Berlin's int_ewr_socioeco.ewr_composite).
           NOT directly comparable in magnitude to Berlin's 5-indicator composite.
+
+  - name: int_hamburg_wohnlage_stadtteil
+    description: >
+      #203 [H-C5]: Wohnlage residential-quality tier composition per
+      Stadtteil -- Hamburg analogue of int_berlin_wohnlage_plr (D3, Thesis
+      Sec.3.4). Unlike Berlin's point-in-polygon spatial join, this model
+      uses a publisher-supplied Stadtteil name-match (verified 100% row
+      coverage against stg_hamburg_geo.area_name, area_level='subarea_l1';
+      enforced >=98% by test_hamburg_wohnlage_stadtteil_match_rate). No
+      rent-VALUE join (Berlin D1 analogue) is attempted in this slice --
+      deliberately deferred (see model SQL header). Wohnlage vocabulary is a
+      two-tier scheme ('Gute Wohnlage'/'Normale Wohnlage'), NOT Berlin's
+      three-tier einfach/mittel/gut -- preserved as-published, no cross-city
+      remap. No time dimension (current-state crosswalk, no WFS edition-year
+      published). geo-DS + domain-expert sign-off: PASS
+      (docs/epic-h/203-hc5-geo-signoff.md, docs/epic-h/203-hc5-domain-signoff.md).
+      Graceful degradation: returns zero rows when stg_hamburg_wohnlage or
+      stg_hamburg_geo return zero rows.
+    meta:
+      dbt_meta_owner: data-engineer
+    data_tests:
+
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns:
+              - city_code
+              - area_code
+              - area_vintage
+              - wohnlage
+          config:
+            where: "area_code is not null"
+      - dbt_utils.expression_is_true:
+          arguments:
+            expression: "pct_wohnlage between 0 and 1"
+          config:
+            where: "pct_wohnlage is not null"
+    columns:
+      - name: city_code
+        description: City identifier (ADR-0005). Always 'HH'.
+        data_tests:
+
+          - not_null:
+              config:
+                where: "area_code is not null"
+          - accepted_values:
+              arguments:
+                values: ["HH"]
+              config:
+                where: "area_code is not null"
+      - name: area_code
+        description: Stadtteil area code (matches stg_hamburg_geo, area_level='subarea_l1').
+        data_tests:
+
+          - not_null
+      - name: area_vintage
+        description: "Hamburg geometry vintage ('current' -- ADR-0014; no historical vintage ingested yet)."
+        data_tests:
+
+          - not_null:
+              config:
+                where: "area_code is not null"
+      - name: wohnlage
+        description: >
+          Hamburg's own Wohnlage tier label ('Gute Wohnlage', 'Normale
+          Wohnlage' -- live schema, #203). NOT remapped onto Berlin's
+          einfach/mittel/gut scheme.
+        data_tests:
+
+          - not_null
+      - name: n_addresses
+        description: Count of Wohnlage-classified addresses in this Stadtteil for this tier.
+      - name: pct_wohnlage
+        description: >
+          Share of addresses in this Wohnlage tier within this Stadtteil.
+          pct_wohnlage = n_addresses / SUM(n_addresses) OVER (PARTITION BY
+          city_code, area_code, area_vintage). Sums to 1.0 within each
+          Stadtteil. Ranges 0 to 1 inclusive.
+      - name: wohnlage_low_n
+        description: >
+          Flag: TRUE when the Stadtteil has fewer than 10 total Wohnlage
+          address points (mirrors Berlin D3 geo condition 7). Downstream
+          consumers must NULL derived scalars for low-N Stadtteile, never
+          zero-fill.
+
+  - name: int_hamburg_displacement_zone_flag
+    description: >
+      #203 [H-C5]: spatially resolves stg_hamburg_displacement_zones
+      (current-state soziale Erhaltungsverordnung / Sec.172 BauGB polygons)
+      onto the Stadtteil grain -- Hamburg analogue of
+      int_berlin_milieuschutz_plr_flag (#70 [B1]), same legal basis, same
+      disclosure-only scoping (binary flag + overlap fraction; NOT
+      composited with int_hamburg_wohnlage_stadtteil or wired into the
+      contract-enforced gentrification_index mart). ST_Intersects (not
+      ST_Within) -- Erhaltungsverordnung polygons are not aligned to
+      Stadtteil boundaries. CRS EPSG:25832 native on both sides (NOT
+      Berlin's EPSG:25833); a y-axis sanity guard (5.90e6-5.97e6) mirrors
+      Berlin's own coordinate-swap guard. Current-state only (16 in-force
+      zones as of #203; no per-year edition endpoint) -- not a
+      reconstructed historical panel. geo-DS + domain-expert sign-off:
+      PASS (docs/epic-h/203-hc5-geo-signoff.md,
+      docs/epic-h/203-hc5-domain-signoff.md).
+      Graceful degradation: returns zero rows when stg_hamburg_displacement_zones
+      or stg_hamburg_geo return zero rows.
+    meta:
+      dbt_meta_owner: data-engineer
+    data_tests:
+
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns:
+              - city_code
+              - area_code
+              - area_vintage
+    columns:
+      - name: city_code
+        description: City identifier (ADR-0005), always 'HH'.
+        data_tests:
+
+          - not_null
+      - name: area_code
+        description: Stadtteil identifier (matches stg_hamburg_geo, area_level='subarea_l1').
+      - name: area_vintage
+        description: "Hamburg geometry vintage ('current' -- ADR-0014)."
+      - name: under_displacement_protection
+        description: >
+          TRUE when the Stadtteil spatially intersects at least one current
+          soziale Erhaltungsverordnung designation. A policy marker of
+          displacement risk the city already recognizes, not a measured
+          displacement outcome -- Stadtteile without the flag are not
+          thereby "safe from displacement," only "not (yet) formally
+          protected" (mirrors int_berlin_milieuschutz_plr_flag's framing).
+        data_tests:
+
+          - not_null
+      - name: displacement_zone_count
+        description: Count of distinct Erhaltungsverordnung designations overlapping this Stadtteil (0 if none).
+      - name: displacement_zone_area_codes
+        description: >
+          Comma-separated list of overlapping designation area_codes, NULL
+          when under_displacement_protection is FALSE.
+      - name: earliest_in_force_date
+        description: >
+          Earliest in-force date among overlapping designations,
+          informational only -- NOT a reconstructed historical status
+          panel (source exposes current-state only; see model SQL header).
+      - name: displacement_zone_overlap_frac
+        description: >
+          Total intersection area / Stadtteil area, clipped to [0,1]. No
+          materiality threshold is applied by this model -- deferred to the
+          consumer (mirrors int_berlin_milieuschutz_plr_flag's
+          milieuschutz_overlap_frac).
+
+  - name: int_hamburg_wohnlage_mietenspiegel
+    description: >
+      #215 [H-C6]: Mietenspiegel rent-VALUE join, Hamburg analogue of
+      int_price_rent_wohnlage_mietspiegel (Berlin D1). Follow-up to #203,
+      which deferred this join because of an unreconciled `ausstattung`
+      (fitting-standard) dimension -- investigated and resolved here: the
+      live 2025 edition carries exactly one ausstattung value ('mit Bad und
+      Sammelheizung'), Hamburg's own standard-equipment baseline, directly
+      analogous to Berlin's fixed "standard equipment" assumption (see model
+      SQL header for the full reconciliation). Fixed representative profile:
+      size_bucket='66m² bis unter 91m²', year_built_bucket='1968 bis 1977',
+      ausstattung='mit Bad und Sammelheizung' -- caveat: verified against a
+      SINGLE ingested edition (2025), unlike Berlin's cross-edition bucket
+      stability check; flagged on G2 as a limitation to revisit at the next
+      Hamburg Mietenspiegel edition. No vintage-matching join (Wohnlage side
+      has no vintage dimension) -- joins against MAX(edition_year). Not wired
+      into gentrification_index (disclosure-only, mirrors #203). geo-DS +
+      domain-expert sign-off: PASS (docs/epic-h/215-hc6-geo-signoff.md,
+      docs/epic-h/215-hc6-domain-signoff.md).
+      Graceful degradation: returns zero rows when int_hamburg_wohnlage_stadtteil
+      or stg_hamburg_mietenspiegel return zero rows.
+    meta:
+      dbt_meta_owner: data-engineer
+    data_tests:
+
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns:
+              - city_code
+              - area_code
+              - area_vintage
+          config:
+            where: "area_code is not null"
+      - dbt_utils.expression_is_true:
+          arguments:
+            expression: "pct_gute_wohnlage + pct_normale_wohnlage between 0.999 and 1.001"
+          config:
+            where: "not wohnlage_low_n"
+    columns:
+      - name: city_code
+        description: City identifier (ADR-0005), always 'HH'.
+        data_tests:
+
+          - not_null
+      - name: area_code
+        description: Stadtteil identifier (matches stg_hamburg_geo, area_level='subarea_l1').
+      - name: area_vintage
+        description: "Hamburg geometry vintage ('current' -- ADR-0014)."
+      - name: pct_gute_wohnlage
+        description: Share of addresses in 'Gute Wohnlage' tier per Stadtteil.
+      - name: pct_normale_wohnlage
+        description: Share of addresses in 'Normale Wohnlage' tier per Stadtteil.
+      - name: wohnlage_low_n
+        description: >
+          Inherited from int_hamburg_wohnlage_stadtteil: TRUE when
+          SUM(n_addresses) for the Stadtteil < 10. est_rent_* are NULL when
+          TRUE.
+      - name: est_rent_mid
+        description: >
+          Modelled net cold rent (EUR/sqm/month) at the fixed representative
+          dwelling profile -- NOT observed rent paid (Holm 2010
+          Bestandsmiete-lagging-bias). NULL when wohnlage_low_n = TRUE.
+      - name: est_rent_low
+        description: Lower-bound modelled rent estimate, same profile as est_rent_mid.
+      - name: est_rent_high
+        description: Upper-bound modelled rent estimate, same profile as est_rent_mid.
+      - name: mietenspiegel_edition_used
+        description: Mietenspiegel edition_year the rent values were sourced from.
 
   - name: int_hamburg_sozialmonitoring_index
     description: >
@@ -1550,6 +1782,14 @@ models:
               config:
                 where: "area_code is not null"
           - accepted_values:
+              # GUARD (#161 / H-C4, ADR-0005 addendum 2026-07-10): this list is the
+              # enforced tripwire for the city-onboarding checklist. A red build here
+              # means a new vintage tag showed up -- STOP and decide whether the new
+              # city needs its own crosswalk seed (mirroring
+              # seed_lor_crosswalk_2006_to_2021) before widening this list; passthrough
+              # is only exact for a single-vintage city (see the model's SQL header and
+              # docs/epic-h/125-multi-city-lineage-geo-signoff.md Condition C4). Do not
+              # widen this list as a reflexive fix without that decision.
               arguments:
                 values: ["lor_2021", "current"]
               config:
@@ -2113,6 +2353,211 @@ models:
           True if area_vintage = 'lor_pre2021' (the 447-PLR series; thesis universe; longest
           MSS time series). Epic B headline analysis uses this series (index-definition.md §6.2).
 
+  - name: int_hamburg_lead_lag
+    description: >
+      H-C3 (#160): mirror-image of int_mss_lead_lag for Hamburg -- independently
+      re-tests whether POI commercial activity at t predicts Sozialmonitoring status
+      change at t+k (H3a) or vice versa (H3b) on Hamburg's ANNUAL series. Does NOT
+      assume the Berlin thesis's H3b-dominance finding replicates.
+
+      ANNUAL-CADENCE REDESIGN (binding; ADR-0014; H1-geo-signoff.md Condition 2; #160):
+      edition_tk = edition_t + lag_k * 1 (lag_k in {1,2,3} => 1/2/3 real years), NOT
+      Berlin's `lag_k * 2` (2/4/6 real years). Same edition-step range as Berlin
+      (1,2,3) for structural comparability, but a DIFFERENT real-time horizon --
+      Hamburg lag_k=1 is a 1-year gap, Berlin lag_k=1 is a 2-year gap. Cross-city
+      lag_k comparison must be read as "same step count, different real-year window",
+      never as "same real-time horizon".
+
+      Theory: Dangschat (1988) double invasion-succession cycle -- social cycle LEADS
+      commercial cycle in Berlin's thesis (p. 91, p. 55-56). Whether this replicates on
+      Hamburg is the open methodology question this model's grain enables
+      analysis/e5_hamburg_lead_lag.py to test; results are reported honestly, whichever
+      direction they turn out to be.
+
+      Grain: one row per (city_code, area_code, area_vintage, edition_t, lag_k).
+      city_code is always 'HH'; area_vintage is always 'current' (single Hamburg
+      geometry edition, ADR-0014 Pillar 1).
+
+      Exclusions applied (mirrors int_mss_lead_lag structurally; both are
+      structural no-ops for Hamburg's data shape today, see SQL header):
+        - is_uninhabited = true rows excluded (no-op: Hamburg has no such rows by
+          construction, int_gentrification_ts Branch C).
+        - Cross-vintage deltas blocked: area_vintage must match between base and
+          lagged row (no-op: Hamburg has a single vintage today).
+        - Only rows where the lagged outcome (status_index_tk) exists are retained.
+
+      D4 discipline: ewr_composite_t is the ONLY D4 column (level at time t as
+      baseline covariate). No D4 delta columns -- same rule as Berlin's model.
+
+      C5 correction: dynamism_score (C5-corrected, independently re-validated on
+      Hamburg's own OSM coverage-growth curve, H-C1 #158,
+      docs/epic-h/158-hc1-geo-signoff.md) is used throughout, never raw count deltas.
+
+      stadtteil_code (#129, binding acceptance criterion): carried on every row,
+      joined from int_ewr_socioeco_hamburg_disagg's own Gebiet->Stadtteil crosswalk
+      (unchanged method, new passthrough column). Required so
+      analysis/e5_hamburg_lead_lag.py can cluster standard errors at Stadtteil grain
+      for any regression using ewr_composite_t (D4) as a covariate, per
+      H1-geo-signoff.md Condition 2 (D4's effective N is Stadtteil count, ~104-105,
+      not Gebiet count, ~941-945 -- a change-of-support problem, Gotway & Young 2002).
+
+      Hamburg-only scope, purely additive (mirror of int_mss_lead_lag's Berlin-only
+      scope, #125): filtered to city_code='HH'; int_mss_lead_lag.sql (Berlin) is
+      untouched. Does NOT widen any published mart's `accepted_values` beyond
+      `["BER"]` (#158/#159 precedent) -- feeds only analysis/e5_hamburg_lead_lag.py.
+
+      Graceful degradation: returns zero rows when int_gentrification_ts has no
+      Hamburg rows.
+    meta:
+      dbt_meta_owner: data-engineer
+    data_tests:
+
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns:
+              - city_code
+              - area_code
+              - area_vintage
+              - edition_t
+              - lag_k
+          config:
+            where: "area_code is not null"
+      - dbt_utils.expression_is_true:
+          arguments:
+            expression: "delta_status_ordinal between -3 and 3"
+          config:
+            where: "delta_status_ordinal is not null"
+      # Data-presence gate (docs/lessons/local-first-data-presence.md):
+      - assert_not_empty:
+          config:
+            severity: error
+    columns:
+      - name: city_code
+        description: City identifier (ADR-0005). Always 'HH'.
+        data_tests:
+
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ["HH"]
+      - name: area_code
+        description: statistisches-Gebiet area code (subarea_l2 grain).
+        data_tests:
+
+          - not_null
+      - name: area_vintage
+        description: Always 'current' (single Hamburg geometry edition, ADR-0014 Pillar 1).
+        data_tests:
+
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ["current"]
+      - name: edition_t
+        description: Base Sozialmonitoring edition year (time t; the predictor side).
+        data_tests:
+
+          - not_null
+      - name: lag_k
+        description: >
+          Sozialmonitoring edition offset (1, 2, or 3 steps; each step = 1 year,
+          ANNUAL cadence -- NOT Berlin's 2-year step, see model description).
+          edition_tk = edition_t + lag_k * 1.
+        data_tests:
+
+          - not_null
+          - accepted_values:
+              arguments:
+                values: [1, 2, 3]
+      - name: edition_tk
+        description: Outcome Sozialmonitoring edition year (t+k; edition_t + lag_k * 1).
+        data_tests:
+
+          - not_null
+      - name: status_index_t
+        description: >
+          D1 Sozialmonitoring social status at time t (ordinal 1-4; 1=hoch best,
+          4=sehr niedrig worst -- same scale/polarity as Berlin's MSS status_index).
+          Predictor side for H3a; baseline for H3b.
+        data_tests:
+
+          - not_null
+          - accepted_values:
+              arguments:
+                values: [1, 2, 3, 4]
+      - name: dynamik_index_t
+        description: >
+          D2 Sozialmonitoring Dynamik at time t (ordinal 1-3; 1=positiv, 2=stabil,
+          3=negativ). CAVEAT (ADR-0014 Pillar 2): computed over a 3-year window in
+          Hamburg vs Berlin's 2-year window -- category comparable, magnitude is not.
+        data_tests:
+
+          - not_null
+          - accepted_values:
+              arguments:
+                values: [1, 2, 3]
+      - name: typology_stage_t
+        description: Typology stage at time t (from D1xD2 matrix; index-definition.md §1.5).
+      - name: status_index_tk
+        description: >
+          D1 social status at time t+k (outcome for H3a; ordinal 1-4). Only present
+          for rows where this exists (inner join on lag).
+        data_tests:
+
+          - not_null
+          - accepted_values:
+              arguments:
+                values: [1, 2, 3, 4]
+      - name: dynamik_index_tk
+        description: D2 Dynamik at time t+k (outcome direction; ordinal 1-3).
+        data_tests:
+
+          - accepted_values:
+              arguments:
+                values: [1, 2, 3]
+              config:
+                where: "dynamik_index_tk is not null"
+      - name: delta_status_ordinal
+        description: >
+          status_index_tk - status_index_t. ORDINAL transition; do NOT treat as metric.
+          Positive = status worsened (more deprived). Negative = status improved (less
+          deprived). Range: -3 to +3 (bounded by the 4-class ordinal scale).
+      - name: status_transition
+        description: >
+          Ordinal transition direction: 'improved' (status_index fell), 'stable'
+          (unchanged), 'worsened' (status_index rose).
+        data_tests:
+
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ["improved", "stable", "worsened"]
+      - name: dynamism_score_t
+        description: >
+          D3 C5-corrected dynamism score at time t (z-score of share_yoy_change).
+          Commercial succession signal; PREDICTOR for H3a (amenity at t -> status at
+          t+k).
+      - name: delta_dynamism_t
+        description: >
+          Change in D3 dynamism_score at t vs t-1 (within-vintage LAG, 1-year gap --
+          annual cadence). Predictor for H3b. C5-corrected; NULL for first
+          Sozialmonitoring edition available for that Gebiet.
+      - name: dynamism_score_tk
+        description: >
+          D3 C5-corrected dynamism score at time t+k. Outcome for H3b.
+      - name: ewr_composite_t
+        description: >
+          D4 baseline vulnerability covariate at time t (cross-sectional LEVEL only;
+          3-indicator Hamburg composite, §4.3-equivalent). Higher = more
+          socio-economically vulnerable. NO D4 delta columns in this model.
+      - name: stadtteil_code
+        description: >
+          Stadtteil-grain SE-clustering key (#129, H1-geo-signoff.md Condition 2,
+          binding). NULL where the Gebiet has no crosswalk match (legitimate
+          data-coverage gap, see int_ewr_socioeco_hamburg_disagg). Any regression
+          using ewr_composite_t as a covariate MUST cluster standard errors on this
+          column.
+
   - name: int_berlin_lor_crosswalk_dominant_2021
     description: >
       QA-7b (#205): dominant (max-weight) pre-2021 <-> 2021 PLR crosswalk, extracted from the
@@ -2468,6 +2913,236 @@ models:
         description: >
           The Mietspiegel vintage year actually matched to this Wohnlage vintage
           (nearest-<= rule, geo condition 8) -- audit trail for the vintage match.
+
+  - name: int_berlin_rent_pressure_proxy
+    description: >
+      #70 [B1] / ADR-0019 Decision 2: affordability / rent-pressure proxy --
+      combines modelled Mietspiegel rent level (relative to the citywide/PLR
+      median, per-year z-score) with the MSS transferbezug_anteil transfer-receipt
+      share (ability-to-pay-stress proxy, already vulnerability-positive per the
+      R-A4/#67 geo-signoff) into an equal-weight mean-of-z-scores composite. NOT a
+      rent-to-income ratio (no PLR-grain income series exists; ADR-0007 gap;
+      ADR-0019 Alternative C rejected that approach under R-C2 grounding).
+
+      Coverage limitation: as actually ingested, transferbezug_anteil is non-null
+      for MSS editions 2015, 2017, 2023, 2025 and NULL for editions 2019, 2021
+      (narrower suspension window than R-A4/#67's "<=2021" characterization --
+      verified directly against stg_berlin_mss_indicators). rent_pressure_proxy
+      is therefore populated for Wohnlage snapshot_year in (2017, 2023, 2026) and
+      NULL for snapshot_year in (2019, 2021) by construction. z_rent_rel alone is
+      populated for all snapshot years.
+
+      Zero consumers as of this model -- not yet wired into any mart or the
+      governed gentrification_index (ADR-0019 explicitly defers that integration
+      to a later, separately-gated slice). See
+      docs/methodology/B1-rent-pressure-geo-signoff.md and
+      docs/methodology/B1-rent-pressure-domain-signoff.md.
+
+      Source: int_price_rent_wohnlage_mietspiegel + stg_berlin_mss_indicators.
+    meta:
+      dbt_meta_owner: data-engineer
+    data_tests:
+
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns:
+              - city_code
+              - snapshot_year
+              - area_code
+              - area_vintage
+          config:
+            where: "area_code is not null"
+    columns:
+      - name: city_code
+        description: City identifier (ADR-0005), normalised to 'BER'.
+        data_tests:
+
+          - not_null:
+              config:
+                where: "area_code is not null"
+      - name: snapshot_year
+        description: Wohnlage WFS edition year (2017, 2019, 2021, 2023, 2026).
+      - name: area_code
+        description: PLR identifier (matches stg_berlin_lor / int_price_rent_wohnlage_mietspiegel).
+      - name: area_vintage
+        description: LOR boundary vintage ('lor_pre2021' or 'lor_2021').
+      - name: est_rent_mid
+        description: >
+          Modelled mid rent estimate carried through from
+          int_price_rent_wohnlage_mietspiegel (Signal 3 input to z_rent_rel).
+          NULL when the source is NULL (wohnlage_low_n).
+      - name: transferbezug_anteil
+        description: >
+          MSS transfer-receipt (SGB II/XII) share for the matched edition
+          (ability-to-pay-stress input to z_transfer_stress). NULL for matched
+          editions 2019 and 2021 (see model header coverage-limitation note).
+      - name: transfer_stress_mss_edition
+        description: >
+          The MSS edition actually matched to this Wohnlage snapshot_year
+          (nearest-<= rule, mirrors geo condition 8) -- audit trail for the match.
+      - name: z_rent_rel
+        description: >
+          Per-snapshot_year z-score of est_rent_mid across PLRs (higher = rent
+          further above that year's citywide median). Populated for all
+          snapshot years where est_rent_mid is non-null.
+      - name: z_transfer_stress
+        description: >
+          Per-snapshot_year z-score of transferbezug_anteil across PLRs (higher =
+          more transfer-dependent residents; vulnerability-positive, no sign flip
+          -- R-A4/#67 Finding d). NULL for snapshot_year in (2019, 2021); see
+          model header coverage-limitation note.
+      - name: rent_pressure_proxy
+        description: >
+          mean(z_rent_rel, z_transfer_stress) -- affordability-stress composite
+          (ADR-0019 Decision 2). NULL when either input z-score is NULL (no
+          imputation across the transferbezug suspension gap). High = above-median
+          modelled rent combined with an above-median transfer-dependent
+          population share (rent risen/already high where residents can least
+          absorb it) -- an affordability-stress signal, not a measured
+          displacement event and not a rent-to-income ratio.
+
+  - name: int_berlin_turnover_proxy
+    description: >
+      #70 [B1], third slice: turnover / Wohndauer (residence-duration) proxy.
+      Year-over-year change in residence_duration_5y_share (EWR DAU5), negated per
+      the thesis sign convention (indicator-semantics.md 65-66: falling long-tenure
+      share = turnover-positive), then per-(city_code, reference_year) z-scored
+      across PLRs. A single-indicator change score (not a multi-indicator
+      composite) -- complements the static vulnerability level already consumed by
+      int_ewr_socioeco's composite. Explicit year_t/year_t-1 self-join (not LAG())
+      so a real gap in the annual EWR panel yields NULL rather than a
+      silently-wrong multi-year delta. Uninhabited-PLR guard applied (residents_total
+      IS NULL or = 0 excluded).
+
+      Zero consumers as of this model -- not yet wired into any mart or the
+      governed gentrification_index (same staged-slice pattern as
+      int_berlin_rent_pressure_proxy). See
+      docs/methodology/B1-turnover-geo-signoff.md and
+      docs/methodology/B1-turnover-domain-signoff.md.
+
+      Known gap (#197): residence_duration_5y_share is entirely NULL for
+      reference_year 2024/2025 as ingested (upstream EWR CSV parse failures), so
+      turnover_proxy is NULL for reference_year=2025 by honest NULL propagation,
+      not imputation.
+
+      Source: int_ewr_socioeco.
+    meta:
+      dbt_meta_owner: data-engineer
+    data_tests:
+
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns:
+              - city_code
+              - area_code
+              - area_vintage
+              - reference_year
+    columns:
+      - name: city_code
+        description: City identifier (ADR-0005), normalised to 'BER'.
+        data_tests:
+
+          - not_null
+      - name: area_code
+        description: PLR identifier (matches int_ewr_socioeco).
+      - name: area_vintage
+        description: LOR boundary vintage (lor_2021 throughout, inherited from int_ewr_socioeco).
+      - name: reference_year
+        description: EWR reference year (year_t; the later of the two years differenced).
+      - name: residence_duration_5y_share
+        description: DAU5 share at year_t, carried through from int_ewr_socioeco.
+      - name: residence_duration_5y_share_prev
+        description: DAU5 share at year_t-1 (matched via explicit self-join, not LAG()).
+      - name: turnover_raw
+        description: >
+          -1 * (residence_duration_5y_share - residence_duration_5y_share_prev) --
+          thesis sign convention; positive = long-tenure share fell (turnover signal).
+      - name: turnover_proxy
+        description: >
+          Per-(city_code, reference_year) z-score of turnover_raw across PLRs
+          (NULLIF(stddev_pop,0) degenerate-year guard). High = long-tenure
+          residents leaving faster than being replaced by other long-tenure
+          residents relative to other PLRs that year -- a turnover/displacement
+          signal, not a measured displacement event.
+      - name: any_endpoint_partial
+        description: >
+          TRUE when either year_t or year_t-1 falls in the pre-2014 partial-EWR-composite
+          era (B9b). residence_duration_5y_share itself is present in both eras, so this
+          flag is informational (cross-era caution carried through, not enforced) rather
+          than a null-producing condition.
+
+  - name: int_berlin_milieuschutz_plr_flag
+    description: >
+      #70 [B1], fourth slice (first integration slice): spatially resolves
+      stg_berlin_milieuschutz (current-state Sec. 172 Abs. 1 Nr. 2 BauGB
+      designated-area polygons) onto the PLR grain via ST_Intersects (not
+      ST_Within -- Milieuschutz boundaries do not align with PLR boundaries;
+      see docs/methodology/B1-milieuschutz-geo-signoff.md), covering both LOR
+      vintages independently. Produces a disclosure-only binary flag +
+      overlap fraction; deliberately NOT blended with rent_pressure_proxy or
+      turnover_proxy (three different, honestly-incompatible time grains --
+      see model header) and NOT wired into the contract-enforced
+      gentrification_index mart. Intended as the "parallel published layer"
+      satisfying #70's acceptance-criteria fallback option.
+
+      Current-state only: the WFS exposes only the current designation set
+      (no per-year edition endpoint), so this is not a time-series panel --
+      earliest_in_force_date is carried through for a coarse before/after cut
+      only.
+
+      See docs/methodology/B1-milieuschutz-geo-signoff.md and
+      docs/methodology/B1-milieuschutz-domain-signoff.md.
+
+      Source: stg_berlin_milieuschutz + stg_berlin_lor.
+    meta:
+      dbt_meta_owner: data-engineer
+    data_tests:
+
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns:
+              - city_code
+              - area_code
+              - area_vintage
+    columns:
+      - name: city_code
+        description: City identifier (ADR-0005), normalised to 'BER'.
+        data_tests:
+
+          - not_null
+      - name: area_code
+        description: PLR identifier (matches stg_berlin_lor).
+      - name: area_vintage
+        description: LOR boundary vintage (lor_pre2021 or lor_2021).
+      - name: under_milieuschutz
+        description: >
+          TRUE when the PLR spatially intersects at least one current
+          Milieuschutz (soziale Erhaltungsverordnung) designation. A policy
+          marker of displacement risk the city already recognizes, not a
+          measured displacement outcome -- PLRs without the flag are not
+          thereby "safe from displacement," only "not (yet) formally
+          protected" (ADR-0019 Consequences).
+        data_tests:
+
+          - not_null
+      - name: milieuschutz_designation_count
+        description: Count of distinct Milieuschutz designations overlapping this PLR (0 if none).
+      - name: milieuschutz_area_codes
+        description: >
+          Comma-separated list of overlapping Milieuschutz area_codes
+          (schluessel, e.g. "EM0105"), NULL when under_milieuschutz is FALSE.
+      - name: earliest_in_force_date
+        description: >
+          Earliest in_force_date among the PLR's overlapping designations, if
+          any -- a coarse "protected since at least this date" marker, NOT a
+          reconstructed status panel (see model header).
+      - name: milieuschutz_overlap_frac
+        description: >
+          Sum of intersection area across all overlapping designations,
+          divided by the PLR's own area, clipped to [0,1]. 0 when
+          under_milieuschutz is FALSE. Lets a consumer distinguish
+          marginal-boundary-touch from near-total-coverage without this
+          model imposing a materiality threshold itself.
 
   - name: int_price_rent_brw_wohnlage_combined
     description: >
