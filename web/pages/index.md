@@ -46,7 +46,7 @@ supervised autonomy, not a black box — and because the project is fully open, 
 agent definition, every architecture decision, and every line of SQL that produces a number here.
 
 <Alert status="info">
-  Curious how a multi-agent system builds a peer-review-grade statistics site? The
+  Curious how a multi-agent system builds this statistics site under an enforced methodology gate? The
   <a href="/about">about page</a> walks through the full workflow, the enforced "free & open only"
   rules, and the methodology gate — or read the agent definitions and Architecture Decision Records
   directly in the <a href="https://github.com/dhelweg/gentriduck">GitHub repository</a>.
