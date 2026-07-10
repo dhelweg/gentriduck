@@ -3,8 +3,6 @@ title: All neighbourhoods (Planungsräume)
 sidebar_position: 4
 ---
 
-# All neighbourhoods (Planungsräume)
-
 <!--
   #150: pairs with pages/berlin/area/[code].md per Evidence's documented templated-page pattern
   (index.md + [param].md — https://docs.evidence.dev/core-concepts/templated-pages/). Not primary
@@ -18,10 +16,18 @@ sidebar_position: 4
   I2 (#219): moved from /area to /berlin/area (city-folder navigation restructure — see
   docs/epic-i/I2-route-map.md). sidebar_position renumbered 14 -> 4 (scoped to this page's
   siblings under pages/berlin/, not the whole site).
+
+  I3 (#220): kept as its own route rather than merged into /berlin/area-detail -- see that page's
+  header comment for the technical reason (this page's fully-rendered, all-542-row table is what
+  makes the static build's per-PLR page crawl work at all). Re-platformed onto the shared `<Hero>`/
+  `<FooterNav>` components (plain `# ` heading and hand-copied `<sub>` footer line).
 -->
 
-Every Berlin neighbourhood (Planungsraum) on its current (2021+) boundaries. Search or sort the
-table, or use the [district browse](/berlin/area-detail) / [map](/berlin/maps) instead.
+<Hero compact eyebrow="Chapter 3 — The Evidence" title="All neighbourhoods (Planungsräume)" lede="Every Berlin neighbourhood (Planungsraum) on its current (2021+) boundaries — a full-text search, secondary to the district browse for most readers." />
+
+Search or sort the table, or use the [district browse](/berlin/area-detail) / [map](/berlin/maps)
+instead — that district browse is the primary way in for most readers; this page exists mainly so
+every neighbourhood has a real, findable page (see this file's header comment).
 
 ```sql all_areas
 select
@@ -48,5 +54,5 @@ order by area_name
 
 ---
 
-<sub>[Home](/) · [Methodology & data sources](/methodology) · [About this project](/about) · [GitHub repository](https://github.com/dhelweg/gentriduck)</sub>
+<FooterNav />
 

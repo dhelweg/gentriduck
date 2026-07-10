@@ -8,6 +8,11 @@ sidebar_position: 2
   docs/epic-i/I2-route-map.md). sidebar_position renumbered 12 -> 2 (scoped to this page's
   siblings under pages/berlin/, not the whole site; kept after time-series to preserve the
   pre-move relative order).
+
+  I3 (#220): re-platformed onto the shared `<Hero>`/`<FooterNav>` components (plain `# ` heading
+  and hand-copied `<sub>` footer line, both now standardized) and added an explicit "Honest
+  caveats" section consolidating the cautions already stated inline in this page's Alerts (no new
+  caveat -- see that section's own note).
 -->
 
 <script>
@@ -29,11 +34,9 @@ sidebar_position: 2
   const stageColorPalette = ['#dc2626', '#f97316', '#f4b548', '#eab308', '#a3e635', '#16a34a'];
 </script>
 
-# Maps — gentrification pressure by area
+<Hero compact eyebrow="Chapter 3 — The Evidence" title="Maps — gentrification pressure by area" lede="Colours each of Berlin's neighbourhoods by its current gentrification-pressure signal, so you can see at a glance which parts of the city show the strongest or weakest pressure." />
 
-This map colours each of Berlin's neighbourhoods by its current gentrification-pressure signal, so
-you can see at a glance which parts of the city show the strongest or weakest pressure. Pick a map
-level and an indicator below.
+Pick a map level and an indicator below.
 
 Right now this map covers Berlin only — Hamburg's boundaries are ready behind the scenes, but the
 underlying index doesn't have real Hamburg numbers yet
@@ -243,6 +246,28 @@ Bezirksregion map above is view-only for now, and browsing by district still wor
 social-status index -- POI density and Offering Advantage by domain -- see the
 [POI & Offering Advantage map](/berlin/poi-map).
 
+## Honest caveats
+
+- **Social status and dynamism are ordinal, not linear.** Higher social-status shading means
+  **more deprived**, not more prosperous; a negative pressure trend means **higher** gentrification
+  pressure — see the alert above the map and [methodology & data sources](/methodology) for the
+  full decoder.
+- **"Gentrification stage" is only computed for Live data at the Planungsraum level** — it is not
+  available for the 2018 thesis reproduction (`standard`) or the coarser Bezirksregion aggregate.
+- Areas without a value (e.g. uninhabited planning areas) are drawn but left blank — a blank area
+  is missing data, not a "zero pressure" reading.
+
+## Where next
+
+- **[Time series](/berlin/time-series)** — how one specific area, or the whole city, has moved
+  over the years.
+- **[Area detail](/berlin/area-detail)** — browse by district, or open one neighbourhood's full
+  profile via a map click.
+- **[POI & Offering Advantage map](/berlin/poi-map)** — the commercial-mix (shops/cafés) view of
+  the same neighbourhoods.
+- **[Methodology & data sources](/methodology)** — what "gentrification pressure" and the six-stage
+  typology mean.
+
 ---
 
-<sub>[Home](/) · [Methodology & data sources](/methodology) · [About this project](/about) · [GitHub repository](https://github.com/dhelweg/gentriduck)</sub>
+<FooterNav />

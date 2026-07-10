@@ -13,13 +13,15 @@ sidebar_position: 1
   see docs/epic-i/I2-route-map.md). sidebar_position renumbered 11 -> 1: positions are scoped to
   this page's siblings under pages/berlin/ (Evidence sorts children per tree level, not globally),
   not the whole site; kept ahead of maps to preserve the pre-move relative order.
+
+  I3 (#220): re-platformed onto the shared `<Hero>`/`<FooterNav>` components and added an explicit
+  "Where next" section per the I1 template; the existing "Go deeper" section is kept and folded
+  into it. No caveat dropped -- the "rose is not automatically good news" note stays verbatim.
 -->
 
-# Time series — how Berlin has moved
+<Hero compact eyebrow="Chapter 3 — The Evidence" title="Time series — how Berlin has moved" lede="Rather than making you guess one of Berlin's ~540 planning areas from a dropdown, this page zooms out: how the city as a whole has moved across the official social-monitoring reports, and which neighbourhoods moved the most." />
 
-Rather than making you guess one of Berlin's ~540 planning areas from a dropdown, this page zooms
-out: how the city as a whole has moved across the official social-monitoring reports, and which
-neighbourhoods moved the most. To inspect any single area, use the district browser on the
+To inspect any single area, use the district browser on the
 [area detail](/berlin/area-detail) page.
 
 <Alert status="info">
@@ -149,7 +151,17 @@ order by area_count desc
     yAxisTitle="Trajectory type"
 />
 
-## Go deeper
+## Honest caveats
+
+- **"Rose" is not automatically good news for existing residents** — rising status (a falling
+  status-index line) is also the signature of gentrification, and can reflect displacement as
+  easily as incumbent social mobility; see the alert above for the full decoder.
+- The citywide trend line **stitches together two boundary systems** across Berlin's 2021
+  redistricting — read it as one long trend, not a break at 2021.
+- The "biggest movers" tables are computed on the **current (2021+) boundaries only**, so they
+  line up with the map and area drill-down, but do not extend before 2021.
+
+## Where next
 
 Click any row above to open that exact neighbourhood's full breakdown — status trajectory,
 commercial mix, and price/rent. To browse by district instead, use the
@@ -158,5 +170,5 @@ commercial mix, and price/rent. To browse by district instead, use the
 
 ---
 
-<sub>[Home](/) · [Methodology & data sources](/methodology) · [About this project](/about) · [GitHub repository](https://github.com/dhelweg/gentriduck)</sub>
+<FooterNav />
 
