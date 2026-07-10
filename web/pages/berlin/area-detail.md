@@ -1,6 +1,6 @@
 ---
 title: Area detail — neighbourhood drill-down
-sidebar_position: 13
+sidebar_position: 3
 ---
 
 # Area detail — one neighbourhood, full picture
@@ -8,15 +8,19 @@ sidebar_position: 13
 Pick a district to compare its neighbourhoods, then read the spotlight below on the one currently
 under the most gentrification pressure — its social-status trajectory, how its mix of shops and
 cafés has developed, and how land value and estimated rent compare. For the citywide picture, see
-the [maps page](/maps) or the [time-series view](/time-series).
+the [maps page](/berlin/maps) or the [time-series view](/berlin/time-series).
 
 <!--
   No blind ~540-item PLR picker (maintainer feedback). Navigation is coarse Bezirk (district) +
   a ranked comparison table; the single-area "spotlight" is the district's highest-pressure area.
   Kept prerender-clean: no $page/?area machinery (that forced client-only rendering and left every
   query empty at build). Exact per-area deep-link from a map/table click is a follow-up — it needs
-  an Evidence templated route (/area/[code]) so ${params.code} can drive the queries server-side.
-  Presentation only; no indicator/weight/method change (no methodology gate).
+  an Evidence templated route (/berlin/area/[code]) so ${params.code} can drive the queries
+  server-side. Presentation only; no indicator/weight/method change (no methodology gate).
+
+  I2 (#219): moved from /area-detail to /berlin/area-detail (city-folder navigation restructure —
+  see docs/epic-i/I2-route-map.md). sidebar_position renumbered 13 -> 3 (scoped to this page's
+  siblings under pages/berlin/, not the whole site).
 -->
 
 <Alert status="info">
@@ -51,8 +55,8 @@ select
     status_class as stage,
     dynamism_class as pressure_trend,
     -- Exact-code drill-down (#150): every area is one click from its full page, not just the
-    -- district's top-ranked spotlight below.
-    '/area/' || area_code as area_link
+    -- district's top-ranked spotlight below. I2 (#219): area moved under /berlin/area.
+    '/berlin/area/' || area_code as area_link
 from gentriduck_marts.gentrification_index
 where variant = 'live_data' and area_level = 'plr' and city_code = 'BER'
   and period_yyyymm = (
@@ -249,9 +253,9 @@ order by snapshot_year
 ## Further reading
 
 See [methodology & data sources](/methodology) for what the index means, the
-[citywide POI & price/rent overview](/poi-price-overview) for these signals across all of Berlin, the
-[time-series view](/time-series) for how the whole city has moved, or the
-[full neighbourhood list](/area) to search for a specific area directly.
+[citywide POI & price/rent overview](/berlin/poi-price-overview) for these signals across all of
+Berlin, the [time-series view](/berlin/time-series) for how the whole city has moved, or the
+[full neighbourhood list](/berlin/area) to search for a specific area directly.
 
 ---
 

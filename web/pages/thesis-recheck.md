@@ -49,8 +49,8 @@ sidebar_position: 10
 
 This page answers that hypothesis by hypothesis. It is deliberately about the *reproduction* — the
 historical check. For what Berlin looks like **today**, start with the [home page](/), the
-[maps](/maps), and the [area detail](/area-detail); those lead with the current data, where these
-2018 hypotheses matter less than the live picture.
+[maps](/berlin/maps), and the [area detail](/berlin/area-detail); those lead with the current data,
+where these 2018 hypotheses matter less than the live picture.
 
 <Alert status="info">
   <b>The short version:</b> rebuilt on the <i>same</i> data the thesis used, its core result
@@ -175,7 +175,7 @@ For the **current** picture the six hypotheses take a back seat to the live typo
 - [OA direct validation vs. the 2018 golden (OA-A.3)](https://github.com/dhelweg/gentriduck/blob/main/docs/epic-b/A3-oa-validation-findings.md) — confirms the recomputed Offering Advantage matches the thesis's own numbers directionally
 - [Faithful vs improved methodology comparison](/methodology-comparison) — does curating which business types count sharpen the signal? (OA-C.2)
 - [Methodology & data sources](/methodology) — what the current index measures and how it differs from the 2018 original
-- [Home page](/) and [maps](/maps) — the current, live picture of Berlin
+- [Home page](/) and [maps](/berlin/maps) — the current, live picture of Berlin
 - [github.com/dhelweg/gentriduck](https://github.com/dhelweg/gentriduck) — all code, models, and decisions
 
 ---

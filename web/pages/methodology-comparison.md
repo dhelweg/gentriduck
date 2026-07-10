@@ -135,7 +135,7 @@ honestly compute. We'd rather say that plainly than manufacture a misleading num
 - [ADR-0018](https://github.com/dhelweg/gentriduck/blob/main/docs/adr/0018-causal-tiered-poi-selection.md) — the curation rule that defines the improved variant
 - [ADR-0017](https://github.com/dhelweg/gentriduck/blob/main/docs/adr/0017-poi-offering-advantage-revival.md) — the Offering Advantage construct and the faithful/improved separation
 - [Methodology & data sources](/methodology) — what the current index measures and how it differs from the 2018 original
-- [Home page](/) and [maps](/maps) — the current, live picture of Berlin
+- [Home page](/) and [maps](/berlin/maps) — the current, live picture of Berlin
 
 ---
 

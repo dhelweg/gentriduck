@@ -1,13 +1,18 @@
 ---
 title: Time series — how Berlin has moved
-sidebar_position: 11
+sidebar_position: 1
 ---
 
 <!--
   PROTOTYPE rework (maintainer feedback): a single-PLR picker over ~540 areas has no value.
   This page zooms OUT to the whole city — citywide trend + ranked "biggest movers" that link
-  into the per-area drill-down (/area-detail). No individual-area picker. Presentation only;
+  into the per-area drill-down (/berlin/area-detail). No individual-area picker. Presentation only;
   no indicator/weight/method change (no methodology gate). Berlin only until Hamburg data lands.
+
+  I2 (#219): moved from /time-series to /berlin/time-series (city-folder navigation restructure —
+  see docs/epic-i/I2-route-map.md). sidebar_position renumbered 11 -> 1: positions are scoped to
+  this page's siblings under pages/berlin/ (Evidence sorts children per tree level, not globally),
+  not the whole site; kept ahead of maps to preserve the pre-move relative order.
 -->
 
 # Time series — how Berlin has moved
@@ -15,7 +20,7 @@ sidebar_position: 11
 Rather than making you guess one of Berlin's ~540 planning areas from a dropdown, this page zooms
 out: how the city as a whole has moved across the official social-monitoring reports, and which
 neighbourhoods moved the most. To inspect any single area, use the district browser on the
-[area detail](/area-detail) page.
+[area detail](/berlin/area-detail) page.
 
 <Alert status="info">
   <b>How to read status:</b> the official status scale runs <b>1 = least deprived</b> to
@@ -62,7 +67,11 @@ Over the three most recent official editions, these areas' official social statu
 select
     g.area_name,
     -- Exact-code drill-down (#150): area/[code] resolves lor_2021 PLR codes only.
-    '/area/' || t.area_code as area_link,
+    -- I2 (#219): area moved under /berlin/area. DataTable's own link mechanism is basePath-aware
+    -- (unlike AreaMap's raw window.location click-through), so no base-path interpolation is
+    -- needed here (NB: literal "dollar-brace-base" text would be evaluated by Evidence's SQL
+    -- block compiler as a JS template expression even inside a comment -- avoid writing it here).
+    '/berlin/area/' || t.area_code as area_link,
     t.status_index_first as status_2021,
     t.status_index_last as status_2025,
     t.status_delta,
@@ -91,7 +100,7 @@ limit 12
 ```sql decliners
 select
     g.area_name,
-    '/area/' || t.area_code as area_link,
+    '/berlin/area/' || t.area_code as area_link,
     t.status_index_first as status_2021,
     t.status_index_last as status_2025,
     t.status_delta,
@@ -144,7 +153,7 @@ order by area_count desc
 
 Click any row above to open that exact neighbourhood's full breakdown — status trajectory,
 commercial mix, and price/rent. To browse by district instead, use the
-[area detail page](/area-detail), or see the citywide [maps](/maps) and the
+[area detail page](/berlin/area-detail), or see the citywide [maps](/berlin/maps) and the
 [home page](/) for the current index and stage typology.
 
 ---

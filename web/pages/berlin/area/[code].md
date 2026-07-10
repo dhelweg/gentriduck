@@ -5,11 +5,16 @@ breadcrumb: "select area_name as breadcrumb from gentriduck_marts.gentrification
 <!--
   #150: templated per-area drill-down route (Evidence "Templated Pages" — see
   https://docs.evidence.dev/core-concepts/templated-pages/). ${params.code} drives every query
-  below, server-prerendered at build time -- discovered via the link-crawl from /maps and
-  /time-series (Evidence builds whatever route a link points at; there is no separate static-paths
-  query). Replaces the ~540-item dropdown that /area-detail dropped (#133 degradation) with an
-  exact map-click / mover-row deep link. /area-detail remains the coarse Bezirk browse entry point.
-  Presentation only; no indicator/weight/method change (no methodology gate).
+  below, server-prerendered at build time -- discovered via the link-crawl from /berlin/maps and
+  /berlin/time-series (Evidence builds whatever route a link points at; there is no separate
+  static-paths query). Replaces the ~540-item dropdown that /berlin/area-detail dropped (#133
+  degradation) with an exact map-click / mover-row deep link. /berlin/area-detail remains the
+  coarse Bezirk browse entry point. Presentation only; no indicator/weight/method change (no
+  methodology gate).
+
+  I2 (#219): moved from /area/[code] to /berlin/area/[code] (city-folder navigation restructure —
+  see docs/epic-i/I2-route-map.md). No frontmatter sidebar_position here (dynamic templated route,
+  not a sidebar entry, per pre-existing precedent).
 -->
 
 ```sql area_info
@@ -121,7 +126,7 @@ order by snapshot_year
 Which kinds of places are over- or under-represented here compared to the citywide average?
 <b>OA = 1.0</b> (the dashed ring) is the citywide baseline for each domain; further out means
 more concentrated here than the city as a whole, further in means less. See the
-[POI & Offering Advantage map](/poi-map) to explore this across all of Berlin.
+[POI & Offering Advantage map](/berlin/poi-map) to explore this across all of Berlin.
 
 ```sql poi_oa_radar
 select
@@ -231,10 +236,10 @@ order by snapshot_year
 ## Further reading
 
 See [methodology & data sources](/methodology) for what the index means, the
-[POI & Offering Advantage map](/poi-map) for this area's commercial-mix signal citywide, the
-[citywide POI & price/rent overview](/poi-price-overview) for these signals across all of Berlin,
-[browse by district](/area-detail) for other neighbourhoods, or the
-[time-series view](/time-series) for how the whole city has moved.
+[POI & Offering Advantage map](/berlin/poi-map) for this area's commercial-mix signal citywide, the
+[citywide POI & price/rent overview](/berlin/poi-price-overview) for these signals across all of
+Berlin, [browse by district](/berlin/area-detail) for other neighbourhoods, or the
+[time-series view](/berlin/time-series) for how the whole city has moved.
 
 ---
 
