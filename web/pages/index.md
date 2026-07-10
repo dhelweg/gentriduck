@@ -12,7 +12,10 @@ title: Gentriduck — Berlin Gentrification Index
   (Evidence auto-imports project components -- see those files' header comments); the footer nav
   now lives in web/components/FooterNav.svelte. No indicator/weight/method changes here (no
   methodology gate) -- all evidence queries below are unchanged from the previous revision.
-  Other pages keep their own inline hero/pipeline/footer copies until I3 converts them one by one.
+  I3 (#220) converted every remaining page onto this same template/component set; see each page's
+  own header comment for what changed there. This page's own audience-card markup was further
+  re-platformed onto the shared `<LinkCard>`/`<LinkCards>` components in that same pass (see
+  the "Pick your path" section below).
 -->
 
 <Hero
@@ -29,7 +32,7 @@ title: Gentriduck — Berlin Gentrification Index
 
 ## Built by a team of AI agents — with a human at the wheel
 
-<p class="chapter-label">Chapter 2 — The Revival</p>
+<ChapterLabel>Chapter 2 — The Revival</ChapterLabel>
 
 Gentriduck is unusual: the data pipeline, the models, and this website are built and maintained
 largely by a **team of specialised AI agents** (running on
@@ -56,7 +59,7 @@ agent definition, every architecture decision, and every line of SQL that produc
 
 ## The finding
 
-<p class="chapter-label">Chapter 3 — The Evidence</p>
+<ChapterLabel>Chapter 3 — The Evidence</ChapterLabel>
 
 **Does the 2018 thesis's result still hold in 2025? Partly — and that's the interesting part.**
 
@@ -235,115 +238,55 @@ headline numbers on this page; the full methodology, thresholds, and PLR-by-PLR 
 
 ## Pick your path
 
-<p class="chapter-label">Chapter 4 — What it means for you</p>
+<ChapterLabel>Chapter 4 — What it means for you</ChapterLabel>
 
 Gentriduck speaks to five audiences. Start wherever you fit:
 
 <!--
   I1 (#218): 5 cards per docs/epic-i/storytelling-guide.md §5's target order. Two of the five
   (policy/initiatives -> takeaways, open-data -> open-data) point to pages I5/I6 haven't built
-  yet -- building placeholder routes for those pages is out of I1's scope (that's I5/I6's job).
-  Evidence's static build prerenders and crawls every <a href>, and fails the whole build on a
-  404 for an internal link (confirmed locally: `npm run build` hard-errors on a link to
-  `/takeaways`) -- so, until those pages exist, these two cards are non-linking `<div>`s (same
-  `.audience-card` look, `.audience-card-planned` modifier) rather than `<a href>`s, so the
-  router is honestly 5 cards wide without a dead link or a broken build. Swap each to an `<a>`
-  once its page lands (I5, I6).
+  yet -- building placeholder routes for those pages is out of I1/I3's scope (that's I5/I6's
+  job). Evidence's static build prerenders and crawls every <a href>, and fails the whole build
+  on a 404 for an internal link (confirmed locally: `npm run build` hard-errors on a link to
+  `/takeaways`) -- so, until those pages exist, these two cards omit `href` (LinkCard then renders
+  a non-linking, dashed `.audience-card-planned` <div>, not an <a>), so the router is honestly 5
+  cards wide without a dead link or a broken build. I3 (#220): re-platformed onto the shared
+  `<LinkCard>`/`<LinkCards>` components (extracted from this page's own former inline markup/CSS,
+  which `pages/berlin/index.md` had also hand-copied -- see those components' header comments);
+  content and card order unchanged from I1. Swap each planned card to a real `href` once its page
+  lands (I5, I6).
 -->
-<div class="audience-cards">
-  <div class="audience-card audience-card-planned">
-    <div class="audience-icon">🏛️</div>
-    <h3>You work in housing policy or a local initiative</h3>
-    <p>Plain-language, honestly caveated takeaways on gentrification pressure — each with a
+<LinkCards>
+  <LinkCard icon="🏛️" title="You work in housing policy or a local initiative" cta="Takeaways page — coming soon">
+    Plain-language, honestly caveated takeaways on gentrification pressure — each with a
     "what the data shows" link and an explicit "what this can NOT tell you" boundary — plus the
-    <a href="/berlin/maps">maps</a> and per-neighbourhood profiles behind them.</p>
-    <span class="audience-cta">Takeaways page — coming soon</span>
-  </div>
-  <a href="/methodology" class="audience-card">
-    <div class="audience-icon">🏙️</div>
-    <h3>You study cities &amp; gentrification</h3>
-    <p>What "gentrification pressure" means here and the theory behind the six-stage typology, the
+    <a href="/berlin/maps">maps</a> and per-neighbourhood profiles behind them.
+  </LinkCard>
+  <LinkCard href="/methodology" icon="🏙️" title="You study cities &amp; gentrification" cta="Start with methodology →">
+    What "gentrification pressure" means here and the theory behind the six-stage typology, the
     <a href="/thesis-recheck">2018 thesis re-checked</a> hypothesis by hypothesis, then the
     <a href="/berlin/maps">maps</a>, <a href="/berlin/area-detail">area detail</a>, and
-    <a href="/berlin/time-series">time series</a>.</p>
-    <span class="audience-cta">Start with methodology →</span>
-  </a>
-  <div class="audience-card audience-card-planned">
-    <div class="audience-icon">🔓</div>
-    <h3>You care about open data</h3>
-    <p>What open data enabled here, the concrete friction encountered building on it, and
+    <a href="/berlin/time-series">time series</a>.
+  </LinkCard>
+  <LinkCard icon="🔓" title="You care about open data" cta="Open-data report — coming soon">
+    What open data enabled here, the concrete friction encountered building on it, and
     standardization recommendations for data publishers — grounded in the same pipeline documented on
-    <a href="/how-its-built">how it's built</a>.</p>
-    <span class="audience-cta">Open-data report — coming soon</span>
-  </div>
-  <a href="/how-its-built" class="audience-card">
-    <div class="audience-icon">⚙️</div>
-    <h3>You build data pipelines</h3>
-    <p>dbt + DuckDB, local-first, rebuilt from open sources with a full OpenStreetMap history back
+    <a href="/how-its-built">how it's built</a>.
+  </LinkCard>
+  <LinkCard href="/how-its-built" icon="⚙️" title="You build data pipelines" cta="Start with how it's built →">
+    dbt + DuckDB, local-first, rebuilt from open sources with a full OpenStreetMap history back
     to 2008. The stack, the data sources, and a worked completeness-bias correction; every model,
     seed, and test lives in the
-    <a href="https://github.com/dhelweg/gentriduck">GitHub repository</a>.</p>
-    <span class="audience-cta">Start with how it's built →</span>
-  </a>
-  <a href="/how-its-organised" class="audience-card">
-    <div class="audience-icon">🤖</div>
-    <h3>You design AI systems</h3>
-    <p>A supervised multi-agent workflow with an enforced, adversarial methodology gate. The agent
+    <a href="https://github.com/dhelweg/gentriduck">GitHub repository</a>.
+  </LinkCard>
+  <LinkCard href="/how-its-organised" icon="🤖" title="You design AI systems" cta="Start with how it's organised →">
+    A supervised multi-agent workflow with an enforced, adversarial methodology gate. The agent
     team, the pipeline that ships a change, then the
     <a href="https://github.com/dhelweg/gentriduck/tree/main/.claude/agents">agent definitions</a>
-    and <a href="https://github.com/dhelweg/gentriduck/tree/main/docs/adr">ADRs</a>.</p>
-    <span class="audience-cta">Start with how it's organised →</span>
-  </a>
-</div>
+    and <a href="https://github.com/dhelweg/gentriduck/tree/main/docs/adr">ADRs</a>.
+  </LinkCard>
+</LinkCards>
 
 ---
 
 <FooterNav />
-
-<style>
-.chapter-label {
-  font-size: 0.72rem;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  font-weight: 700;
-  color: #2563eb;
-  opacity: 0.85;
-  margin: -0.4rem 0 0.9rem 0;
-}
-.audience-cards {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
-  gap: 1rem;
-  margin: 1.1rem 0 1.5rem;
-}
-.audience-card {
-  display: block;
-  text-decoration: none !important;
-  color: inherit;
-  padding: 1.15rem 1.15rem 1rem;
-  border-radius: 0.75rem;
-  border: 1px solid rgba(127, 127, 127, 0.25);
-  background: rgba(127, 127, 127, 0.04);
-  transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
-}
-.audience-card:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
-  border-color: #2563eb;
-}
-.audience-card-planned {
-  cursor: default;
-  opacity: 0.8;
-  border-style: dashed;
-}
-.audience-card-planned:hover {
-  transform: none;
-  box-shadow: none;
-  border-color: rgba(127, 127, 127, 0.25);
-}
-.audience-icon { font-size: 1.7rem; margin-bottom: 0.4rem; }
-.audience-card h3 { margin: 0 0 0.4rem 0; font-size: 1rem; }
-.audience-card p { margin: 0 0 0.7rem 0; font-size: 0.85rem; opacity: 0.85; line-height: 1.4; }
-.audience-card p a { text-decoration: underline; }
-.audience-cta { font-size: 0.82rem; font-weight: 700; color: #2563eb; }
-</style>

@@ -23,64 +23,17 @@ sidebar_position: 11
   (docs/epic-i/storytelling-guide.md §4) in miniature: a compact hero, one paragraph of orientation
   (why Berlin, why these five pages), then direct links into every Berlin deep-dive page, then the
   footer nav -- deliberately no duplicate charts (those already live on the linked pages).
+
+  I3 (#220): re-platformed onto the shared `<Hero>`/`<ChapterLabel>`/`<LinkCard>`/`<LinkCards>`
+  components (web/components/), removing the hand-copied `.hero-compact`/`.audience-card` CSS this
+  page had duplicated from `pages/index.md` (flagged by I3's scope: "remove any duplicated inline
+  CSS/markup that I1 didn't already extract"). The "Where to go next" grid drops from six cards to
+  five, folding the former "Citywide POI & price/rent overview" card into the "POI & Offering
+  Advantage map" card -- I3's named consolidation merges that page's content into
+  `/berlin/poi-map` (see that page and `pages/berlin/poi-price-overview.md`'s redirect stub).
 -->
 
-<div class="hero hero-compact">
-  <div class="hero-eyebrow">Chapter 3 — The Evidence</div>
-  <h1>Berlin</h1>
-  <p class="hero-lede">Gentriduck's original city, and the one with the fullest data: eight years
-  of official social-monitoring editions, a full OpenStreetMap history back to 2008, and official
-  land-value/rent references, all at the neighbourhood (Planungsraum) scale. This page is the
-  deep-dive entry point — pick a view below.</p>
-</div>
-
-<style>
-.hero-compact {
-  margin: -0.5rem -0.25rem 1.5rem;
-  padding: 1.5rem 1.6rem;
-  border-radius: 1rem;
-  background:
-    radial-gradient(circle at 12% 18%, rgba(37, 99, 235, 0.16), transparent 55%),
-    radial-gradient(circle at 88% 82%, rgba(194, 65, 12, 0.13), transparent 55%),
-    rgba(127, 127, 127, 0.04);
-  border: 1px solid rgba(127, 127, 127, 0.16);
-}
-.hero-compact .hero-eyebrow {
-  font-size: 0.75rem;
-  text-transform: uppercase;
-  letter-spacing: 0.07em;
-  font-weight: 700;
-  color: #2563eb;
-  margin-bottom: 0.45rem;
-}
-.hero-compact h1 { margin: 0 0 0.55rem 0; font-size: 1.9rem; line-height: 1.15; }
-.hero-compact .hero-lede { max-width: 46rem; font-size: 0.98rem; line-height: 1.5; opacity: 0.92; margin: 0; }
-.audience-cards {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
-  gap: 1rem;
-  margin: 1.1rem 0 1.5rem;
-}
-.audience-card {
-  display: block;
-  text-decoration: none !important;
-  color: inherit;
-  padding: 1.15rem 1.15rem 1rem;
-  border-radius: 0.75rem;
-  border: 1px solid rgba(127, 127, 127, 0.25);
-  background: rgba(127, 127, 127, 0.04);
-  transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
-}
-.audience-card:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
-  border-color: #2563eb;
-}
-.audience-icon { font-size: 1.7rem; margin-bottom: 0.4rem; }
-.audience-card h3 { margin: 0 0 0.4rem 0; font-size: 1rem; }
-.audience-card p { margin: 0 0 0.7rem 0; font-size: 0.85rem; opacity: 0.85; line-height: 1.4; }
-.audience-cta { font-size: 0.82rem; font-weight: 700; color: #2563eb; }
-</style>
+<Hero compact eyebrow="Chapter 3 — The Evidence" title="Berlin" lede="Gentriduck's original city, and the one with the fullest data: eight years of official social-monitoring editions, a full OpenStreetMap history back to 2008, and official land-value/rent references, all at the neighbourhood (Planungsraum) scale. This page is the deep-dive entry point — pick a view below." />
 
 Every figure here is a small-area aggregate — a property of a neighbourhood of a few thousand
 residents, never a person, household, or building — built on the same governed methodology
@@ -105,50 +58,40 @@ where variant = 'live_data' and area_level = 'plr' and city_code = 'BER'
 
 ## Where to go next
 
-<div class="audience-cards">
-  <a href="/berlin/maps" class="audience-card">
-    <div class="audience-icon">🗺️</div>
-    <h3>Maps</h3>
-    <p>A citywide choropleth of gentrification stage (or the raw social-status/dynamism inputs
-    behind it), one Planungsraum at a time. Click any area to open its full profile.</p>
-    <span class="audience-cta">Open the maps →</span>
-  </a>
-  <a href="/berlin/time-series" class="audience-card">
-    <div class="audience-icon">📈</div>
-    <h3>Time series</h3>
-    <p>How Berlin has moved as a whole since the official social-monitoring reports began, plus a
-    ranked list of the neighbourhoods that moved the most.</p>
-    <span class="audience-cta">See the trend →</span>
-  </a>
-  <a href="/berlin/area-detail" class="audience-card">
-    <div class="audience-icon">🏘️</div>
-    <h3>Area detail</h3>
-    <p>Browse by district (Bezirk), then read a full spotlight — status trajectory, commercial
-    mix, land value & rent — on that district's highest-pressure neighbourhood.</p>
-    <span class="audience-cta">Browse by district →</span>
-  </a>
-  <a href="/berlin/area" class="audience-card">
-    <div class="audience-icon">🔍</div>
-    <h3>All neighbourhoods</h3>
-    <p>A searchable table of all 542 current Planungsräume — the fastest way in if you already
-    know which neighbourhood you want.</p>
-    <span class="audience-cta">Search neighbourhoods →</span>
-  </a>
-  <a href="/berlin/poi-map" class="audience-card">
-    <div class="audience-icon">🏪</div>
-    <h3>POI &amp; Offering Advantage map</h3>
-    <p>Where shops, cafés, and other mapped places are concentrated, and how over- or
-    under-represented each commercial category is compared to the citywide average.</p>
-    <span class="audience-cta">Explore the commercial mix →</span>
-  </a>
-  <a href="/berlin/poi-price-overview" class="audience-card">
-    <div class="audience-icon">📊</div>
-    <h3>Citywide POI &amp; price/rent overview</h3>
-    <p>The same two contextual signals — commercial mix, land value &amp; rent — added up across
-    the whole city rather than one neighbourhood at a time.</p>
-    <span class="audience-cta">See the citywide picture →</span>
-  </a>
-</div>
+<!--
+  I3 (#220): "Area detail" (district browse + spotlight) is the primary browse entry; "All
+  neighbourhoods" is kept as a secondary, explicitly-labelled full-text search rather than folded
+  into it -- see pages/berlin/area-detail.md's header comment for why the two routes are
+  reconciled in role/labelling rather than merged (the crawlable full-list table is what lets
+  Evidence's static build generate a real page per PLR; the district-browse table can't do that
+  on its own). This card grid states that relationship explicitly rather than presenting them as
+  two independent, equally-weighted options.
+-->
+<LinkCards>
+  <LinkCard href="/berlin/maps" icon="🗺️" title="Maps" cta="Open the maps →">
+    A citywide choropleth of gentrification stage (or the raw social-status/dynamism inputs
+    behind it), one Planungsraum at a time. Click any area to open its full profile.
+  </LinkCard>
+  <LinkCard href="/berlin/time-series" icon="📈" title="Time series" cta="See the trend →">
+    How Berlin has moved as a whole since the official social-monitoring reports began, plus a
+    ranked list of the neighbourhoods that moved the most.
+  </LinkCard>
+  <LinkCard href="/berlin/area-detail" icon="🏘️" title="Area detail — start here" cta="Browse by district →">
+    The primary way in: browse by district (Bezirk), then read a full spotlight — status
+    trajectory, commercial mix, land value &amp; rent — on that district's highest-pressure
+    neighbourhood. Links to <a href="/berlin/area">the full searchable list</a> if you already
+    know the neighbourhood's name.
+  </LinkCard>
+  <LinkCard href="/berlin/area" icon="🔍" title="All neighbourhoods (full list)" cta="Search neighbourhoods →">
+    A searchable table of all 542 current Planungsräume — a secondary way in for when you already
+    know which neighbourhood you want; district browse above is the primary way in for everyone else.
+  </LinkCard>
+  <LinkCard href="/berlin/poi-map" icon="🏪" title="POI &amp; Offering Advantage map" cta="Explore the commercial mix →">
+    Where shops, cafés, and other mapped places are concentrated (as raw density or Offering
+    Advantage), plus the same two citywide contextual signals — POI growth, land value &amp; rent
+    — added up across the whole city.
+  </LinkCard>
+</LinkCards>
 
 ## Honest caveats
 
