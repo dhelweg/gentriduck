@@ -15,6 +15,13 @@ breadcrumb: "select area_name as breadcrumb from gentriduck_marts.gentrification
   I2 (#219): moved from /area/[code] to /berlin/area/[code] (city-folder navigation restructure —
   see docs/epic-i/I2-route-map.md). No frontmatter sidebar_position here (dynamic templated route,
   not a sidebar entry, per pre-existing precedent).
+
+  I3 (#220): mechanical template conversion only -- swapped the plain `# ` heading and hand-copied
+  `<sub>` footer for the shared `<Hero>`/`<FooterNav>` components. Per
+  docs/epic-i/storytelling-guide.md §2 ("this is I14's target ... turning the chart stack into a
+  profile"), the deeper narrative rework (a plain-language portrait, district/citywide context
+  lines alongside each chart) is explicitly I14's scope, not I3's -- this page's charts, captions,
+  and caveats are otherwise unchanged.
 -->
 
 ```sql area_info
@@ -26,7 +33,7 @@ order by period_yyyymm desc
 limit 1
 ```
 
-# {area_info[0].area_name}
+<Hero compact eyebrow="Chapter 3 — The Evidence · most granular" title={area_info[0] ? area_info[0].area_name : 'Neighbourhood'} lede="Status trajectory, commercial-mix development, Offering Advantage, and land value/rent for one Berlin Planungsraum." />
 
 <Alert status="info">
   <b>How to read the charts:</b> official status runs <b>1 = least deprived</b> to
@@ -236,11 +243,11 @@ order by snapshot_year
 ## Further reading
 
 See [methodology & data sources](/methodology) for what the index means, the
-[POI & Offering Advantage map](/berlin/poi-map) for this area's commercial-mix signal citywide, the
-[citywide POI & price/rent overview](/berlin/poi-price-overview) for these signals across all of
-Berlin, [browse by district](/berlin/area-detail) for other neighbourhoods, or the
+[POI & Offering Advantage map](/berlin/poi-map) for this area's commercial-mix signal citywide
+(including a "citywide context" section for these same signals across all of Berlin),
+[browse by district](/berlin/area-detail) for other neighbourhoods, or the
 [time-series view](/berlin/time-series) for how the whole city has moved.
 
 ---
 
-<sub>[Home](/) · [Methodology & data sources](/methodology) · [About this project](/about) · [GitHub repository](https://github.com/dhelweg/gentriduck)</sub>
+<FooterNav />
