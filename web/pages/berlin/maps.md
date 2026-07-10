@@ -13,6 +13,23 @@ sidebar_position: 2
   and hand-copied `<sub>` footer line, both now standardized) and added an explicit "Honest
   caveats" section consolidating the cautions already stated inline in this page's Alerts (no new
   caveat -- see that section's own note).
+
+  I16 (#233): colour-scale + label pass (display-only, no D1xD2/typology change). (1) Six-stage
+  categorical palette swapped from a red->green ramp (not colorblind-safe: red-green confusion is
+  the single most common CVD pattern) to ColorBrewer's RdYlBu-6 -- colorbrewer2.org classifies
+  RdYlBu as colorblind-safe, and a local CVD-simulation check (Machado/Oliveira/Fairchild 2009
+  matrices; script + output in the PR) confirms every adjacent-stop pair stays clearly separable
+  under protanopia/deuteranopia/tritanopia (min pairwise distance improved from 0.025 to 0.252 for
+  tritanopia, the old palette's worst case). Ordinal meaning (red=worst..blue=best) preserved, only
+  the "best" hue moved from green to blue -- Alert copy below updated to match. (2) Both AreaMap
+  tooltips now lead with `area_name` (bold) instead of the default `area_code`-first tooltip --
+  nobody recognises their Kiez as a PLR ID; area_code stays as a de-emphasised secondary line for
+  anyone cross-referencing the official code. Sourced from the same `areas` query already run
+  below -- no geojson change, no payload delta. Scalar indicators (status_index, dynamism_index)
+  keep Evidence's default single-hue sequential scale (light->dark blue): both are bounded ordinal
+  ranges (1-4 / 1-3) with no meaningful zero/baseline to diverge around, and a single-hue ramp is
+  inherently colorblind-safe (hue is constant; only lightness varies) -- geo-DS consulted, no
+  change needed there.
 -->
 
 <script>
@@ -25,13 +42,31 @@ sidebar_position: 2
   // column's SQL literal below, the same templating mechanism used for `${inputs...}`.
   import { base } from '$app/paths';
 
-  // #152: fixed, intuitive "worse -> red" ramp for the six-stage typology. EvidenceMap assigns
-  // categorical colours positionally by first-occurrence order in the query result (see AreaMap's
-  // underlying EvidenceMap.js handleLegendValues/initializeData) -- the `areas` query below is
-  // ordered by `stage_sort` (most acute gentrification-pressure stage first) precisely so that
-  // ordering lines up with this palette. Display-only: does not touch the D1xD2 typology_stage
-  // classification or its thresholds (int_gentrification_ts.sql, ADR-0008).
-  const stageColorPalette = ['#dc2626', '#f97316', '#f4b548', '#eab308', '#a3e635', '#16a34a'];
+  // #152/#233 (I16): intuitive "worse -> red, best -> blue" ramp for the six-stage typology.
+  // EvidenceMap assigns categorical colours positionally by first-occurrence order in the query
+  // result (see AreaMap's underlying EvidenceMap.js handleLegendValues/initializeData) -- the
+  // `areas` query below is ordered by `stage_sort` (most acute gentrification-pressure stage
+  // first) precisely so that ordering lines up with this palette. ColorBrewer RdYlBu-6
+  // (colorblind-safe per colorbrewer2.org); replaces the pre-I16 red->green ramp, which put the
+  // two ends of the scale on exactly the hue pair most CVD types confuse. Display-only: does not
+  // touch the D1xD2 typology_stage classification or its thresholds (int_gentrification_ts.sql,
+  // ADR-0008).
+  const stageColorPalette = ['#d73027', '#fc8d59', '#fee090', '#e0f3f8', '#91bfdb', '#4575b4'];
+
+  // #233 (I16): tooltip leads with the human place name instead of Areas.svelte's default
+  // areaCol-first tooltip (which would show the bare PLR/BZR area_code) -- area_name is already
+  // selected by the `areas` query below via dim_area, so this is a display-only reorder, no new
+  // join. `title` mirrors the pattern already used for the map's own <AreaMap title=...> prop
+  // (inputs.indicator.label). area_code kept, de-emphasised, as a secondary line.
+  $: areaTooltip = [
+    { id: 'area_name', showColumnName: false, valueClass: 'font-bold text-sm', fmt: 'id' },
+    {
+      id: inputs.indicator.value === 'status_class' ? 'stage_label' : inputs.indicator.value,
+      title: inputs.indicator.label,
+      fmt: inputs.indicator.value === 'status_class' ? 'id' : 'num1'
+    },
+    { id: 'area_code', title: 'Area code', valueClass: 'text-xs opacity-60', fmt: 'id' }
+  ];
 </script>
 
 <Hero compact eyebrow="Chapter 3 — The Evidence" title="Maps — gentrification pressure by area" lede="Colours each of Berlin's neighbourhoods by its current gentrification-pressure signal, so you can see at a glance which parts of the city show the strongest or weakest pressure." />
@@ -46,7 +81,8 @@ for now.
 <Alert status="info">
   <b>How to read the map:</b> The <b>"Gentrification stage"</b> option is the easiest to read at a
   glance — it colours each area by one of six plain-language stages (red = highest pressure /
-  earliest displacement risk, green = most stable), no decoder needed. The <b>"Social status"</b>
+  earliest displacement risk, blue = most stable), no decoder needed — hover any area for its name
+  and value. The <b>"Social status"</b>
   and <b>"Dynamism"</b> options show the raw ordinal inputs behind that stage: "Social status" is
   ordinal — higher shading means <b>more deprived</b>, not more prosperous. "Dynamism" — higher
   means the area's status is improving <b>faster</b>. A <b>negative</b> pressure trend (see the
@@ -167,6 +203,7 @@ order by stage_sort
     startingLong={13.405}
     startingZoom={9}
     link="link"
+    tooltip={areaTooltip}
 />
 
 {#if inputs.variant.value === 'live_data'}
@@ -199,6 +236,7 @@ district on the [area detail page](/berlin/area-detail).
     startingLat={52.52}
     startingLong={13.405}
     startingZoom={9}
+    tooltip={areaTooltip}
 />
 
 {/if}

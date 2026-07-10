@@ -28,10 +28,54 @@ sidebar_position: 5
   copied verbatim from the old page, only cross-links updated. Re-platformed onto `<Hero>`/
   `<ChapterLabel>`/`<FooterNav>` (removing the plain `# ` heading + hand-copied `<sub>` footer
   line I1 didn't touch on this page).
+
+  I16 (#233): colour-scale + label pass (display-only; oa_domain/poi_density_per_km2 values and
+  their upstream definitions, ADR-0017/0018, are untouched). (1) Tooltip now leads with
+  `area_name` (already joined in `poi_map_data` below) instead of the default areaCol-first
+  tooltip, which showed the bare PLR area_code. (2) Offering Advantage (`oa`) has a real baseline
+  -- OA=1.0 means "exactly the citywide average" -- and the "Change since previous year" view is
+  centered on 0 for both metrics, so both read as **diverging**, not sequential, quantities: how
+  far above/below the neutral point, in which direction. Switched those four value/view
+  combinations to ColorBrewer's PuOr-5 (colorblind-safe per colorbrewer2.org; local CVD-simulation
+  check in the PR, min pairwise adjacent-stop distance 0.45+ across protanopia/deuteranopia/
+  tritanopia) with the domain symmetrically centered on the true baseline (1.0 for OA, 0 for
+  deltas) so the palette's middle (near-white) stop always lands exactly on "no signal" --
+  min/max are computed client-side per the current filtered selection (the `symmetricDomain`
+  helper below), since chroma's 2-point `.domain()` only sets outer bounds and would otherwise
+  misplace the center for an asymmetric data range. POI density (`density`, "Stock" view) has no
+  natural center -- it stays on Evidence's default single-hue sequential scale, consistent with
+  `/maps`'s scalar indicators (geo-DS consulted).
 -->
 
 <script>
   import { base } from '$app/paths';
+
+  // #233 (I16): tooltip leads with the human place name (Areas.svelte's default tooltip would
+  // otherwise lead with the bare PLR area_code); the current metric/view's value column follows,
+  // then area_code stays, de-emphasised, as a secondary line.
+  $: areaTooltip = [
+    { id: 'area_name', showColumnName: false, valueClass: 'font-bold text-sm', fmt: 'id' },
+    {
+      id: inputs.metric.value === 'density'
+        ? (inputs.view.value === 'stock' ? 'poi_density_per_km2' : 'density_delta')
+        : (inputs.view.value === 'stock' ? 'oa_domain' : 'oa_delta'),
+      title: inputs.metric.value === 'density' ? 'POI density / km²' : 'Offering Advantage',
+      fmt: 'num1'
+    },
+    { id: 'area_code', title: 'Area code', valueClass: 'text-xs opacity-60', fmt: 'id' }
+  ];
+
+  // #233 (I16): diverging color domain, symmetric around each metric's true baseline, computed
+  // from the current filtered `poi_map_data` (recomputed reactively as the dropdowns change) --
+  // see the header comment for why a symmetric client-computed domain is needed instead of
+  // AreaMap's plain min/max. ColorBrewer PuOr-5 (colorblind-safe).
+  const divergingPalette = ['#e66101', '#fdb863', '#f7f7f7', '#b2abd2', '#5e3c99'];
+
+  function symmetricDomain(rows, col, baseline) {
+    const vals = rows.map((r) => r[col]).filter((v) => v !== null && v !== undefined && !isNaN(v));
+    const maxAbsDev = vals.reduce((acc, v) => Math.max(acc, Math.abs(v - baseline)), 0) || 1;
+    return [baseline - maxAbsDev, baseline + maxAbsDev];
+  }
 </script>
 
 <Hero compact eyebrow="Chapter 3 — The Evidence" title="POI & Offering Advantage map" lede="Where shops, cafés, and other mapped places are concentrated across Berlin, and how that commercial mix has grown over time — the commercial half of the double invasion-succession model this project's index is built on." />
@@ -52,8 +96,12 @@ for the full method, or the [methodology page](/methodology) for a plain-languag
   gastronomy per resident/area than the city as a whole), <b>below 1.0</b> means under-represented.
   <b>Density</b> is simply mapped-place count per km². Switch <b>"Stock vs. development"</b> to
   <b>"Change since previous year"</b> to see year-over-year movement instead of the point-in-time
-  value -- useful for spotting where a domain is growing or shrinking fastest. This map covers
-  Berlin only for now; Hamburg's underlying gentrification index isn't signed off yet
+  value -- useful for spotting where a domain is growing or shrinking fastest. Offering Advantage
+  and any "Change since previous year" view use a <b>two-colour (diverging) legend</b> centred on
+  that neutral point (1.0 for Offering Advantage, 0 for a year-over-year change) -- one hue means
+  above it, the other means below; plain POI-density "stock" values use a single-colour scale
+  instead, since there's no natural centre to diverge around. This map covers Berlin only for now;
+  Hamburg's underlying gentrification index isn't signed off yet
   ([#125](https://github.com/dhelweg/gentriduck/issues/125)).
 </Alert>
 
@@ -157,6 +205,12 @@ left join names as n on b.area_code = n.area_code
 where b.snapshot_year = ${inputs.year.value}
 ```
 
+<!--
+  #233 (I16): diverging (baseline-centered) vs sequential scale, matched to each metric/view's
+  semantics -- see this file's header comment. "density" + "stock" is the only combination with
+  no natural center, so it alone falls through to AreaMap's default sequential scale
+  (colorPalette/min/max all undefined).
+-->
 <AreaMap
     data={poi_map_data}
     geoJsonUrl={`${base}/geo/plr_live_data.geojson`}
@@ -168,11 +222,35 @@ where b.snapshot_year = ${inputs.year.value}
             : (inputs.view.value === 'stock' ? 'oa_domain' : 'oa_delta')
     }
     legendType="scalar"
+    colorPalette={
+        inputs.metric.value === 'density' && inputs.view.value === 'stock'
+            ? undefined
+            : divergingPalette
+    }
+    min={
+        inputs.metric.value === 'oa'
+            ? (inputs.view.value === 'stock'
+                ? symmetricDomain(poi_map_data, 'oa_domain', 1)[0]
+                : symmetricDomain(poi_map_data, 'oa_delta', 0)[0])
+            : inputs.view.value === 'development'
+                ? symmetricDomain(poi_map_data, 'density_delta', 0)[0]
+                : undefined
+    }
+    max={
+        inputs.metric.value === 'oa'
+            ? (inputs.view.value === 'stock'
+                ? symmetricDomain(poi_map_data, 'oa_domain', 1)[1]
+                : symmetricDomain(poi_map_data, 'oa_delta', 0)[1])
+            : inputs.view.value === 'development'
+                ? symmetricDomain(poi_map_data, 'density_delta', 0)[1]
+                : undefined
+    }
     title="Berlin Planungsraum (PLR) — {inputs.metric.value === 'density' ? 'POI density' : 'Offering Advantage'}, {inputs.domain.value}, {inputs.year.value}{inputs.view.value === 'development' ? ' (change vs. previous year)' : ''}"
     startingLat={52.52}
     startingLong={13.405}
     startingZoom={9}
     link="link"
+    tooltip={areaTooltip}
     emptySet="warn"
     emptyMessage="No data for this domain/year combination."
 />
