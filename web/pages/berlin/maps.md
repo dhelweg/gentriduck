@@ -1,16 +1,23 @@
 ---
 title: Maps — gentrification pressure by area
-sidebar_position: 12
+sidebar_position: 2
 ---
+
+<!--
+  I2 (#219): moved from /maps to /berlin/maps (city-folder navigation restructure — see
+  docs/epic-i/I2-route-map.md). sidebar_position renumbered 12 -> 2 (scoped to this page's
+  siblings under pages/berlin/, not the whole site; kept after time-series to preserve the
+  pre-move relative order).
+-->
 
 <script>
   // basePath-aware asset URL (#144): AreaMap fetches `geoJsonUrl` verbatim, and its click-through
   // `link` column does a raw `window.location.href = link` (EvidenceMap.js) -- unlike Evidence's
   // own nav/DataTable links, NEITHER prepends the base path -- so on the GitHub Pages project site
-  // (served under /gentriduck) a bare "/geo/..." 404s (empty map) and a bare "/area/..." 404s on
-  // click-through. Prepend SvelteKit's `base` (= deployment.basePath in the build; "" when served
-  // at root in dev) to both -- `${base}` is interpolated directly into the `link` column's SQL
-  // literal below, the same templating mechanism used for `${inputs...}`.
+  // (served under /gentriduck) a bare "/geo/..." 404s (empty map) and a bare "/berlin/area/..."
+  // 404s on click-through. Prepend SvelteKit's `base` (= deployment.basePath in the build; ""
+  // when served at root in dev) to both -- `${base}` is interpolated directly into the `link`
+  // column's SQL literal below, the same templating mechanism used for `${inputs...}`.
   import { base } from '$app/paths';
 
   // #152: fixed, intuitive "worse -> red" ramp for the six-stage typology. EvidenceMap assigns
@@ -121,11 +128,11 @@ select
         else 99
     end as stage_sort,
     -- Drill-down click-through target (#133 G1d, exact-code fix #150): only wire the link for
-    -- `live_data`, since /area/[code] queries fct_gentrification_change etc. on lor_2021 (current,
-    -- 542-PLR) area codes -- the `standard` (2018 thesis, 447-PLR pre-2021) variant's codes don't
-    -- resolve there. Only the PLR branch below actually renders this as a link.
+    -- `live_data`, since /berlin/area/[code] queries fct_gentrification_change etc. on lor_2021
+    -- (current, 542-PLR) area codes -- the `standard` (2018 thesis, 447-PLR pre-2021) variant's
+    -- codes don't resolve there. Only the PLR branch below actually renders this as a link.
     case
-        when '${inputs.variant.value}' = 'live_data' then '${base}/area/' || area_code
+        when '${inputs.variant.value}' = 'live_data' then '${base}/berlin/area/' || area_code
     end as link
 from gentriduck_marts.gentrification_index
 where variant = '${inputs.variant.value}'
@@ -168,7 +175,7 @@ Click a Planungsraum on the map to open its exact neighbourhood page.
 
 Click-through is only available for "Live data" — the 2018 thesis reproduction uses Berlin's
 pre-2021 area codes, which the per-area page doesn't cover. Switch "Data" above, or browse by
-district on the [area detail page](/area-detail).
+district on the [area detail page](/berlin/area-detail).
 
 {/if}
 
@@ -228,13 +235,13 @@ order by dynamism_index desc
 </DataTable>
 
 Want to see how one specific area has changed over the years? Use the
-[time series page](/time-series). Clicking a Planungsraum (PLR) on the map above opens its
+[time series page](/berlin/time-series). Clicking a Planungsraum (PLR) on the map above opens its
 exact neighbourhood page ([#133](https://github.com/dhelweg/gentriduck/issues/133),
 [#150](https://github.com/dhelweg/gentriduck/issues/150)) when viewing "Live data"; the
 Bezirksregion map above is view-only for now, and browsing by district still works on the
-[area detail page](/area-detail). Want the commercial-mix (shops/cafés) view instead of the
+[area detail page](/berlin/area-detail). Want the commercial-mix (shops/cafés) view instead of the
 social-status index -- POI density and Offering Advantage by domain -- see the
-[POI & Offering Advantage map](/poi-map).
+[POI & Offering Advantage map](/berlin/poi-map).
 
 ---
 

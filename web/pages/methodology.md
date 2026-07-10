@@ -101,8 +101,8 @@ vulnerability score: a high land value is consistent with long-established wealt
 gentrification, or active upward pressure, and the level alone cannot distinguish between those. The
 *level* is treated as a baseline/context covariate; only the *change* in these values over time carries
 any displacement-pressure reading, and even then only as one part of the still-unbuilt displacement
-dimension (§6). These figures are shown on the [area detail](/area-detail) and
-[citywide POI & price/rent overview](/poi-price-overview) pages.
+dimension (§6). These figures are shown on the [area detail](/berlin/area-detail) and
+[citywide POI & price/rent overview](/berlin/poi-price-overview) pages.
 
 ### Milieuschutz / rent-pressure / turnover — disclosed, not yet in the index
 
@@ -186,7 +186,7 @@ outcome it already describes would be closer to circular reasoning than to predi
 
 ## 5. The two data variants on this site: `standard` vs `live_data`
 
-The data selector on the [home page](/) and [maps page](/maps) offers two variants, and the
+The data selector on the [home page](/) and [maps page](/berlin/maps) offers two variants, and the
 difference between them matters for how you should read a number:
 
 - **`standard`** is the **2018 thesis reproduction**, frozen at its original December 2016 snapshot.
@@ -203,7 +203,7 @@ These are **not directly comparable numbers**. `standard`'s single score and `li
 stage are built from different definitions, different area boundaries, and — critically — Berlin's
 official area boundaries were redrawn in 2021 (447 areas became 542); no time series on this site
 crosses that boundary without an explicit, documented area crosswalk. If you want to know "how has
-this specific area changed since the 2018 thesis," use the [area detail page](/area-detail)'s
+this specific area changed since the 2018 thesis," use the [area detail page](/berlin/area-detail)'s
 trajectory chart, which is built to handle the boundary discipline correctly, rather than comparing a
 `standard` number to a `live_data` number by eye.
 
@@ -264,9 +264,9 @@ project's public GitHub repository:
 - [ADR-0019 — Berlin Milieuschutz displacement source](https://github.com/dhelweg/gentriduck/blob/main/docs/adr/0019-berlin-milieuschutz-displacement-source.md)
 - B1 displacement/affordability sign-offs (§2): [Milieuschutz geo](https://github.com/dhelweg/gentriduck/blob/main/docs/methodology/B1-milieuschutz-geo-signoff.md) / [domain](https://github.com/dhelweg/gentriduck/blob/main/docs/methodology/B1-milieuschutz-domain-signoff.md), [rent-pressure geo](https://github.com/dhelweg/gentriduck/blob/main/docs/methodology/B1-rent-pressure-geo-signoff.md) / [domain](https://github.com/dhelweg/gentriduck/blob/main/docs/methodology/B1-rent-pressure-domain-signoff.md), [turnover geo](https://github.com/dhelweg/gentriduck/blob/main/docs/methodology/B1-turnover-geo-signoff.md) / [domain](https://github.com/dhelweg/gentriduck/blob/main/docs/methodology/B1-turnover-domain-signoff.md)
 
-See also the [home page](/) for the current index, [time-series](/time-series) for per-area
-trajectories, [maps](/maps) for a citywide choropleth, [area detail](/area-detail) for a full per-area
-breakdown, and the [citywide POI & price/rent overview](/poi-price-overview).
+See also the [home page](/) for the current index, [time-series](/berlin/time-series) for per-area
+trajectories, [maps](/berlin/maps) for a citywide choropleth, [area detail](/berlin/area-detail) for
+a full per-area breakdown, and the [citywide POI & price/rent overview](/berlin/poi-price-overview).
 
 ---
 

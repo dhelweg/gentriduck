@@ -106,7 +106,9 @@ where variant = '${inputs.variant.value}'
 
 Figures reflect the most recent available reporting period: **{latest_period[0].period}**. A
 *negative* trend is the one this project reads as **higher** gentrification pressure — full
-plain-language decoder on the [methodology page](/methodology).
+plain-language decoder on the [methodology page](/methodology). For the full Berlin deep-dive —
+maps, per-neighbourhood profiles, time series, and the commercial-mix data — start at the
+**[Berlin data hub](/berlin)**.
 
 ### Where each neighbourhood sits in the gentrification cycle
 
@@ -254,7 +256,7 @@ Gentriduck speaks to five audiences. Start wherever you fit:
     <h3>You work in housing policy or a local initiative</h3>
     <p>Plain-language, honestly caveated takeaways on gentrification pressure — each with a
     "what the data shows" link and an explicit "what this can NOT tell you" boundary — plus the
-    <a href="/maps">maps</a> and per-neighbourhood profiles behind them.</p>
+    <a href="/berlin/maps">maps</a> and per-neighbourhood profiles behind them.</p>
     <span class="audience-cta">Takeaways page — coming soon</span>
   </div>
   <a href="/methodology" class="audience-card">
@@ -262,8 +264,8 @@ Gentriduck speaks to five audiences. Start wherever you fit:
     <h3>You study cities &amp; gentrification</h3>
     <p>What "gentrification pressure" means here and the theory behind the six-stage typology, the
     <a href="/thesis-recheck">2018 thesis re-checked</a> hypothesis by hypothesis, then the
-    <a href="/maps">maps</a>, <a href="/area-detail">area detail</a>, and
-    <a href="/time-series">time series</a>.</p>
+    <a href="/berlin/maps">maps</a>, <a href="/berlin/area-detail">area detail</a>, and
+    <a href="/berlin/time-series">time series</a>.</p>
     <span class="audience-cta">Start with methodology →</span>
   </a>
   <div class="audience-card audience-card-planned">

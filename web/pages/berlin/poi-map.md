@@ -1,6 +1,6 @@
 ---
 title: POI & Offering Advantage map
-sidebar_position: 15
+sidebar_position: 5
 ---
 
 <!--
@@ -9,13 +9,15 @@ sidebar_position: 15
   only. Not methodology-bearing: this page reads already-signed-off `oa_domain` /
   `poi_density_per_km2` values from `mart_poi_offering_advantage` (itself a pure pass-through,
   see that model's header) with no new indicator, weight, or normalization introduced here.
-  Follows the existing /maps AreaMap dropdown pattern (#132/#150/#152 precedent). Berlin-only
-  for now, matching /maps and /poi-price-overview -- Hamburg's index isn't signed off yet
-  (#125), even though the OA mart itself has Hamburg rows.
+  Follows the existing /berlin/maps AreaMap dropdown pattern (#132/#150/#152 precedent).
+  Berlin-only for now, matching /berlin/maps and /berlin/poi-price-overview -- Hamburg's index
+  isn't signed off yet (#125), even though the OA mart itself has Hamburg rows.
 
-  sidebar_position bumped 14 -> 15 (I1, #218): collided with pages/area/index.md's
-  sidebar_position: 14 (2026-07-10 storytelling review, finding 4). poi-price-overview.md bumped
-  15 -> 16 in the same commit to keep the existing order (thesis-recheck..poi-price-overview).
+  sidebar_position history: bumped 14 -> 15 (I1, #218) to resolve a collision with
+  pages/area/index.md's sidebar_position: 14 (2026-07-10 storytelling review, finding 4).
+  I2 (#219): moved from /poi-map to /berlin/poi-map (city-folder navigation restructure — see
+  docs/epic-i/I2-route-map.md); position renumbered again, 15 -> 5, now scoped to this page's
+  siblings under pages/berlin/ rather than the whole site.
 -->
 
 <script>
@@ -134,11 +136,11 @@ select
     b.oa_domain,
     b.density_delta,
     b.oa_delta,
-    -- basePath-aware click-through (see /maps' `<script>` header comment): AreaMap's link column
-    -- does a raw `window.location.href = link` (EvidenceMap.js), unlike Evidence's own
+    -- basePath-aware click-through (see /berlin/maps' `<script>` header comment): AreaMap's link
+    -- column does a raw `window.location.href = link` (EvidenceMap.js), unlike Evidence's own
     -- nav/DataTable links, so `${base}` (SvelteKit's deployment.basePath) must be interpolated
     -- into the link literal here, or click-through 404s on the GitHub Pages project site.
-    '${base}/area/' || b.area_code as link
+    '${base}/berlin/area/' || b.area_code as link
 from base as b
 left join names as n on b.area_code = n.area_code
 where b.snapshot_year = ${inputs.year.value}
@@ -170,8 +172,8 @@ area's full OA-by-domain profile as a radar chart.
 ## Further reading
 
 See [ADR-0017](https://github.com/dhelweg/gentriduck/blob/main/docs/adr/0017-poi-offering-advantage-revival.md)
-for how Offering Advantage is computed, the [citywide POI & price/rent overview](/poi-price-overview)
-for POI trends without the OA lens, or the [gentrification-pressure map](/maps) for the governed
+for how Offering Advantage is computed, the [citywide POI & price/rent overview](/berlin/poi-price-overview)
+for POI trends without the OA lens, or the [gentrification-pressure map](/berlin/maps) for the governed
 index itself.
 
 ---

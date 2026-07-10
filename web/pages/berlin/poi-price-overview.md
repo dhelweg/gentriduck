@@ -1,7 +1,13 @@
 ---
 title: Citywide POI & price/rent overview
-sidebar_position: 16
+sidebar_position: 6
 ---
+
+<!--
+  I2 (#219): moved from /poi-price-overview to /berlin/poi-price-overview (city-folder navigation
+  restructure — see docs/epic-i/I2-route-map.md). sidebar_position renumbered 16 -> 6 (scoped to
+  this page's siblings under pages/berlin/, not the whole site).
+-->
 
 # Berlin, citywide: shops & amenities, land value & rent
 
@@ -9,7 +15,7 @@ Two data sources Gentriduck tracks, added up across the whole city — one feeds
 one is contextual: how the mix of mapped shops, cafés, and other amenities ("points of interest,"
 or POIs) has grown, and how land value and estimated rent have moved. Looking at the whole city
 lets you see the citywide trend without already knowing which neighbourhood to check — for a
-single-neighbourhood breakdown, see the [area detail page](/area-detail).
+single-neighbourhood breakdown, see the [area detail page](/berlin/area-detail).
 
 <Alert status="info">
   These are simple citywide averages/totals of the same governed data used elsewhere on the site —
@@ -95,7 +101,7 @@ order by snapshot_year
 
 <Alert status="info">
   These are citywide averages of official reference values, not observed transaction prices — see
-  the [area detail page](/area-detail)'s price & rent section, or the
+  the [area detail page](/berlin/area-detail)'s price & rent section, or the
   [methodology page](/methodology), for what "land value" (Bodenrichtwert) and "estimated rent"
   (Mietspiegel-derived) actually measure and their caveats. Land-value coverage is uneven across
   years (some years have no residential zones matched — see <code>n_areas_with_brw</code> in the
@@ -124,8 +130,8 @@ order by snapshot_year
 ## Drill down further
 
 For a single-neighbourhood breakdown of these same two signals alongside the governed
-gentrification index, see the [area detail page](/area-detail). For the citywide index headline
-and map, see the [home page](/) and the [maps page](/maps).
+gentrification index, see the [area detail page](/berlin/area-detail). For the citywide index
+headline and map, see the [home page](/) and the [maps page](/berlin/maps).
 
 ---
 
