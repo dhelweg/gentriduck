@@ -1,6 +1,6 @@
 ---
 title: POI & Offering Advantage map
-sidebar_position: 14
+sidebar_position: 15
 ---
 
 <!--
@@ -12,6 +12,10 @@ sidebar_position: 14
   Follows the existing /maps AreaMap dropdown pattern (#132/#150/#152 precedent). Berlin-only
   for now, matching /maps and /poi-price-overview -- Hamburg's index isn't signed off yet
   (#125), even though the OA mart itself has Hamburg rows.
+
+  sidebar_position bumped 14 -> 15 (I1, #218): collided with pages/area/index.md's
+  sidebar_position: 14 (2026-07-10 storytelling review, finding 4). poi-price-overview.md bumped
+  15 -> 16 in the same commit to keep the existing order (thesis-recheck..poi-price-overview).
 -->
 
 <script>

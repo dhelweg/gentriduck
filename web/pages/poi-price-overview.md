@@ -1,6 +1,6 @@
 ---
 title: Citywide POI & price/rent overview
-sidebar_position: 15
+sidebar_position: 16
 ---
 
 # Berlin, citywide: shops & amenities, land value & rent
