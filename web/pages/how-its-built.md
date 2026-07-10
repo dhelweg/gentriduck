@@ -9,9 +9,16 @@ sidebar_position: 22
   correction, docs/adr/0012) for a public audience -- no new indicator, weight, method, or data
   source is introduced here, so no methodology gate. Pairs with /how-its-organised (AI-architect
   audience) and productionizes the "⚙️ You build data pipelines" door on the home page.
+
+  I3 (#220): re-platformed onto the shared `<Hero>`/`<ChapterLabel>`/`<FooterNav>` components
+  (this page previously had a plain `# ` heading and a hand-copied `<sub>` footer line) and given
+  an explicit "Honest caveats" + "Where next" section per the I1 template (this page's content
+  didn't change — the completeness-bias correction's "approximation, not a perfect fix" caveat
+  already existed inline; it is now pulled into its own labelled section rather than trailing the
+  prose, per docs/epic-i/storytelling-guide.md §4.4).
 -->
 
-# How it's built — the data pipeline
+<Hero compact eyebrow="Chapter 2 — The Revival" title="How it's built — the data pipeline" lede="The stack, the data sources, and the specific correction that keeps a crowd-mapped data source honest — for the audience that wants to know how the numbers get made." />
 
 This page is for the audience that wants to know **how the numbers get made**: the stack, the data
 sources, and the specific correction that keeps a crowd-mapped data source honest. If you want to
@@ -79,10 +86,35 @@ raw point-of-interest count would mostly measure "how much this area got mapped,
 this area's commercial mix changed." Gentriduck corrects for this by working with each area's
 **share** of the citywide point-of-interest count in a given year rather than its raw count: if
 citywide mapping coverage grows roughly evenly, the correction cancels out, and only an area
-gaining points of interest *faster than the rest of the city* registers as a real signal. It's an
-approximation, not a perfect fix — see [methodology & data sources §6](/methodology) for the
-caveats — but it's a concrete example of the kind of data-quality problem this pipeline has to
-solve, and the correction is itself checked by an independent reviewer and cited to its
-methodology document before being trusted, the same as every other step here.
+gaining points of interest *faster than the rest of the city* registers as a real signal. It's a
+concrete example of the kind of data-quality problem this pipeline has to solve, and the
+correction is itself checked by an independent reviewer and cited to its methodology document
+before being trusted, the same as every other step here.
 
-<sub>[Home](/) · [Methodology & data sources](/methodology) · [About this project](/about) · [GitHub repository](https://github.com/dhelweg/gentriduck)</sub>
+## Honest caveats
+
+- **The completeness-bias correction above is an approximation, not a perfect fix.** Coverage did
+  not grow perfectly evenly across the city, and already-popular inner-city areas were typically
+  mapped earlier than peripheral ones — see [methodology & data sources §6](/methodology) for the
+  full statement of this and every other known limitation.
+- This page describes **the pipeline**, not the statistics it produces. It makes no claim about
+  gentrification pressure, displacement risk, or any specific area — those claims, and their own
+  caveats, live on [methodology](/methodology) and the [Berlin data pages](/berlin).
+- Rebuildability is a design goal, not a guarantee that every historical run is byte-identical:
+  upstream open-data sources (OSM, MSS/EWR editions) are occasionally revised or corrected
+  upstream, and the pipeline picks up whatever the source currently publishes.
+
+## Where next
+
+- **[How it's organised](/how-its-organised)** — the multi-agent workflow that builds and reviews
+  this pipeline (this page's sideways neighbour: same audience door, the process side).
+- **[Methodology & data sources](/methodology)** — what the pipeline's output actually claims,
+  and where it should not be trusted too far.
+- **[Berlin data hub](/berlin)** — the maps, time series, and per-neighbourhood profiles this
+  pipeline feeds.
+- **[GitHub repository](https://github.com/dhelweg/gentriduck)** — every dbt model, seed, and ADR
+  referenced above, in full.
+
+---
+
+<FooterNav />
