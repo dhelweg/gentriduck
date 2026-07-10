@@ -5,7 +5,7 @@
   "upstream": {
     "url": "https://gdi.berlin.de/services/wfs/lor_2019 (pre2021) ; https://gdi.berlin.de/services/wfs/lor_2021",
     "vintage": "lor_pre2021 (2019 WFS edition) + lor_2021 (2021 WFS edition)",
-    "retrieved_at": "2026-07-09T16:03:48Z"
+    "retrieved_at": "2026-07-10T22:15:21Z"
   },
   "outputs": [
     {
@@ -35,7 +35,7 @@
   ],
   "ingest_script": {
     "module": "ingestion.berlin.lor.ingest_lor_geometries",
-    "git_sha": "f879e422e41c1a0d457bff01c41b6eb9baa08c94"
+    "git_sha": "81edf98496a5f7e66f15e6886f405e249033c331"
   },
   "manifest_schema_version": 1
 }
