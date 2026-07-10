@@ -64,3 +64,11 @@ vars:
   # published city today; Hamburg (ADR-0014) is ingested but not yet published.
   # Override via --vars 'published_cities: [BER, HH]' when a second city ships.
   published_cities: ["BER"]
+  # H-C2 (#159, docs/epic-h/159-hc2-geo-spike.md): fct_gentrification_trajectory's
+  # `ts` CTE restricts its classification input to a matched year-span window --
+  # each (city_code, area_vintage)'s most recent `trajectory_window_years` years
+  # -- so the meaning of the status_delta/status_range thresholds stays constant
+  # across cities of differing MSS/Sozialmonitoring cadence (biennial vs annual).
+  # 6 equals Berlin's longest single-vintage span (lor_pre2021, 2013-2019), which
+  # makes the window a provable no-op for both Berlin vintages (see model header).
+  trajectory_window_years: 6
