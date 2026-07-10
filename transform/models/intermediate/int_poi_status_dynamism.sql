@@ -41,6 +41,30 @@
 -- others) may create spurious share dynamics. Option B (ohsome edit-density
 -- normalization) is available for a future epic if needed post-publication.
 --
+-- Hamburg re-validation (H-C1 #158, geo-DS spike docs/epic-h/158-hc1-geo-spike.md):
+-- The C5 sign-off's two empirical premises -- (1) the bulk of OSM coverage growth
+-- predates 2015, with post-2015 coverage more stable, and (2) uniform-ish
+-- city-wide mapping growth so share-based normalization cancels completeness
+-- bias -- were independently re-checked against Hamburg's own OSM POI
+-- coverage-growth curve, not merely assumed to transfer from Berlin. Hamburg's
+-- ingested series runs 2008-2026, the same window/cadence as Berlin, and shows
+-- the same shape: a 2009-2013 cold-start explosion (e.g. +598% YoY in 2009)
+-- stabilizing to a low-single/low-double-digit growth regime by ~2014-2015 --
+-- matching Berlin's stabilization point. Because dynamism_score and status_score
+-- are already z-scores partitioned by (city_code, snapshot_year) (see w_year
+-- below), Hamburg is scored entirely relative to Hamburg's own distribution --
+-- the mechanism was already per-city, not a Berlin-hardcoded constant. No change
+-- to this model's normalization, cutoff year, or math was required or made.
+-- The 77 test_c5_poi_share_spike flags initially observed for Hamburg were
+-- diagnosed as a small-N artifact of that test's fixed 2x-ratio threshold at
+-- Hamburg's finer Gebiet grain (23.6% of HH areas carry <20 POIs vs 2.4% for
+-- BER PLRs) -- not evidence of a broken uniform-coverage assumption. The
+-- dynamism_score itself was measured to be well-behaved: the smallest-POI
+-- areas contribute zero >3SD extreme scores, and per-row extreme-value rates
+-- are comparable across cities (~1.9% for both HH and BER). The test (not this
+-- model) was fixed with a material-count floor -- see
+-- transform/tests/test_c5_poi_share_spike.sql.
+--
 -- Methodology notes:
 -- - Window functions over (snapshot_year) for z-scores: stddev returns NULL
 -- when < 2 rows for that year. This is handled by NULLIF(stddev, 0) guard.
