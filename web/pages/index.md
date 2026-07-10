@@ -257,7 +257,9 @@ Gentriduck speaks to five audiences. Start wherever you fit:
   own former inline markup/CSS, which `pages/berlin/index.md` had also hand-copied -- see those
   components' header comments); content and card order unchanged from I1. I5 (#222): `/takeaways`
   landed -- swapped the policy/initiatives card to a real `href` per this comment's own note ("swap
-  each planned card to a real href once its page lands"); open-data card still planned (I6).
+  each planned card to a real href once its page lands"); open-data card still planned (I6). I6
+  (#223): `/open-data` landed -- swapped the open-data card to a real `href` too; all five cards
+  now link live pages.
 -->
 <LinkCards>
   <LinkCard href="/takeaways" icon="🏛️" title="You work in housing policy or a local initiative" cta="Start with takeaways →">
@@ -271,7 +273,7 @@ Gentriduck speaks to five audiences. Start wherever you fit:
     <a href="/berlin/maps">maps</a>, <a href="/berlin/area-detail">area detail</a>, and
     <a href="/berlin/time-series">time series</a>.
   </LinkCard>
-  <LinkCard icon="🔓" title="You care about open data" cta="Open-data report — coming soon">
+  <LinkCard href="/open-data" icon="🔓" title="You care about open data" cta="Start with the open-data report →">
     What open data enabled here, the concrete friction encountered building on it, and
     standardization recommendations for data publishers — grounded in the same pipeline documented on
     <a href="/how-its-built">how it's built</a>.
