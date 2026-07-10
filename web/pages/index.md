@@ -248,20 +248,19 @@ Gentriduck speaks to five audiences. Start wherever you fit:
 
 <!--
   I1 (#218): 5 cards per docs/epic-i/storytelling-guide.md §5's target order. Two of the five
-  (policy/initiatives -> takeaways, open-data -> open-data) point to pages I5/I6 haven't built
-  yet -- building placeholder routes for those pages is out of I1/I3's scope (that's I5/I6's
-  job). Evidence's static build prerenders and crawls every <a href>, and fails the whole build
-  on a 404 for an internal link (confirmed locally: `npm run build` hard-errors on a link to
-  `/takeaways`) -- so, until those pages exist, these two cards omit `href` (LinkCard then renders
-  a non-linking, dashed `.audience-card-planned` <div>, not an <a>), so the router is honestly 5
-  cards wide without a dead link or a broken build. I3 (#220): re-platformed onto the shared
-  `<LinkCard>`/`<LinkCards>` components (extracted from this page's own former inline markup/CSS,
-  which `pages/berlin/index.md` had also hand-copied -- see those components' header comments);
-  content and card order unchanged from I1. Swap each planned card to a real `href` once its page
-  lands (I5, I6).
+  (policy/initiatives -> takeaways, open-data -> open-data) originally pointed to pages I5/I6
+  hadn't built yet -- building placeholder routes for those pages was out of I1/I3's scope.
+  Evidence's static build prerenders and crawls every <a href>, and fails the whole build on a
+  404 for an internal link -- so, until each page existed, its card omitted `href` (LinkCard then
+  renders a non-linking, dashed `.audience-card-planned` <div>, not an <a>). I3 (#220):
+  re-platformed onto the shared `<LinkCard>`/`<LinkCards>` components (extracted from this page's
+  own former inline markup/CSS, which `pages/berlin/index.md` had also hand-copied -- see those
+  components' header comments); content and card order unchanged from I1. I5 (#222): `/takeaways`
+  landed -- swapped the policy/initiatives card to a real `href` per this comment's own note ("swap
+  each planned card to a real href once its page lands"); open-data card still planned (I6).
 -->
 <LinkCards>
-  <LinkCard icon="🏛️" title="You work in housing policy or a local initiative" cta="Takeaways page — coming soon">
+  <LinkCard href="/takeaways" icon="🏛️" title="You work in housing policy or a local initiative" cta="Start with takeaways →">
     Plain-language, honestly caveated takeaways on gentrification pressure — each with a
     "what the data shows" link and an explicit "what this can NOT tell you" boundary — plus the
     <a href="/berlin/maps">maps</a> and per-neighbourhood profiles behind them.
