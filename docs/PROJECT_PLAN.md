@@ -363,6 +363,82 @@ data and see whether the paper's conclusions reproduce; exact 2018 inputs are no
   source adapters + index params; no model rewrite) — validates the city-agnostic seam. · *DE pair
   (+ scientist for local methodology)* · A1b, mature Berlin pipeline.
 
+### Epic I — Public communication & storytelling (2026-07-10 review)
+*Triggered by the storytelling & outside-communication review
+(`docs/assessment/2026-07-10-storytelling-comms-review.md`; full SPECs in `docs/epic-i/tickets/`).
+The site's pages are individually solid but don't tell one story; navigation is flat (no city
+deep-dives); the PLR detail pages lack a narrative profile; an OA display bug is reported; and the
+project has no outward-communication machinery (channels, personas, post drafts, sign-off gate).
+**Order:** I1 → I2 → I3 + I14 + I16 (revision wave — gates noindex removal), I4/I5/I6 following the
+I1 template; **I15 early and in parallel** (holds OA-based content in I11/I14); I7 after I1;
+I8 → I10 → I9/I11 → I12 in parallel to the site wave; I13 last. **Holds:** anything published
+externally stays maintainer-gated (posting is always a manual human act); noindex comes off only
+via I13 once content is revised and routes are frozen; the `/about` route never changes. Label:
+`epic-i`.*
+
+**I-S — Site: story & revision**
+- **I1** **Story spine & shared UX system** — narrative arc, tone guide, page template, shared
+  Evidence components (`web/components/`). · *data-analyst + web pair; domain-expert framing gate* ·
+  — · storytelling guide + components committed; home converted as exemplar.
+- **I2** **City deep-dive folder navigation** — Berlin data pages under `/berlin/` + city landing
+  page; Hamburg scaffolded (unpublished); `/about` route untouched; sidebar collision fixed; routes
+  frozen after. · *web pair* · I1 · folder nav live, links valid, route map documented.
+- **I3** **Full page revision pass (incl. About, in place)** — every page onto the I1 template;
+  consolidate `poi-price-overview`→POI page, `methodology-comparison`→`methodology`,
+  `area-detail` vs `area/index`; audience router covers all public audiences. · *web pair +
+  data-analyst; domain (+ geo where claims change) sign-off on findings framing* · I1, I2 · fewer,
+  stronger pages; About updated, route/file preserved.
+- **I4** **Timeline page `/timeline`** — project evolution 2018→today; milestones curated from
+  ADR/handoff/CITATION dates (never git log); CSS timeline, no new library. · *web pair +
+  data-analyst* · I1 · renders light/dark; every milestone source-cited.
+- **I5** **Takeaways page `/takeaways`** — ~5 actionable, true-but-simple takeaways for policy &
+  other-city initiatives + explicit "what this cannot tell you". · *data-analyst + web pair* ·
+  I1; OA claims hold on I15 · **dual gate** (domain + geo) PASS before integration.
+- **I6** **Open-data experience page `/open-data`** — what open data enabled, concrete per-source
+  friction, standardization recommendations; factual, non-advocacy. · *DE input + data-analyst +
+  web pair; domain framing gate* · I1 · every claim traceable to a repo artifact.
+- **I7** **README & story realignment** — pitch broadened to the four public stories; Epic I in
+  roadmap/status; stale ADR range fixed; new pages linked. · *data-analyst + PM* · I1 (links: I4/I5/I6).
+- **I14** **PLR area deep-dive → neighbourhood profile** — generated plain-language portrait from
+  OA mix + status/trajectory/price; district/citywide context on every chart; OA explained in
+  place and shown as **% vs citywide baseline**; POI stacked bar ordered by count; Kurzprofil-style
+  structure (berlin.de Sozialraum profiles / BZR Kurzprofile as format models). · *web pair +
+  data-analyst; domain gate on portrait wording* · I1, I2; OA wording holds on I15.
+- **I15** **OA calculation review + subtype bug** ⛔holds I11-post-3/I14-OA — root-cause identical
+  subtype OA values on `/area/04200311/` (mart grain vs join vs page query); verify formula,
+  denominators, tier selection, and value scale (coarse 0/1/2 symptom) against the thesis; publish
+  scale decided (% vs baseline). · *geo-DS + domain (dual gate) → DE pair* ·
+  **methodology-bearing** · sign-offs with Verdict: PASS; reconciliation note committed.
+- **I16** **Map UX** — perceptually ordered, colorblind-safe scales consistent across `/maps` +
+  `/poi-map` and light/dark; labels/tooltips show **area names, not PLR IDs** (`dim_area` join into
+  the map layer). · *web pair; geo-DS consulted on scale semantics* · I2; OA scale per I15.
+
+**I-C — Communication machinery**
+- **I8** **ADR: public communication surface & channel policy** — LinkedIn + Bluesky/Mastodon
+  (Instagram deferred pending I9 evidence); **draft-and-screen only, maintainer posts manually**;
+  per-post domain(+geo) sign-off; O3/O4 content rules; SEC-3; egress-hosts registration. ·
+  *architect; maintainer accepts* · — · ADR accepted + indexed.
+- **I9** **Audience personas & channel map** — one persona per public goal-audience, channel fit,
+  format + reach tactics; **archetypes only, no personal data**. · *comms-strategist +
+  domain-expert* · I8 · `docs/epic-i/audience-channel-map.md` committed.
+- **I10** **`comms-strategist` agent + `comms-draft` skill** — least-privilege, no publish
+  capability, SEC-3 block; skill: ground → draft per channel → self-check → commit under
+  `docs/epic-i/posts/` → sign-off → maintainer posts. · *architect (design) + DE pair (author)* ·
+  I8 · files follow conventions; dry-run draft produced.
+- **I11** **First post series** — 6 drafts × 2 channel variants from signed-off findings
+  (re-check, backtest, OA ⛔I15, operating model, open data, timeline/launch). · *comms-strategist*
+  · I8, I10 · per-post sign-offs PASS; drafts committed.
+- **I12** **Reach measurement loop** — GoatCounter + campaign-tagged links; per-persona reach
+  definitions; `reach-log.md` cadence; free tools only, no APIs/credentials. · *comms-strategist +
+  architect* · I8, I9.
+- **I13** **Launch playbook — go fully public** ⛔maintainer — criteria: I1–I3 integrated, routes
+  frozen (I2), I4–I6 live, I15 resolved, I16 in; then remove noindex/robots block (with #144/#146),
+  Zenodo DOI, announcement pack, thesis-repo cross-link, timeline milestone. · *PM; maintainer
+  executes every outward step* · all of the above.
+- **META-1** **Operating-model playbook scoping** ⛔parked — inventory generic vs project-specific;
+  recommendation: incubate in `docs/process/`, extract on second-adopter trigger; scoping doc only. ·
+  *architect; maintainer decides* · after the Epic I revision wave.
+
 ### Remediation wave R — Methodology re-grounding & process hardening (2026-06-19 review)
 *Triggered by the PM+architect deep review (`docs/assessment/2026-06-19-pm-architect-review.md`; full
 SPECs in `docs/assessment/tickets/`). The review found the live index conflates POI activity with social
@@ -505,6 +581,12 @@ Pure project deliverables; no scope creep into the core data work.*
 - **G:** public website renders the Berlin index/time-series/maps, with methodology + attribution +
   privacy pages live; hosted free.
 - **H (future):** a second city appears on the site via adapters only — no changes to core models.
+- **I (2026-07-10 review):** the site tells one story on a shared UX system with city deep-dive
+  folders (`/about` route unchanged); PLR pages read as neighbourhood profiles; the OA subtype bug
+  is root-caused and the calculation signed off before any OA-based communication; the comms ADR +
+  `comms-strategist` agent exist with a draft-and-screen model (agents never publish); post drafts
+  carry per-post sign-offs; noindex is removed only via the launch playbook once content is revised
+  and routes are frozen.
 - **R (2026-06-19 review):** governed index definition signed off (POI = predictors, social-status outcome,
   lead-lag restored); MSS ingested and the live index back-tests against it; E1/E2 re-run with cited
   hypotheses; the methodology gate mechanically blocks un-signed-off methodology work; and the conceptual

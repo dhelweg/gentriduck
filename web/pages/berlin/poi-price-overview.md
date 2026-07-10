@@ -1,12 +1,12 @@
 ---
-title: Faithful vs improved — a methodology comparison (moved)
+title: Citywide POI & price/rent overview (moved)
 sidebar_link: false
 hide_title: true
 ---
 
 <!--
-  I3 (#220) named consolidation: this page's content (the faithful-vs-improved Offering Advantage
-  comparison, OA-C.2 #175) folded into `/methodology` as new §7 -- see that page's §7 header
+  I3 (#220) named consolidation: this page's content (citywide POI growth + land value/rent
+  trends) merged into `/berlin/poi-map` ("Citywide context" section) -- see that page's header
   comment for the rationale. This route is kept as a short stub rather than deleted or left to
   404, per I3's SPEC ("removed routes get a short meta-refresh stub or are removed while still
   noindex"): the site already ships site-wide noindex during the soft-launch phase
@@ -21,9 +21,9 @@ hide_title: true
 
 # This page has moved
 
-The faithful-vs-improved Offering Advantage comparison that used to live here is now **§7 of the
-[methodology & data sources](/methodology) page** — same content, same caveats, no methodology
-change.
+The citywide POI growth and land value/rent charts that used to live here are now part of the
+**[POI & Offering Advantage map](/berlin/poi-map)** page, in its "Citywide context" section — same
+data, same caveats, no methodology change.
 
 ---
 

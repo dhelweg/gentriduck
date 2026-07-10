@@ -3,7 +3,18 @@ title: Methodology & data sources
 sidebar_position: 20
 ---
 
-# Methodology & data sources
+<!--
+  I3 (#220): re-platformed onto the shared `<Hero>`/`<FooterNav>` components (this page previously
+  had a plain `# ` heading and a hand-copied `<sub>` footer line, both now standardized per the I1
+  template — docs/epic-i/storytelling-guide.md §4). Named consolidation: `/methodology-comparison`
+  folds into this page as new §7 below (content carried over verbatim from that page, only heading
+  levels and a handful of self-referential links adjusted — see §7's own header note); that route
+  is now a redirect stub (`pages/methodology-comparison.md`). No indicator/weight/normalization
+  change of any kind in this edit — this remains a restatement of the governed methodology
+  (`docs/methodology/index-definition.md`), same as before I3.
+-->
+
+<Hero compact eyebrow="Chapter 3 — The Evidence · reference / rulebook" title="Methodology & data sources" lede="What Gentriduck measures, where the numbers come from, and where they should not be trusted too far — the plain-language decoder every other Chapter-3 page on this site links back to." />
 
 This page explains, in plain language, what Gentriduck measures, where the numbers come from, and
 where the numbers should **not** be trusted too far. It restates the project's governed methodology
@@ -101,8 +112,8 @@ vulnerability score: a high land value is consistent with long-established wealt
 gentrification, or active upward pressure, and the level alone cannot distinguish between those. The
 *level* is treated as a baseline/context covariate; only the *change* in these values over time carries
 any displacement-pressure reading, and even then only as one part of the still-unbuilt displacement
-dimension (§6). These figures are shown on the [area detail](/area-detail) and
-[citywide POI & price/rent overview](/poi-price-overview) pages.
+dimension (§6). These figures are shown on the [area detail](/berlin/area-detail) page and the
+[POI & Offering Advantage map](/berlin/poi-map)'s citywide-context section.
 
 ### Milieuschutz / rent-pressure / turnover — disclosed, not yet in the index
 
@@ -186,7 +197,7 @@ outcome it already describes would be closer to circular reasoning than to predi
 
 ## 5. The two data variants on this site: `standard` vs `live_data`
 
-The data selector on the [home page](/) and [maps page](/maps) offers two variants, and the
+The data selector on the [home page](/) and [maps page](/berlin/maps) offers two variants, and the
 difference between them matters for how you should read a number:
 
 - **`standard`** is the **2018 thesis reproduction**, frozen at its original December 2016 snapshot.
@@ -203,7 +214,7 @@ These are **not directly comparable numbers**. `standard`'s single score and `li
 stage are built from different definitions, different area boundaries, and — critically — Berlin's
 official area boundaries were redrawn in 2021 (447 areas became 542); no time series on this site
 crosses that boundary without an explicit, documented area crosswalk. If you want to know "how has
-this specific area changed since the 2018 thesis," use the [area detail page](/area-detail)'s
+this specific area changed since the 2018 thesis," use the [area detail page](/berlin/area-detail)'s
 trajectory chart, which is built to handle the boundary discipline correctly, rather than comparing a
 `standard` number to a `live_data` number by eye.
 
@@ -248,7 +259,133 @@ We would rather state these plainly than have you discover them by surprise.
   this model. Results should be read as directional indicators, consistent with a hypothesis, not as
   confirmatory proof.
 
-## 7. Further reading
+## 7. Faithful vs improved — a methodology comparison
+
+<!--
+  I3 (#220) named consolidation: folded in from the former standalone `/methodology-comparison`
+  page (OA-C.2, #175) -- content restates the signed-off findings in
+  docs/epic-e/C1-three-way-comparison-findings.md (dual R-C1 sign-off,
+  docs/epic-e/C1-three-way-comparison-{geo,domain}-signoff.md) unchanged from that page; only
+  heading levels (##/### -> ###/####) and a few self-referential links were adjusted for this
+  page's numbering. The three result sets (faithful, improved, comparison) stay visually and
+  textually separated per ADR-0017 D3's firm "never blend" rule, same as before. That route is now
+  a short redirect stub (`pages/methodology-comparison.md`).
+-->
+
+The [thesis re-check page](/thesis-recheck) already swaps in the 2018 thesis's own
+commercial predictor — the **Offering Advantage** (OA), a location quotient — in place
+of a raw point-of-interest count. That is the **faithful** revival: reproduce OA
+exactly as the thesis defined it, with **no curation of which business types count**.
+
+This section goes one step further and asks a different question: **does curating *which*
+business types count — grounded in urban-sociology theory, then confirmed where the
+data allows — sharpen the signal?** That curated version is the **improved** variant.
+The two are never blended into one number (see §3 above); the rest of this section
+shows them side by side.
+
+<Alert status="warning">
+  <b>Read this before the numbers below:</b> the improved variant is currently only
+  computed for Berlin's <b>current</b> area boundaries and years (2021–2025) — it has
+  <i>not</i> been computed for the 2018 thesis's own period and boundaries. That means
+  we cannot yet run a true head-to-head "does curation improve the exact same
+  prediction" test. Rather than force a misleading comparison, we report each
+  variant's own best-available result and are explicit about what is, and is not,
+  comparable.
+</Alert>
+
+### Two workstreams, one taxonomy, never blended
+
+| | Faithful (thesis re-check) | Improved (this section) |
+|---|---|---|
+| **Which business types count?** | All of them — no curation, exactly as the 2018 thesis did it | A curated subset, weighted by how theoretically plausible each type is as a gentrification signal *before* any outcome data is consulted, then confirmed (never promoted) by a correlation pass |
+| **Anchor period** | 2018 (thesis-era data, `lor_pre2021` boundaries) | 2021–2025 (current Berlin, `lor_2021` boundaries) |
+| **Question** | Do the 2018 findings still hold? | Does curating the signal sharpen it? |
+| **Where it's built** | [thesis re-check](/thesis-recheck) | this section |
+
+The curation rule itself — which business types are kept, dropped, or down-weighted,
+and why — is a **standing, citable decision** now written up as
+[ADR-0018](https://github.com/dhelweg/gentriduck/blob/main/docs/adr/0018-causal-tiered-poi-selection.md).
+In short: a type is included only if urban-sociology literature (independent of this
+project's own data) gives it a plausible mechanism connecting it to commercial
+gentrification — coworking spaces and specialty cafés are the kind of "third-wave
+retail" the literature points to; a transit stop or a recycling bin is not, even if it
+happens to correlate with social status in a given year (that correlation is treated as
+a coincidence of general density, not a signal, and the type stays excluded either way).
+Vacancy is the one deliberate exception: it is tracked as its own, oppositely-signed
+disinvestment marker, never summed into the "more business = more upscaling" signal.
+
+### What we found
+
+**Faithful (reproduces the thesis's own H1 test, all business types):** using the
+thesis's actual Offering-Advantage basket (the four business domains it identified as
+upscaling-relevant, averaged) against the 2018 golden data, the relationship is
+**statistically significant but points the opposite way from the thesis's prior**
+(n=435 areas — more of this business basket goes with slightly *worse*, not better,
+social standing).
+
+**Improved (the curated, theory-weighted basket) against Berlin's current official
+social monitor:** **weak and not statistically significant** (n=1,607 area-years,
+2021–2025), also pointing the same, unexpected direction.
+
+Neither result, on its own, is the headline. What *is* worth reporting:
+
+- **Both point in the same, unexpected direction** — more of the tracked business
+  activity going with slightly *worse*, not better, social standing. The faithful
+  result clears the bar for statistical confidence (in the unexpected direction); the
+  improved result does not reach significance either way. Taken together this is a
+  **directional-disagreement-with-theory** finding for the coarse aggregate basket —
+  not a confirmation of the thesis's original H1 prior in either workstream.
+- **This does not mean Offering Advantage "doesn't work."** The [thesis re-check
+  page](/thesis-recheck) shows that finer-grained tests using the *same* faithful OA
+  construct — a single business type (fast food) rather than an averaged four-domain
+  basket — are significant and correctly signed, and get *stronger* under OA than under
+  a raw count. Averaging several business domains into one basket smooths out exactly
+  the kind of type-specific signal (fast food is one clear example) that the finer
+  tests pick up. The wrong-signed aggregate result here is a property of the coarse
+  basket, not evidence against the underlying construct.
+- **The two numbers above are not a fair head-to-head.** They come from different
+  years, different area boundaries, and — because the improved variant only exists for
+  the current period — different underlying social outcomes entirely. We are not
+  claiming curation "helped" or "hurt"; we are reporting that, on their own separate
+  best-available tests, the faithful basket clears significance in the *unexpected*
+  direction and the improved basket does not clear significance at all — neither
+  confirms the thesis's original H1 prior.
+
+### Why we can't (yet) run the head-to-head test
+
+Building the curated, theory-weighted business-type list (ADR-0018) was itself a
+research exercise, grounded in Berlin's *current* OpenStreetMap taxonomy and modern
+urban-sociology literature. Re-doing that exercise for the 2018 thesis's older area
+boundaries and business classifications would be a new piece of research in its own
+right, not a mechanical rerun — so it hasn't been done yet. Until it is, a literal
+apples-to-apples "does the curated basket predict better" test isn't something we can
+honestly compute. We'd rather say that plainly than manufacture a misleading number.
+
+### Honest caveats (this section)
+
+- **Neither correlation confirms the thesis's original H1 prior** — the faithful
+  basket is statistically significant but wrong-signed, and the improved basket does
+  not reach significance either way. Read both as evidence against the *aggregate*
+  basket confirming H1, not as confirmed findings in the thesis's predicted
+  direction.
+- The comparison above is **structural, not a controlled experiment**: the two numbers
+  differ in outcome measure, time period, and area boundaries simultaneously.
+- This section describes **correlational, descriptive** results. Nothing here is a
+  causal claim about what makes an area gentrify, and nothing here should be read as a
+  "which neighbourhood is about to change" targeting signal.
+- Aggregate business-type counts are unreliable in areas with very few mapped
+  businesses; per-area results should not be over-read at the individual-area level.
+- No multiple-comparison correction was applied; treat all figures here as
+  **directional indicators**, consistent (or not) with a hypothesis, not confirmatory
+  proof.
+
+This section's own further reading: [the 2018 thesis, re-checked](/thesis-recheck) (the faithful
+revival, hypothesis by hypothesis), [three-way comparison findings (OA-C.1)](https://github.com/dhelweg/gentriduck/blob/main/docs/epic-e/C1-three-way-comparison-findings.md)
+(the full statistical detail behind this section), [ADR-0018](https://github.com/dhelweg/gentriduck/blob/main/docs/adr/0018-causal-tiered-poi-selection.md)
+(the curation rule), and [ADR-0017](https://github.com/dhelweg/gentriduck/blob/main/docs/adr/0017-poi-offering-advantage-revival.md)
+(the Offering Advantage construct and the faithful/improved separation).
+
+## 8. Further reading
 
 This page is a plain-language summary. The full, versioned methodology — including exact statistical
 methods, sensitivity analyses, and the theory citations behind every design choice — lives in the
@@ -262,13 +399,15 @@ project's public GitHub repository:
 - [Spatial methods](https://github.com/dhelweg/gentriduck/blob/main/docs/methodology/spatial-methods.md) — how points of interest are assigned to areas
 - [OSM completeness-bias correction sign-off](https://github.com/dhelweg/gentriduck/blob/main/docs/epic-c/C5-geo-signoff.md)
 - [ADR-0019 — Berlin Milieuschutz displacement source](https://github.com/dhelweg/gentriduck/blob/main/docs/adr/0019-berlin-milieuschutz-displacement-source.md)
+- [ADR-0018 — causal-tiered POI selection](https://github.com/dhelweg/gentriduck/blob/main/docs/adr/0018-causal-tiered-poi-selection.md) and [ADR-0017 — Offering Advantage revival](https://github.com/dhelweg/gentriduck/blob/main/docs/adr/0017-poi-offering-advantage-revival.md) — the faithful/improved comparison in §7
 - B1 displacement/affordability sign-offs (§2): [Milieuschutz geo](https://github.com/dhelweg/gentriduck/blob/main/docs/methodology/B1-milieuschutz-geo-signoff.md) / [domain](https://github.com/dhelweg/gentriduck/blob/main/docs/methodology/B1-milieuschutz-domain-signoff.md), [rent-pressure geo](https://github.com/dhelweg/gentriduck/blob/main/docs/methodology/B1-rent-pressure-geo-signoff.md) / [domain](https://github.com/dhelweg/gentriduck/blob/main/docs/methodology/B1-rent-pressure-domain-signoff.md), [turnover geo](https://github.com/dhelweg/gentriduck/blob/main/docs/methodology/B1-turnover-geo-signoff.md) / [domain](https://github.com/dhelweg/gentriduck/blob/main/docs/methodology/B1-turnover-domain-signoff.md)
 
-See also the [home page](/) for the current index, [time-series](/time-series) for per-area
-trajectories, [maps](/maps) for a citywide choropleth, [area detail](/area-detail) for a full per-area
-breakdown, and the [citywide POI & price/rent overview](/poi-price-overview).
+See also the [home page](/) for the current index, [time-series](/berlin/time-series) for per-area
+trajectories, [maps](/berlin/maps) for a citywide choropleth, [area detail](/berlin/area-detail) for
+a full per-area breakdown, and the [POI & Offering Advantage map](/berlin/poi-map) (including its
+citywide-context section).
 
 ---
 
-<sub>[Home](/) · [Methodology & data sources](/methodology) · [About this project](/about) · [GitHub repository](https://github.com/dhelweg/gentriduck)</sub>
+<FooterNav />
 

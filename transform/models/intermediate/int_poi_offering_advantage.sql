@@ -88,6 +88,33 @@
 -- never-blended workstream owned by OA-B.1..B.4 (#170-173); this column exists
 -- now (enumerated + accepted_values-tested) so those tickets append rows
 -- rather than requiring a grain migration (ADR-0017 D4 "structural invariant").
+-- When that workstream lands, WHICH taxonomy leaves it curates/weights (and in
+-- what order theory vs. data are consulted) is governed by ADR-0018
+-- (causality-first-with-data-confirmation POI selection: theory tier locked
+-- first from urban-sociology literature, data confirms/flags second, never
+-- retiers) -- `seed_poi_offering_relevance.csv` (offering_tier/offering_weight/
+-- causal_rationale/data_corr) already carries that tiering per ADR-0018 D1/D2;
+-- this model does not yet consume it (that consumption is OA-B.3, not built
+-- here) -- flagged so a future 'improved' row producer cites ADR-0018, not
+-- just the ADR-0017 D3 workstream split.
+--
+-- I15 (#232) review note: the 3-level LQ formula above was independently
+-- hand-recomputed from raw fct_poi_development counts for a sample of Berlin
+-- PLRs (including 04200311, the reported bug PLR) at domain AND category
+-- level and matched this model's oa_domain/oa_category to floating-point
+-- exactness -- see docs/epic-i/I15-oa-review-findings.md. oa_category and
+-- oa_type genuinely vary within a domain (they are NOT fanned-out copies of
+-- oa_domain -- only oa_domain itself is, by construction, constant across a
+-- domain's sibling category/type leaves, which is the correct LQ semantics,
+-- not a defect). The reported "all OA values for a type with subtypes are
+-- identical" symptom on /area/04200311/ was traced to the page query in
+-- web/pages/area/[code].md selecting raw (poi_domain_h, oa_domain) rows from
+-- this mart's LEAF grain without aggregating first, so a domain's oa_domain
+-- value is visually repeated once per sibling category/type row -- a
+-- page-query-only defect, not a mart-grain or formula defect. No change was
+-- required in this model; the page-side fix is out of this ticket's scope
+-- (routes to I14, which already reworks that exact page section and holds on
+-- this ticket's sign-off).
 --
 -- =============================================================================
 -- Interpretation notes (NOT SQL logic -- domain-expert D-1/D-2 conditions;

@@ -1,32 +1,77 @@
 ---
 title: Maps — gentrification pressure by area
-sidebar_position: 12
+sidebar_position: 2
 ---
+
+<!--
+  I2 (#219): moved from /maps to /berlin/maps (city-folder navigation restructure — see
+  docs/epic-i/I2-route-map.md). sidebar_position renumbered 12 -> 2 (scoped to this page's
+  siblings under pages/berlin/, not the whole site; kept after time-series to preserve the
+  pre-move relative order).
+
+  I3 (#220): re-platformed onto the shared `<Hero>`/`<FooterNav>` components (plain `# ` heading
+  and hand-copied `<sub>` footer line, both now standardized) and added an explicit "Honest
+  caveats" section consolidating the cautions already stated inline in this page's Alerts (no new
+  caveat -- see that section's own note).
+
+  I16 (#233): colour-scale + label pass (display-only, no D1xD2/typology change). (1) Six-stage
+  categorical palette swapped from a red->green ramp (not colorblind-safe: red-green confusion is
+  the single most common CVD pattern) to ColorBrewer's RdYlBu-6 -- colorbrewer2.org classifies
+  RdYlBu as colorblind-safe, and a local CVD-simulation check (Machado/Oliveira/Fairchild 2009
+  matrices; script + output in the PR) confirms every adjacent-stop pair stays clearly separable
+  under protanopia/deuteranopia/tritanopia (min pairwise distance improved from 0.025 to 0.252 for
+  tritanopia, the old palette's worst case). Ordinal meaning (red=worst..blue=best) preserved, only
+  the "best" hue moved from green to blue -- Alert copy below updated to match. (2) Both AreaMap
+  tooltips now lead with `area_name` (bold) instead of the default `area_code`-first tooltip --
+  nobody recognises their Kiez as a PLR ID; area_code stays as a de-emphasised secondary line for
+  anyone cross-referencing the official code. Sourced from the same `areas` query already run
+  below -- no geojson change, no payload delta. Scalar indicators (status_index, dynamism_index)
+  keep Evidence's default single-hue sequential scale (light->dark blue): both are bounded ordinal
+  ranges (1-4 / 1-3) with no meaningful zero/baseline to diverge around, and a single-hue ramp is
+  inherently colorblind-safe (hue is constant; only lightness varies) -- geo-DS consulted, no
+  change needed there.
+-->
 
 <script>
   // basePath-aware asset URL (#144): AreaMap fetches `geoJsonUrl` verbatim, and its click-through
   // `link` column does a raw `window.location.href = link` (EvidenceMap.js) -- unlike Evidence's
   // own nav/DataTable links, NEITHER prepends the base path -- so on the GitHub Pages project site
-  // (served under /gentriduck) a bare "/geo/..." 404s (empty map) and a bare "/area/..." 404s on
-  // click-through. Prepend SvelteKit's `base` (= deployment.basePath in the build; "" when served
-  // at root in dev) to both -- `${base}` is interpolated directly into the `link` column's SQL
-  // literal below, the same templating mechanism used for `${inputs...}`.
+  // (served under /gentriduck) a bare "/geo/..." 404s (empty map) and a bare "/berlin/area/..."
+  // 404s on click-through. Prepend SvelteKit's `base` (= deployment.basePath in the build; ""
+  // when served at root in dev) to both -- `${base}` is interpolated directly into the `link`
+  // column's SQL literal below, the same templating mechanism used for `${inputs...}`.
   import { base } from '$app/paths';
 
-  // #152: fixed, intuitive "worse -> red" ramp for the six-stage typology. EvidenceMap assigns
-  // categorical colours positionally by first-occurrence order in the query result (see AreaMap's
-  // underlying EvidenceMap.js handleLegendValues/initializeData) -- the `areas` query below is
-  // ordered by `stage_sort` (most acute gentrification-pressure stage first) precisely so that
-  // ordering lines up with this palette. Display-only: does not touch the D1xD2 typology_stage
-  // classification or its thresholds (int_gentrification_ts.sql, ADR-0008).
-  const stageColorPalette = ['#dc2626', '#f97316', '#f4b548', '#eab308', '#a3e635', '#16a34a'];
+  // #152/#233 (I16): intuitive "worse -> red, best -> blue" ramp for the six-stage typology.
+  // EvidenceMap assigns categorical colours positionally by first-occurrence order in the query
+  // result (see AreaMap's underlying EvidenceMap.js handleLegendValues/initializeData) -- the
+  // `areas` query below is ordered by `stage_sort` (most acute gentrification-pressure stage
+  // first) precisely so that ordering lines up with this palette. ColorBrewer RdYlBu-6
+  // (colorblind-safe per colorbrewer2.org); replaces the pre-I16 red->green ramp, which put the
+  // two ends of the scale on exactly the hue pair most CVD types confuse. Display-only: does not
+  // touch the D1xD2 typology_stage classification or its thresholds (int_gentrification_ts.sql,
+  // ADR-0008).
+  const stageColorPalette = ['#d73027', '#fc8d59', '#fee090', '#e0f3f8', '#91bfdb', '#4575b4'];
+
+  // #233 (I16): tooltip leads with the human place name instead of Areas.svelte's default
+  // areaCol-first tooltip (which would show the bare PLR/BZR area_code) -- area_name is already
+  // selected by the `areas` query below via dim_area, so this is a display-only reorder, no new
+  // join. `title` mirrors the pattern already used for the map's own <AreaMap title=...> prop
+  // (inputs.indicator.label). area_code kept, de-emphasised, as a secondary line.
+  $: areaTooltip = [
+    { id: 'area_name', showColumnName: false, valueClass: 'font-bold text-sm', fmt: 'id' },
+    {
+      id: inputs.indicator.value === 'status_class' ? 'stage_label' : inputs.indicator.value,
+      title: inputs.indicator.label,
+      fmt: inputs.indicator.value === 'status_class' ? 'id' : 'num1'
+    },
+    { id: 'area_code', title: 'Area code', valueClass: 'text-xs opacity-60', fmt: 'id' }
+  ];
 </script>
 
-# Maps — gentrification pressure by area
+<Hero compact eyebrow="Chapter 3 — The Evidence" title="Maps — gentrification pressure by area" lede="Colours each of Berlin's neighbourhoods by its current gentrification-pressure signal, so you can see at a glance which parts of the city show the strongest or weakest pressure." />
 
-This map colours each of Berlin's neighbourhoods by its current gentrification-pressure signal, so
-you can see at a glance which parts of the city show the strongest or weakest pressure. Pick a map
-level and an indicator below.
+Pick a map level and an indicator below.
 
 Right now this map covers Berlin only — Hamburg's boundaries are ready behind the scenes, but the
 underlying index doesn't have real Hamburg numbers yet
@@ -36,7 +81,8 @@ for now.
 <Alert status="info">
   <b>How to read the map:</b> The <b>"Gentrification stage"</b> option is the easiest to read at a
   glance — it colours each area by one of six plain-language stages (red = highest pressure /
-  earliest displacement risk, green = most stable), no decoder needed. The <b>"Social status"</b>
+  earliest displacement risk, blue = most stable), no decoder needed — hover any area for its name
+  and value. The <b>"Social status"</b>
   and <b>"Dynamism"</b> options show the raw ordinal inputs behind that stage: "Social status" is
   ordinal — higher shading means <b>more deprived</b>, not more prosperous. "Dynamism" — higher
   means the area's status is improving <b>faster</b>. A <b>negative</b> pressure trend (see the
@@ -121,11 +167,11 @@ select
         else 99
     end as stage_sort,
     -- Drill-down click-through target (#133 G1d, exact-code fix #150): only wire the link for
-    -- `live_data`, since /area/[code] queries fct_gentrification_change etc. on lor_2021 (current,
-    -- 542-PLR) area codes -- the `standard` (2018 thesis, 447-PLR pre-2021) variant's codes don't
-    -- resolve there. Only the PLR branch below actually renders this as a link.
+    -- `live_data`, since /berlin/area/[code] queries fct_gentrification_change etc. on lor_2021
+    -- (current, 542-PLR) area codes -- the `standard` (2018 thesis, 447-PLR pre-2021) variant's
+    -- codes don't resolve there. Only the PLR branch below actually renders this as a link.
     case
-        when '${inputs.variant.value}' = 'live_data' then '${base}/area/' || area_code
+        when '${inputs.variant.value}' = 'live_data' then '${base}/berlin/area/' || area_code
     end as link
 from gentriduck_marts.gentrification_index
 where variant = '${inputs.variant.value}'
@@ -157,6 +203,7 @@ order by stage_sort
     startingLong={13.405}
     startingZoom={9}
     link="link"
+    tooltip={areaTooltip}
 />
 
 {#if inputs.variant.value === 'live_data'}
@@ -168,7 +215,7 @@ Click a Planungsraum on the map to open its exact neighbourhood page.
 
 Click-through is only available for "Live data" — the 2018 thesis reproduction uses Berlin's
 pre-2021 area codes, which the per-area page doesn't cover. Switch "Data" above, or browse by
-district on the [area detail page](/area-detail).
+district on the [area detail page](/berlin/area-detail).
 
 {/if}
 
@@ -189,6 +236,7 @@ district on the [area detail page](/area-detail).
     startingLat={52.52}
     startingLong={13.405}
     startingZoom={9}
+    tooltip={areaTooltip}
 />
 
 {/if}
@@ -228,14 +276,36 @@ order by dynamism_index desc
 </DataTable>
 
 Want to see how one specific area has changed over the years? Use the
-[time series page](/time-series). Clicking a Planungsraum (PLR) on the map above opens its
+[time series page](/berlin/time-series). Clicking a Planungsraum (PLR) on the map above opens its
 exact neighbourhood page ([#133](https://github.com/dhelweg/gentriduck/issues/133),
 [#150](https://github.com/dhelweg/gentriduck/issues/150)) when viewing "Live data"; the
 Bezirksregion map above is view-only for now, and browsing by district still works on the
-[area detail page](/area-detail). Want the commercial-mix (shops/cafés) view instead of the
+[area detail page](/berlin/area-detail). Want the commercial-mix (shops/cafés) view instead of the
 social-status index -- POI density and Offering Advantage by domain -- see the
-[POI & Offering Advantage map](/poi-map).
+[POI & Offering Advantage map](/berlin/poi-map).
+
+## Honest caveats
+
+- **Social status and dynamism are ordinal, not linear.** Higher social-status shading means
+  **more deprived**, not more prosperous; a negative pressure trend means **higher** gentrification
+  pressure — see the alert above the map and [methodology & data sources](/methodology) for the
+  full decoder.
+- **"Gentrification stage" is only computed for Live data at the Planungsraum level** — it is not
+  available for the 2018 thesis reproduction (`standard`) or the coarser Bezirksregion aggregate.
+- Areas without a value (e.g. uninhabited planning areas) are drawn but left blank — a blank area
+  is missing data, not a "zero pressure" reading.
+
+## Where next
+
+- **[Time series](/berlin/time-series)** — how one specific area, or the whole city, has moved
+  over the years.
+- **[Area detail](/berlin/area-detail)** — browse by district, or open one neighbourhood's full
+  profile via a map click.
+- **[POI & Offering Advantage map](/berlin/poi-map)** — the commercial-mix (shops/cafés) view of
+  the same neighbourhoods.
+- **[Methodology & data sources](/methodology)** — what "gentrification pressure" and the six-stage
+  typology mean.
 
 ---
 
-<sub>[Home](/) · [Methodology & data sources](/methodology) · [About this project](/about) · [GitHub repository](https://github.com/dhelweg/gentriduck)</sub>
+<FooterNav />
