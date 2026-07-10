@@ -12,40 +12,17 @@ sidebar_position: 10
   new methodology claim, only the thesis's own Offering-Advantage predictor swapped in per ADR-0017.
   Public framing follows the #155/G2 sign-off precedent (geo-DS + domain-expert read of the public
   claims) — see docs/epic-g/A5-thesis-recheck-refresh-*-signoff.md.
+
+  I3 (#220): re-platformed onto the shared `<Hero>`/`<FooterNav>` components, removing the
+  hand-copied `.hero-compact` CSS this page and `pages/index.md` had each carried inline (flagged
+  by the 2026-07-10 storytelling review, finding 4, and I1's own header comment: "Other pages keep
+  their own inline hero/pipeline/footer copies until I3 converts them one by one"). Content/data
+  unchanged; added one backward link to `/about` in "Further reading" per
+  docs/epic-i/storytelling-guide.md §2's explicit note ("I3 should add a backward link *into*
+  About from thesis-recheck").
 -->
 
-<div class="hero hero-compact">
-  <div class="hero-eyebrow">The historical reproduction study</div>
-  <h1>The 2018 thesis, re-checked</h1>
-  <p class="hero-lede">Gentriduck began as a question: an
-  <a href="https://github.com/dhelweg/masterthesis2018_gentrification">award-era master's thesis</a>
-  from 2018 claimed that the churn of shops, cafés and restaurants in a Berlin neighbourhood
-  tracks — and partly <i>predicts</i> — its social change. Eight years and a completely rebuilt,
-  open-source stack later: <b>does that result still hold?</b></p>
-</div>
-
-<style>
-.hero-compact {
-  margin: -0.5rem -0.25rem 1.5rem;
-  padding: 1.5rem 1.6rem;
-  border-radius: 1rem;
-  background:
-    radial-gradient(circle at 12% 18%, rgba(37, 99, 235, 0.16), transparent 55%),
-    radial-gradient(circle at 88% 82%, rgba(194, 65, 12, 0.13), transparent 55%),
-    rgba(127, 127, 127, 0.04);
-  border: 1px solid rgba(127, 127, 127, 0.16);
-}
-.hero-compact .hero-eyebrow {
-  font-size: 0.75rem;
-  text-transform: uppercase;
-  letter-spacing: 0.07em;
-  font-weight: 700;
-  color: #2563eb;
-  margin-bottom: 0.45rem;
-}
-.hero-compact h1 { margin: 0 0 0.55rem 0; font-size: 1.9rem; line-height: 1.15; }
-.hero-compact .hero-lede { max-width: 46rem; font-size: 0.98rem; line-height: 1.5; opacity: 0.92; margin: 0; }
-</style>
+<Hero compact eyebrow="The historical reproduction study" title="The 2018 thesis, re-checked" lede="Gentriduck began as a question: an <a href='https://github.com/dhelweg/masterthesis2018_gentrification'>award-era master's thesis</a> from 2018 claimed that the churn of shops, cafés and restaurants in a Berlin neighbourhood tracks — and partly <i>predicts</i> — its social change. Eight years and a completely rebuilt, open-source stack later: <b>does that result still hold?</b>" />
 
 This page answers that hypothesis by hypothesis. It is deliberately about the *reproduction* — the
 historical check. For what Berlin looks like **today**, start with the [home page](/), the
@@ -173,12 +150,13 @@ For the **current** picture the six hypotheses take a back seat to the live typo
 - [Epic B milestone write-up](https://github.com/dhelweg/gentriduck/blob/main/docs/epic-g/O4-milestone-B-narrative.md) — the full signed-off findings this page summarises
 - [E1 regression findings (OA-A.4, Run 1)](https://github.com/dhelweg/gentriduck/blob/main/docs/epic-e/E1-regression-findings.md) — the full H1–H3c results table this page draws from
 - [OA direct validation vs. the 2018 golden (OA-A.3)](https://github.com/dhelweg/gentriduck/blob/main/docs/epic-b/A3-oa-validation-findings.md) — confirms the recomputed Offering Advantage matches the thesis's own numbers directionally
-- [Faithful vs improved methodology comparison](/methodology-comparison) — does curating which business types count sharpen the signal? (OA-C.2)
+- [Faithful vs improved methodology comparison](/methodology#7-faithful-vs-improved--a-methodology-comparison) — does curating which business types count sharpen the signal? (OA-C.2, now §7 of the methodology page)
 - [Methodology & data sources](/methodology) — what the current index measures and how it differs from the 2018 original
 - [Home page](/) and [maps](/berlin/maps) — the current, live picture of Berlin
+- [About this project](/about) — curious who rebuilt this and why? The origin story and the team (human and AI) behind this re-check
 - [github.com/dhelweg/gentriduck](https://github.com/dhelweg/gentriduck) — all code, models, and decisions
 
 ---
 
-<sub>[Home](/) · [Methodology & data sources](/methodology) · [About this project](/about) · [GitHub repository](https://github.com/dhelweg/gentriduck)</sub>
+<FooterNav />
 

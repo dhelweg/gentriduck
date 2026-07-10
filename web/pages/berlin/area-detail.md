@@ -3,13 +3,6 @@ title: Area detail — neighbourhood drill-down
 sidebar_position: 3
 ---
 
-# Area detail — one neighbourhood, full picture
-
-Pick a district to compare its neighbourhoods, then read the spotlight below on the one currently
-under the most gentrification pressure — its social-status trajectory, how its mix of shops and
-cafés has developed, and how land value and estimated rent compare. For the citywide picture, see
-the [maps page](/berlin/maps) or the [time-series view](/berlin/time-series).
-
 <!--
   No blind ~540-item PLR picker (maintainer feedback). Navigation is coarse Bezirk (district) +
   a ranked comparison table; the single-area "spotlight" is the district's highest-pressure area.
@@ -21,7 +14,35 @@ the [maps page](/berlin/maps) or the [time-series view](/berlin/time-series).
   I2 (#219): moved from /area-detail to /berlin/area-detail (city-folder navigation restructure —
   see docs/epic-i/I2-route-map.md). sidebar_position renumbered 13 -> 3 (scoped to this page's
   siblings under pages/berlin/, not the whole site).
+
+  I3 (#220) rationalization decision, area-detail vs. area/index (ticket's "reconcile ... or
+  document why not merging them"): this page (coarse Bezirk browse + spotlight) is the primary
+  browse entry; `pages/berlin/area/index.md` (the crawlable full-text-search table of all 542
+  PLRs) is kept as a secondary, explicitly-labelled entry rather than merged into this one, for a
+  concrete technical reason, not an oversight: Evidence's static build discovers every templated
+  `/berlin/area/[code]` route by crawling real `<a href>` elements at build time, and this page's
+  own DataTable only ever renders the *default* district's ~12 rows at build time (the other 11
+  districts' rows only exist after the reader changes the dropdown, client-side) — nowhere near
+  covering all 542 areas. `AreaMap`'s canvas click-throughs (on `/berlin/maps`, `/berlin/poi-map`)
+  can't be crawled either (their links only exist after client-side JS runs — see
+  `pages/berlin/area/index.md`'s own header comment). `area/index.md`'s single big DataTable,
+  with every one of the 542 rows rendered server-side, is what actually makes the full per-PLR
+  page set buildable; removing it (or folding its table into this page behind a dropdown that
+  only renders one district at build time) would silently shrink the crawled/generated page set.
+  Given that hard constraint plus I2's route freeze (`/berlin/…` routes do not move again in this
+  ticket), the two pages keep their separate routes; this page's own copy and
+  `pages/berlin/index.md`'s card grid instead state the relationship explicitly (primary browse
+  vs. secondary full list) so a reader is never left guessing which one to use.
+
+  I3 (#220): re-platformed onto the shared `<Hero>`/`<FooterNav>` components and added an explicit
+  "Honest caveats" section consolidating this page's inline cautions; no caveat dropped.
 -->
+
+<Hero compact eyebrow="Chapter 3 — The Evidence" title="Area detail — one neighbourhood, full picture" lede="Pick a district to compare its neighbourhoods, then read the spotlight below on the one currently under the most gentrification pressure — its social-status trajectory, how its mix of shops and cafés has developed, and how land value and estimated rent compare." />
+
+For the citywide picture, see the [maps page](/berlin/maps) or the
+[time-series view](/berlin/time-series). If you already know which neighbourhood you want, the
+[full searchable list](/berlin/area) is the faster way in.
 
 <Alert status="info">
   <b>How to read the charts:</b> official status runs <b>1 = least deprived</b> to
@@ -250,14 +271,25 @@ order by snapshot_year
     <Column id=est_rent_high title="Estimated rent, high (EUR/m²)"/>
 </DataTable>
 
+## Honest caveats
+
+- **A falling status line means the area became *less* deprived** (its status rose) — which is
+  also the signature of gentrification, not automatically good news for existing residents.
+- **Land value and estimated rent are official reference values, not observed transaction prices.**
+- Figures are on Berlin's **current (2021+) boundaries** and the live social-monitoring editions
+  (2021–2025) only — this page does not show the pre-2021 `standard` variant.
+- See [methodology & data sources §6](/methodology) for the full list of project-wide limitations
+  (ecological fallacy, no displacement measurement, OSM completeness bias, and more).
+
 ## Further reading
 
 See [methodology & data sources](/methodology) for what the index means, the
-[citywide POI & price/rent overview](/berlin/poi-price-overview) for these signals across all of
-Berlin, the [time-series view](/berlin/time-series) for how the whole city has moved, or the
-[full neighbourhood list](/berlin/area) to search for a specific area directly.
+[POI & Offering Advantage map](/berlin/poi-map) (its "citywide context" section covers these
+signals across all of Berlin) for the citywide picture, the [time-series view](/berlin/time-series)
+for how the whole city has moved, or the [full neighbourhood list](/berlin/area) to search for a
+specific area directly.
 
 ---
 
-<sub>[Home](/) · [Methodology & data sources](/methodology) · [About this project](/about) · [GitHub repository](https://github.com/dhelweg/gentriduck)</sub>
+<FooterNav />
 
