@@ -5,6 +5,16 @@
 yet landed). **Status:** draft, pending `gentrification-domain-expert` framing/misuse sign-off
 (`I9-audience-domain-signoff.md`) before I11 (post drafts) or I12 (reach measurement) reference it.
 
+**Patch note (2026-07-11).** This revision addresses the two conditions in
+`I9-audience-domain-signoff.md`'s independent **PASS WITH CONDITIONS** verdict: P1's area-level
+lead-lag example now requires **both** per-post sign-offs — the `gentrification-domain-expert`
+framing/ethics gate (ADR-0021 §3) *first*, then geo-DS — instead of geo-DS alone, and §4 carries an
+explicit dual-use acknowledgment (C1); P2 now names the political-mobilization context of Berlin
+*Mieterinitiativen* and the project's non-advocacy tension explicitly rather than treating this
+persona as an apolitical reader (C2). I11 area-level drafts remain gated on this patch being treated
+as authoritative for P1/P2 format guidance; re-request the domain sign-off on this version before any
+such draft ships.
+
 **Grounding.** The six personas and the goal→audience mapping below are lifted directly from
 `docs/assessment/2026-07-10-storytelling-comms-review.md` §4 ("Goals → audiences → channels") —
 no new audience is invented here, this ticket only fleshes each one out into a persona with
@@ -57,9 +67,19 @@ evidence a persona below is actually reachable there.
   `time-series`, `maps` — per `storytelling-guide.md` Chapter 4.
 - **Channel fit.** **LinkedIn primary** (professional network, policy/public-sector audience
   overlap per ADR-0021 §1). Owned surfaces (site) as the destination every post links back to.
-- **Format guidance (LinkedIn).** Short (120–200 words), one concrete finding per post (e.g. "in
-  [area], commercial turnover picked up two years before the social-status shift" — only if that
-  specific claim clears the geo-DS per-post sign-off), a link to the relevant takeaway or area
+- **Format guidance (LinkedIn).** Short (120–200 words), one concrete finding per post.
+  **Area-level lead-lag claims require extra care and extra gating**: an example such as "in
+  [area], commercial turnover picked up two years before the social-status shift" is the thesis's
+  core rent-gap timing signal (Smith 1979/1987) — the same lead-lag finding that lets a planner
+  protect an area also lets a landlord or speculator time entry into it, and LinkedIn is the
+  channel with the highest professional overlap with real-estate/development audiences (ADR-0021
+  §1), i.e. the highest-exposure channel for this specific dual-use risk (Chapple & Zuk,
+  "Forewarned," *Cityscape* 2016 — see §4's dual-use note). Any such claim must clear **both**
+  per-post sign-offs before drafting — the `gentrification-domain-expert` framing/ethics gate
+  (ADR-0021 §3) *first*, then the geo-DS statistical-soundness gate — not geo-DS alone, and the
+  default posture is to prefer an aggregated or retrospective framing (citywide pattern, past-tense
+  "we found," no single named area presented as currently heating up) over a real-time, area-named
+  "this is happening now" claim; see §4. Beyond that: a link to the relevant takeaway or area
   profile, no more than one caveat sentence stated plainly rather than hedged into vagueness.
   **[public best-practice, not repo-specific]**: LinkedIn favours native text + a single image/chart
   over a bare link; a short native caption plus the link performs better than a link-only post.
@@ -68,6 +88,17 @@ evidence a persona below is actually reachable there.
 
 - **Role.** Volunteer-run tenant/neighbourhood groups tracking change in their own area — not
   professionals, not necessarily data-literate, but highly motivated by their specific street/PLR.
+- **Political context (non-advocacy tension).** In Berlin, *Mieterinitiativen* are frequently
+  *politically mobilized anti-displacement actors* — the milieu of groups like Kotti & Co, Bizim
+  Kiez, and the *Deutsche Wohnen & Co enteignen* campaign, not a neutral "curious resident"
+  readership (Holm 2010 on Berlin *Aufwertung* and organized tenant resistance). That is not a
+  reason to exclude or deprioritize this persona — they are a legitimate, arguably primary,
+  audience for area-level findings — but the project is O3 non-advocacy, and this audience's *use*
+  of a finding is inherently political. **The project cannot control downstream reframing of its
+  findings into campaign material**, and does not attempt to; publishing to this persona means
+  accepting that a risk/pressure finding may be cited in an advocacy context the project itself
+  does not take a position in. This is an accepted, legitimate use, not a framing failure — but the
+  map names it rather than treating P2 as an apolitical reader.
 - **What they want to know.** "What's happening in *my* neighbourhood," in a format they can share
   with neighbours or cite to a local council member without needing to explain the methodology
   themselves.
@@ -84,7 +115,11 @@ evidence a persona below is actually reachable there.
   the actual product for this persona. Posts mainly serve as a discovery path *to* the site.
 - **Format guidance.** Plain-language post (no jargon at all), the area-profile link as the whole
   point of the post, one sentence on what the number does and does not mean (risk signal, not a
-  prediction), explicit invitation to read the caveats rather than skip them.
+  prediction), explicit invitation to read the caveats rather than skip them. Any post drafted for
+  P2 that includes an area-level lead-lag claim (not just a static risk/pressure reading) is subject
+  to the same dual-use gating as P1 above — both per-post sign-offs, domain/ethics first — because
+  the same area-level specificity that helps this persona protect their neighbourhood is equally
+  legible to an adversarial reader (§4).
 
 ### P3 — Urban researchers
 
@@ -191,7 +226,7 @@ evidence a persona below is actually reachable there.
 
 | Channel | Best-fit personas | Register | Length | Notes |
 |---|---|---|---|---|
-| **LinkedIn** | P1 (policy), P5 (data eng, shared with Bluesky), P2 (secondary) | Professional, plain-language over jargon | 120–200 words | Native text + one chart/image outperforms link-only. **[public best-practice]** |
+| **LinkedIn** | P1 (policy), P5 (data eng, shared with Bluesky), P2 (secondary) | Professional, plain-language over jargon | 120–200 words | Native text + one chart/image outperforms link-only. **[public best-practice]** Highest-exposure channel for the dual-use risk in §4 — apply the area-level lead-lag gating there before drafting. |
 | **Bluesky/Mastodon** | P3 (researchers), P4 (tech/AI), P6 (open-data), P5 (shared with LinkedIn) | Can run longer/technical; thread-native | Thread-friendly, no hard cap | Hashtag/mention conventions are platform- and community-specific; check at draft time, don't assume static. **[public best-practice]** |
 | **Owned site** | All six | Whatever the target page's existing register is (per `storytelling-guide.md`) | N/A | The actual destination every post links to — posts are a discovery path, the site is the product. |
 | **Repo / ADRs** | P3, P4, P5 | Technical, as-is | N/A | Cited directly, not reformatted. |
@@ -208,6 +243,25 @@ this map's next revision, not an assumption made here.
 
 ## 4. Reach tactics (register check)
 
+**Dual-use / misuse note (binding for P1/P2 area-level lead-lag content).** The thesis's lead-lag
+hypothesis — POI/commercial-turnover dynamism leading a social-status shift — is a rent-gap timing
+signal (Smith 1979/1987: capital targets areas where the gap between actual and potential ground
+rent is widening). Publishing that signal at area-level specificity to an outward channel is a
+documented dual-use vector for gentrification early-warning outputs: the same finding that helps a
+planner or tenant initiative protect a neighbourhood also helps a developer, landlord, or speculator
+time entry into it (Chapple & Zuk, "Forewarned," *Cityscape* 2016). **LinkedIn is the channel where
+this exposure is highest** (heaviest overlap with real-estate/development professionals, per
+ADR-0021 §1). Standing rule: prefer aggregated or retrospective framing ("across the areas we
+tracked, X pattern held," "we found this two years after the fact") over real-time, single-area
+"area X is heating up now" phrasing in outward posts, and route any area-named lead-lag claim
+through **both** per-post sign-offs — `gentrification-domain-expert` (framing/ethics, ADR-0021 §3)
+*first*, then geo-DS (statistical soundness) — never geo-DS alone. This map does not claim it
+"cannot surface" at-risk areas outward; it can, via P1/P2's area-level format guidance above, and
+that is precisely why the dual-use gating here is binding rather than aspirational. This intersects
+with P2 (§2): the same area-level specificity that serves a tenant initiative's protective use is
+equally legible to an adversarial reader — the gating above applies regardless of which persona a
+post is nominally targeting.
+
 Per O3/O4 and ADR-0021 §4, every reach tactic below stays inside "genuinely useful and citable
 beats promotional":
 
@@ -216,8 +270,12 @@ beats promotional":
   landing page.
 - **Reproducibility as the hook for the data audience (P4/P5).** "Here's exactly how to reproduce
   this" is a stronger, more honest hook than "look what we built" for these two personas.
-- **Concrete area-level specificity for P1/P2.** A citable PLR profile beats a citywide claim —
-  specificity is what makes a policy/neighbourhood reader trust a number enough to act on it.
+- **Concrete area-level specificity for P1/P2, subject to the dual-use note above.** A citable PLR
+  profile beats a citywide claim — specificity is what makes a policy/neighbourhood reader trust a
+  number enough to act on it — but for area-level *lead-lag* claims specifically, this specificity
+  is also what makes the finding actionable for a predatory reader; the dual-use note's gating and
+  aggregated/retrospective-framing preference govern that subset, not this bullet's general case
+  (a static risk/pressure reading with no timing claim is not subject to the extra gating).
 - **The open-data page's own friction-to-recommendation shape, reused for P6.** Concrete incident →
   concrete recommendation, never incident → editorial conclusion about legislation.
 - **No engagement-bait.** No questions posed purely to drive replies, no manufactured urgency, no
@@ -230,6 +288,9 @@ beats promotional":
 
 - **I11** (first post series) picks one persona per draft, uses that persona's channel + format
   guidance above, and self-checks against ADR-0021 §4's content rules before requesting sign-off.
+  For any P1/P2 draft containing an area-level lead-lag claim, I11 requests the
+  `gentrification-domain-expert` framing/ethics sign-off (ADR-0021 §3) *before* the geo-DS
+  statistical sign-off, per §4's dual-use note — not geo-DS alone.
 - **I12** (reach measurement) measures reach *per persona/channel pair* defined here, not as a
   single aggregate number — a post reaching many P4 readers is a different outcome than reaching
   few P1 readers, and the loop should report both, not net them into a single "engagement" figure.
@@ -242,4 +303,11 @@ beats promotional":
 - `docs/epic-i/storytelling-guide.md` (chapter mapping, per-page audience doors)
 - `docs/epic-i/I6-open-data-domain-signoff.md` (precedent for the IFG-adjacency framing boundary
   reused here for P6)
+- `docs/epic-i/I9-audience-domain-signoff.md` (independent domain-expert **PASS WITH CONDITIONS**
+  verdict; this revision patches the map to address conditions C1 and C2 recorded there)
 - `docs/epic-i/tickets/I9-audience-personas-channel-map.md` (source SPEC, full acceptance criteria)
+- Smith, N. (1979/1987) — rent-gap theory, cited for the P1/§4 dual-use note
+- Chapple, K. & Zuk, M. (2016). "Forewarned: The Use of Neighborhood Early Warning Systems for
+  Gentrification and Displacement." *Cityscape*, 18(3) — cited for the P1/§4 dual-use note
+- Holm, A. (2010) — Berlin *Aufwertung* and organized tenant resistance, cited for P2's political
+  context
