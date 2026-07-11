@@ -77,7 +77,8 @@ GitHub UI**. The PM never uses `gh pr merge` and never pushes to `main` (both bl
 `geo-data-scientist` (spatial/statistical methodology gate) ·
 `gentrification-domain-expert` (urban-sociology/housing-policy theory gate, pairs with geo-DS) ·
 `data-analyst` (analysis + site content) ·
-`web-engineer` + `web-engineer-reviewer` (Epic G site build + verify; skills `we-implement`/`we-review`).
+`web-engineer` + `web-engineer-reviewer` (Epic G site build + verify; skills `we-implement`/`we-review`) ·
+`comms-strategist` (Epic I outward comms; draft-and-screen only, never posts; skill `comms-draft`).
 
 ## Methodology gate (R-C1)
 
