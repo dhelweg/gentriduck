@@ -295,6 +295,58 @@ beats promotional":
   single aggregate number — a post reaching many P4 readers is a different outcome than reaching
   few P1 readers, and the loop should report both, not net them into a single "engagement" figure.
 
+## 6. Reach measurement (I12): campaign-link convention and per-persona definitions
+
+**Campaign-link convention.** Every link a draft post makes back to the site carries a
+`?ref=<channel>-<post>` query parameter — e.g. `?ref=li-recheck` (LinkedIn, thesis re-check post),
+`?ref=bs-timeline` (Bluesky, timeline post). Channel prefixes: `li` (LinkedIn), `bs` (Bluesky/
+Mastodon). Post slugs are short and stable across a post's own LinkedIn/Bluesky variants (e.g.
+`recheck`, `oa-fastfood`, `opmodel`, `opendata`, `timeline`) so the two channel variants of the same
+finding are distinguishable in GoatCounter's referrer/path view without being conflated. This
+convention has been used consistently by all six I11 drafts (see `docs/epic-i/posts/`); no change to
+the convention is needed, this section is its single documented source of truth (the SPEC's own
+acceptance criterion for "documented").
+
+**GoatCounter confirms tagged paths/referrers, in principle — status as of this writing.**
+GoatCounter (ADR-0012 Amendment B) surfaces both the landing path and the query string in its
+referrer/path views by design (query parameters are part of the URL it logs) — no additional
+integration is required beyond what Amendment B already ships (the beacon script + the `?ref=`
+convention above). **However**, Amendment B's own "Open follow-up" note records that the GoatCounter
+account/site and the `GOATCOUNTER_CODE` deploy env var are a **maintainer action, not code** — the
+PM cannot create third-party accounts on the maintainer's behalf. Until that account exists and a
+post has actually been shared (I13/first real post), there is no live traffic to confirm against;
+this section documents the mechanism, not yet a confirmed observation. Re-confirm this line once
+the account is live and traffic exists.
+
+**Per-persona reach definitions** (observable proxies per the six personas in §2 — read manually,
+no API integration, no credentials, per I8's publishing model):
+
+| Persona | Reach proxy (what "reached" means, observably) |
+|---|---|
+| **P1** — Policy makers / city administration | `takeaways` and `/area/[code]` PLR-profile page visits via a `li-`/`bs-` tagged referrer; LinkedIn is the primary channel to watch (per §3's channel table). |
+| **P2** — Neighbourhood initiatives | Same PLR-profile pages as P1, but arriving via a post explicitly targeting P2's framing (per §2's P2 format guidance); watch for direct/bookmarked repeat visits to a specific area page (the "home turf" pattern §2 names) as a stronger signal than a single pageview. |
+| **P3** — Urban researchers | `thesis-recheck`, `methodology`, and whitepaper visits/downloads; a citation of the whitepaper or dataset (manually noticed, e.g. a repo mention or an academic reference) counts as the strongest possible signal, though it is not something GoatCounter surfaces directly. |
+| **P4** — Tech & AI practitioners | `how-its-organised`, `how-its-built`, and `timeline` page visits via a `bs-` tagged referrer (P4's primary channel); repo traffic (stars/forks/clones, read manually from GitHub's own free Insights tab, no API) as a secondary signal. |
+| **P5** — Data engineers / analysts | `how-its-built` visits split roughly evenly across `li-`/`bs-` tagged referrers (per §3's even-split channel fit); repo clone/fork counts as a secondary signal, same source as P4. |
+| **P6** — Open-data & civic-tech community | `open-data` page visits via a `bs-` tagged referrer (P6's primary channel); any GitHub Discussion or issue opened by an external reader referencing the open-data page counts as the strongest signal, read manually. |
+
+Platform-native metrics (LinkedIn/Bluesky impressions, reactions, reposts) are read manually by the
+maintainer directly on each platform — no API integration, no credentials, consistent with I8's
+publishing model and this ticket's explicit "no API integration, no credentials" scope boundary.
+
+**Cadence.** After each post is actually shared by the maintainer, one `reach-log.md` row is added
+(see `docs/epic-i/reach-log.md`) reading GoatCounter's tagged-path/referrer view for that post's
+window; if a persona's reach proxy consistently under- or over-performs relative to what the post
+targeted, that observation feeds back into this map's channel-fit guidance (§2/§3) at the PM's
+cadence, not automatically.
+
+**Report both, not netted.** Per §5's existing I12 note: reach is reported *per persona/channel
+pair*, never as a single aggregate "engagement" figure across all six personas — reaching many P4
+readers and reaching few P1 readers are different outcomes for different goals, and netting them
+would erase the distinction the whole loop exists to preserve.
+
+---
+
 ## References
 
 - `docs/assessment/2026-07-10-storytelling-comms-review.md` §4 (the goal→audience→channel table
