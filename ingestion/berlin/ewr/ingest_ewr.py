@@ -17,6 +17,13 @@ Processing:
   at PLR grain and outputs one Parquet file per year in WIDE format (one row per
   PLR) to data/raw/berlin/ewr/<year>.parquet (gitignored).
 
+  Source-tier priority (ADR-0023): (1) explicit --local-csv-dir, (2) live URL /
+  CKAN discovery, (3) the committed ingestion/berlin/ewr/vendored/ directory as a
+  last-resort reproducibility fallback for years upstream no longer serves
+  programmatically (see vendored/README.md). This restores a fresh-checkout's
+  ability to rebuild the EWR pipeline without a live network dependency for the
+  years vendored there.
+
 Output schema (wide format, one row per PLR):
   city_code, reference_year, reference_date, area_code, area_vintage,
   residents_total, residents_male_share, residents_female_share,
@@ -126,6 +133,11 @@ from manifest import existing_outputs, write_manifest_entry  # noqa: E402
 # ---------------------------------------------------------------------------
 
 CITY_CODE = "berlin"
+
+# ADR-0023: committed CC-BY-licensed source CSVs, used as the final fallback
+# tier (after explicit --local-csv-dir and live URL/CKAN) when neither of
+# those yields a file. See ingestion/berlin/ewr/vendored/README.md.
+VENDORED_DIR = Path(__file__).resolve().parent / "vendored"
 
 SOURCE_ATTRIBUTION = (
     "Amt fuer Statistik Berlin-Brandenburg / Einwohnerregister Berlin-Brandenburg (EWR),"
@@ -719,6 +731,37 @@ def download_csv(url: str, year: int) -> pd.DataFrame:
 # ---------------------------------------------------------------------------
 
 
+def _companion_dirs(local_dir: Optional[Path]) -> list[Path]:
+    """
+    Ordered list of directories to search for companion (12A/EWRMIGRA/WHNDAUER) CSVs.
+
+    Companions have no live-URL tier (statistik-berlin-brandenburg.de blocks programmatic
+    access to them), so they are always sought from the explicit --local-csv-dir (if any)
+    first, then the committed vendored fallback (ADR-0023).
+    """
+    dirs = []
+    if local_dir is not None:
+        dirs.append(local_dir)
+    if VENDORED_DIR.exists():
+        dirs.append(VENDORED_DIR)
+    return dirs
+
+
+def _load_from_dirs(loader, dirs: list[Path], year: int, label: str):
+    """Try `loader(dir, year)` over `dirs` in order; log when the vendored fallback is used."""
+    for d in dirs:
+        result = loader(d, year)
+        if result is not None:
+            if d == VENDORED_DIR:
+                log.info(
+                    "Using vendored fallback %s CSV for EWR %d (ADR-0023, no live source).",
+                    label,
+                    year,
+                )
+            return result
+    return None
+
+
 def process_year(
     year: int,
     url: Optional[str],
@@ -726,32 +769,57 @@ def process_year(
     dry_run: bool = False,
     local_dir: Optional[Path] = None,
 ) -> bool:
-    """Load (local first, then HTTP), compute indicators, write parquet. Returns True on success."""
+    """
+    Load (local -> live URL -> vendored fallback), compute indicators, write parquet.
+
+    Source-tier priority (ADR-0023): (1) explicit --local-csv-dir, (2) live URL / CKAN,
+    (3) the committed ingestion/berlin/ewr/vendored/ directory as a last resort. Returns
+    True on success.
+    """
     out_path = out_dir / f"{year}.parquet"
 
     if dry_run:
-        src = f"local:{local_dir}" if local_dir else url or "CKAN-discovery"
+        src = f"local:{local_dir}" if local_dir else url or "CKAN-discovery / vendored fallback"
         log.info("[dry-run] Would process %d from %s -> %s", year, src, out_path)
         return True
 
-    # Local pre-downloaded CSV takes priority over HTTP.
+    # Tier 1: explicit local pre-downloaded CSV takes priority over HTTP.
     raw_df = None
     if local_dir:
         raw_df = load_local_csv(local_dir, year)
 
-    if raw_df is None:
-        if url is None:
-            log.warning("No URL and no local CSV for EWR %d — skipping.", year)
-            return False
+    # Tier 2: live URL download.
+    if raw_df is None and url is not None:
         try:
             raw_df = download_csv(url, year)
         except Exception as exc:
-            log.error("Failed to download EWR %d: %s", year, exc)
-            return False
+            log.warning(
+                "Failed to download EWR %d from live URL (%s) — will try vendored fallback.",
+                year,
+                exc,
+            )
+
+    # Tier 3 (ADR-0023): committed vendored CSV, last resort.
+    if raw_df is None and VENDORED_DIR.exists():
+        raw_df = load_local_csv(VENDORED_DIR, year)
+        if raw_df is not None:
+            log.info(
+                "Using vendored fallback main-matrix CSV for EWR %d (ADR-0023, no live source).",
+                year,
+            )
+
+    if raw_df is None:
+        log.warning(
+            "No URL, no local CSV, and no vendored fallback for EWR %d — skipping.", year
+        )
+        return False
+
+    # Companion dirs (12A/EWRMIGRA/WHNDAUER): explicit --local-csv-dir, then vendored (ADR-0023).
+    companion_dirs = _companion_dirs(local_dir)
 
     # Attempt to load and merge companion 12H CSV (contains E_A, MH_E, DAU5, DAU10).
-    if local_dir:
-        companion_df = load_companion_local_csv(local_dir, year)
+    if companion_dirs:
+        companion_df = _load_from_dirs(load_companion_local_csv, companion_dirs, year, "12A")
         if companion_df is not None:
             # Normalise companion column names to match main CSV treatment.
             companion_df.columns = companion_df.columns.str.strip().str.upper()
@@ -806,8 +874,8 @@ def process_year(
                         )
 
     # Attempt to load and merge EWRMIGRA companion CSV (contains MH_E).
-    if local_dir:
-        migra_df = load_migra_local_csv(local_dir, year)
+    if companion_dirs:
+        migra_df = _load_from_dirs(load_migra_local_csv, companion_dirs, year, "EWRMIGRA")
         if migra_df is not None:
             migra_df.columns = migra_df.columns.str.strip().str.upper()
             migra_plr_col = next(
@@ -842,8 +910,8 @@ def process_year(
                         )
 
     # Attempt to load and merge Wohndauer companion CSV (contains DAU5/DAU10).
-    if local_dir:
-        whndauer_df = load_whndauer_local_csv(local_dir, year)
+    if companion_dirs:
+        whndauer_df = _load_from_dirs(load_whndauer_local_csv, companion_dirs, year, "Wohndauer")
         if whndauer_df is not None:
             # Column names already normalised to upper-case by load_whndauer_local_csv.
             whndauer_plr_col = next(
@@ -1025,10 +1093,17 @@ def main(argv: Optional[list[str]] = None) -> int:
     for year in years:
         url = url_map.get(year)
 
-        # Skip URL discovery if a local file will cover this year.
-        has_local = (
-            local_dir and load_local_csv(local_dir, year) is not None if not dry_run else False
-        )
+        # Skip URL discovery (and the network call it costs) if a local file — explicit
+        # --local-csv-dir or the committed ADR-0023 vendored fallback — already covers
+        # this year.
+        def _year_has_local_or_vendored(yr: int) -> bool:
+            if dry_run:
+                return False
+            if local_dir and load_local_csv(local_dir, yr) is not None:
+                return True
+            return VENDORED_DIR.exists() and load_local_csv(VENDORED_DIR, yr) is not None
+
+        has_local = _year_has_local_or_vendored(year)
 
         if url is None and not has_local:
             # Attempt CKAN API discovery.
@@ -1040,9 +1115,9 @@ def main(argv: Optional[list[str]] = None) -> int:
 
         if url is None and not has_local:
             log.warning(
-                "No URL and no local CSV for EWR %d — skipping. "
+                "No URL, no local CSV, and no vendored fallback for EWR %d — skipping. "
                 "Add to VINTAGE_URLS, use --url-override %d=<url>, "
-                "or place a CSV in --local-csv-dir.",
+                "place a CSV in --local-csv-dir, or add it to ingestion/berlin/ewr/vendored/.",
                 year,
                 year,
             )
