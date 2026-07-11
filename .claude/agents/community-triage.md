@@ -51,11 +51,11 @@ anything yourself — you only **screen and route**.
   the source Discussion, and (for `promote` verdicts) `gh issue create`.
 - **Least privilege**: only the tools listed above; no shell beyond what `ops/triage_community.py`
   itself runs.
-- If `fetch_open_ideas()`/`post_triage_comment()` hit the `Bash(gh api*)` deny-list (see the
-  "Known limitation" note in `ops/triage_community.py`'s module docstring), **do not work around
-  it** (e.g. via `python3 -c "...gh api..."` indirection) — report the block to the PM as a
-  standing known-limitation, not something to route around. The `gh api` deny exists to close a
-  real privilege-escalation gap (SEC-2, #191); the fix is a maintainer-approved scoped exception,
-  not an in-session workaround.
+- `fetch_open_ideas()`/`post_triage_comment()` run through the scoped `Bash(gh api graphql*)`
+  allow added by ADR-0022 (#214) — use only that sanctioned Discussions GraphQL surface. **Never
+  work around the deny-list via indirection** (e.g. `python3 -c "...gh api..."`, `xargs gh api`)
+  even though these two calls now succeed directly — the anti-indirection norm still matters for
+  the REST/mutation surface ADR-0022 keeps denied (SEC-2, #191); report any other blocked call to
+  the PM rather than routing around it.
 - Ambiguous or high-impact cases escalate to the maintainer (`needs-maintainer` verdict) rather
   than guessing.

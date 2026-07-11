@@ -20,18 +20,15 @@ Design (ADR-0020 §3 "Automation substrate"):
   fixed template into `gh issue create` arguments passed as literal strings (no `eval`/`shell=True`
   interpolation of untrusted content).
 
-**Known limitation, discovered while wiring this up (filed as a follow-up decision ticket):**
-`gh` has no native `discussion` subcommand, so reading/commenting on Discussions needs `gh api
-graphql` (as ADR-0020 §3 anticipated). SEC-2 (#191)'s later hardening of `.claude/settings.json`
-put a blanket `Bash(gh api*)` in the **deny** list (closing a real privilege-escalation gap), which
-now also blocks this script's `fetch_open_ideas()`/`post_triage_comment()` calls when run from an
-interactive Claude session. `promote_to_issue()` is unaffected (`gh issue create` stays allow-
-listed). Until the maintainer decides on a narrowly-scoped exception (e.g. a `gh api graphql`
-allow-rule restricted to read-only Discussion queries, or routing this through a separate,
-lower-privilege identity per ADR-0011 Alternative D), `fetch_open_ideas()`/`post_triage_comment()`
-will hit the deny-list when invoked directly by the PM session; they run fine outside that
-sandbox (e.g. a human or a differently-scoped credential). The rubric (`screen()`) and promotion
-wiring are fully functional and tested today regardless.
+**Resolved limitation (ADR-0022, #214):** `gh` has no native `discussion` subcommand, so
+reading/commenting on Discussions needs `gh api graphql` (as ADR-0020 §3 anticipated). SEC-2
+(#191) had put a blanket `Bash(gh api*)` in `.claude/settings.json`'s **deny** list, which also
+blocked this script's `fetch_open_ideas()`/`post_triage_comment()` calls from an interactive
+Claude session. ADR-0022 replaced that blanket deny with an enumerated one (`gh api repos/*`,
+`/repos/*`, plus explicit GraphQL write-mutation denies) and added a scoped
+`Bash(gh api graphql*)` allow, so both calls now run inside the sandboxed PM/agent session.
+`promote_to_issue()` was always unaffected (`gh issue create` stays allow-listed). The rubric
+(`screen()`) and promotion wiring remain fully functional and tested independent of this.
 
 Usage:
     uv run poe triage-community              # dry-run summary of what WOULD change (default)
