@@ -1,9 +1,15 @@
 # I9 audience personas & channel map — domain-expert framing/misuse check
 
+> **FINAL VERDICT (2026-07-11 re-review of patch `bd3df94b`, merged to `develop` at `5c72f14e`):
+> PASS (clean).** Conditions C1 and C2 from the original PASS-WITH-CONDITIONS verdict below are both
+> satisfied. Two trivial, non-blocking hygiene notes carried forward (see "Re-review" section at the
+> end). I11 area-level P1/P2 drafting is **no longer blocked** on this sign-off, provided each such
+> draft still passes the per-post gate ADR-0021 §3 requires (domain/ethics *first*, then geo-DS).
+
 **Ticket:** I9 (#226), artifact `docs/epic-i/audience-channel-map.md` (merged to `develop` at
-`040c0903` *before* a valid gate).
+`040c0903` *before* a valid gate; patched at `bd3df94b`, merged at `5c72f14e`).
 **Reviewer:** gentrification-domain-expert (genuine, independent pass).
-**Date:** 2026-07-11
+**Date:** 2026-07-11 (original verdict + same-day re-review of the patch)
 **Scope:** the SPEC's gate — audience-framing accuracy and misuse angles for a public communications
 plan about a displacement/gentrification measurement project. Not the full dual R-C1 methodology
 gate (no indicator, weight, normalization, or spatial-method change).
@@ -19,7 +25,7 @@ the 2026-07-10 review §4 table; the I6 IFG-adjacency precedent is cited accurat
 
 ---
 
-## Verdict: PASS WITH CONDITIONS
+## Original verdict: PASS WITH CONDITIONS (superseded by the Re-review below, kept as history)
 
 The map is largely sound: no real individuals/orgs/contact data, correct risk-vs-pressure register
 on most persona sections, and correct inheritance of the I6 IFG-adjacency boundary for P6. But two
@@ -132,4 +138,79 @@ as fact (LinkedIn native-text vs. link-only performance; Bluesky/Mastodon thread
   area-level P1/P2 *format guidance* until C1 is patched. I11 area-level drafts are blocked on C1.
 - When I10's `comms-strategist` lands, it inherits C1/C2 as hard rules, not suggestions.
 
-**Verdict: PASS WITH CONDITIONS**
+**Original verdict: PASS WITH CONDITIONS**
+
+---
+
+## Re-review (2026-07-11) — verification of patch `bd3df94b` (merged `5c72f14e`)
+
+Independently re-read the full patched `audience-channel-map.md` and diffed it against the version
+that carried the conditions. Both conditions are now genuinely closed, not token-patched.
+
+### C1 — CLOSED. The dual-use gating is now binding, not descriptive.
+
+- **The worked example is no longer a bare geo-DS trap.** P1 format guidance (now lines 70–83)
+  reframes the "commercial turnover picked up two years before the social-status shift" example as
+  "the thesis's core rent-gap timing signal (Smith 1979/1987)" and states plainly that "the same
+  lead-lag finding that lets a planner protect an area also lets a landlord or speculator time entry
+  into it." It then requires the claim to **"clear both per-post sign-offs before drafting — the
+  `gentrification-domain-expert` framing/ethics gate (ADR-0021 §3) *first*, then the geo-DS
+  statistical-soundness gate — not geo-DS alone."** This is my C1(a) verbatim in intent.
+- **Binding, not aspirational — stated as such.** The new §4 note is titled "Dual-use / misuse note
+  **(binding for P1/P2 area-level lead-lag content)**" and closes the loop I asked for in C1(c):
+  *"This map does not claim it 'cannot surface' at-risk areas outward; it can, via P1/P2's area-level
+  format guidance above, and that is precisely why the dual-use gating here is binding rather than
+  aspirational."* The prior self-contradiction (misuse stance vs. worked example) is explicitly
+  named and resolved rather than papered over. The word choice ("must … before drafting", "binding")
+  makes this a hard requirement, not descriptive prose.
+- **The dual-use acknowledgment (C1(b)) is present and correctly grounded.** §4 names the rent-gap
+  mechanism (Smith 1979/1987), the early-warning dual-use literature (Chapple & Zuk 2016), LinkedIn
+  as the highest-exposure channel, and the standing preference for aggregated/retrospective framing
+  over "area X is heating up now." References section now lists all three sources.
+- **Propagation is consistent.** The §3 summary table (LinkedIn row), the P2 format guidance, the §4
+  reach-tactics bullet, and the I11 handoff (§5) all now route area-level lead-lag content through
+  domain/ethics-first + geo-DS. There is no remaining path in the document that sends this post type
+  to geo-DS alone.
+- **Good domain judgment in the scoping.** The patch correctly narrows the *extra* gating to
+  area-level *lead-lag/timing* claims and states that "a static risk/pressure reading with no timing
+  claim is not subject to the extra gating." I concur: the rent-gap *timing* signal is the sharp
+  dual-use intelligence; a static status reading is far less exploitable, and it still passes the
+  normal ADR-0021 §3 domain gate regardless. This is a faithful, not over-broad, operationalization.
+
+### C2 — CLOSED. The political dimension is named substantively, not tokenly.
+
+P2 now carries a dedicated "**Political context (non-advocacy tension)**" bullet that (a) names
+*Mieterinitiativen* as "frequently *politically mobilized anti-displacement actors*," (b) grounds
+this in the real Berlin milieu (Kotti & Co, Bizim Kiez, *Deutsche Wohnen & Co enteignen*), (c) cites
+Holm 2010 on *Aufwertung* and organized tenant resistance, and (d) engages the actual tension — the
+project is O3 non-advocacy, yet this audience's *use* is inherently political and "**the project
+cannot control downstream reframing of its findings into campaign material.**" It also links back to
+the C1 intersection (same specificity serves protective and adversarial readers). This is a genuine
+sociological correction, not a single hedge sentence.
+
+### New issues introduced by the patch
+
+None blocking. Two trivial hygiene notes:
+
+1. **Real-org naming in P2 is sociological illustration, and must stay that way.** The patch names
+   Kotti & Co, Bizim Kiez, and the *Deutsche Wohnen & Co enteignen* campaign to characterize the
+   persona's milieu. This is consistent with the map's constraint (which forbids naming a real
+   organization *as an outreach target*, not as sociological context) and with my own C2 wording,
+   which named these same groups. **Guard, non-blocking:** these must never migrate into an actual
+   outreach/targeting list at I11/I12 time — the "illustrative milieu" vs. "outreach target"
+   boundary is load-bearing and should be preserved verbatim.
+2. **Citation author-order nit (cosmetic).** The Cityscape 2016 article is bylined *Zuk & Chapple*;
+   the doc cites it as "Chapple & Zuk" (an ordering I carried in the original verdict, so this is
+   inherited, not introduced). Trivially fixable at the next docs pass; does not affect the finding.
+
+### What I11 may now do
+
+- **Persona identity AND P1/P2 area-level format guidance are now authoritative.** The blocker in my
+  original recommendation ("not authoritative for area-level P1/P2 format guidance until C1 is
+  patched") is lifted.
+- **Per-post gate still applies.** This map sign-off does not pre-clear any individual future post.
+  Every P1/P2 draft containing an area-level lead-lag/timing claim must still pass the ADR-0021 §3
+  per-post gate — `gentrification-domain-expert` (framing/ethics) *first*, then geo-DS — at I11 time.
+  That is now correctly encoded in the map itself (§4, §5).
+
+**Re-review verdict: PASS (clean).**
