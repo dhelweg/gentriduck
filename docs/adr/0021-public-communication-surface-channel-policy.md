@@ -1,6 +1,6 @@
 # ADR-0021: Public communication surface & channel policy
 
-- **Status:** Proposed (awaiting maintainer acceptance)
+- **Status:** Accepted (2026-07-11)
 - **Date:** 2026-07-10
 - **Methodology gate:** not applicable to *this* ADR itself — it is a communication-process/
   governance decision (channels, publishing model, sign-off mechanics), not a change to index
