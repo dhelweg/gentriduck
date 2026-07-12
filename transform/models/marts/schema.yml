@@ -944,8 +944,8 @@ models:
       not on the R-C1 methodology-bearing model list.
 
       Grain: one row per (city_code, area_level, area_code, area_vintage).
-      Sources: stg_berlin_lor (plr), stg_berlin_lor_bzr (bzr), stg_hamburg_geo
-      (district/subarea_l1/subarea_l2).
+      Sources: stg_berlin_lor (plr), stg_berlin_lor_bzr (bzr), stg_berlin_lor_pgr
+      (pgr, added #242 I18), stg_hamburg_geo (district/subarea_l1/subarea_l2).
     meta:
       dbt_meta_owner: data-engineer
     data_tests:

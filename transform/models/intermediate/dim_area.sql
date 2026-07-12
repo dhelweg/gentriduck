@@ -16,6 +16,12 @@
 -- 4. stg_hamburg_geo — WFS Hamburg geometry staging (HH / district / subarea_l1 /
 -- subarea_l2). Added in #40 (H1 Hamburg onboarding, ADR-0014). This is the first
 -- second-city area source and exercises the ADR-0005 city-agnostic seam for real.
+-- 5. stg_berlin_lor_pgr — WFS LOR Prognoseraum (PGR) geometry staging (BER / pgr,
+-- both vintages). Added in #242 (I18, geo-hierarchy pages): ADR-0003 already
+-- licensed this LOR level, it simply hadn't been ingested. 'pgr' is used as the
+-- area_level string (matching the already-implemented 'bzr'/'plr' convention,
+-- not ADR-0003's aspirational generic 'subarea_l1' label -- architect-confirmed,
+-- no new ADR needed).
 --
 -- Deduplication strategy:
 -- - Area codes that appear in both sources get one row per (city_code, area_level,
@@ -59,6 +65,15 @@ with
         where area_code is not null
     ),
 
+    -- WFS LOR PGR areas (both vintages collapsed, city_code='BER', issue #242
+    -- I18). Same collapsing rationale as lor_areas above, at the Prognoseraum
+    -- grain.
+    lor_pgr_areas as (
+        select distinct city_code, 'pgr' as area_level, area_code, area_name
+        from {{ ref("stg_berlin_lor_pgr") }}
+        where area_code is not null
+    ),
+
     -- WFS Hamburg areas (statistisches Gebiet / Stadtteil / Bezirk, city_code='HH',
     -- issue #40 H1, ADR-0014). Single 'current' vintage for this first slice.
     hamburg_areas as (
@@ -74,6 +89,9 @@ with
         union all
         select *, 1 as source_priority
         from lor_bzr_areas
+        union all
+        select *, 1 as source_priority
+        from lor_pgr_areas
         union all
         select *, 1 as source_priority
         from hamburg_areas

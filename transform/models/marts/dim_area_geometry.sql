@@ -17,6 +17,9 @@
 -- 3. stg_hamburg_geo      -- WFS Hamburg geometry (HH / district / subarea_l1 /
 -- subarea_l2, single 'current' vintage). Included for the ADR-0005 seam,
 -- even though G1c's initial map scope is Berlin-only.
+-- 4. stg_berlin_lor_pgr   -- WFS LOR Prognoseraum geometry (BER / pgr, both
+-- vintages). Added #242 (I18, geo-hierarchy pages) so PGR profile pages can
+-- render a choropleth polygon, same as BZR/PLR.
 --
 -- Reprojection: native CRS per dim_city.native_crs_epsg (BER=EPSG:25833,
 -- HH=EPSG:25832) -> EPSG:4326 (WGS84 lon/lat), matching the st_transform(...,
@@ -65,6 +68,20 @@ with
         where lor.area_code is not null
     ),
 
+    berlin_pgr as (
+        select
+            lor.city_code,
+            'pgr' as area_level,
+            lor.area_code,
+            lor.area_name,
+            lor.area_vintage,
+            lor.geometry_wkb,
+            city.native_crs_epsg
+        from {{ ref("stg_berlin_lor_pgr") }} as lor
+        left join {{ ref("dim_city") }} as city on lor.city_code = city.city_code
+        where lor.area_code is not null
+    ),
+
     hamburg as (
         select
             geo.city_code,
@@ -85,6 +102,9 @@ with
         union all
         select *
         from berlin_bzr
+        union all
+        select *
+        from berlin_pgr
         union all
         select *
         from hamburg

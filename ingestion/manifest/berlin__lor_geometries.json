@@ -5,7 +5,7 @@
   "upstream": {
     "url": "https://gdi.berlin.de/services/wfs/lor_2019 (pre2021) ; https://gdi.berlin.de/services/wfs/lor_2021",
     "vintage": "lor_pre2021 (2019 WFS edition) + lor_2021 (2021 WFS edition)",
-    "retrieved_at": "2026-07-10T22:15:21Z"
+    "retrieved_at": "2026-07-12T07:34:27Z"
   },
   "outputs": [
     {
@@ -21,6 +21,12 @@
       "content_hash": "sha256:284167ef1a95fb620d562ef87a616bbbb0bfc671f0344f573f65065148c4fd2d"
     },
     {
+      "path": "data/raw/berlin/lor/pre2021_pgr.parquet",
+      "row_count": 60,
+      "schema_fingerprint": "sha256:2a4b23cd035f2ecf6abf11ac1d9beec02b5a47c90b4e7bbe7ac6bd2374eafd75",
+      "content_hash": "sha256:2cda4ecb2c762955d348ba28b16b86ee6d163abf7b02784810e46bbc3f351864"
+    },
+    {
       "path": "data/raw/berlin/lor/lor_2021_plr.parquet",
       "row_count": 542,
       "schema_fingerprint": "sha256:2a4b23cd035f2ecf6abf11ac1d9beec02b5a47c90b4e7bbe7ac6bd2374eafd75",
@@ -31,11 +37,17 @@
       "row_count": 143,
       "schema_fingerprint": "sha256:2a4b23cd035f2ecf6abf11ac1d9beec02b5a47c90b4e7bbe7ac6bd2374eafd75",
       "content_hash": "sha256:b6f36a8ebf6326d5f4ff69d92ab62f92400228892020e6fe8df3148c741374d1"
+    },
+    {
+      "path": "data/raw/berlin/lor/lor_2021_pgr.parquet",
+      "row_count": 58,
+      "schema_fingerprint": "sha256:2a4b23cd035f2ecf6abf11ac1d9beec02b5a47c90b4e7bbe7ac6bd2374eafd75",
+      "content_hash": "sha256:41b37e6ceca7327c0762698858a3fde55c61baf4bdd985d9ddee5fd3592be78d"
     }
   ],
   "ingest_script": {
     "module": "ingestion.berlin.lor.ingest_lor_geometries",
-    "git_sha": "81edf98496a5f7e66f15e6886f405e249033c331"
+    "git_sha": "67cebad6c7891b880aff3a19e2277acad686159a"
   },
   "manifest_schema_version": 1
 }
