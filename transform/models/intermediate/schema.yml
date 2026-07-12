@@ -3732,3 +3732,48 @@ models:
           Indicative coarsened typology — derived from floored mean-of-ordinals status/dynamik.
           NOT the official Senate BZR typology. For MAUP diagnostic use only; must not be fed
           into gentrification_index mart or published as per-area verdicts (B10 domain sign-off Condition 4).
+
+  - name: int_ewr_demographics_wide
+    description: >
+      #243 (I19): pivots int_berlin_ewr_plr2021 (long format, ALL 13
+      seed_ewr_indicator_meta indicators) to wide format, one row per
+      (city_code, area_code, area_vintage, reference_year), PLR grain.
+      Display-only re-pivot -- separate from int_ewr_socioeco (the R-C1
+      gated index-input pivot of only 5+3 indicators) -- makes no change
+      to any index weight/normalization. Feeds mart_area_demographics.
+    meta:
+      dbt_meta_owner: data-engineer
+    data_tests:
+
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns:
+              - city_code
+              - area_code
+              - area_vintage
+              - reference_year
+    columns:
+      - name: city_code
+        description: City identifier; always 'BER' (source is Berlin-only EWR).
+        data_tests:
+
+          - not_null
+      - name: area_code
+        description: PLR area code (LOR 2021 scheme, 8-digit).
+        data_tests:
+
+          - not_null
+      - name: reference_year
+        description: Calendar year of the 31-Dec EWR snapshot.
+        data_tests:
+
+          - not_null
+      - name: residents_total
+        description: Total registered residents per PLR (EWR indicator residents_total).
+      - name: any_indicator_suppressed
+        description: >
+          TRUE if any pivoted indicator for this area/year was suppressed at
+          source (propagated, not silently zeroed).
+        data_tests:
+
+          - not_null
