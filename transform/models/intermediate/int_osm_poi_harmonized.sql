@@ -33,6 +33,9 @@
 -- pair has no entry in seed_poi_canonical_category.  Treated
 -- as native classification until the canonical seed is updated.
 --
+-- I20 (#252): `cuisine` passed through unchanged (display-only OSM secondary
+-- tag, not part of drift/canonical harmonization -- no cuisine-specific
+-- remapping exists or is planned).
 -- dbt_meta_owner: data-engineer
 {{ config(materialized="view", meta={"dbt_meta_owner": "data-engineer"}) }}
 
@@ -68,6 +71,7 @@ with
             src.lon,
             src.lat,
             src.source_attribution,
+            src.cuisine,
 
             -- Drift and canonical columns (null when no match)
             drft.canonical_key,
@@ -111,6 +115,7 @@ with
             lon,
             lat,
             source_attribution,
+            cuisine,
 
             -- Harmonized classification columns
             coalesce(canonical_poi_domain, poi_domain) as poi_domain_h,

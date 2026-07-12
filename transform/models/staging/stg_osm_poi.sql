@@ -34,6 +34,10 @@
 -- downstream models and uv run poe build continue to pass before data is ingested.
 -- Each city's parquet set is independently optional -- Hamburg's absence does not
 -- block Berlin's rows from flowing through, and vice versa.
+-- I20 (#252): `cuisine` column added -- a display-only OSM secondary tag
+-- (raw value, e.g. "italian;pizza") carried through unions_by_name=true; older
+-- parquet files predating this change simply lack the column and resolve to
+-- NULL for cuisine, which is correct (their POIs were never asked for it).
 -- dbt_meta_owner: data-engineer
 {{
     config(
@@ -70,7 +74,8 @@
                     poi_type,
                     lon,
                     lat,
-                    source_attribution
+                    source_attribution,
+                    cuisine
                 from
                     read_parquet(
                         {{ _src_raw_osm_berlin }},
@@ -92,7 +97,8 @@
                     poi_type,
                     lon,
                     lat,
-                    source_attribution
+                    source_attribution,
+                    cuisine
                 from
                     read_parquet(
                         {{ _src_raw_osm_hamburg }},
@@ -112,7 +118,8 @@
         poi_type,
         lon,
         lat,
-        source_attribution
+        source_attribution,
+        cuisine
     from combined
 
 {% else %}
@@ -130,7 +137,8 @@
         cast(null as varchar) as poi_type,
         cast(null as double) as lon,
         cast(null as double) as lat,
-        cast(null as varchar) as source_attribution
+        cast(null as varchar) as source_attribution,
+        cast(null as varchar) as cuisine
     where false
 
 {% endif %}

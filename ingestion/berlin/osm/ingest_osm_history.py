@@ -104,6 +104,11 @@ SNAPSHOT_HOUR = datetime.time(0, 0, 0, tzinfo=datetime.timezone.utc)
 
 # Parquet schema for the output files.
 # Matches the stg_osm_poi.sql schema exactly.
+# I20 (#252): `cuisine` added — a display-only OSM secondary tag captured
+# alongside the existing poi_domain/category/type classification. NOT part of
+# any index-input column; carried through purely for mart_area_amenities'
+# dominant-gastro-type summary. Nullable: only present when the OSM feature
+# itself carries a `cuisine=*` tag (mostly amenity=restaurant|cafe|fast_food).
 OUTPUT_SCHEMA = pa.schema(
     [
         ("city_code", pa.string()),
@@ -116,6 +121,7 @@ OUTPUT_SCHEMA = pa.schema(
         ("lon", pa.float64()),
         ("lat", pa.float64()),
         ("source_attribution", pa.string()),
+        ("cuisine", pa.string()),
     ]
 )
 
@@ -365,12 +371,17 @@ class _MultiYearSnapshotHandler(osmium.SimpleHandler):
         )
 
         poi_match: tuple[str, str, str] | None = None
+        cuisine: str | None = None
         if in_bbox and n.visible:
             for tag in n.tags:
                 match = self.poi_mapping.get((tag.k, tag.v))
                 if match is not None:
                     poi_match = match
-                    break
+                # I20 (#252): capture the `cuisine` secondary tag verbatim
+                # (raw OSM value, e.g. "italian;pizza") whenever present —
+                # display-only, not projected into any poi_mapping category.
+                if tag.k == "cuisine":
+                    cuisine = tag.v
 
         # Update candidates for every year this version applies to.
         for year in self.years:
@@ -395,6 +406,7 @@ class _MultiYearSnapshotHandler(osmium.SimpleHandler):
                     "lon": lon,
                     "lat": lat,
                     "source_attribution": SOURCE_ATTRIBUTION,
+                    "cuisine": cuisine,
                 }
 
     def get_dataframe(self, year: int) -> pd.DataFrame:
