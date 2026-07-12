@@ -220,6 +220,48 @@ evidence a persona below is actually reachable there.
   recommendation, never editorialize toward the IFG debate — if in doubt, reuse the open-data page's
   own closing-paragraph discipline verbatim rather than paraphrasing loosely.
 
+### P7 — Prospective mover / relocating household
+
+**Added by I20 (#244/#252/#253) — maintainer feedback 2026-07-11**, per that ticket's explicit
+instruction to add this persona here. Unlike P1–P6 (drawn from the original storytelling-comms
+review's goal->audience table), this persona is added for a specific, narrower feature (I20's
+amenity/infrastructure block), not a general communications goal — it does not yet have I11 post
+drafts or a channel-fit assessment the way P1–P6 do, and is scoped accordingly below.
+
+- **Role.** Someone deciding where to live or move within (or into) the city — not a researcher, not
+  an activist, not a policy professional. Motivated by a concrete, personal decision (a specific
+  address, PLR, or district they're considering), not by the project's gentrification framing at
+  all in the first instance.
+- **What they want to know.** What is this area actually like day-to-day: is there a supermarket,
+  school, doctor nearby; what kind of food/retail scene dominates; how does it compare to
+  neighbouring areas or the district. I20's entire scope exists to answer these questions.
+- **What convinces them.** Concrete, checkable local detail (the I20 amenity/infrastructure block on
+  the area profile page) presented plainly, with an honest completeness caveat (OSM tagging is
+  uneven — see `docs/epic-i/I20-poi-curation-rules.md` §3) rather than false precision.
+- **What alienates them — and the hard boundary this persona sits on (binding).** A gentrification
+  observatory that reads as **advising or ranking areas to move to** would turn the project into
+  exactly the kind of accelerant it critiques (steering demand toward "up-and-coming" areas is a
+  documented driver of the displacement this project studies). **This project informs, it never
+  recommends or ranks** — no "best areas to move to," no real-estate-portal register, no framing
+  that could be read as investment or relocation advice. This is a **hard gate**
+  (`gentrification-domain-expert`, `I20-domain-signoff.md`), not a style preference, and it governs
+  P7 specifically because P7 is the one persona whose entire relationship to the site is a
+  move/location decision.
+- **Pages that serve them.** `/area/[code]` profile pages (I14/I18), specifically the I20
+  amenity/infrastructure block — no other existing page targets this persona; P7 does not read
+  `takeaways`, `methodology`, or the comms/process pages the way P1–P6 do.
+- **Channel fit.** **None assessed yet.** P7 is not part of I11's post-drafting scope or ADR-0021's
+  channel decisions — it is discovered organically via search/direct links to an area profile, not
+  via LinkedIn/Bluesky outward posts the way P1–P6 are. If a future ticket finds evidence P7 is
+  reachable via an outward channel, that channel-fit assessment would be added here at that point,
+  not assumed now.
+- **Reach measurement (I12, #229).** Not yet defined — #229 is currently `blocked` on a maintainer
+  decision unrelated to I20; per I20 slice 2's own scope ("land the persona note... don't unblock
+  #229 itself"), P7's reach-proxy definition is deferred to whenever #229 resumes, using the same
+  "observable proxy, no API/credentials" convention §6 already establishes for P1–P6 (e.g. area-
+  profile-page visits with no `li-`/`bs-` referrer tag, i.e. organic/search traffic, would be the
+  natural first proxy to consider — not decided here).
+
 ---
 
 ## 3. Cross-cutting channel/format summary
