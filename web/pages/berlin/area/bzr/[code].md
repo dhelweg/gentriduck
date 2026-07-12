@@ -14,6 +14,9 @@ breadcrumb: "select area_name as breadcrumb from gentriduck_marts.dim_area_geome
 
   Same display-only / non-methodology-bearing framing as the Bezirk/PGR pages (see those files'
   header comments). Gate: docs/epic-i/I18-web-geo-signoff.md / I18-web-domain-signoff.md.
+
+
+  #249 (I18-web-b, follow-on): adds an 'Approximate status & change' section reading the new gentriduck_marts.mart_mss_area_aggregate (thin display mart over int_mss_bzr_aggregate, B10/#120). This section's own display-fitness gate is docs/epic-i/I249-web-b-geo-signoff.md / I249-web-b-domain-signoff.md -- it does NOT extend the formula-level B10/#120 sign-off, only display fitness/wording of an already-approved research aggregation.
 -->
 
 ```sql bzr_name
@@ -71,6 +74,35 @@ limit 1
   At least one constituent neighbourhood had a suppressed EWR cell (small-count privacy rule) —
   this area's figures may understate the true total.
 </Alert>
+{/if}
+
+## Approximate status & change (Bezirksregion-level estimate)
+
+<Alert status="info">
+  This is an <b>approximation</b>, not the Senate's own Bezirksregion classification. It is a
+  population-weighted average of this Bezirksregion's neighbourhood-level status/Dynamik ordinals,
+  rounded — the Senate's own MSS BZR figures are computed by re-combining and re-classifying the
+  underlying raw indicators at BZR grain, which can shift borderline BZRs into a different class
+  than this estimate shows (boundary effects are more likely to bite at this finer grain than at
+  the district level). Treat this as directional, not authoritative; see the
+  <a href="/methodology">methodology page</a> for the full caveat.
+</Alert>
+
+```sql mss
+select status_index, dynamik_index, typology_stage, n_plr, reference_year
+from gentriduck_marts.mart_mss_area_aggregate
+where city_code = 'BER' and area_level = 'bzr' and area_vintage = 'lor_2021'
+  and area_code = '${params.code}'
+order by reference_year desc
+limit 1
+```
+
+{#if mss && mss[0]}
+<BigValue data={mss} value=typology_stage title="Estimated stage (BZR-level)"/>
+<BigValue data={mss} value=status_index title="Estimated status index (1=lower, 4=higher)"/>
+<BigValue data={mss} value=dynamik_index title="Estimated Dynamik index (1=rising pressure, 3=stable)"/>
+{:else}
+<Alert status="warning">No Bezirksregion-level status/Dynamik estimate available for this area.</Alert>
 {/if}
 
 ## Neighbourhood stage mix

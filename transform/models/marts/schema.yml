@@ -1296,3 +1296,75 @@ models:
         data_tests:
 
           - not_null
+
+  - name: mart_mss_area_aggregate
+    description: >
+      #249 (I18-web-b): thin display mart exposing int_mss_bzr_aggregate (B10,
+      #120) at BZR/Bezirk grain to the web layer. Pure pass-through/rename --
+      no new aggregation formula (already geo-DS approved under B10, #120).
+      This ticket's own geo-DS pass (I249-web-b-geo-signoff.md) covers DISPLAY
+      fitness (confidence framing, boundary-mismatch caveat) of publishing this
+      classification on public profile pages, not the formula itself. Domain-
+      expert sign-off (I249-web-b-domain-signoff.md) covers lay-reader wording
+      of an approximated status/Dynamik figure at this grain. Berlin only.
+    meta:
+      dbt_meta_owner: data-engineer
+    data_tests:
+
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns:
+              - city_code
+              - area_level
+              - area_code
+              - area_vintage
+              - reference_year
+    columns:
+      - name: city_code
+        description: City identifier (ADR-0005). Currently 'BER' only.
+        data_tests:
+
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ["BER"]
+      - name: area_level
+        description: Geo-hierarchy level -- bzr or bezirk (this mart never carries plr rows).
+        data_tests:
+
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ["bzr", "bezirk"]
+      - name: area_code
+        description: LOR area code at this level's own grain (6-digit BZR / 2-digit Bezirk).
+        data_tests:
+
+          - not_null
+      - name: reference_year
+        description: Snapshot year this MSS/EWR/POI rollup represents (renamed from snapshot_year).
+        data_tests:
+
+          - not_null
+      - name: status_index
+        description: >
+          Population-weighted-mean-of-ordinals approximation of MSS status
+          index (1-4) at BZR/Bezirk grain. DIFFERS from the Senate's own
+          re-z-score-then-reclassify method -- see int_mss_bzr_aggregate.sql
+          header and I249-web-b-geo-signoff.md for the confidence framing this
+          caveat requires wherever this column is rendered.
+      - name: dynamik_index
+        description: >
+          Population-weighted-mean-of-ordinals approximation of MSS Dynamik
+          index (1-3) at BZR/Bezirk grain. Same approximation caveat as
+          status_index.
+      - name: typology_stage
+        description: >
+          Indicative D1xD2 typology stage derived from the aggregated
+          status_index/dynamik_index. NOT the official Senate BZR typology --
+          MAUP diagnostic / directional display only.
+      - name: n_plr
+        description: Number of constituent PLRs contributing to this row.
+        data_tests:
+
+          - not_null
