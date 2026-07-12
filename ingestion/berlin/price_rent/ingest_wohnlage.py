@@ -214,22 +214,41 @@ def fetch_page(wfs_base_url: str, wfs_type_names: str, offset: int, timeout: int
         raise RuntimeError(f"Failed fetching offset={offset}: {exc}") from exc
 
 
+# #251 (ADR-0015 amendment 2026-07-12): circuit breaker — a fully-down endpoint
+# used to grind through the whole MAX_RUNTIME_SECONDS budget (each page retried
+# internally by common.http's own retry+backoff before finally raising), costing
+# up to 15 minutes *per vintage* just to discover "the host is unreachable"
+# (see #248's incident: gdi.berlin.de was down, cost ~31 min across 5 vintages).
+# CIRCUIT_BREAKER_CONSECUTIVE_FAILURES pages failing in a row (each already
+# exhausted common.http's own retries) is treated as "the endpoint is down for
+# this vintage" and bails immediately instead of waiting for the time budget.
+CIRCUIT_BREAKER_CONSECUTIVE_FAILURES = 3
+
+
 def fetch_all_features(
     wfs_base_url: str,
     wfs_type_names: str,
     max_pages: Optional[int] = None,
-) -> tuple[list[dict], bool]:
+) -> tuple[list[dict], bool, bool]:
     """
     Paginate through the WFS endpoint and return all raw GeoJSON features.
 
-    Returns (features, is_complete) where is_complete=False when the download
-    was cut short by the time budget or max_pages limit.
+    Returns (features, is_complete, host_down):
+      - is_complete=False when the download was cut short (time budget,
+        max_pages limit, OR the circuit breaker tripped).
+      - host_down=True only when the circuit breaker tripped (page 0 failed,
+        or CIRCUIT_BREAKER_CONSECUTIVE_FAILURES consecutive page failures) —
+        a distinct, stronger signal than a merely-time-budget-limited partial
+        fetch, used by main() to skip remaining vintages against the same
+        endpoint rather than re-discovering the outage for each one.
     """
     all_features: list[dict] = []
     offset = 0
     page_num = 0
+    consecutive_failures = 0
     start_time = time.monotonic()
     is_complete = True
+    host_down = False
 
     while True:
         elapsed = time.monotonic() - start_time
@@ -250,7 +269,38 @@ def fetch_all_features(
             is_complete = False
             break
 
-        page = fetch_page(wfs_base_url, wfs_type_names, offset)
+        try:
+            page = fetch_page(wfs_base_url, wfs_type_names, offset)
+        except RuntimeError as exc:
+            consecutive_failures += 1
+            log.warning(
+                "Page %d (offset=%d) failed after internal retries: %s (%d consecutive failure(s))",
+                page_num,
+                offset,
+                exc,
+                consecutive_failures,
+            )
+            if page_num == 0 or consecutive_failures >= CIRCUIT_BREAKER_CONSECUTIVE_FAILURES:
+                log.error(
+                    "Circuit breaker tripped for %s: endpoint appears down "
+                    "(page_num=%d, consecutive_failures=%d). Bailing out of this "
+                    "vintage instead of grinding the full %ds time budget.",
+                    wfs_base_url,
+                    page_num,
+                    consecutive_failures,
+                    MAX_RUNTIME_SECONDS,
+                )
+                is_complete = False
+                host_down = True
+                break
+            # Not yet at the circuit-breaker threshold and not the very first
+            # page: skip this offset and keep going (a single mid-pagination
+            # page failure is not necessarily "the endpoint is down").
+            offset += WFS_PAGE_SIZE
+            page_num += 1
+            continue
+
+        consecutive_failures = 0
         page_features = page.get("features", [])
         n = len(page_features)
 
@@ -278,13 +328,14 @@ def fetch_all_features(
 
     elapsed = time.monotonic() - start_time
     log.info(
-        "Fetch complete: %d features in %d pages (%.0fs). Complete=%s",
+        "Fetch complete: %d features in %d pages (%.0fs). Complete=%s Host_down=%s",
         len(all_features),
         page_num,
         elapsed,
         is_complete,
+        host_down,
     )
-    return all_features, is_complete
+    return all_features, is_complete, host_down
 
 
 # ---------------------------------------------------------------------------
@@ -421,8 +472,15 @@ def write_parquet(rows: list[dict], out_path: Path, is_complete: bool) -> None:
 # ---------------------------------------------------------------------------
 
 
-def ingest_year(year: int, out_dir: Path, max_pages: Optional[int] = None) -> int:
-    """Ingest Wohnlage for one vintage year. Returns row count written (0 on failure)."""
+def ingest_year(year: int, out_dir: Path, max_pages: Optional[int] = None) -> tuple[int, bool]:
+    """Ingest Wohnlage for one vintage year.
+
+    Returns (rows_written, host_down). rows_written is 0 on any failure;
+    host_down is True only when the circuit breaker (fetch_all_features)
+    determined the WFS endpoint itself is unreachable -- the signal main()
+    uses to skip remaining vintages instead of re-discovering the same
+    outage per year.
+    """
     if year not in AVAILABLE_YEARS:
         raise ValueError(f"Year {year} not in AVAILABLE_YEARS={AVAILABLE_YEARS}")
 
@@ -443,23 +501,19 @@ def ingest_year(year: int, out_dir: Path, max_pages: Optional[int] = None) -> in
     )
     log.info("Total features: ~397k. Expected pages: ~796. ETA: 5-15 min.")
 
-    try:
-        features, is_complete = fetch_all_features(
-            wfs_base_url, wfs_type_names, max_pages=max_pages
-        )
-    except RuntimeError as exc:
-        log.error("Failed to fetch Wohnlage WFS for year=%d: %s", year, exc)
-        return 0
+    features, is_complete, host_down = fetch_all_features(
+        wfs_base_url, wfs_type_names, max_pages=max_pages
+    )
 
     if not features:
         log.error("No features returned from WFS for year=%d -- not writing parquet.", year)
-        return 0
+        return 0, host_down
 
     rows = parse_features(features, year, source_attribution)
 
     if not rows:
         log.error("No valid rows parsed for year=%d -- not writing parquet.", year)
-        return 0
+        return 0, host_down
 
     if not is_complete:
         log.warning(
@@ -473,7 +527,7 @@ def ingest_year(year: int, out_dir: Path, max_pages: Optional[int] = None) -> in
         write_parquet(rows, out_path, is_complete=is_complete)
     except Exception as exc:
         log.error("Failed to write parquet for year=%d: %s", year, exc)
-        return 0
+        return 0, host_down
 
     if not is_complete:
         # .tmp.parquet was kept for manual inspection but out_path was not written.
@@ -484,7 +538,7 @@ def ingest_year(year: int, out_dir: Path, max_pages: Optional[int] = None) -> in
             year,
             out_path,
         )
-        return 0
+        return 0, host_down
 
     log.info(
         "=== Wohnlagen %d complete: %d rows -> %s ===",
@@ -492,7 +546,7 @@ def ingest_year(year: int, out_dir: Path, max_pages: Optional[int] = None) -> in
         len(rows),
         out_path,
     )
-    return len(rows)
+    return len(rows), host_down
 
 
 # ---------------------------------------------------------------------------
@@ -570,7 +624,21 @@ def main(argv: Optional[list[str]] = None) -> int:
 
     total = 0
     for year in args.years:
-        total += ingest_year(year, out_dir, max_pages=args.max_pages)
+        rows, host_down = ingest_year(year, out_dir, max_pages=args.max_pages)
+        total += rows
+        if host_down:
+            remaining = args.years[args.years.index(year) + 1 :]
+            if remaining:
+                log.error(
+                    "Circuit breaker: %s appears down (year=%d failed at page 0 or "
+                    "%d consecutive page failures) -- skipping remaining vintage(s) %s "
+                    "instead of repeating the same doomed fetch.",
+                    WFS_BASE_URL_TEMPLATE.format(year=year),
+                    year,
+                    CIRCUIT_BREAKER_CONSECUTIVE_FAILURES,
+                    remaining,
+                )
+            break
 
     log.info("All years complete. Grand total: %d rows.", total)
 
