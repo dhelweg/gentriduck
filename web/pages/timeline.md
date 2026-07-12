@@ -115,6 +115,14 @@ the whole story chronologically, rather than the current state (which is what th
       hrefLabel: 'issue #125 (closed 2026-07-09) →'
     }
   ];
+
+  import { base } from '$app/paths';
+
+  let repoStats = null;
+  onMount(async () => {
+    const res = await fetch(`${base}/data/repo-stats.json`);
+    repoStats = await res.json();
+  });
 </script>
 
 <Timeline {milestones} />
@@ -123,6 +131,47 @@ the whole story chronologically, rather than the current state (which is what th
   This page will gain one more entry — <strong>going fully public</strong> (noindex removed) — once
   the <a href="/about">Epic I revision wave</a> finishes and the launch playbook runs.
 </Alert>
+
+## How the codebase itself grew
+
+<!--
+  I17 (#241), slice 1 of 3 -- repo-growth stats block only (agent-activity swimlanes and the
+  curated maintainer-steerings thread are follow-up slices of the same ticket, tracked on #241).
+
+  Numbers come from `web/static/data/repo-stats.json`, a committed snapshot produced by the
+  deterministic, stdlib-only generator `web/scripts/gen-repo-stats.mjs` (regenerate with
+  `npm run repo-stats` from `web/`; two runs on the same tree produce byte-identical JSON). This
+  is a **current-state snapshot**, not a time series -- per the I4 squashed-history rule, this repo
+  never derives dated series from `git log`, so there is deliberately no history here yet. Labelled
+  "as of" the whitepaper's own snapshot framing, not a specific commit date.
+-->
+
+The project is dbt + DuckDB + Python + an Evidence static site, built by a supervised multi-agent
+team rather than one engineer. A single current-state snapshot, not a history (see caveat above):
+
+{#if repoStats}
+<DataTable data={[
+  { layer: 'transform/ (dbt)', files: repoStats.layers.transform?.files ?? 0, loc: repoStats.layers.transform?.loc ?? 0 },
+  { layer: 'ingestion/ (Python)', files: repoStats.layers.ingestion?.files ?? 0, loc: repoStats.layers.ingestion?.loc ?? 0 },
+  { layer: 'web/ (Evidence site)', files: repoStats.layers.web?.files ?? 0, loc: repoStats.layers.web?.loc ?? 0 },
+  { layer: 'docs/ (ADRs, methodology, epics)', files: repoStats.layers.docs?.files ?? 0, loc: repoStats.layers.docs?.loc ?? 0 },
+  { layer: 'analysis/ (methodology-gated scripts)', files: repoStats.layers.analysis?.files ?? 0, loc: repoStats.layers.analysis?.loc ?? 0 },
+  { layer: 'ops/ (autonomous-run scripts)', files: repoStats.layers.ops?.files ?? 0, loc: repoStats.layers.ops?.loc ?? 0 },
+  { layer: '.claude/ (agents + skills)', files: repoStats.layers['.claude']?.files ?? 0, loc: repoStats.layers['.claude']?.loc ?? 0 }
+]}>
+  <Column id=layer title="Layer"/>
+  <Column id=files title="Files"/>
+  <Column id=loc title="Lines"/>
+</DataTable>
+
+<ul>
+  <li><strong>{repoStats.dbt.models}</strong> dbt models, <strong>{repoStats.dbt.tests}</strong> custom tests, <strong>{repoStats.dbt.seeds}</strong> seeds.</li>
+  <li><strong>{repoStats.site.pages}</strong> site pages, <strong>{repoStats.site.components}</strong> shared Svelte components.</li>
+  <li><strong>{repoStats.adrs}</strong> accepted ADRs, <strong>{repoStats.signoffs}</strong> methodology/domain sign-off documents on file.</li>
+</ul>
+{:else}
+<p><em>Loading repo stats…</em></p>
+{/if}
 
 ## Honest caveats
 
