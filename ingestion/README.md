@@ -43,9 +43,22 @@ uv run poe ingest
 
 Runs every ingestion script that has **no manual precondition** — currently all Berlin sources
 except OSM, and all Hamburg sources except OSM — in dependency order (e.g. the LOR pre2021→2021
-crosswalk runs after the LOR geometries it reads). See the `ingest` task in the repo-root
-`pyproject.toml` for the exact, current command list; that file is the single source of truth and
-this doc is kept in sync with it.
+crosswalk runs after the LOR geometries it reads), via **`ingestion/run_ingest.py`** (#251, ADR-0015
+amendment 2026-07-12). See `build_steps()` in that file for the exact, current source list; that
+file is the single source of truth and this doc is kept in sync with it.
+
+`run_ingest.py` runs each source as an **isolated subprocess** — one source failing is reported but
+does not abort the rest, and the driver's own exit code only reflects a small, documented
+**release-blocking allowlist** (`BLOCKING_SOURCE_IDS`: Berlin LOR geometries/crosswalk, EWR, MSS —
+everything else is a leaf dimension whose absence degrades one part of the site, not the core
+build). It also **skips a source whose on-disk output already matches the committed ADR-0016
+manifest** (reusing `verify_data.classify()`), so a healthy weekly refresh doesn't re-fetch data
+that hasn't changed. Force a full re-ingest with:
+
+```bash
+uv run poe ingest -- --force        # or: FORCE_REFRESH=1 uv run poe ingest
+uv run python ingestion/run_ingest.py --only berlin__wohnlage   # run just one source
+```
 
 Output lands under `data/raw/<city>/<source>/*.parquet` (gitignored — rebuildable, not committed;
 see ADR-0001/A8). `uv run poe build` (dbt) reads from there.
