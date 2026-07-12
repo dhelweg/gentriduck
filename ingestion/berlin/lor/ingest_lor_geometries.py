@@ -8,10 +8,14 @@ Source: GDI Berlin OGC WFS, CC BY 3.0 DE
     typeNames=lor_2019:a_lor_plr_2019  (~448 PLR areas)
   Pre-2021 BZR: https://gdi.berlin.de/services/wfs/lor_2019
     typeNames=lor_2019:b_lor_bzr_2019  (~137 Bezirksregionen)
+  Pre-2021 PGR: https://gdi.berlin.de/services/wfs/lor_2019
+    typeNames=lor_2019:c_lor_pgr_2019  (~60 Prognoseraeume)
   2021 PLR:     https://gdi.berlin.de/services/wfs/lor_2021
     typeNames=lor_2021:a_lor_plr_2021  (~542 PLR areas)
   2021 BZR:     https://gdi.berlin.de/services/wfs/lor_2021
     typeNames=lor_2021:b_lor_bzr_2021  (~139 Bezirksregionen)
+  2021 PGR:     https://gdi.berlin.de/services/wfs/lor_2021
+    typeNames=lor_2021:c_lor_pgr_2021  (58 Prognoseraeume)
 
 BZR layer added for #134 (bug): the 2018-thesis-golden `area_name` for BZR-level
 rows is latin-1-mojibake-corrupted at the source CSV (literal '?' bytes on disk,
@@ -21,16 +25,23 @@ already prefers WFS PLR names over thesis-golden PLR names (see dim_area.sql's
 dedup comment). This ingestion script now fetches BZR alongside PLR so the same
 WFS-preferred dedup pattern can extend to the 'bzr' area_level.
 
+PGR layer added for #242 (I18, geo-hierarchy pages): ADR-0003 already licenses
+this WFS family for all three LOR levels including Prognoseraum; it was simply
+never ingested. Field names confirmed live via DescribeFeatureType 2026-07-12:
+both vintages expose pgr_id (4-digit, zero-padded, e.g. '0110'), pgr_name, and
+bez (informational "NN - Bezirksname" string, not used -- the Bezirk code is
+derived downstream from the PGR/BZR/PLR code prefix, see dim_area_hierarchy.sql).
+
 All endpoints return GeoJSON with outputFormat=application/json.
 Native CRS: EPSG:25833 (ETRS89 / UTM zone 33N). NOT reprojected.
 
 Output parquet schema (per file):
   vintage            (string): 'lor_pre2021' or 'lor_2021'
-  area_level         (string): 'plr' or 'bzr'
-  area_code          (string): plr_id/bzr_id attribute, zero-padded (8 chars for
-                                plr, 6 chars for bzr)
-  area_name          (string): human-readable name (planungsraum/plr_name or
-                                bzr_name attribute, per level)
+  area_level         (string): 'plr', 'bzr', or 'pgr'
+  area_code          (string): plr_id/bzr_id/pgr_id attribute, zero-padded
+                                (8 chars for plr, 6 chars for bzr, 4 chars for pgr)
+  area_name          (string): human-readable name (planungsraum/plr_name,
+                                bzr_name, or pgr_name attribute, per level)
   geometry_wkb       (bytes):  geometry in WKB, CRS EPSG:25833 (native, not reprojected)
   source_attribution (string): mandatory CC BY 3.0 DE attribution
 
@@ -46,7 +57,7 @@ Attribution (mandatory — CC BY 3.0 DE):
   Each output parquet row carries source_attribution. The dbt staging model
   (stg_berlin_lor) and the website attribution page (Epic G3) must surface this.
 
-Runtime: ~10-25 s for both vintages x both levels on normal broadband.
+Runtime: ~15-35 s for both vintages x three levels on normal broadband.
 """
 
 from __future__ import annotations
@@ -102,6 +113,12 @@ LEVEL_CONFIGS = {
         "id_candidates": ["bzr_id", "BZR_ID"],
         "name_candidates": ["bzr_name", "bzr_nam", "name"],
         "code_width": 6,
+    },
+    "pgr": {
+        "type_name_prefix": "c_lor_pgr",
+        "id_candidates": ["pgr_id", "PGR_ID"],
+        "name_candidates": ["pgr_name", "pgr_nam", "name"],
+        "code_width": 4,
     },
 }
 
@@ -440,8 +457,10 @@ def _write_manifest(out_dir: Path) -> None:
         [
             "pre2021_plr.parquet",
             "pre2021_bzr.parquet",
+            "pre2021_pgr.parquet",
             "lor_2021_plr.parquet",
             "lor_2021_bzr.parquet",
+            "lor_2021_pgr.parquet",
         ],
     )
     if not found:

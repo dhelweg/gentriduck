@@ -95,6 +95,15 @@ sources:
         meta:
           external_location: "{{ env_var('PWD', '.') }}/data/raw/berlin/lor/*_bzr.parquet"
 
+      - name: lor_pgr
+        description: >
+          LOR Prognoseraum (PGR)-grain geometries (GDI Berlin WFS, CC BY 3.0
+          DE). Added for #242 (I18, geo-hierarchy pages) -- ADR-0003 already
+          licensed this level, it was just never ingested. Read by
+          stg_berlin_lor_pgr.
+        meta:
+          external_location: "{{ env_var('PWD', '.') }}/data/raw/berlin/lor/*_pgr.parquet"
+
       - name: mss
         description: >
           MSS (Monitoring Soziale Stadtentwicklung) biennial editions,
