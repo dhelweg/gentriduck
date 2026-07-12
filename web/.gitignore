@@ -3,7 +3,8 @@
 build
 node_modules
 .DS_Store
-static/data
+static/data/*
+!static/data/repo-stats.json
 *.options.yaml
 .vscode/settings.json
 .env
