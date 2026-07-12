@@ -118,12 +118,13 @@ models:
     description: >
       Conformed area dimension (ADR-0005 city-agnostic seam). Distinct
       (city_code, area_level, area_code, area_name) from int_thesis_2018_area_index
-      + stg_berlin_lor + stg_hamburg_geo (#40 H1, ADR-0014), joined with
-      seed_dim_area_level for level_name.
-      NOTE: parent_area_code is intentionally omitted until stg_berlin_lor is
-      populated (Epic B2/C). When the LOR geometry ingestion lands, add the parent
-      crosswalk via a join on (city_code, area_code, area_level). See model SQL for
-      details.
+      + stg_berlin_lor + stg_berlin_lor_bzr + stg_berlin_lor_pgr (#242 I18) +
+      stg_hamburg_geo (#40 H1, ADR-0014), joined with seed_dim_area_level for
+      level_name.
+      NOTE: parent_area_code is intentionally omitted from this dimension --
+      parent/child links now live in the separate dim_area_hierarchy model
+      (#242, I18), not as a column here, so dim_area's own grain/dedup logic
+      stays untouched. See dim_area_hierarchy.sql for details.
       Area names are proper nouns kept in their local language (German for both
       Berlin and Hamburg).
     meta:
@@ -152,16 +153,24 @@ models:
                 field: city_code
       - name: area_level
         description: >
-          Area level identifier. Berlin uses 'bezirk'/'bzr'/'plr'; Hamburg
-          (#40 H1, ADR-0014) uses the generic 'district'/'subarea_l1'/'subarea_l2'
-          levels (see seed_dim_area_level).
+          Area level identifier. Berlin uses 'bezirk'/'pgr'/'bzr'/'plr' (pgr
+          added #242, I18); Hamburg (#40 H1, ADR-0014) uses the generic
+          'district'/'subarea_l1'/'subarea_l2' levels (see seed_dim_area_level).
         data_tests:
 
           - not_null
           - accepted_values:
               arguments:
                 values:
-                  ["bezirk", "bzr", "plr", "district", "subarea_l1", "subarea_l2"]
+                  [
+                    "bezirk",
+                    "pgr",
+                    "bzr",
+                    "plr",
+                    "district",
+                    "subarea_l1",
+                    "subarea_l2",
+                  ]
       - name: area_code
         description: Area code. Natural key within (city_code, area_level).
         data_tests:
@@ -174,6 +183,88 @@ models:
           - not_null
       - name: level_name
         description: Human-readable level name from seed_dim_area_level.
+
+  - name: dim_area_hierarchy
+    description: >
+      #242 (I18, geo-hierarchy pages): parent/child links for dim_area's area
+      levels, city-agnostic per ADR-0005. Berlin: PLR -> BZR -> PGR -> Bezirk,
+      derived from LOR code-prefix nesting. Hamburg: Stadtteil (subarea_l1) ->
+      Bezirk (district), passed through from the WFS-provided parent code.
+      Hamburg subarea_l2 (Gebiet) -> subarea_l1 is intentionally NOT resolved
+      here (no source-provided or code-derivable parent exists -- see model
+      SQL header; open question for geo-DS, same treatment as the Berlin
+      Ortsteil non-nesting case). NOT on the R-C1 methodology-bearing model
+      list -- structural code-prefix / source-passthrough derivation only, no
+      indicator weighting, normalization, or index computation.
+    meta:
+      dbt_meta_owner: data-engineer
+    # Grain: one row per (city_code, area_level, area_code) that has a
+    # resolved parent -- i.e. every child area has at most one parent by
+    # construction (union of disjoint per-level CTEs, each keyed 1:1 off
+    # dim_area / stg_hamburg_geo's own natural key). This test guards against
+    # a future fan-out regression (e.g. an accidental duplicate join).
+    data_tests:
+
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns:
+              - city_code
+              - area_level
+              - area_code
+    columns:
+      - name: city_code
+        description: City identifier (FK -> dim_city). ADR-0005 seam.
+        data_tests:
+
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_city')
+                field: city_code
+      - name: area_level
+        description: Child area level.
+        data_tests:
+
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ["pgr", "bzr", "plr", "subarea_l1"]
+      - name: area_code
+        description: >
+          Child area code. Every row here is itself sourced from a dim_area
+          (or, for Hamburg, stg_hamburg_geo) row, so a dedicated FK test would
+          be redundant with dim_area's own tests -- not null is sufficient here.
+        data_tests:
+
+          - not_null
+      - name: parent_area_level
+        description: >
+          Parent area level ('bzr', 'pgr', 'bezirk' for Berlin; 'district' for
+          Hamburg). 'bezirk' intentionally has no corresponding dim_area row
+          yet (Epic C; see dim_area's own accepted_values test, which already
+          anticipates this level_code) -- PGR's parent_area_code is still a
+          real administrative fact, recorded here ahead of its own geometry.
+        data_tests:
+
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ["bzr", "pgr", "bezirk", "district"]
+      - name: parent_area_code
+        description: >
+          Parent area code. Strictly FK-tested against dim_area for
+          parent_area_level in ('bzr', 'pgr', 'district') -- a real dim_area
+          row must exist one level up. NOT tested for parent_area_level =
+          'bezirk' (no dim_area row exists yet, by design -- see above).
+        data_tests:
+
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_area')
+                field: area_code
+              config:
+                where: "parent_area_level != 'bezirk'"
 
   - name: int_berlin_ewr_plr2021
     description: >
@@ -3641,3 +3732,48 @@ models:
           Indicative coarsened typology — derived from floored mean-of-ordinals status/dynamik.
           NOT the official Senate BZR typology. For MAUP diagnostic use only; must not be fed
           into gentrification_index mart or published as per-area verdicts (B10 domain sign-off Condition 4).
+
+  - name: int_ewr_demographics_wide
+    description: >
+      #243 (I19): pivots int_berlin_ewr_plr2021 (long format, ALL 13
+      seed_ewr_indicator_meta indicators) to wide format, one row per
+      (city_code, area_code, area_vintage, reference_year), PLR grain.
+      Display-only re-pivot -- separate from int_ewr_socioeco (the R-C1
+      gated index-input pivot of only 5+3 indicators) -- makes no change
+      to any index weight/normalization. Feeds mart_area_demographics.
+    meta:
+      dbt_meta_owner: data-engineer
+    data_tests:
+
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns:
+              - city_code
+              - area_code
+              - area_vintage
+              - reference_year
+    columns:
+      - name: city_code
+        description: City identifier; always 'BER' (source is Berlin-only EWR).
+        data_tests:
+
+          - not_null
+      - name: area_code
+        description: PLR area code (LOR 2021 scheme, 8-digit).
+        data_tests:
+
+          - not_null
+      - name: reference_year
+        description: Calendar year of the 31-Dec EWR snapshot.
+        data_tests:
+
+          - not_null
+      - name: residents_total
+        description: Total registered residents per PLR (EWR indicator residents_total).
+      - name: any_indicator_suppressed
+        description: >
+          TRUE if any pivoted indicator for this area/year was suppressed at
+          source (propagated, not silently zeroed).
+        data_tests:
+
+          - not_null

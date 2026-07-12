@@ -944,8 +944,8 @@ models:
       not on the R-C1 methodology-bearing model list.
 
       Grain: one row per (city_code, area_level, area_code, area_vintage).
-      Sources: stg_berlin_lor (plr), stg_berlin_lor_bzr (bzr), stg_hamburg_geo
-      (district/subarea_l1/subarea_l2).
+      Sources: stg_berlin_lor (plr), stg_berlin_lor_bzr (bzr), stg_berlin_lor_pgr
+      (pgr, added #242 I18), stg_hamburg_geo (district/subarea_l1/subarea_l2).
     meta:
       dbt_meta_owner: data-engineer
     data_tests:
@@ -1219,3 +1219,80 @@ models:
           SUM(poi_count) / area_km2 for this domain (e.g. "all Gastronomy
           POIs per km2") -- recomputed at domain grain, not an average of
           leaf-level densities. NULL when area_km2 is NULL or zero.
+
+  - name: mart_area_demographics
+    description: >
+      #243 (I19): display mart of EWR descriptive indicators (Einwohner, age
+      structure, composition, residence duration) at PLR grain and rolled up
+      to BZR/PGR/Bezirk (I18 geo-hierarchy levels). Display-only -- no index
+      weight/normalization change; foreigners_share/migration_background_share
+      framing gated by domain-expert sign-off (I19-domain-signoff.md, PASS).
+      Rollup rule (extensive=sum, intensive=summed-numerator recompute)
+      geo-DS approved (I19-geo-signoff.md, PASS), reusing int_mss_bzr_aggregate's
+      precedent. Berlin only; Hamburg parity deferred to after H3 (#237).
+    meta:
+      dbt_meta_owner: data-engineer
+    data_tests:
+
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns:
+              - city_code
+              - area_level
+              - area_code
+              - area_vintage
+              - reference_year
+    columns:
+      - name: city_code
+        description: City identifier (ADR-0005). Currently 'BER' only.
+        data_tests:
+
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ["BER"]
+      - name: area_level
+        description: Geo-hierarchy level (I18) -- plr, bzr, pgr, or bezirk.
+        data_tests:
+
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ["plr", "bzr", "pgr", "bezirk"]
+      - name: area_code
+        description: LOR area code at this level's own grain (8/6/4/2-digit).
+        data_tests:
+
+          - not_null
+      - name: reference_year
+        description: Calendar year of the 31-Dec EWR snapshot.
+        data_tests:
+
+          - not_null
+      - name: residents_total
+        description: >
+          Total registered residents. PLR: EWR indicator value. Rolled-up
+          levels: SUM of constituent PLR values (extensive indicator).
+      - name: foreigners_share
+        description: >
+          Share of foreign nationals. Rolled-up levels: recomputed from
+          summed numerators (population-weighted), never averaged.
+          Small-area-grain publication framing gated by domain-expert
+          sign-off (I19-domain-signoff.md).
+      - name: migration_background_share
+        description: >
+          Share of residents with migration background. Same rollup rule and
+          domain-expert framing gate as foreigners_share. Methodologically
+          stable only from 2017 (Mikrozensus reform, cf. int_ewr_socioeco).
+      - name: n_plr
+        description: Number of constituent PLRs contributing to this row (1 for area_level='plr').
+        data_tests:
+
+          - not_null
+      - name: any_indicator_suppressed
+        description: >
+          TRUE if this area/year (or, for rollups, any constituent PLR) had a
+          suppressed source cell -- degrade gracefully, don't silently zero.
+        data_tests:
+
+          - not_null

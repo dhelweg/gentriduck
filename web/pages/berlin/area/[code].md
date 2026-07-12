@@ -359,6 +359,188 @@ where
   editions (2021–2025).
 </Alert>
 
+<!--
+  I19-web (#246): "People & structure" block, PLR level -- slice 1 of the web render (BZR/PGR/
+  Bezirk-level pages don't have a web route yet; I18 itself only landed its dbt-layer slice,
+  #242 -- see docs/handoff and the follow-up ticket filed alongside this one). Reads
+  `mart_area_demographics` (#243, geo + domain PASS) read-only; no dbt model change, no new
+  indicator/weight/normalization (not on the R-C1 gated-file list). District/city comparison rows
+  reuse the SAME sum-then-recompute rollup formula already geo-DS-approved inside
+  mart_area_demographics.sql (I19-geo-signoff.md) -- applied one level further (city) here, in the
+  display layer only, not a new spatial/statistical method.
+
+  Hard framing conditions from I19-domain-signoff.md, honoured here:
+  (a) no ranking/sorting affordance on foreigners_share/migration_background_share -- both are
+      plain table rows among many, never sorted or highlighted;
+  (b) always co-presented with structural context -- population, age structure, and residence
+      duration sit in the same table, never displayed standalone;
+  (c) no causal/evaluative language -- every figure is dated + sourced ("EWR, vintage YYYY"),
+      purely descriptive;
+  (d) the >=2017 migration_background_share comparability caveat is rendered inline, unconditionally,
+      next to that row (not only when a trend is shown, to stay on the safe side of the gate);
+  (e) suppressed/sparse areas degrade gracefully -- an inline note replaces silent, misleadingly
+      precise figures when `any_indicator_suppressed` is true, rather than hiding the row outright.
+
+  Re-consulted with the domain expert on this exact rendered wording before integration --
+  docs/epic-i/I19-web-domain-signoff.md (Verdict: PASS).
+-->
+
+## People & structure
+
+```sql demographics_current
+select
+    reference_year,
+    reference_date,
+    residents_total,
+    mean_age_years,
+    any_indicator_suppressed
+from gentriduck_marts.mart_area_demographics
+where city_code = 'BER' and area_level = 'plr' and area_code = '${params.code}'
+order by reference_year desc
+limit 1
+```
+
+```sql demographics_table
+-- One row per indicator: this area vs. its district (Bezirk, already population-weighted by the
+-- mart's own rollup) vs. Berlin as a whole (same sum-then-recompute rule, applied here one level
+-- further -- display layer only, see header comment). Values pre-formatted as text in SQL (mixed
+-- units -- counts, years, shares -- in one comparison column) rather than via a per-column Evidence
+-- `fmt`, since a single DataTable column can't carry three different numeric formats.
+with
+    latest as (
+        select max(reference_year) as reference_year
+        from gentriduck_marts.mart_area_demographics
+        where city_code = 'BER' and area_level = 'plr' and area_code = '${params.code}'
+    ),
+    area_row as (
+        select *
+        from gentriduck_marts.mart_area_demographics
+        where
+            city_code = 'BER' and area_level = 'plr' and area_code = '${params.code}'
+            and reference_year = (select reference_year from latest)
+    ),
+    district_row as (
+        select *
+        from gentriduck_marts.mart_area_demographics
+        where
+            city_code = 'BER' and area_level = 'bezirk'
+            and area_code = substr('${params.code}', 1, 2)
+            and reference_year = (select reference_year from latest)
+    ),
+    city_row as (
+        select
+            reference_year,
+            sum(residents_total) as residents_total,
+            sum(residents_male_share * residents_total)
+            / nullif(sum(residents_total), 0) as residents_male_share,
+            sum(residents_female_share * residents_total)
+            / nullif(sum(residents_total), 0) as residents_female_share,
+            sum(age_under18_share * residents_total)
+            / nullif(sum(residents_total), 0) as age_under18_share,
+            sum(age_18_27_share * residents_total)
+            / nullif(sum(residents_total), 0) as age_18_27_share,
+            sum(age_27_45_share * residents_total)
+            / nullif(sum(residents_total), 0) as age_27_45_share,
+            sum(age_45_65_share * residents_total)
+            / nullif(sum(residents_total), 0) as age_45_65_share,
+            sum(age_65plus_share * residents_total)
+            / nullif(sum(residents_total), 0) as age_65plus_share,
+            sum(mean_age_years * residents_total)
+            / nullif(sum(residents_total), 0) as mean_age_years,
+            sum(foreigners_share * residents_total)
+            / nullif(sum(residents_total), 0) as foreigners_share,
+            sum(migration_background_share * residents_total)
+            / nullif(sum(residents_total), 0) as migration_background_share,
+            sum(residence_duration_5y_share * residents_total)
+            / nullif(sum(residents_total), 0) as residence_duration_5y_share,
+            sum(residence_duration_10y_share * residents_total)
+            / nullif(sum(residents_total), 0) as residence_duration_10y_share
+        from gentriduck_marts.mart_area_demographics
+        where city_code = 'BER' and area_level = 'bezirk'
+            and reference_year = (select reference_year from latest)
+        group by reference_year
+    )
+select 1 as sort_order, 'Residents (Einwohner)' as indicator, cast(a.residents_total as varchar) as area_value,
+    cast(round(d.residents_total) as varchar) as district_value, cast(round(c.residents_total) as varchar) as city_value
+from area_row as a cross join district_row as d cross join city_row as c
+union all
+select 2, 'Mean age', round(a.mean_age_years, 1) || ' yrs', round(d.mean_age_years, 1) || ' yrs', round(c.mean_age_years, 1) || ' yrs'
+from area_row as a cross join district_row as d cross join city_row as c
+union all
+select 3, 'Female share', round(a.residents_female_share * 100, 1) || '%', round(d.residents_female_share * 100, 1) || '%', round(c.residents_female_share * 100, 1) || '%'
+from area_row as a cross join district_row as d cross join city_row as c
+union all
+select 4, 'Under 18', round(a.age_under18_share * 100, 1) || '%', round(d.age_under18_share * 100, 1) || '%', round(c.age_under18_share * 100, 1) || '%'
+from area_row as a cross join district_row as d cross join city_row as c
+union all
+select 5, '18 to under 27', round(a.age_18_27_share * 100, 1) || '%', round(d.age_18_27_share * 100, 1) || '%', round(c.age_18_27_share * 100, 1) || '%'
+from area_row as a cross join district_row as d cross join city_row as c
+union all
+select 6, '27 to under 45', round(a.age_27_45_share * 100, 1) || '%', round(d.age_27_45_share * 100, 1) || '%', round(c.age_27_45_share * 100, 1) || '%'
+from area_row as a cross join district_row as d cross join city_row as c
+union all
+select 7, '45 to under 65', round(a.age_45_65_share * 100, 1) || '%', round(d.age_45_65_share * 100, 1) || '%', round(c.age_45_65_share * 100, 1) || '%'
+from area_row as a cross join district_row as d cross join city_row as c
+union all
+select 8, '65 and over', round(a.age_65plus_share * 100, 1) || '%', round(d.age_65plus_share * 100, 1) || '%', round(c.age_65plus_share * 100, 1) || '%'
+from area_row as a cross join district_row as d cross join city_row as c
+union all
+select 9, 'Resident 5+ years at address', round(a.residence_duration_5y_share * 100, 1) || '%', round(d.residence_duration_5y_share * 100, 1) || '%', round(c.residence_duration_5y_share * 100, 1) || '%'
+from area_row as a cross join district_row as d cross join city_row as c
+union all
+select 10, 'Resident 10+ years at address', round(a.residence_duration_10y_share * 100, 1) || '%', round(d.residence_duration_10y_share * 100, 1) || '%', round(c.residence_duration_10y_share * 100, 1) || '%'
+from area_row as a cross join district_row as d cross join city_row as c
+union all
+select 11, 'Foreign-national share', round(a.foreigners_share * 100, 1) || '%', round(d.foreigners_share * 100, 1) || '%', round(c.foreigners_share * 100, 1) || '%'
+from area_row as a cross join district_row as d cross join city_row as c
+union all
+select 12, 'Migration-background share †', round(a.migration_background_share * 100, 1) || '%', round(d.migration_background_share * 100, 1) || '%', round(c.migration_background_share * 100, 1) || '%'
+from area_row as a cross join district_row as d cross join city_row as c
+order by sort_order
+```
+
+<p>
+{#if demographics_current[0]}
+As of the <b>{demographics_current[0].reference_year}</b> EWR register (population statistics), this area has
+<b>{demographics_current[0].residents_total != null ? Math.round(demographics_current[0].residents_total).toLocaleString() : '—'}</b> registered
+residents. The table below is purely descriptive — dated and sourced from Berlin's official
+population register (EWR) — and always shown alongside its full demographic context, never as an
+isolated figure.
+{:else}
+No population-register data is available for this area yet.
+{/if}
+</p>
+
+{#if demographics_current[0] && demographics_current[0].any_indicator_suppressed}
+<Alert status="warning">
+  One or more figures below are based on a small or privacy-suppressed population cell for this
+  area (per Berlin's EWR disclosure rules) — treat the values in this table as <b>approximate</b>,
+  not exact counts.
+</Alert>
+{/if}
+
+<DataTable data={demographics_table} rows=12 emptySet="warn" emptyMessage="No population-register data for this area.">
+    <Column id=indicator title="Indicator"/>
+    <Column id=area_value title="This area"/>
+    <Column id=district_value title="District average"/>
+    <Column id=city_value title="Berlin average"/>
+</DataTable>
+
+<p>
+† <b>Migration-background share</b> uses a Mikrozensus definition that changed around 2017 —
+figures from before 2017 are present in the underlying data but are <b>not directly comparable</b>
+to 2017-and-later figures. This page shows only the current-vintage snapshot above; do not compare
+this row across years without checking the vintage.
+</p>
+
+<p>
+Both the foreign-national and migration-background shares above are shown only as plain rows in
+this table, alongside the area's full age and residence-duration profile — this page never ranks
+or sorts areas by either figure, and makes no claim about whether a change in either is good or bad
+for the neighbourhood.
+</p>
+
+
 ## Social status over time
 
 ```sql area_trend

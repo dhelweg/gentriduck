@@ -413,6 +413,28 @@ via I13 once content is revised and routes are frozen; the `/about` route never 
   `/poi-map` and light/dark; labels/tooltips show **area names, not PLR IDs** (`dim_area` join into
   the map layer). · *web pair; geo-DS consulted on scale semantics* · I2; OA scale per I15.
 
+*I17–I20: second maintainer feedback wave (2026-07-11) — timeline depth + place-page depth.*
+- **I17** **Timeline enrichment** — repo growth/LOC stats (deterministic generator, committed
+  JSON, no git-log dates), kanban-style agent-workflow activity swimlanes (handoff-archive-dated),
+  curated maintainer steerings + impact thread. · *web pair + data-analyst; maintainer reviews
+  steerings list* · I4.
+- **I18** **Geo-hierarchy area pages** — profile pages for Bezirk/PGR/BZR (add `pgr` to
+  `dim_area` + hierarchy model; LOR code nesting), breadcrumbs + child tables both directions;
+  coarse grain shows sums + child-stage distributions only, **no re-scored index** (that would be
+  its own methodology ticket); Ortsteile out of scope v1 (non-LOR, open question). · *DE pair +
+  web pair; geo-DS sign-off on rollup rules* · I2, I14; Hamburg part after H3.
+- **I19** **Area demographics (Kurzprofil parity)** — surface the already-ingested EWR
+  descriptive series (Einwohner, age bands, mean age, composition, residence duration) as a
+  display mart + "People & structure" block at every level; other-data inventory (MSS, Wohnlage,
+  BRW, Mietspiegel, Milieuschutz) per level. · *DE pair + data-analyst + web pair;
+  **domain gate on composition-indicator framing**, geo-DS on rollups* · I14, I18; vintages per #197.
+- **I20** **Amenity insights for movers** — retain `cuisine` + everyday-infrastructure OSM tags
+  (schools, kindergartens, doctors, pharmacies, supermarkets, playgrounds, transit), dominant-
+  gastro-type summary, curation rules that demote bench-class counts from default views;
+  **new persona: prospective mover** added to I9/I12; display-only (index outputs byte-identical). ·
+  *DE pair + data-analyst + web pair; **domain gate on mover framing** (inform, never recommend)* ·
+  I14, I18.
+
 **I-C — Communication machinery**
 - **I8** **ADR: public communication surface & channel policy** — LinkedIn + Bluesky/Mastodon
   (Instagram deferred pending I9 evidence); **draft-and-screen only, maintainer posts manually**;

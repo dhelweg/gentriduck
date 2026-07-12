@@ -98,6 +98,13 @@ fi
 # (Claude encodes the cwd by replacing / . _ with - .)
 PROJDIR="$HOME/.claude/projects/$(printf '%s' "$DIR" | sed 's#[/._]#-#g')"
 
+# The watchdog touches this when it kills an idle-hung session, so the main loop can tell a
+# watchdog-forced restart apart from a normal exit and back off accordingly (issue #245: a
+# connectivity outage wedges the session, the watchdog kills it after a LONG idle, and the old
+# `ran < 120` heuristic then treated that long run as healthy — resetting backoff to 60s and
+# respinning through the whole outage every ~30 min). Per-host, per-session so two repos don't clash.
+WATCHDOG_FLAG="$HOME/.claude/.gentriduck-devmode-watchdog-kill.$SESSION_NAME"
+
 # Keep the host awake while running, using whatever's available; no-op on a
 # headless server that never sleeps.
 if command -v caffeinate >/dev/null 2>&1; then            # macOS
@@ -125,6 +132,19 @@ watchdog() {
         age=$(( $(date +%s) - mtime ))
         if [ "$age" -gt "$STALL_SECS" ]; then
             echo "--- watchdog: session idle ${age}s (> ${STALL_SECS}s) — killing to force restart $(date) ---" >> "$LOG"
+            # Capture WHY, not just the idle timeout (issue #245): the raw API/connectivity error
+            # only ever prints to the interactive surface and never reaches this log, so an outage
+            # looks like a bare "idle kill". Scrape the transcript tail for known error signatures so
+            # the next occurrence is diagnosable from the log alone. Matches are short substrings;
+            # cut caps any pathological line. No match → genuine hang, note that too.
+            errsig="$(grep -aoiE 'API Error[^"]{0,120}|Unable to connect to API[^"]{0,80}|FailedToOpenSocket|ConnectionRefused|Connection (error|refused|reset)| E(CONNREFUSED|CONNRESET|TIMEDOUT|HOSTUNREACH|AI_AGAIN)|getaddrinfo|TLS|socket hang' "$newest" 2>/dev/null | tail -5 | cut -c1-200)"
+            if [ -n "$errsig" ]; then
+                echo "    transcript shows connectivity/API errors before the hang (likely root cause):" >> "$LOG"
+                printf '%s\n' "$errsig" | sed 's/^/    | /' >> "$LOG"
+            else
+                echo "    (no API/connectivity error signature in transcript tail — treating as a generic hang)" >> "$LOG"
+            fi
+            touch "$WATCHDOG_FLAG"
             pkill -f -- "--remote-control $SESSION_NAME"
             return
         fi
@@ -146,8 +166,10 @@ mkdir -p "$(dirname "$LOG")"
 } | tee -a "$LOG"
 
 fails=0
+rm -f "$WATCHDOG_FLAG"                                      # drop any stale flag from a previous run
 while true; do
     start=$(date +%s)
+    rm -f "$WATCHDOG_FLAG"                                  # fresh each attempt; the watchdog sets it iff it kills
     echo "--- devmode start $(date) (perm: $PERM_LABEL) ---" >> "$LOG"
 
     watchdog & wd=$!                                        # self-healing: restart on hang, not just exit
@@ -156,8 +178,16 @@ while true; do
     kill "$wd" 2>/dev/null; wait "$wd" 2>/dev/null         # stop this attempt's watchdog
 
     ran=$(( $(date +%s) - start ))
-    if [ "$ran" -lt 120 ]; then fails=$((fails + 1)); else fails=0; fi   # quick exit → escalate backoff
-    case "$fails" in 0 | 1) backoff=60 ;; 2) backoff=300 ;; *) backoff=900 ;; esac
-    echo "--- devmode exited (code $code) after ${ran}s; restart #$fails in ${backoff}s $(date) ---" >> "$LOG"
+    if [ -f "$WATCHDOG_FLAG" ]; then watchdog_killed=1; else watchdog_killed=0; fi
+    rm -f "$WATCHDOG_FLAG"
+    # A fault is EITHER a quick exit (fast crash) OR a watchdog kill (idle-hung — the connectivity
+    # wedge of #245, which runs LONG before the kill and so used to look healthy here). Both escalate
+    # backoff; only a long run that the watchdog did NOT have to kill resets it. Cap at 1800s so a
+    # sustained outage spins ~hourly (STALL_SECS idle + backoff), not every ~30 min, and stops
+    # hammering a refused endpoint. A one-off hang is fails=1 → 60s, same as before.
+    if [ "$ran" -lt 120 ] || [ "$watchdog_killed" -eq 1 ]; then fails=$((fails + 1)); else fails=0; fi
+    case "$fails" in 0 | 1) backoff=60 ;; 2) backoff=300 ;; 3) backoff=900 ;; *) backoff=1800 ;; esac
+    reason=$([ "$watchdog_killed" -eq 1 ] && echo "watchdog-hang" || echo "exit")
+    echo "--- devmode $reason (code $code) after ${ran}s; restart #$fails in ${backoff}s $(date) ---" >> "$LOG"
     sleep "$backoff"
 done

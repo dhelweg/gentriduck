@@ -5,7 +5,7 @@
   "upstream": {
     "url": "https://gdi.berlin.de/services/wfs/mss_<year> (mss<year>_indizes_<n> feature type)",
     "vintage": "2013,2015,2017,2019,2021,2023,2025",
-    "retrieved_at": "2026-07-09T16:04:07Z"
+    "retrieved_at": "2026-07-10T22:15:42Z"
   },
   "outputs": [
     {
@@ -53,7 +53,7 @@
   ],
   "ingest_script": {
     "module": "ingestion.berlin.mss.ingest_mss_2013_excel",
-    "git_sha": "f879e422e41c1a0d457bff01c41b6eb9baa08c94"
+    "git_sha": "81edf98496a5f7e66f15e6886f405e249033c331"
   },
   "manifest_schema_version": 1
 }
