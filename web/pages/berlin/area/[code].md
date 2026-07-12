@@ -79,7 +79,7 @@ breadcrumb: "select area_name as breadcrumb from gentriduck_marts.gentrification
 -->
 
 ```sql area_info
-select area_name, city_code
+select area_name, city_code, substr(area_code, 1, 6) as bzr_code
 from gentriduck_marts.gentrification_index
 where variant = 'live_data' and area_level = 'plr' and city_code = 'BER'
   and area_code = '${params.code}'
@@ -160,6 +160,12 @@ where
 ```
 
 <Hero compact eyebrow="Chapter 3 — The Evidence · most granular" title={area_info[0] ? area_info[0].area_name : 'Neighbourhood'} lede="Status trajectory, commercial-mix development, Offering Advantage, and land value/rent for one Berlin Planungsraum." />
+
+<!-- #247 (I18-web slice 2): breadcrumb up to this area's Bezirksregion coarse profile -- the
+     other direction of the breadcrumb nav that ticket asks for (BZR page links back down to
+     here via its own child table). bzr_code comes from the area_info query above (a plain
+     substr of area_code), same derivation as dim_area_hierarchy.sql / int_mss_bzr_aggregate.sql. -->
+Up: <a href="/berlin/area/bzr/{area_info[0] && area_info[0].bzr_code}">Bezirksregion profile</a> · [district browse](/berlin/area-detail) · [all districts](/berlin/area/bezirk)
 
 <script>
   const areaName = () => (area_info?.[0] ? area_info[0].area_name : 'This area');
