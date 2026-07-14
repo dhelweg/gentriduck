@@ -43,13 +43,15 @@ methodological upgrade in this revival (`index-definition.md` §0.2, ADR-0008 De
 | **D2 — Social change** | Berlin's official Dynamik-Index class (improving/stable/worsening) | Outcome (direction) | MSS |
 | **D3 — Commercial / amenity mix** | Commercial POI density and its year-over-year change | Predictor | OpenStreetMap |
 | **D4 — Socio-demographic baseline** | Composite of welfare-register shares (tenure, age, migration background) at a fixed baseline year | Baseline covariate | EWR |
-| **D5 — Displacement / affordability** | *Not yet built.* **(Follow-up now tracked: #258 (D5-wire) — see `docs/planning/deferred-work-audit-2026-07/README.md`.)** Milieuschutz zoning, rent burden, tenant turnover | Predictor (planned, Epic D) | — |
+| **D5 — Displacement / affordability** | *Not yet built.* **(Follow-up now tracked: #258 (D5-wire) — see `docs/planning/deferred-work-audit-2026-07.md`.)** Milieuschutz zoning, rent burden, tenant turnover | Predictor (planned, Epic D) | — |
 
 We report D1/D2 as the outcome that D3 and D4 are tested *against* — never averaged into one number.
 D5 (an explicit displacement/affordability signal) is the biggest current gap: without it, the model
 can observe socio-economic upgrading but **cannot distinguish** genuine incumbent-led improvement from
 gentrification-driven displacement (`index-definition.md` §1.3, tension cell `improving-vulnerable`).
-The completeness of this page's carry-forward methodology caveats is audited under **(Follow-up now tracked: #262 (G2-audit) — see `docs/planning/deferred-work-audit-2026-07/README.md`.)**
+
+<!-- Caveat-completeness of this public methodology page is audited under #262 (G2-audit); see docs/planning/deferred-work-audit-2026-07.md. Keep this as a comment — do not surface an internal ticket number to public readers. -->
+
 
 ## 3. Why "lead-lag", not a snapshot
 

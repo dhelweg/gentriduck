@@ -69,7 +69,7 @@ Per the C3 sign-off, `total_poi_count` is a raw count reflecting both real densi
 2. Add a `n_components_present` (0–3) and component-NULL-reason flag to each row.
 3. On G2, state plainly that the 1/3-mean grand index is a **new** C4 construction, not a reproduction of the 2018 thesis aggregation.
 4. Validate the directional revival (Epic B): the rank correlation of the C4 status index against the thesis status index on overlapping years should be strongly positive — add this as a documented spot-check.
-5. Consider winsorising z-scores (e.g. ±3 SD) before summing, so a single extreme PLR-year does not swing the composite. **(Follow-up now tracked: #268 (QA-winsor) — see `docs/planning/deferred-work-audit-2026-07/README.md`.)**
+5. Consider winsorising z-scores (e.g. ±3 SD) before summing, so a single extreme PLR-year does not swing the composite. **(Follow-up now tracked: #268 (QA-winsor) — see `docs/planning/deferred-work-audit-2026-07.md`.)**
 
 ## Conditions to clear before Epic D/E/F (not before this intermediate merges)
 

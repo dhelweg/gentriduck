@@ -97,7 +97,7 @@ ratio. Both components already exist in the pipeline; no new source is needed fo
 **This proxy formula, and its integration into an intermediate sub-index or the governed
 `gentrification_index`, is explicitly deferred to a follow-up gated slice** (touches
 `transform/models/intermediate/*` / the index mart — methodology-bearing under R-C1, requiring
-geo-data-scientist + gentrification-domain-expert sign-off per R-A1's grounding pattern). **(Follow-up now tracked: #258 (D5-wire) — see `docs/planning/deferred-work-audit-2026-07/README.md`.)** This ADR
+geo-data-scientist + gentrification-domain-expert sign-off per R-A1's grounding pattern). **(Follow-up now tracked: #258 (D5-wire) — see `docs/planning/deferred-work-audit-2026-07.md`.)** This ADR
 only fixes the *sourcing* decision, consistent with keeping ADRs and methodology work as separate,
 independently-reviewable slices (the same pattern ADR-0006/0007 used ahead of R-A1/R-A2).
 

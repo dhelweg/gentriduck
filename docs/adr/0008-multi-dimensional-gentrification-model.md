@@ -105,7 +105,7 @@ Concrete bindings the DE pair must honour:
   the model architecture accommodates it without a future redefinition. Its source ADR and staging
   land with R-B1 (#70) in Epic D. R-A1 must leave a clean seam (a nullable / absent dimension slot)
   so D5 can be added later **without** restructuring the index or breaking the ADR-0004 mart
-  contract. **(Follow-up now tracked: #258 (D5-wire) — see `docs/planning/deferred-work-audit-2026-07/README.md`.)**
+  contract. **(Follow-up now tracked: #258 (D5-wire) — see `docs/planning/deferred-work-audit-2026-07.md`.)**
 
 The **outcome dimensions (D1, D2) are Berlin-specific in their *source* (MSS), not in their *role*.**
 The city-agnostic core (ADR-0005) requires that the model accept a generic "social-status outcome"

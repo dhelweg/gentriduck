@@ -65,9 +65,17 @@ Five parallel doc-scan agents + a code grep, cross-referenced against the full o
 
 Per-ticket SPECs live under each epic's `tickets/` directory:
 
-- **epic-c:** [C-pre2021-poi](../../epic-c/tickets/C-pre2021-poi.md) · [C-craft-taxonomy](../../epic-c/tickets/C-craft-taxonomy.md) · [QA-winsor](../../epic-c/tickets/QA-winsor.md) · [QA-raumid](../../epic-c/tickets/QA-raumid.md) *(no epic label; filed under epic-c as it fixes the Epic-C `int_thesis_2018_area_index` / `dim_area` models)*
-- **epic-d:** [D5-wire](../../epic-d/tickets/D5-wire.md) · [D3-brw-change](../../epic-d/tickets/D3-brw-change.md)
-- **epic-e:** [A10-P2](../../epic-e/tickets/A10-P2.md) · [R-A8b](../../epic-e/tickets/R-A8b.md) · [OA-ablation](../../epic-e/tickets/OA-ablation.md) · [R-B2b](../../epic-e/tickets/R-B2b.md)
-- **epic-g:** [G2-audit](../../epic-g/tickets/G2-audit.md)
-- **epic-h:** [H-reg-SE](../../epic-h/tickets/H-reg-SE.md)
-- **epic-i:** [I-coarse-index](../../epic-i/tickets/I-coarse-index.md) · [I-ortsteile](../../epic-i/tickets/I-ortsteile.md) · [I20-school-xcheck](../../epic-i/tickets/I20-school-xcheck.md)
+- **epic-c:** [C-pre2021-poi](../epic-c/tickets/C-pre2021-poi.md) · [C-craft-taxonomy](../epic-c/tickets/C-craft-taxonomy.md) · [QA-winsor](../epic-c/tickets/QA-winsor.md) · [QA-raumid](../epic-c/tickets/QA-raumid.md) *(no epic label; filed under epic-c as it fixes the Epic-C `int_thesis_2018_area_index` / `dim_area` models)*
+- **epic-d:** [D5-wire](../epic-d/tickets/D5-wire.md) · [D3-brw-change](../epic-d/tickets/D3-brw-change.md)
+- **epic-e:** [A10-P2](../epic-e/tickets/A10-P2.md) · [R-A8b](../epic-e/tickets/R-A8b.md) · [OA-ablation](../epic-e/tickets/OA-ablation.md) · [R-B2b](../epic-e/tickets/R-B2b.md)
+- **epic-g:** [G2-audit](../epic-g/tickets/G2-audit.md)
+- **epic-h:** [H-reg-SE](../epic-h/tickets/H-reg-SE.md)
+- **epic-i:** [I-coarse-index](../epic-i/tickets/I-coarse-index.md) · [I-ortsteile](../epic-i/tickets/I-ortsteile.md) · [I20-school-xcheck](../epic-i/tickets/I20-school-xcheck.md)
+
+## R-C1 sign-off (the back-link commit)
+
+The commit that added the back-link annotations touches `docs/adr/**` + `docs/methodology/**`, so it went
+through the methodology gate as a traceability-only change. Both verdicts: **PASS**.
+
+- geo-DS: [`docs/methodology/deferred-work-audit-backlink-geo-signoff.md`](../methodology/deferred-work-audit-backlink-geo-signoff.md)
+- domain: [`docs/methodology/deferred-work-audit-backlink-domain-signoff.md`](../methodology/deferred-work-audit-backlink-domain-signoff.md)

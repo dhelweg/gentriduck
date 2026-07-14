@@ -2,7 +2,7 @@
 
 - **Issue:** [#268](https://github.com/dhelweg/gentriduck/issues/268)
 - **Tier:** 3 · **Epic:** c · **Labels:** `epic-c,dbt,methodology-bearing`
-- **Filed:** 2026-07-14, from the deferred-work audit ([index](../../planning/deferred-work-audit-2026-07/README.md))
+- **Filed:** 2026-07-14, from the deferred-work audit ([index](../../planning/deferred-work-audit-2026-07.md))
 
 ---
 

@@ -167,7 +167,7 @@ PASS also required by the R-C1 dual gate.
   "risks": [
     "One taxonomy leaf (economy/workspace/coworking_space) has no seed_poi_offering_relevance match and defaults to tier-0/weight-0 -- pre-existing taxonomy drift that should be reconciled before OA-C.1 treats the improved composite as complete",
     "B2's data_corr continuous-calibration recommendation is not yet incorporated -- the improved variant is theory-tier-only",
-    "The improved predictor is Berlin lor_2021-only; lor_pre2021/Hamburg extension needs its own tier-weight review, not a mechanical crosswalk reuse **(Follow-up now tracked: #261 (OA-ablation) — see `docs/planning/deferred-work-audit-2026-07/README.md`.)**"
+    "The improved predictor is Berlin lor_2021-only; lor_pre2021/Hamburg extension needs its own tier-weight review, not a mechanical crosswalk reuse **(Follow-up now tracked: #261 (OA-ablation) — see `docs/planning/deferred-work-audit-2026-07.md`.)**"
   ],
   "recommendations": [
     "OA-C.1 (#174): test whether data_corr-based calibration shrink measurably changes the improved variant's predictive performance vs. the pure theory-tier weight used here",

@@ -32,7 +32,7 @@ data when the POI pipeline is extended. The commit correctly notes this limitati
 **Condition 1 (binding for G2):** The methodology page and the mart description must clearly state
 that the trajectory classification is based on 3 editions (2021–2025, lor_2021 vintage only) and that
 the full 7-edition (2008–2024) trajectory intended by the project plan is deferred until the POI
-pipeline is extended to pre-2021 years. **(Follow-up now tracked: #260 (7-edition panel), enabled by #257 (pre-2021 POI ingestion) — see `docs/planning/deferred-work-audit-2026-07/README.md`.)** Do not present the 3-edition classification as a complete
+pipeline is extended to pre-2021 years. **(Follow-up now tracked: #260 (7-edition panel), enabled by #257 (pre-2021 POI ingestion) — see `docs/planning/deferred-work-audit-2026-07.md`.)** Do not present the 3-edition classification as a complete
 longitudinal trajectory for G2 without this caveat.
 
 ### 2. Classification method — rule-based trend analysis

@@ -2,7 +2,7 @@
 
 - **Issue:** [#265](https://github.com/dhelweg/gentriduck/issues/265)
 - **Tier:** 2 · **Epic:** h · **Labels:** `epic-h,ml`
-- **Filed:** 2026-07-14, from the deferred-work audit ([index](../../planning/deferred-work-audit-2026-07/README.md))
+- **Filed:** 2026-07-14, from the deferred-work audit ([index](../../planning/deferred-work-audit-2026-07.md))
 
 ---
 

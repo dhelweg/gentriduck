@@ -134,7 +134,7 @@ unambiguously positive social change.
 
 3. **[Advisory, future R-A8 extension]** When the full 7-edition panel is available (2013–2025),
    distinguish between areas that were `improving` early and later stabilized vs. areas in ongoing
-   succession. This enriches the Dangschat temporal framing. **(Follow-up now tracked: #260 — see `docs/planning/deferred-work-audit-2026-07/README.md`.)**
+   succession. This enriches the Dangschat temporal framing. **(Follow-up now tracked: #260 — see `docs/planning/deferred-work-audit-2026-07.md`.)**
 
 ---
 

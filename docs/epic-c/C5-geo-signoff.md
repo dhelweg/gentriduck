@@ -144,7 +144,7 @@ b. **City-wide count drop test:** alert if Berlin's total POI count drops >5% ye
   "recommendations": [
     "Document uniform-coverage assumption as a limitation in int_poi_status_dynamism.sql header",
     "Add anomaly tests (warn severity) for PLR share spikes (>2x 5yr rolling avg) and city-wide count drops (>5% YoY)",
-    "Consider winsorizing dynamism_score at +/-3 SD as a non-blocking enhancement post-C5 **(Follow-up now tracked: #268 (QA-winsor) — see `docs/planning/deferred-work-audit-2026-07/README.md`.)**",
+    "Consider winsorizing dynamism_score at +/-3 SD as a non-blocking enhancement post-C5 **(Follow-up now tracked: #268 (QA-winsor) — see `docs/planning/deferred-work-audit-2026-07.md`.)**",
     "Option B (ohsome edit-density normalization) remains available for a future epic if needed post-publication"
   ]
 }

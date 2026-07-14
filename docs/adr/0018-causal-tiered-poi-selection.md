@@ -73,7 +73,7 @@ rule they already followed).
   filter* (does an established urban-sociology mechanism connect this POI type to commercial
   gentrification), evaluated ex ante from literature — **not** causal inference in the DiD /
   event-study sense (#80 [A10]), which estimates a treatment effect from data and is explicitly
-  deferred. **(Follow-up now tracked: #259 (A10-P2) — see `docs/planning/deferred-work-audit-2026-07/README.md`.)** Conflating the two would misrepresent the improved variant as causally validated when it
+  deferred. **(Follow-up now tracked: #259 (A10-P2) — see `docs/planning/deferred-work-audit-2026-07.md`.)** Conflating the two would misrepresent the improved variant as causally validated when it
   is a theory-curated *descriptive* predictor (D-1, inherited from ADR-0017).
 
 ---

@@ -9,7 +9,7 @@ branch: feature/80-a10p1-early-warning-indicator
 
 - **Branch:** `feature/80-a10p1-early-warning-indicator`
 - **Issue / task:** #80 [A10-P1] Part 1 only (predictive, out-of-time-validated early-warning score).
-  Part 2 (DiD / event-study on Milieuschutz, #70) is explicitly OUT of scope and **not** assessed here. **(Follow-up now tracked: #259 (A10-P2) — see `docs/planning/deferred-work-audit-2026-07/README.md`.)**
+  Part 2 (DiD / event-study on Milieuschutz, #70) is explicitly OUT of scope and **not** assessed here. **(Follow-up now tracked: #259 (A10-P2) — see `docs/planning/deferred-work-audit-2026-07.md`.)**
 - **Reviewer:** gentrification-domain-expert (urban-sociology / housing-policy theory gate, R-C1)
 - **Lens:** theory fidelity, indicator/outcome meaning, honest framing of a null for eventual public
   (G2/#38) consumption, and displacement-measurement ethics. Statistical soundness (permutation-test

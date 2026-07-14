@@ -86,7 +86,7 @@ across genuinely different outcomes as if they were commensurable (the exact
 confound ADR-0017 D3 exists to prevent, restated correctly in the script's Run 3
 prose). Reporting the boundary itself as the finding, with an explicit follow-up
 path (lor_pre2021 re-tiering extension), is the only methodologically honest option
-available at this ticket's scope. **(Follow-up now tracked: #261 (OA-ablation) — see `docs/planning/deferred-work-audit-2026-07/README.md`.)**
+available at this ticket's scope. **(Follow-up now tracked: #261 (OA-ablation) — see `docs/planning/deferred-work-audit-2026-07.md`.)**
 
 ### 2.2 The non-significant, wrong-direction aggregate result is reported honestly, not spun
 

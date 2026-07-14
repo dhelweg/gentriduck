@@ -141,7 +141,7 @@ for.
   ],
   "recommendations": [
     "When #200 lands, refresh both web/pages/thesis-recheck.md and web/pages/methodology-comparison.md together, not just the findings docs, since both cite the pre-fix n=92 figure",
-    "Consider a future ticket to extend the improved-variant causal-tier seed to lor_pre2021/2018 so a true head-to-head ablation becomes publishable **(Follow-up now tracked: #261 (OA-ablation) — see `docs/planning/deferred-work-audit-2026-07/README.md`.)**"
+    "Consider a future ticket to extend the improved-variant causal-tier seed to lor_pre2021/2018 so a true head-to-head ablation becomes publishable **(Follow-up now tracked: #261 (OA-ablation) — see `docs/planning/deferred-work-audit-2026-07.md`.)**"
   ]
 }
 ```
