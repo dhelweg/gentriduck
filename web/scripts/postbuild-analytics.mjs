@@ -6,12 +6,12 @@
 // chosen over Cloudflare Web Analytics — see the ADR amendment for the full rationale.
 //
 // The GoatCounter site *code* (the `<code>` in `<code>.goatcounter.com`) is NOT a secret — it is
-// designed to sit in every page's public source — so it's read from a plain env var
-// (`GOATCOUNTER_CODE`), not a `.env`/credential. If unset, this step is a no-op: local dev,
-// preview, and any build without the env var set produce byte-identical output to before this
-// ticket, keeping "no account needed to preview" (golden rule #5) intact. Set it only in the
-// deploy environment (e.g. exported before `ops/deploy-gh-pages.sh`) once the maintainer creates
-// the free goatcounter.com site (a manual one-time account step this script cannot do).
+// designed to sit in every page's public source — so it's committed in plain text at
+// `web/goatcounter-code.txt` (one line, no `.env`/credential handling needed) rather than relying
+// on a per-machine env var, so any maintainer machine gets it via `git pull` with nothing to
+// re-export. `GOATCOUNTER_CODE` still overrides the file when set, for testing a different code
+// without editing the committed default. Delete/empty the file (and don't set the env var) to
+// go back to a no-op build — local dev/preview needs no account either way (golden rule #5).
 //
 // Injected here at post-build (not in Evidence's app.html) for the same reason as
 // postbuild-noindex.mjs: `.evidence/template` is gitignored and regenerated every build, so an
@@ -26,7 +26,23 @@ const BUILD_DIR = join(
   "..",
   "build",
 );
-const CODE = process.env.GOATCOUNTER_CODE;
+const CODE_FILE = join(
+  fileURLToPath(new URL(".", import.meta.url)),
+  "..",
+  "goatcounter-code.txt",
+);
+
+async function resolveCode() {
+  if (process.env.GOATCOUNTER_CODE) return process.env.GOATCOUNTER_CODE.trim();
+  try {
+    const contents = await readFile(CODE_FILE, "utf8");
+    return contents.trim();
+  } catch {
+    return "";
+  }
+}
+
+const CODE = await resolveCode();
 
 async function* htmlFiles(dir) {
   for (const entry of await readdir(dir, { withFileTypes: true })) {
@@ -38,7 +54,7 @@ async function* htmlFiles(dir) {
 
 if (!CODE) {
   console.log(
-    "postbuild-analytics: GOATCOUNTER_CODE not set, skipping beacon injection (no-op — see web/README.md).",
+    "postbuild-analytics: no code (GOATCOUNTER_CODE unset, goatcounter-code.txt empty/missing) — skipping beacon injection (no-op — see web/README.md).",
   );
   process.exit(0);
 }

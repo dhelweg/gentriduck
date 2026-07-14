@@ -258,18 +258,18 @@ are free and cookieless with no consent banner required. GoatCounter is chosen b
 Node postbuild script (`web/scripts/postbuild-analytics.mjs`) injects the beacon into every built
 HTML file's `<head>`, run as a `&&` step after `evidence build` in `package.json`. The GoatCounter
 site **code** (the `<code>` in `<code>.goatcounter.com`) is **not a secret** — it is designed to be
-public in every page's source — so it is read from a plain env var (`GOATCOUNTER_CODE`, documented in
-`web/README.md`, no `.env` requirement) rather than treated as a credential. **If unset, the postbuild
-step is a no-op** (logs a notice) so local dev/preview and CI-less builds are unaffected — this keeps
-"no account needed to preview" (golden rule #5) intact; analytics is an opt-in production concern, not
-a build dependency.
+public in every page's source — so it is committed in plain text at `web/goatcounter-code.txt`
+(one line, no `.env`/credential handling) rather than treated as a credential. **Updated 2026-07-13:**
+initially read from a plain env var (`GOATCOUNTER_CODE`) only; moved to a committed default because
+the maintainer deploys from multiple machines and a per-shell env var doesn't travel with `git pull`.
+`GOATCOUNTER_CODE` still overrides the file when set (e.g. to test a different code). **If neither
+is set, the postbuild step is a no-op** (logs a notice) so local dev/preview and CI-less builds are
+unaffected — this keeps "no account needed to preview" (golden rule #5) intact; analytics is an
+opt-in production concern, not a build dependency.
 
-**Open follow-up (maintainer action, not code):** a GoatCounter account/site (free, `goatcounter.com`
-signup, choose a site code) must be created once and `GOATCOUNTER_CODE` set at deploy time
-(`ops/deploy-gh-pages.sh` or the maintainer's shell) — the PM cannot create third-party accounts on
-the maintainer's behalf. Until that env var is set in the deploy environment, the site builds and
-serves exactly as before (no beacon, no behavior change) — this ticket ships the tooling, not the
-live account.
+**Open follow-up:** resolved 2026-07-13 — the maintainer created the free `goatcounter.com` account
+(site code `dhelweg`) and it is now committed at `web/goatcounter-code.txt`, live on the next
+`ops/deploy-gh-pages.sh` run.
 
 **Gate:** hosting/tooling addition (a new free, open-source analytics beacon), **not
 methodology-bearing** (no R-C1 path touched) — consistent with this ADR's own Status/Process note, so
