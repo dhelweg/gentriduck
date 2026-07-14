@@ -4,7 +4,8 @@ A one-off sweep of the tickets **and** the docs/code for work the project explic
 do "later / once unblocked / in a follow-up / out of scope for now / parked / deferred", plus
 remainders of **closed** tickets that were only partly delivered — i.e. gaps that no open issue was
 tracking. Each surviving gap was filed as a new ticket (**#257–#271**) and added to the Gentriduck
-board (Todo). This doc is the index; the per-ticket SPECs live alongside it.
+board (Todo). This doc is the index; the per-ticket SPECs live under each epic's `tickets/`
+directory (linked in **SPEC files** below).
 
 **Why this doc exists:** so a future audit does not re-discover the same gaps. Every source location
 that flagged one of these deferrals has been **back-linked** to its new ticket (search the repo for
@@ -59,3 +60,14 @@ Five parallel doc-scan agents + a code grep, cross-referenced against the full o
 
 `docs/handoff/archive/*.md` was grep-skimmed, not read line-by-line (large, mostly restating already
 -tracked blocked items). Every hit there pointed back to an already-tracked issue.
+
+## SPEC files
+
+Per-ticket SPECs live under each epic's `tickets/` directory:
+
+- **epic-c:** [C-pre2021-poi](../../epic-c/tickets/C-pre2021-poi.md) · [C-craft-taxonomy](../../epic-c/tickets/C-craft-taxonomy.md) · [QA-winsor](../../epic-c/tickets/QA-winsor.md) · [QA-raumid](../../epic-c/tickets/QA-raumid.md) *(no epic label; filed under epic-c as it fixes the Epic-C `int_thesis_2018_area_index` / `dim_area` models)*
+- **epic-d:** [D5-wire](../../epic-d/tickets/D5-wire.md) · [D3-brw-change](../../epic-d/tickets/D3-brw-change.md)
+- **epic-e:** [A10-P2](../../epic-e/tickets/A10-P2.md) · [R-A8b](../../epic-e/tickets/R-A8b.md) · [OA-ablation](../../epic-e/tickets/OA-ablation.md) · [R-B2b](../../epic-e/tickets/R-B2b.md)
+- **epic-g:** [G2-audit](../../epic-g/tickets/G2-audit.md)
+- **epic-h:** [H-reg-SE](../../epic-h/tickets/H-reg-SE.md)
+- **epic-i:** [I-coarse-index](../../epic-i/tickets/I-coarse-index.md) · [I-ortsteile](../../epic-i/tickets/I-ortsteile.md) · [I20-school-xcheck](../../epic-i/tickets/I20-school-xcheck.md)

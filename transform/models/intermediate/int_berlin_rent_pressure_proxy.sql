@@ -52,7 +52,7 @@
 -- gentrification_index (ADR-0019 explicitly scopes that integration to a later,
 -- separately-gated slice).
 -- Follow-up now tracked: #258 (see
--- docs/planning/deferred-work-audit-2026-07/D5-wire.md).
+-- docs/epic-d/tickets/D5-wire.md).
 --
 -- dbt_meta_owner: data-engineer
 -- depends_on: {{ ref('int_price_rent_wohnlage_mietspiegel') }}

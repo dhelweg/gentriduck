@@ -21,7 +21,7 @@
 -- raum_id join key: golden CSVs sometimes drop the leading zero (Bezirk 1-9), so
 -- lpad to the WFS's zero-padded width (6 for bzr, 8 for plr) before joining.
 -- Follow-up now tracked: #266 (see
--- docs/planning/deferred-work-audit-2026-07/QA-raumid.md).
+-- docs/epic-c/tickets/QA-raumid.md).
 {{
     config(
         materialized="view",

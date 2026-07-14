@@ -72,7 +72,7 @@
 -- gives the Berlin Ortsteil non-nesting case. A follow-up ticket can add this
 -- edge once that method is chosen and gated.
 -- Follow-up now tracked: #269 (see
--- docs/planning/deferred-work-audit-2026-07/I-ortsteile.md).
+-- docs/epic-i/tickets/I-ortsteile.md).
 {{
     config(
         materialized="view",
