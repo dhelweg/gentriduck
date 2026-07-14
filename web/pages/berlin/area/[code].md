@@ -161,11 +161,20 @@ where
 
 <Hero compact eyebrow="Chapter 3 — The Evidence · most granular" title={area_info[0] ? area_info[0].area_name : 'Neighbourhood'} lede="Status trajectory, commercial-mix development, Offering Advantage, and land value/rent for one Berlin Planungsraum." />
 
-<!-- #247 (I18-web slice 2): breadcrumb up to this area's Bezirksregion coarse profile -- the
-     other direction of the breadcrumb nav that ticket asks for (BZR page links back down to
-     here via its own child table). bzr_code comes from the area_info query above (a plain
-     substr of area_code), same derivation as dim_area_hierarchy.sql / int_mss_bzr_aggregate.sql. -->
-Up: <a href="/berlin/area/bzr/{area_info[0] && area_info[0].bzr_code}">Bezirksregion profile</a> · [district browse](/berlin/area-detail) · [all districts](/berlin/area/bezirk)
+<!-- #247 (I18-web slice 2): breadcrumb up to this area's Bezirksregion coarse profile. bzr_code
+     comes from the area_info query above (a plain substr of area_code), same derivation as
+     dim_area_hierarchy.sql / int_mss_bzr_aggregate.sql.
+
+     #255: guard on the VALUE (`area_info[0]?.bzr_code`), not just the row. Evidence's
+     unparameterized `[code]` template-shell build renders a placeholder `area_info[0]` row whose
+     `bzr_code` column is `undefined`; a row-level `area_info[0] ? ...` check is still truthy and
+     concatenates the literal text "undefined" into the href, producing a crawlable
+     `/berlin/area/bzr/undefined` route (which then cascades to `pgr/` and `bezirk/undefined`). A
+     static-prefix href inside a one-line `{#if}` -- kept as an explicit `<p>` so mdsvex can't
+     split the paragraph around the block -- both drops the "undefined" segment AND preserves
+     Evidence's base-path rewriting. (A fully-dynamic `{cond ? a : b}` href instead defeats
+     base-path rewriting and emits a double-slashed `//berlin` path.) -->
+<p>Up: {#if area_info[0]?.bzr_code}<a href="/berlin/area/bzr/{area_info[0].bzr_code}">Bezirksregion profile</a>{:else}<a href="/berlin/area/bezirk">Bezirksregion profile</a>{/if} · <a href="/berlin/area-detail">district browse</a> · <a href="/berlin/area/bezirk">all districts</a></p>
 
 <script>
   const areaName = () => (area_info?.[0] ? area_info[0].area_name : 'This area');
