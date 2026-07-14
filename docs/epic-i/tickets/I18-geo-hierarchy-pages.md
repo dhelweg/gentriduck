@@ -23,7 +23,7 @@ PLR and back, with level-appropriate content at each step.
   Add a `dim_area_hierarchy` model (or `parent_area_code` on `dim_area`) derived from code
   structure, city-agnostic per ADR-0005 (Hamburg: Gebiet → Stadtteil → Bezirk), with dbt tests
   (every child has exactly one parent; both LOR vintages handled via the existing crosswalk logic).
-- **Berlin "Stadtteile" (Ortsteile, 96): explicitly out of scope v1.** Ortsteile are not part of
+- **Berlin "Stadtteile" (Ortsteile, 96): explicitly out of scope v1.** **(Follow-up now tracked: #269 (I-ortsteile) — see `docs/planning/deferred-work-audit-2026-07.md`.)** Ortsteile are not part of
   LOR and their boundaries do not nest with PLRs — surfacing them needs a crosswalk + MAUP
   decision. Record as an open question for geo-DS in the sign-off; a follow-up ticket if wanted.
 - **What a coarse-level page shows (phased, gate-aware):**
@@ -32,7 +32,7 @@ PLR and back, with level-appropriate content at each step.
     MSS at BZR (exists: `int_mss_bzr_aggregate`), POI counts, and the **distribution of child
     areas over the six typology stages** (e.g. "3 of 9 PLRs in this BZR are in stage X") — a
     descriptive rollup, *not* a re-scored index.
-  - *Not in this ticket:* computing a gentrification-index value at BZR/PGR/Bezirk grain. That is
+  - *Not in this ticket:* computing a gentrification-index value at BZR/PGR/Bezirk grain. **(Follow-up now tracked: #267 (I-coarse-index) — see `docs/planning/deferred-work-audit-2026-07.md`.)** That is
     a spatial-aggregation methodology decision (MAUP) → its own methodology-bearing follow-up if
     ever wanted.
   - Even the Phase-1 rollup rules (sum-then-recompute, stage-distribution framing) get a geo-DS

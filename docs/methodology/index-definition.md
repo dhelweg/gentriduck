@@ -195,7 +195,7 @@ attribute, never as a typology stage.** Rationale: designation is simultaneously
 the Senate identified upgrading/displacement pressure, and (b) an *intervention* that *suppresses* the
 very displacement it flags. Folding it into a stage would conflate a risk signal with its own treatment
 effect. Implementation seam: a nullable boolean/category overlay on the typology, populated in Epic D
-when D5 lands. R-A1 leaves the slot; it does **not** populate it.
+when D5 lands. R-A1 leaves the slot; it does **not** populate it. **(Follow-up now tracked: #258 (D5-wire) — see `docs/planning/deferred-work-audit-2026-07.md`.)**
 
 ### 1.9 Cut-point governance
 
@@ -362,7 +362,7 @@ one edition and niedrig in another (range = 2).
 **Mixed:**
 All remaining patterns are classified as **mixed**. With 3 editions and an integer ordinal, the
 mixed category is structurally vacuous (all PLRs clear the thresholds), but it will capture
-V-shapes and N-shapes when the full 7-edition panel (2013-2025) becomes available.
+V-shapes and N-shapes when the full 7-edition panel (2013-2025) becomes available. **(Follow-up now tracked: #260 — see `docs/planning/deferred-work-audit-2026-07.md`.)**
 
 **Caveat — improving trajectory interpretation:**
 A trajectory classified as `improving` (D1 status numerically decreased = less deprived) does NOT

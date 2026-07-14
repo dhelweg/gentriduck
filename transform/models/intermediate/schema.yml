@@ -3030,6 +3030,7 @@ models:
       docs/methodology/B1-rent-pressure-domain-signoff.md.
 
       Source: int_price_rent_wohnlage_mietspiegel + stg_berlin_mss_indicators.
+      Follow-up now tracked: #258 (D5-wire).
     meta:
       dbt_meta_owner: data-engineer
     data_tests:
@@ -3117,6 +3118,7 @@ models:
       not imputation.
 
       Source: int_ewr_socioeco.
+      Follow-up now tracked: #258 (D5-wire).
     meta:
       dbt_meta_owner: data-engineer
     data_tests:

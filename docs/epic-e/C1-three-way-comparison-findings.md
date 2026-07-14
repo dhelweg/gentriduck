@@ -32,6 +32,6 @@ The improved-variant predictor (`status_score_improved`, OA-B.1–B.3 #170–#17
 
 ## Follow-ups
 
-- A true same-anchor ablation needs the improved-variant causal-tier seed and pipeline extended to `lor_pre2021`/2018 (new methodology-bearing ticket, not mechanical) — tracked, not scheduled by this ticket.
+- A true same-anchor ablation needs the improved-variant causal-tier seed and pipeline extended to `lor_pre2021`/2018 (new methodology-bearing ticket, not mechanical) — tracked, not scheduled by this ticket. **(Follow-up now tracked: #261 (OA-ablation), enabled by #257 (pre-2021 POI ingestion) — see `docs/planning/deferred-work-audit-2026-07.md`.)**
 - The bandwidth-fragility publish gate (ADR-0017 C-4) and minimum-POI-base flag (D-3) remain open obligations on any future public display of either correlation.
 

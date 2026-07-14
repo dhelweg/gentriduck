@@ -43,7 +43,7 @@ the district — with low-signal categories removed from default views.
   to; no real-estate-portal language. OSM completeness bias for schools/doctors (well-mapped vs
   poorly-mapped areas) stated as a caveat next to the block; geo-DS consulted on whether counts
   need a completeness disclaimer per category (official directories, e.g. the Berlin school
-  registry, noted as a possible future cross-check ticket — not in scope).
+  registry, noted as a possible future cross-check ticket — not in scope). **(Follow-up now tracked: #270 (I20-school-xcheck) — see `docs/planning/deferred-work-audit-2026-07.md`.)**
 
 ## Acceptance criteria
 - Ingestion retains the agreed tags; `mart_area_amenities` built + tested; `uv run poe build`

@@ -35,6 +35,8 @@
 -- almost entirely covered" without this model having to pick a materiality
 -- threshold itself (that threshold choice is deferred to the consumer /
 -- G2 disclosure, per the geo-signoff).
+-- Follow-up now tracked: #258 (see
+-- docs/epic-d/tickets/D5-wire.md).
 --
 -- Current-state only (no time series): the WFS exposes only the *current*
 -- designation set (ADR-0019 Open Question #2) -- there is no per-year edition

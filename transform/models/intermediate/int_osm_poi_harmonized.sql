@@ -21,6 +21,8 @@
 -- definitions that become active once C1 is extended to capture secondary tags.
 --
 -- craft=* namespace is not in C1 poi_mapping — flag PM for a follow-up ticket.
+-- Follow-up now tracked: #271 (see
+-- docs/epic-c/tickets/C-craft-taxonomy.md).
 --
 -- Provenance values:
 -- 'drift_remap'  — poi_type matched exactly one non-ambiguous drift rule and

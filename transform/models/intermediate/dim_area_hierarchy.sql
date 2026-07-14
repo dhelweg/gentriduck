@@ -71,6 +71,8 @@
 -- flagged as an open question for geo-DS, same treatment the ticket already
 -- gives the Berlin Ortsteil non-nesting case. A follow-up ticket can add this
 -- edge once that method is chosen and gated.
+-- Follow-up now tracked: #269 (see
+-- docs/epic-i/tickets/I-ortsteile.md).
 {{
     config(
         materialized="view",
@@ -135,7 +137,10 @@ with
             'district' as parent_area_level,
             parent_area_code
         from {{ ref("stg_hamburg_geo") }}
-        where city_code = 'HH' and area_level = 'subarea_l1' and parent_area_code is not null
+        where
+            city_code = 'HH'
+            and area_level = 'subarea_l1'
+            and parent_area_code is not null
     ),
 
     unioned as (
