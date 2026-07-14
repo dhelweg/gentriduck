@@ -30,13 +30,19 @@ limit 1
 select area_code, area_name, '/berlin/area/pgr/' || area_code as pgr_link
 from gentriduck_marts.dim_area_geometry
 where city_code = 'BER' and area_level = 'pgr' and area_code = substr('${params.code}', 1, 4)
+  -- #255: defensive guard, see the matching comment in bezirk/[code].md's "children" query.
+  -- (dim_area_geometry.area_code has no nulls today; this belt-and-suspenders check just makes
+  -- sure a future regression there can't feed a null into pgr_link / the Up-link below.)
+  and area_code is not null and trim(area_code) <> ''
 limit 1
 ```
 
 <Hero compact eyebrow="Chapter 3 — The Evidence" title="{bzr_name[0] && bzr_name[0].area_name} — Bezirksregion profile" lede="Population, composition, and neighbourhood-stage mix for this Bezirksregion, summed and recomputed from its constituent Planungsräume — never a re-scored index at this grain." />
 
-Up: <a href="/berlin/area/pgr/{pgr_name[0] && pgr_name[0].area_code}">{pgr_name[0] && pgr_name[0].area_name}</a> ·
-[all districts](/berlin/area/bezirk) · [full neighbourhood list](/berlin/area)
+<!-- #255: guard on the VALUE (`pgr_name[0]?.area_code`), keep a static-prefix href inside a
+     one-line `{#if}` written as explicit `<p>` HTML -- see pages/berlin/area/[code].md's Up-link
+     comment for the full "undefined"-cascade + base-path rationale. -->
+<p>Up: {#if pgr_name[0]?.area_code}<a href="/berlin/area/pgr/{pgr_name[0].area_code}">{pgr_name[0].area_name}</a>{:else}<a href="/berlin/area/bezirk">Prognoseraum profile</a>{/if} · <a href="/berlin/area/bezirk">all districts</a> · <a href="/berlin/area">full neighbourhood list</a></p>
 
 <Alert status="info">
   Figures on this page are <b>sums and population-weighted averages</b> of this Bezirksregion's
@@ -154,6 +160,8 @@ select
     '/berlin/area/' || area_code as area_link
 from gentriduck_marts.gentrification_index
 where variant = 'live_data' and area_level = 'plr' and city_code = 'BER'
+  -- #255: defensive guard, see the matching comment in bezirk/[code].md's "children" query.
+  and area_code is not null and trim(area_code) <> ''
   and substr(area_code, 1, 6) = '${params.code}'
   and period_yyyymm = (
       select max(period_yyyymm) from gentriduck_marts.gentrification_index

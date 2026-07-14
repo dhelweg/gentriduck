@@ -43,8 +43,10 @@ where bezirk_code = substr('${params.code}', 1, 2)
 
 <Hero compact eyebrow="Chapter 3 — The Evidence" title="{pgr_name[0] && pgr_name[0].area_name} — Prognoseraum profile" lede="Population, composition, and neighbourhood-stage mix for this Prognoseraum, summed and recomputed from its constituent Bezirksregionen — never a re-scored index at this grain." />
 
-Up: <a href="/berlin/area/bezirk/{bezirk_name[0] && bezirk_name[0].bezirk_code}">{bezirk_name[0] && bezirk_name[0].bezirk_name}</a> ·
-[all districts](/berlin/area/bezirk) · [full neighbourhood list](/berlin/area)
+<!-- #255: guard on the VALUE (`bezirk_name[0]?.bezirk_code`), keep a static-prefix href inside a
+     one-line `{#if}` written as explicit `<p>` HTML -- see pages/berlin/area/[code].md's Up-link
+     comment for the full "undefined"-cascade + base-path rationale. -->
+<p>Up: {#if bezirk_name[0]?.bezirk_code}<a href="/berlin/area/bezirk/{bezirk_name[0].bezirk_code}">{bezirk_name[0].bezirk_name}</a>{:else}<a href="/berlin/area/bezirk">District profile</a>{/if} · <a href="/berlin/area/bezirk">all districts</a> · <a href="/berlin/area">full neighbourhood list</a></p>
 
 <Alert status="info">
   Figures on this page are <b>sums and population-weighted averages</b> of this Prognoseraum's
@@ -133,6 +135,8 @@ from gentriduck_marts.mart_area_demographics as d
 left join gentriduck_marts.dim_area_geometry as g
   on g.city_code = 'BER' and g.area_level = 'bzr' and g.area_code = d.area_code
 where d.city_code = 'BER' and d.area_level = 'bzr'
+  -- #255: defensive guard, see the matching comment in bezirk/[code].md's "children" query.
+  and d.area_code is not null and trim(d.area_code) <> ''
   and substr(d.area_code, 1, 4) = '${params.code}'
   and d.reference_year = (
       select max(reference_year) from gentriduck_marts.mart_area_demographics

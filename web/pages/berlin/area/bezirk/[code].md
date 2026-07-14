@@ -189,6 +189,10 @@ from gentriduck_marts.mart_area_demographics as d
 left join gentriduck_marts.dim_area_geometry as g
   on g.city_code = 'BER' and g.area_level = 'pgr' and g.area_code = d.area_code
 where d.city_code = 'BER' and d.area_level = 'pgr'
+  -- #255: defensive guard so a null/blank area_code (from mart_area_demographics; none exist
+  -- today, but this belt-and-suspenders check keeps a future regression there from ever
+  -- surfacing as a crawlable /berlin/area/pgr/undefined route) never reaches pgr_link.
+  and d.area_code is not null and trim(d.area_code) <> ''
   and substr(d.area_code, 1, 2) = '${params.code}'
   and d.reference_year = (
       select max(reference_year) from gentriduck_marts.mart_area_demographics
