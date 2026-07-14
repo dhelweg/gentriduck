@@ -202,7 +202,7 @@ integrated with the same level-vs-change discipline that governs D4 `ewr_composi
   computed (BRW is 8-year, so a defensible `brw_yoy`/`brw_trend` change signal is *possible* and
   is arguably the more valuable gentrification signal — rising land value = realised rent gap,
   Smith 1979 — but it must be built and polarised as an explicit *change* indicator, distinct from
-  the level, exactly as D4 separates levels from changes). Do not let the BRW *level* leak into a
+  the level, exactly as D4 separates levels from changes). **(Follow-up now tracked: #263 (D3-brw-change) — see `docs/planning/deferred-work-audit-2026-07/README.md`.)** Do not let the BRW *level* leak into a
   change reading or vice-versa.
 
 ---

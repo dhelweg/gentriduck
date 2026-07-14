@@ -91,7 +91,7 @@ The R-C2 grounding rule is satisfied: all labels have explicit citations with so
     "Mixed PLRs are used for narrative context only; no formal test covers them"
   ],
   "recommendations": [
-    "Extend seed to include 2-3 Lichtenberg/eastern Berlin pressure-zone PLRs in a follow-up ticket",
+    "Extend seed to include 2-3 Lichtenberg/eastern Berlin pressure-zone PLRs in a follow-up ticket **(Follow-up now tracked: #264 — see `docs/planning/deferred-work-audit-2026-07/README.md`.)**",
     "Explain completed-gentrification semantics in plain language on the G2 methodology page"
   ]
 }

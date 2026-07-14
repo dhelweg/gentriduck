@@ -48,6 +48,8 @@
 -- - Zero consumers as of this model -- not yet wired into any mart or the governed
 -- gentrification_index (same staged-slice pattern as int_berlin_rent_pressure_proxy;
 -- integration is a separately-gated future slice per the #70 progress notes).
+-- Follow-up now tracked: #258 (see
+-- docs/planning/deferred-work-audit-2026-07/D5-wire.md).
 -- - Known coverage gap (#197, upstream EWR CSV parse failures):
 -- residence_duration_5y_share
 -- is entirely NULL for reference_year 2024 and 2025 as ingested (confirmed directly

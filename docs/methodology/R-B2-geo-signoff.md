@@ -98,7 +98,7 @@ The document is appropriate for inclusion in the G2 methodology page. PASS.
   ],
   "recommendations": [
     "Expand seed in future with PLRs labelled only from non-MSS literature for genuinely predictive recall",
-    "Add a dynamism_index back-test as a follow-up ticket (post-G2 or as part of C5/R-A6)"
+    "Add a dynamism_index back-test as a follow-up ticket (post-G2 or as part of C5/R-A6) **(Follow-up now tracked: #264 — see `docs/planning/deferred-work-audit-2026-07/README.md`.)**"
   ]
 }
 ```

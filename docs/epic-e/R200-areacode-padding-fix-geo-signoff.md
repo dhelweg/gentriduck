@@ -124,7 +124,7 @@ None blocking, no new conditions.
    (or an equivalent Berlin PLR key) without going through
    `int_poi_features_pivot`'s already-correct `LPAD` join — I did not find another
    instance in this review's scope, but a broader repo-wide grep for un-padded
-   `raum_id` usage would be good due diligence for a future ticket if time permits.
+   `raum_id` usage would be good due diligence for a future ticket if time permits. **(Follow-up now tracked: #266 (QA-raumid) — see `docs/planning/deferred-work-audit-2026-07/README.md`.)**
 
 ---
 

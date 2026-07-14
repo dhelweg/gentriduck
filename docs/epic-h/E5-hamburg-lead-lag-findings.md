@@ -1,7 +1,7 @@
 # E5 Hamburg Lead-Lag Findings -- Independent H3a/H3b/H3c Re-Test (H-C3, #160)
 
 - **Task:** H-C3 (#160) -- annual-cadence Hamburg lead-lag model + independent H3a/H3b re-test
-- **Issue:** #160 (H-C3); #129 (Stadtteil SE-clustering binding requirement)
+- **Issue:** #160 (H-C3); #129 (Stadtteil SE-clustering binding requirement) **(Follow-up now tracked: #265 (H-reg-SE) — see `docs/planning/deferred-work-audit-2026-07/README.md`.)**
 - **Date:** 2026-07-10
 - **Data:** int_hamburg_lead_lag (H-C3 #160), n=27871 rows
 - **Method:** Spearman rank correlation (bivariate, mirrors e1_regressions.py's test_h3 exactly) + OLS with Stadtteil-clustered standard errors (D4-covariate specification only, #129)
