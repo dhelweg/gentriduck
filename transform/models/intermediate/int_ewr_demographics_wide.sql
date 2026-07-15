@@ -75,9 +75,7 @@ select
     max(indicator_value) filter (
         where indicator = 'age_65plus_share'
     ) as age_65plus_share,
-    max(indicator_value) filter (
-        where indicator = 'mean_age_years'
-    ) as mean_age_years,
+    max(indicator_value) filter (where indicator = 'mean_age_years') as mean_age_years,
     max(indicator_value) filter (
         where indicator = 'foreigners_share'
     ) as foreigners_share,

@@ -75,6 +75,8 @@
 -- geometry_wkb (BLOB); ST_GeomFromWKB() converts to a geometry object for the
 -- spatial join.
 --
+-- I20 (#252): `cuisine` passed through unchanged (display-only, not part of
+-- the spatial join predicate).
 -- dbt_meta_owner: data-engineer
 -- depends_on: {{ ref('int_osm_poi_harmonized') }}
 -- depends_on: {{ ref('stg_berlin_lor') }}
@@ -107,6 +109,7 @@
                 lat,
                 harmonization_provenance,
                 source_attribution,
+                cuisine,
                 -- Transform POI point from EPSG:4326 to EPSG:25833 (native LOR CRS).
                 -- always_xy=true forces (lon, lat) = (x, y) input axis order,
                 -- overriding EPSG:4326's canonical (lat, lon) axis order in
@@ -140,6 +143,7 @@
                 poi.lat,
                 poi.harmonization_provenance,
                 poi.source_attribution,
+                poi.cuisine,
                 lor.area_code,
                 lor.area_vintage
             from poi_points as poi
@@ -169,6 +173,7 @@
                 poi.lat,
                 poi.harmonization_provenance,
                 poi.source_attribution,
+                poi.cuisine,
                 lor.area_code,
                 lor.area_vintage
             from poi_points as poi
@@ -213,6 +218,7 @@
         cast(null as double) as lat,
         cast(null as varchar) as harmonization_provenance,
         cast(null as varchar) as source_attribution,
+        cast(null as varchar) as cuisine,
         cast(null as varchar) as area_code,
         cast(null as varchar) as area_vintage
     where false

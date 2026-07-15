@@ -686,7 +686,7 @@ def write_findings(
             "the same property on Berlin's MSS data; see that function's docstring and "
             "B7-geo-signoff.md Concern 2). This is a **co-movement test across the lag window, "
             "not a strict temporal-precedence test** -- a symmetric bivariate statistic cannot "
-            "distinguish \"POI leads status\" (H3a) from \"status leads POI\" (H3b); it can only "
+            'distinguish "POI leads status" (H3a) from "status leads POI" (H3b); it can only '
             "say the two series co-move. **Section 2 below (the D4-controlled OLS with "
             "Stadtteil-clustered SEs) is the test that actually distinguishes the two directional "
             "hypotheses** -- H3a and H3b there are different regression specifications (different "
