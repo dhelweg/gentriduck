@@ -1,11 +1,8 @@
 # I20 (#244/#252/#253) — Amenity/mover-framing sign-off request for `gentrification-domain-expert`
 
-**Status: PENDING** — this is a **request packet**, not the sign-off itself. The actual
-`I20-domain-signoff.md` (with `Verdict: PASS`/`FAIL`/`concerns`) must be authored by the
-`gentrification-domain-expert` agent/reviewer before #254 (web slice) integrates into `develop`,
-per CLAUDE.md's R-C1-adjacent hard gate named explicitly in the I20 SPEC ("domain-expert gates
-the mover framing"). PM has assembled the material below so that review can happen without
-re-deriving scope from scratch — **no verdict is asserted here**.
+**Status: RESOLVED (2026-07-15)** — see `docs/epic-i/I20-domain-signoff.md`, **Verdict: PASS**,
+with five binding conditions carried forward into #254's implementation/copy. This request packet
+is kept as-is below for the record of what was asked; it does not itself carry a verdict.
 
 **Ticket:** `docs/epic-i/tickets/I20-amenity-insights-movers.md` (parent #244).
 **Branches under review:** `feature/252-i20-amenity-mart` (data), `feature/253-i20-domain-curation`

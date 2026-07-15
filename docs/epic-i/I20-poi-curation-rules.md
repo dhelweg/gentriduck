@@ -60,6 +60,27 @@ flags a category-specific concern (e.g. transit stops being unusually complete v
 unusually incomplete, per known OSM Berlin coverage patterns), this section gets a follow-up
 revision before #254 integrates.
 
+### Geo-DS consult (recorded 2026-07-15)
+
+Reviewed the standing caveat text and the n>=8 / share>=15% thresholds against known Berlin OSM
+coverage patterns:
+
+- **Caveat wording confirmed as-is** — the "0 may mean 'none here' or 'not yet mapped'" framing is
+  accurate and appropriately hedged; no revision needed.
+- **Category-specific coverage note (added detail, not a wording change):** transit stops and
+  supermarkets are comparatively well-mapped in Berlin OSM (dense POI history since ~2010);
+  doctors/dentists/kindergartens are less consistently tagged (many practices in shared apartment
+  buildings go untagged). This is a real, non-uniform bias — the generic caveat text is honest but
+  slightly understates the *unevenness across categories within the same area*. **Non-blocking
+  recommendation:** a future revision could split the caveat into "well-mapped" vs. "less-mapped"
+  category groups rather than one blanket sentence, but the current single-sentence caveat is not
+  misleading and is fine to ship in #254 as-is. Filed as **#270** (official-directory cross-check)
+  already covers the deeper fix (schools) — no new ticket needed for this narrower point.
+- **n>=8 / share>=15% thresholds:** reasonable, conservative floors for a discrete "dominant cuisine"
+  label at PLR grain; no change requested. At coarser I18 levels (BZR/Bezirk) these thresholds will
+  rarely bind (samples are much larger), which is the correct direction of conservatism.
+
+
 ## 4. Categories demoted from default views ("bench-class" — full data stays in tables/downloads)
 
 Per the SPEC's own framing, everything in `mart_area_amenities` is *already* a deliberately curated
@@ -70,6 +91,23 @@ by construction, not merely hidden by a display flag. They remain fully queryabl
 POI-map/table views (`mart_poi_offering_advantage`, `/poi-map`) for any reader who wants the
 complete inventory — this document does not remove or gate access to that data, it only keeps it
 out of the *default* profile-page "what matters to a mover" block.
+
+## 4b. Denylist for #254's reader-facing copy (per `I20-domain-signoff.md`, binding)
+
+Recorded here so the web-engineer implementing #254 has a concrete checklist, not just prose to
+re-derive. **Also apply:** use "most common cuisine" (not "dominant cuisine") in any reader-facing
+heading/prose; the `dominant_cuisine` mart column name itself does not need renaming.
+
+- No comparative/superlative *area* ranking ("best," "top," "most desirable," "up-and-coming,"
+  "hidden gem") — food-scene vocabulary like "most common cuisine" is fine; ranking the *area*
+  itself against others is not.
+- No "livability," "quality of life," or any single blended score/label implying the block is an
+  aggregate judgment rather than a list of independent facts.
+- No investment-adjacent language ("undervalued," "on the rise," "before it gets expensive").
+- No possessive/recommending verbs directed at the reader ("you'll love," "perfect for families,"
+  "ideal if you...").
+- District comparison renders as co-equal figures (same units/format, no colour-coded
+  better/worse, no sort/highlight of "above"/"below" the district value).
 
 ## 5. Explicitly out of scope for this document
 
