@@ -82,14 +82,15 @@
 
 with
     -- Berlin: PLR (8-digit) -> BZR (leading 6 digits).
-    -- lpad(area_code, 8, '0') defensively: int_thesis_2018_area_index carries
-    -- some thesis-golden PLR raum_ids with the leading zero dropped for
-    -- Bezirk 1-9 (7 chars, e.g. '1033102' not '01033102' -- same known quirk
-    -- documented in that model's own header and stg_thesis_2018_result_plr_oa.sql's
-    -- lpad convention), which flow unchanged into dim_area (dim_area.sql has no
-    -- padding step) and would otherwise silently derive a wrong/truncated BZR
-    -- parent from the raw 7-char string. WFS-sourced PLR codes (stg_berlin_lor)
-    -- are already correctly 8-char and pass through lpad unchanged.
+    -- lpad(area_code, 8, '0') kept as a defensive no-op safety net: before #266,
+    -- int_thesis_2018_area_index carried some thesis-golden PLR raum_ids with the
+    -- leading zero dropped for Bezirk 1-9 (7 chars, e.g. '1033102' not '01033102'),
+    -- which flowed unchanged into dim_area (dim_area.sql has no padding step) and
+    -- would otherwise silently derive a wrong/truncated BZR parent from the raw
+    -- 7-char string. #266 fixed this AT SOURCE (int_thesis_2018_area_index.sql now
+    -- emits already-padded area_code) -- this lpad is now always a no-op for every
+    -- row but is kept as a cheap defensive guard against any future un-padded
+    -- source. WFS-sourced PLR codes (stg_berlin_lor) were already correctly 8-char.
     ber_plr_to_bzr as (
         select
             city_code,
