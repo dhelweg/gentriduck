@@ -556,7 +556,142 @@ for the neighbourhood.
 </p>
 
 
+<!--
+  I20-web (#254): "Amenities & everyday infrastructure" block, PLR level -- same slice-1-only
+  scope precedent as I19-web (BZR/PGR/Bezirk pages don't have this block yet; filed as a follow-up
+  alongside this one, same pattern as #247 was to #246). Reads `mart_area_amenities` (#252, NOT
+  methodology-bearing -- reads int_osm_poi_plr read-only, no index/weight change) read-only; no
+  dbt model change here. District comparison reuses the mart's own already-rolled-up bezirk-level
+  row (extensive-count SUM, no share-weighting needed -- these are raw counts, not shares like
+  I19's demographics case) -- same "sum, don't reinvent" display-layer discipline.
+
+  Hard framing conditions from docs/epic-i/I20-domain-signoff.md (Verdict: PASS, 5 binding
+  conditions), honoured here:
+  (1) "most common cuisine" wording used throughout (never "dominant") in reader-facing copy --
+      the underlying `dominant_cuisine` mart column name is unchanged, only prose differs;
+  (2) district comparison renders as co-equal counts, same format, no colour/sort/highlight of
+      above-vs-below;
+  (3) denylist honoured -- no area-ranking, "livability", investment-adjacent, or
+      possessive/recommending language anywhere in this block;
+  (4) the completeness caveat (curation rules §3, geo-DS-confirmed) renders directly adjacent to
+      the infrastructure table, every time the block is shown;
+  (5) interestingness thresholds from docs/epic-i/I20-poi-curation-rules.md §2 applied verbatim --
+      a "most common cuisine" line only renders when gastro_poi_with_cuisine_count >= 8 AND
+      dominant_cuisine_share >= 0.15; below either floor, an honest null state renders instead.
+
+  Bench-class / low-signal POI categories (benches, waste baskets, etc.) are not in
+  `mart_area_amenities` at all, by construction (see that mart's header comment) -- nothing to
+  suppress here, they were never modeled into this display mart in the first place. Full inventory
+  remains queryable on /poi-map for any reader who wants it.
+-->
+
+## Amenities & everyday infrastructure
+
+```sql amenities_current
+select
+    snapshot_year,
+    n_schools, n_kindergartens, n_doctors, n_dentists, n_pharmacies, n_supermarkets,
+    n_playgrounds, n_transit_stops,
+    gastro_poi_count, gastro_poi_with_cuisine_count,
+    dominant_cuisine, dominant_cuisine_share
+from gentriduck_marts.mart_area_amenities
+where city_code = 'BER' and area_level = 'plr' and area_code = '${params.code}'
+order by snapshot_year desc
+limit 1
+```
+
+```sql amenities_table
+-- One row per infrastructure fact: this area vs. its district (Bezirk, already summed by the
+-- mart's own rollup -- extensive counts, no share-weighting needed). Values pre-formatted as text
+-- in SQL since some rows are plain integers and the gastro row is a percentage-bearing sentence.
+with
+    latest as (
+        select max(snapshot_year) as snapshot_year
+        from gentriduck_marts.mart_area_amenities
+        where city_code = 'BER' and area_level = 'plr' and area_code = '${params.code}'
+    ),
+    area_row as (
+        select *
+        from gentriduck_marts.mart_area_amenities
+        where
+            city_code = 'BER' and area_level = 'plr' and area_code = '${params.code}'
+            and snapshot_year = (select snapshot_year from latest)
+    ),
+    district_row as (
+        select *
+        from gentriduck_marts.mart_area_amenities
+        where
+            city_code = 'BER' and area_level = 'bezirk'
+            and area_code = substr('${params.code}', 1, 2)
+            and snapshot_year = (select snapshot_year from latest)
+    )
+select 1 as sort_order, 'Schools' as indicator, cast(a.n_schools as varchar) as area_value, cast(d.n_schools as varchar) as district_value
+from area_row as a cross join district_row as d
+union all
+select 2, 'Kindergartens', cast(a.n_kindergartens as varchar), cast(d.n_kindergartens as varchar)
+from area_row as a cross join district_row as d
+union all
+select 3, 'Doctors', cast(a.n_doctors as varchar), cast(d.n_doctors as varchar)
+from area_row as a cross join district_row as d
+union all
+select 4, 'Dentists', cast(a.n_dentists as varchar), cast(d.n_dentists as varchar)
+from area_row as a cross join district_row as d
+union all
+select 5, 'Pharmacies', cast(a.n_pharmacies as varchar), cast(d.n_pharmacies as varchar)
+from area_row as a cross join district_row as d
+union all
+select 6, 'Supermarkets', cast(a.n_supermarkets as varchar), cast(d.n_supermarkets as varchar)
+from area_row as a cross join district_row as d
+union all
+select 7, 'Playgrounds', cast(a.n_playgrounds as varchar), cast(d.n_playgrounds as varchar)
+from area_row as a cross join district_row as d
+union all
+select 8, 'Transit stops', cast(a.n_transit_stops as varchar), cast(d.n_transit_stops as varchar)
+from area_row as a cross join district_row as d
+order by sort_order
+```
+
+<p>
+{#if amenities_current[0]}
+Based on OpenStreetMap tagging as of <b>{amenities_current[0].snapshot_year}</b>, this area has the
+everyday-infrastructure counts below, shown alongside its district (Bezirk) total for context.
+{:else}
+No amenity data is available for this area yet.
+{/if}
+</p>
+
+<DataTable data={amenities_table} rows=8 emptySet="warn" emptyMessage="No amenity data for this area.">
+    <Column id=indicator title="Infrastructure"/>
+    <Column id=area_value title="This area"/>
+    <Column id=district_value title="District total"/>
+</DataTable>
+
+<Alert status="info">
+  These figures come from OpenStreetMap tagging, not an official registry. A <b>0</b> may mean
+  "none here" or "not yet mapped" — better-mapped areas (typically denser, more central) will show
+  more complete counts than less-mapped ones. See the <a href="/open-data">open-data</a> page for
+  more on this project's data-completeness caveats generally.
+</Alert>
+
+<p>
+{#if amenities_current[0] && amenities_current[0].gastro_poi_with_cuisine_count >= 8 && amenities_current[0].dominant_cuisine_share >= 0.15}
+Among <b>{amenities_current[0].gastro_poi_with_cuisine_count}</b> restaurants/cafes with cuisine
+data tagged in this area, the <b>most common cuisine</b> is
+<b>{amenities_current[0].dominant_cuisine}</b>
+({Math.round(amenities_current[0].dominant_cuisine_share * 100)}% of tagged gastronomy POIs).
+{:else}
+There isn't enough tagged cuisine data in this area yet to identify a most-common cuisine (OpenStreetMap
+tagging of restaurant/cafe cuisine is incomplete for smaller or less-mapped areas).
+{/if}
+</p>
+
+<p>
+This block is a plain inventory, not a recommendation — it never ranks or scores this area against
+others, and makes no claim about whether it is a good or bad place to live.
+</p>
+
 ## Social status over time
+
 
 ```sql area_trend
 with
