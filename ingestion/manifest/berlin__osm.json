@@ -4,8 +4,8 @@
   "city": "berlin",
   "upstream": {
     "url": "https://osm-internal.download.geofabrik.de/europe/germany-internal.osh.pbf (login-gated, ADR-0002)",
-    "vintage": "unknown (PBF publish-date not captured by the ingestor; PBF itself is never hashed, ADR-0016)",
-    "retrieved_at": "2026-06-17T19:59:48Z"
+    "vintage": "PBF file mtime 2026-07-05 (best-effort proxy for Geofabrik publish date, not a true fetch record)",
+    "retrieved_at": "2026-07-12T22:16:40Z"
   },
   "outputs": [
     {
@@ -114,7 +114,7 @@
       "path": "data/raw/osm/berlin/2025.parquet",
       "row_count": 191354,
       "schema_fingerprint": "sha256:0117a394ec65a4b1a3830a7e46f0dbe703ee09e7abddd96caeaedce7e994226c",
-      "content_hash": "sha256:084b988cfec2521de806da96f05a89f388c09240cdc6ce3b9646c56764812834"
+      "content_hash": "sha256:0ad3fc3eff893e983d2458d33845ab386daf776df231dd95a22e1333d1318cc7"
     },
     {
       "path": "data/raw/osm/berlin/2026-partial.parquet",
@@ -125,7 +125,7 @@
   ],
   "ingest_script": {
     "module": "ingestion.berlin.osm.ingest_osm_history",
-    "git_sha": "2f6b2f6853967d004d6942592bb52d4740e6cc97"
+    "git_sha": "10dd1c83eee6feefbd9f91d3083d80026d074d69"
   },
   "manifest_schema_version": 1
 }

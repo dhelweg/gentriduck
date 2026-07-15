@@ -61,17 +61,16 @@ select
     h.expected_foreigners_share,
     m.mart_foreigners_share
 from hand_summed as h
-inner join mart_bzr as m
-    on
-        h.city_code = m.city_code
-        and h.bzr_code = m.bzr_code
-        and h.area_vintage = m.area_vintage
-        and h.reference_year = m.reference_year
+inner join
+    mart_bzr as m
+    on h.city_code = m.city_code
+    and h.bzr_code = m.bzr_code
+    and h.area_vintage = m.area_vintage
+    and h.reference_year = m.reference_year
 where
     abs(coalesce(h.expected_residents_total, 0) - coalesce(m.mart_residents_total, 0))
     > 0.001
     or abs(
-        coalesce(h.expected_foreigners_share, 0)
-        - coalesce(m.mart_foreigners_share, 0)
+        coalesce(h.expected_foreigners_share, 0) - coalesce(m.mart_foreigners_share, 0)
     )
     > 1e-9

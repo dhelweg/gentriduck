@@ -73,14 +73,14 @@
 -- codes are simply absent from the Sozialmonitoring EWR source table),
 -- consistent with the same >300-resident scoring-threshold rationale as the
 -- 5 documented above (all four are industrial/harbor/airport districts):
---   Stage 1 (104/105 -> 99, Sozialmonitoring has NO score at all -- documented
---   above): 02712 Altenwerder, 02703 Gut Moor, 02121 Neuwerk, 02118
---   Steinwerder, 02119 Waltershof.
---   Stage 2 (99 -> 95, crosswalk match exists but stg_hamburg_ewr_stadtteil
---   has zero rows for the Stadtteil): 02117 Kleiner Grasbrook (Elbe-island
---   harbor terminal), 02120 Finkenwerder (Airbus works / airport), 02702
---   Neuland (industrial estate), 02711 Moorburg (industrial / former power
---   plant site).
+-- Stage 1 (104/105 -> 99, Sozialmonitoring has NO score at all -- documented
+-- above): 02712 Altenwerder, 02703 Gut Moor, 02121 Neuwerk, 02118
+-- Steinwerder, 02119 Waltershof.
+-- Stage 2 (99 -> 95, crosswalk match exists but stg_hamburg_ewr_stadtteil
+-- has zero rows for the Stadtteil): 02117 Kleiner Grasbrook (Elbe-island
+-- harbor terminal), 02120 Finkenwerder (Airbus works / airport), 02702
+-- Neuland (industrial estate), 02711 Moorburg (industrial / former power
+-- plant site).
 -- H-C3 #160's Stadtteil-clustered D4-covariate regression (int_hamburg_lead_
 -- lag.sql, analysis/e5_hamburg_lead_lag.py) therefore observes n_clusters=95
 -- distinct Stadtteile, not the ~104-105 ADR-0014 baseline -- this is the full

@@ -1322,10 +1322,15 @@ models:
               - snapshot_year
     columns:
       - name: city_code
-        description: City identifier (ADR-0005). Currently 'berlin' (legacy OSM convention) only.
+        description: >
+          City identifier (ADR-0005), normalized via canonical_city_code()
+          from int_osm_poi_plr's legacy lowercase 'berlin'. Currently 'BER' only.
         data_tests:
 
           - not_null
+          - accepted_values:
+              arguments:
+                values: ["BER"]
       - name: area_level
         description: Geo-hierarchy level (I18) -- plr, bzr, pgr, or bezirk.
         data_tests:

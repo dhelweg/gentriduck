@@ -135,7 +135,10 @@ with
             'district' as parent_area_level,
             parent_area_code
         from {{ ref("stg_hamburg_geo") }}
-        where city_code = 'HH' and area_level = 'subarea_l1' and parent_area_code is not null
+        where
+            city_code = 'HH'
+            and area_level = 'subarea_l1'
+            and parent_area_code is not null
     ),
 
     unioned as (

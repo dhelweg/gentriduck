@@ -48,8 +48,18 @@ with
         where bzr.area_code is not null and pgr.area_code is null
     )
 
-select city_code, area_vintage, area_level, area_code, expected_bzr_parent as expected_parent
+select
+    city_code,
+    area_vintage,
+    area_level,
+    area_code,
+    expected_bzr_parent as expected_parent
 from plr_missing_bzr_parent
 union all
-select city_code, area_vintage, area_level, area_code, expected_pgr_parent as expected_parent
+select
+    city_code,
+    area_vintage,
+    area_level,
+    area_code,
+    expected_pgr_parent as expected_parent
 from bzr_missing_pgr_parent

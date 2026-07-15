@@ -809,9 +809,7 @@ def process_year(
             )
 
     if raw_df is None:
-        log.warning(
-            "No URL, no local CSV, and no vendored fallback for EWR %d — skipping.", year
-        )
+        log.warning("No URL, no local CSV, and no vendored fallback for EWR %d — skipping.", year)
         return False
 
     # Companion dirs (12A/EWRMIGRA/WHNDAUER): explicit --local-csv-dir, then vendored (ADR-0023).

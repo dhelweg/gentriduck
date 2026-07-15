@@ -38,6 +38,14 @@
 -- (raw value, e.g. "italian;pizza") carried through unions_by_name=true; older
 -- parquet files predating this change simply lack the column and resolve to
 -- NULL for cuisine, which is correct (their POIs were never asked for it).
+-- Per-city `cuisine` presence is detected at compile time (below) rather than
+-- assumed: `union_by_name=true` only synthesizes a NULL column for files
+-- *within* a glob where at least one sibling file in that same glob has the
+-- column -- if NONE of one city's files have it yet (e.g. Hamburg's
+-- ingest_hamburg_osm.py, #40, has not been extended for #252's tags), a bare
+-- `cuisine` reference on that city's branch is a DuckDB Binder Error, not a
+-- NULL. Each city glob is therefore probed independently so Berlin landing
+-- `cuisine` first doesn't break Hamburg (and vice versa for any future tag).
 -- dbt_meta_owner: data-engineer
 {{
     config(
@@ -56,7 +64,31 @@
     {%- set berlin_file_count = berlin_count_result.columns[0][0] -%}
     {%- set hamburg_count_result = run_query("SELECT count(*) FROM glob('" ~ hamburg_osm_glob ~ "')") -%}
     {%- set hamburg_file_count = hamburg_count_result.columns[0][0] -%}
-{% else %} {%- set berlin_file_count = 0 -%} {%- set hamburg_file_count = 0 -%}
+
+    {%- set berlin_has_cuisine = false -%}
+    {%- if berlin_file_count > 0 -%}
+        {%- set berlin_cols_result = run_query(
+            "SELECT count(*) FROM (DESCRIBE SELECT * FROM read_parquet('"
+            ~ berlin_osm_glob
+            ~ "', union_by_name = true)) WHERE column_name = 'cuisine'"
+        ) -%}
+        {%- set berlin_has_cuisine = berlin_cols_result.columns[0][0] > 0 -%}
+    {%- endif -%}
+
+    {%- set hamburg_has_cuisine = false -%}
+    {%- if hamburg_file_count > 0 -%}
+        {%- set hamburg_cols_result = run_query(
+            "SELECT count(*) FROM (DESCRIBE SELECT * FROM read_parquet('"
+            ~ hamburg_osm_glob
+            ~ "', union_by_name = true)) WHERE column_name = 'cuisine'"
+        ) -%}
+        {%- set hamburg_has_cuisine = hamburg_cols_result.columns[0][0] > 0 -%}
+    {%- endif -%}
+{% else %}
+    {%- set berlin_file_count = 0 -%}
+    {%- set hamburg_file_count = 0 -%}
+    {%- set berlin_has_cuisine = false -%}
+    {%- set hamburg_has_cuisine = false -%}
 {% endif %}
 
 {% if berlin_file_count > 0 or hamburg_file_count > 0 %}
@@ -75,7 +107,9 @@
                     lon,
                     lat,
                     source_attribution,
-                    cuisine
+                    {% if berlin_has_cuisine %} cuisine
+                    {% else %} cast(null as varchar) as cuisine
+                    {% endif %}
                 from
                     read_parquet(
                         {{ _src_raw_osm_berlin }},
@@ -98,7 +132,9 @@
                     lon,
                     lat,
                     source_attribution,
-                    cuisine
+                    {% if hamburg_has_cuisine %} cuisine
+                    {% else %} cast(null as varchar) as cuisine
+                    {% endif %}
                 from
                     read_parquet(
                         {{ _src_raw_osm_hamburg }},

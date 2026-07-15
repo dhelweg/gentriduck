@@ -74,7 +74,14 @@
 with
     poi_base as (
         select
-            city_code,
+            -- QA-4 (#179) / ADR-0005: int_osm_poi_plr is one of the models the
+            -- canonical_city_code() macro's own docstring names as still
+            -- emitting the legacy lowercase 'berlin' -- normalise here so this
+            -- mart's city_code matches every other mart's canonical 'BER'
+            -- (same call as mart_poi_offering_advantage / fct_poi_development;
+            -- this mart previously left it un-normalised, inconsistent with
+            -- that precedent -- fixed at review).
+            {{ canonical_city_code("city_code") }} as city_code,
             snapshot_year,
             lpad(area_code, 8, '0') as area_code,
             area_vintage,
@@ -84,11 +91,7 @@ with
             cuisine
         from {{ ref("int_osm_poi_plr") }}
         -- int_osm_poi_plr is already Berlin-only by construction (joins to
-        -- stg_berlin_lor); no separate city_code filter needed. Berlin OSM
-        -- rows carry the legacy lowercase 'berlin' city_code (stg_osm_poi's
-        -- documented convention, pre-dates ADR-0005 canonicalization) --
-        -- passed through unchanged, not normalized here (same precedent as
-        -- mart_poi_offering_advantage).
+        -- stg_berlin_lor); no separate city_code filter needed.
         where area_code is not null
     ),
 
@@ -199,8 +202,9 @@ with
         from cuisine_counts
         qualify
             row_number() over (
-                partition by city_code, area_vintage, snapshot_year, level_code, area_level
-                order by cuisine_count desc, cuisine
+                partition by
+                    city_code, area_vintage, snapshot_year, level_code, area_level
+                order by cuisine_count desc, cuisine asc
             )
             = 1
     ),
@@ -231,16 +235,16 @@ with
             snapshot_year,
             'bzr' as area_level,
             bzr_code as level_code,
-            sum(is_school),
-            sum(is_kindergarten),
-            sum(is_doctor),
-            sum(is_dentist),
-            sum(is_pharmacy),
-            sum(is_supermarket),
-            sum(is_playground),
-            sum(is_transit_stop),
-            sum(is_gastro),
-            sum(is_gastro_with_cuisine)
+            sum(is_school) as n_schools,
+            sum(is_kindergarten) as n_kindergartens,
+            sum(is_doctor) as n_doctors,
+            sum(is_dentist) as n_dentists,
+            sum(is_pharmacy) as n_pharmacies,
+            sum(is_supermarket) as n_supermarkets,
+            sum(is_playground) as n_playgrounds,
+            sum(is_transit_stop) as n_transit_stops,
+            sum(is_gastro) as gastro_poi_count,
+            sum(is_gastro_with_cuisine) as gastro_poi_with_cuisine_count
         from flagged
         group by city_code, area_vintage, snapshot_year, bzr_code
         union all
@@ -250,16 +254,16 @@ with
             snapshot_year,
             'pgr' as area_level,
             pgr_code as level_code,
-            sum(is_school),
-            sum(is_kindergarten),
-            sum(is_doctor),
-            sum(is_dentist),
-            sum(is_pharmacy),
-            sum(is_supermarket),
-            sum(is_playground),
-            sum(is_transit_stop),
-            sum(is_gastro),
-            sum(is_gastro_with_cuisine)
+            sum(is_school) as n_schools,
+            sum(is_kindergarten) as n_kindergartens,
+            sum(is_doctor) as n_doctors,
+            sum(is_dentist) as n_dentists,
+            sum(is_pharmacy) as n_pharmacies,
+            sum(is_supermarket) as n_supermarkets,
+            sum(is_playground) as n_playgrounds,
+            sum(is_transit_stop) as n_transit_stops,
+            sum(is_gastro) as gastro_poi_count,
+            sum(is_gastro_with_cuisine) as gastro_poi_with_cuisine_count
         from flagged
         group by city_code, area_vintage, snapshot_year, pgr_code
         union all
@@ -269,16 +273,16 @@ with
             snapshot_year,
             'bezirk' as area_level,
             bezirk_code as level_code,
-            sum(is_school),
-            sum(is_kindergarten),
-            sum(is_doctor),
-            sum(is_dentist),
-            sum(is_pharmacy),
-            sum(is_supermarket),
-            sum(is_playground),
-            sum(is_transit_stop),
-            sum(is_gastro),
-            sum(is_gastro_with_cuisine)
+            sum(is_school) as n_schools,
+            sum(is_kindergarten) as n_kindergartens,
+            sum(is_doctor) as n_doctors,
+            sum(is_dentist) as n_dentists,
+            sum(is_pharmacy) as n_pharmacies,
+            sum(is_supermarket) as n_supermarkets,
+            sum(is_playground) as n_playgrounds,
+            sum(is_transit_stop) as n_transit_stops,
+            sum(is_gastro) as gastro_poi_count,
+            sum(is_gastro_with_cuisine) as gastro_poi_with_cuisine_count
         from flagged
         group by city_code, area_vintage, snapshot_year, bezirk_code
     )
