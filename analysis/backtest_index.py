@@ -36,7 +36,9 @@ Five tests are run:
     edition). Mirrors Test A one dimension over (R-B2b, #264).
     Pass threshold: rho > 0.3, p < 0.05.
 
-  Test E — Emerging-east recall (R-B2c, #278; criterion tightened at iteration 2 review):
+  Test E — Emerging-east recall (R-B2c, #278; criterion tightened at iteration-2 review;
+  RESTRUCTURED at round-2 per the geo-DS + gentrification-domain-expert dual sign-off,
+  docs/epic-e/R-B2c-emerging-east-{geo,domain}-signoff.md):
     Fraction of labelled 'emerging-east' PLRs from seed_gentrification_ground_truth that
     meet the STRICT dynamism-aware criterion: mittel status (D1 status_index == 2) AND
     IMPROVING dynamism only (D2 dynamik_index == 1) AND under active Milieuschutz
@@ -46,40 +48,56 @@ Five tests are run:
     top-decile deprived (docs/methodology/R-B2b-domain-signoff.md). Run as its own test path
     -- NOT folded into Test B's 'hotspot' recall, which would either mis-sign GDR-era
     Plattenbau deprivation as gentrification or silently dilute what Test B measures.
-    Pass threshold: recall >= 0.5 (same rationale as Tests B/C).
+
+    NON-GATING as of round-2 (condition C2, both sign-offs): Test E's result is reported
+    (does Roedeliusplatz meet the criterion?) but excluded from the OVERALL ALL-PASS/FAIL
+    computation, exactly like the merged-hotspot diagnostic below. Rationale: the strict
+    criterion's positive set is now n=1 (see CRITERION HISTORY), and a recall >= 0.5
+    pass/fail has no statistical power at that n -- the "chance performance at the 10%
+    decile = 10% recall" rationale used for Tests B/C's threshold does NOT apply here, since
+    Test E is criterion-based, not decile-based: its true citywide base rate is
+    22/535 = 4.1% (see CRITERION HISTORY). At the current n this is a descriptive archetype
+    confirmation, not a powered recall gate. FOLLOW-UP (not implemented here, docstring note
+    only): promote Test E to a gating recall test once the 'emerging-east' seed grows to a
+    defensible n; the candidate pool is the 22 citywide strict-criterion (D1=2 AND D2==1 AND
+    under_milieuschutz) matches, subset to literature-documented eastern frontiers.
 
     CRITERION HISTORY (iteration-2 reviewer finding, #278): the first implementation used a
     LOOSENED "non-declining" reading (D2 in {1 improving, 2 stabil}), which the independent
     reviewer found to be a silent, unilateral loosening of the SPEC's literal "D2 (improving
     dynamism)" wording (R-B2b domain sign-off, Item 2, recommendation 1) -- and, worse, to be
-    nearly vacuous at citywide scale (169/542 = 31% of all Berlin PLRs meet the loose
-    reading, spread across the classic west/inner-city bezirke already covered by
-    hotspot/mixed, with only 9 of 169 in Lichtenberg). This module now implements the
-    STRICT reading (D2 == 1 only); citywide it matches 22/542 PLRs, of which only
-    11300724 Roedeliusplatz is also in the ground-truth seed. Recall accordingly drops to
-    1/4 = 0.25 (FAIL, below the 0.5 threshold) -- disclosed honestly, not hidden. The other
-    three seed PLRs (Frankfurter Allee Süd, Victoriastadt/Kaskelkiez, Weitlingkiez) are all
-    D2 == 2 (stabil) / typology_stage == 'stable-established' (transform/macros/
-    typology_stage.sql, ADR-0008), matching the R-B2b domain sign-off's own candidate table,
-    which distinguished Roedeliusplatz as "emerging-east (hotspot-by-dynamism)" from the
-    other three as "emerging-east / control" -- i.e. the domain expert's own turnkey table
-    already hinted these three were not meant to be tested on equal footing with the
-    archetype. Whether these three PLRs should be re-labelled out of the Test-E-gated
-    'emerging-east' class into a separate, non-gating control class (the R-B2b sign-off's
-    design Option 2) is an OPEN QUESTION left for the geo-DS + domain-expert sign-off --
-    see "Open questions for methodology sign-off" in docs/methodology/backtest.md. This
-    module deliberately does NOT unilaterally relabel the seed; that decision belongs to the
-    methodology gate, not the coder.
+    nearly vacuous at citywide scale (169/535 = 31.6% of all inhabited Berlin PLRs meet the
+    loose reading, spread across the classic west/inner-city bezirke already covered by
+    hotspot/mixed, with only 9 of 169 in Lichtenberg). This module implements the STRICT
+    reading (D2 == 1 only); citywide it matches 22/535 = 4.1% of inhabited PLRs. Under the
+    original (iteration-2) labelling, all four seed PLRs were tested uniformly against this
+    criterion and recall was 1/4 = 0.25 (FAIL) -- disclosed honestly, not hidden. But three
+    of those four (Frankfurter Allee Süd, Victoriastadt/Kaskelkiez, Weitlingkiez) are D2 == 2
+    (stabil) / typology_stage == 'stable-established' (transform/macros/typology_stage.sql,
+    ADR-0008): the R-B2b domain sign-off's own candidate table had already distinguished
+    Roedeliusplatz as "emerging-east (hotspot-by-dynamism)" (archetype) from the other three
+    as "emerging-east / control" -- i.e. testing all four uniformly against an "improving
+    dynamism" criterion treated three deliberately-chosen controls as positives and reported
+    the resulting mislabeling as a pipeline FAIL. ROUND-2 RESOLUTION (condition C1, both
+    sign-offs): the three D2=2 control PLRs are now labelled 'emerging-east-watch' in the
+    seed -- a separate, explicitly non-gating class that is NOT scored by this function (see
+    seed_gentrification_ground_truth.csv and transform/seeds/schema.yml). Test E's gated
+    'emerging-east' class now contains only 11300724 Roedeliusplatz (D2=1, archetype), so
+    recall is computed over n=1.
 
-    Note: the design's third criterion, "Altbau" (pre-1919 Gründerzeit building stock), has
-    no corresponding warehouse column and is NOT computationally gated here. The code
-    ASSERTS -- but has NOT had domain-expert confirmation -- that Milieuschutz designation
-    implies Altbau-era building stock for these four PLRs. Milieuschutz
-    (Soziale-Erhaltungsgebiet) and Altbau/Gründerzeit building stock are related but NOT
-    definitionally identical (a Soziale-Erhaltungsgebiet can in principle include non-Altbau
-    stock). This substitution is flagged as a second OPEN QUESTION for domain-expert
-    sign-off in docs/methodology/backtest.md and transform/seeds/schema.yml -- disclosure in
-    this code comment is not the same as domain approval.
+    Note (R-C2 grounding, resolved at round-2 per gentrification-domain-expert sign-off,
+    condition C3): the design's third criterion, "Altbau" (pre-1919/Gründerzeit building
+    stock), has no corresponding warehouse column and is NOT computationally gated here.
+    Milieuschutz (Soziale-Erhaltungsgebiet) is used as the computational gate only because
+    the warehouse has no PLR-level building-era column -- NOT because Milieuschutz implies
+    Altbau as a general rule. §172 BauGB Soziale-Erhaltungsrecht protects the social
+    composition of the resident population against displacement, not building era; a
+    Soziale-Erhaltungsgebiet can, and some do, include non-Altbau stock. For these four
+    specific Lichtenberg PLRs, Altbau/Gründerzeit stock IS domain-confirmed (cited per-row in
+    the seed notes, from R-B2b research: Roedeliusplatz, Victoriastadt/Kaskelkiez, Weitlingkiez,
+    Frankfurter Allee Süd are all documented Gründerzeit-Altbau Soziale-Erhaltungsgebiete), so
+    Milieuschutz and Altbau genuinely coincide for this corpus. This coincidence is NOT
+    assumed to generalize to other Berlin PLRs or to another city (Epic H).
 
 Data-presence guard: if the DB is missing or required tables are empty, exit 0 cleanly.
 
@@ -126,7 +144,15 @@ OUTPUT_MD = Path(__file__).parent.parent / "docs" / "methodology" / "backtest.md
 # Pass thresholds (B2 specification)
 THRESHOLD_MSS_RHO = 0.3  # Test A: Spearman rho > 0.3
 THRESHOLD_MSS_P = 0.05  # Test A: p-value < 0.05
-THRESHOLD_RECALL = 0.5  # Tests B & C: recall@decile >= 0.5
+THRESHOLD_RECALL = 0.5  # Tests B & C: recall@decile >= 0.5; also reported (non-gating) for Test E
+
+# R-B2c round-2 (#278, condition C1, geo-DS + domain-expert sign-off): the eastern-Berlin
+# frontier candidates span two seed labels -- the Test-E-gated archetype ('emerging-east',
+# n=1, D2==1) and the non-gating watch/control class ('emerging-east-watch', D2=2 stabil).
+# Only the diagnostic below (which quantifies the R-B2b domain sign-off's dilution
+# prediction across the full eastern-frontier candidate set) uses both; Test E scores only
+# 'emerging-east'.
+EMERGING_EAST_LABELS = ("emerging-east", "emerging-east-watch")
 
 
 # ---------------------------------------------------------------------------
@@ -204,8 +230,11 @@ def load_data(con: duckdb.DuckDBPyConnection) -> dict:
     # 'hotspot'       = currently under gentrification pressure (high D1 = high deprivation)
     # 'coldspot'      = stable, affluent, low deprivation (D1 = 1 = hoch)
     # 'mixed'         = transitional / completed gentrification process
-    # 'emerging-east' = eastern-Berlin mittel-status frontier (R-B2c, #278); tested by
-    #                   Test E's dynamism-aware criterion, NOT Test B's top-decile criterion
+    # 'emerging-east' = eastern-Berlin archetype frontier (R-B2c, #278; round-2-scoped to
+    #                   the D2==1 archetype only, n=1); tested by Test E's dynamism-aware
+    #                   criterion (non-gating), NOT Test B's top-decile criterion
+    # 'emerging-east-watch' = eastern-Berlin D2=2 (stabil) control PLRs (R-B2c round-2,
+    #                   condition C1); descriptive only, NOT scored by Test E or any gate
     # dbt seeds land in the 'main_seeds' schema (dbt_project.yml +schema: seeds)
     gt_df = con.execute("""
         SELECT
@@ -615,6 +644,20 @@ def test_coldspot_recall(index_df, gt_df) -> dict:
 def test_emerging_east_recall(mss_df, gt_df) -> dict:
     """Test E (R-B2c, #278): dynamism-aware recall for the 'emerging-east' label.
 
+    NON-GATING as of round-2 (condition C2, geo-DS + gentrification-domain-expert dual
+    sign-off, docs/epic-e/R-B2c-emerging-east-{geo,domain}-signoff.md): this test's result is
+    reported below but is excluded from the OVERALL ALL-PASS/FAIL computation (see
+    print_results / write_backtest_md), exactly like the merged-hotspot diagnostic. The
+    gated 'emerging-east' positive set is n=1 (Roedeliusplatz only, after the round-2
+    relabel -- see CRITERION HISTORY below); a recall >= 0.5 pass/fail carries no
+    statistical power at that n, and the true citywide base rate for this criterion is
+    22/535 = 4.1% (a criterion-based rate, not a decile-based one -- the "chance at the 10%
+    decile" rationale used for Tests B/C does not apply here). At the current n this is a
+    descriptive archetype confirmation, not a powered recall gate. FOLLOW-UP: promote to a
+    gating recall test once the 'emerging-east' seed grows to a defensible n, drawing from
+    the 22 citywide strict-criterion matches as the candidate pool (docstring note only, not
+    implemented here).
+
     Eastern-Berlin (Lichtenberg) gentrification frontiers do not fit the west-Berlin-shaped
     'hotspot' criterion (D1 top-decile deprived): the R-B2b domain sign-off
     (docs/methodology/R-B2b-domain-signoff.md) found no Lichtenberg PLR is simultaneously
@@ -635,32 +678,35 @@ def test_emerging_east_recall(mss_df, gt_df) -> dict:
     alongside (not merged into) Test B so the existing hotspot recall metric's denominator
     and meaning are unchanged (design Option 1 of the R-B2c SPEC).
 
-    CRITERION TIGHTENED at iteration-2 review (#278): the original implementation used
-    `mss_dynamik_index.isin([1, 2])` (a "non-declining" reading), which an independent
-    reviewer found (a) silently loosened the SPEC's literal "improving" wording and (b) was
-    nearly vacuous at citywide scale -- 169/542 Berlin PLRs (31%) meet the loose reading,
-    concentrated in the classic west/inner-city bezirke already covered by hotspot/mixed,
-    with only 9/169 in Lichtenberg. Under the STRICT `== 1` reading, only 22/542 PLRs match
-    citywide, of which only 11300724 Roedeliusplatz is in the ground-truth seed -- so recall
-    drops to 1/4 = 0.25 (FAIL @ >= 0.5 threshold). This is disclosed honestly below, not
-    hidden. Whether the other three seed PLRs (all D2 == 2 / typology_stage ==
-    'stable-established') should be moved to a separate, non-Test-E-gated control class is
-    an explicit OPEN QUESTION for the geo-DS + domain-expert sign-off -- see "Open questions
-    for methodology sign-off" in docs/methodology/backtest.md. Not resolved unilaterally
-    here.
+    CRITERION HISTORY (iteration-2 tightening + round-2 relabel, #278): the original
+    implementation used `mss_dynamik_index.isin([1, 2])` (a "non-declining" reading), which
+    an independent reviewer found (a) silently loosened the SPEC's literal "improving"
+    wording and (b) was nearly vacuous at citywide scale -- 169/535 = 31.6% of inhabited
+    Berlin PLRs meet the loose reading, concentrated in the classic west/inner-city bezirke
+    already covered by hotspot/mixed, with only 9/169 in Lichtenberg. Under the STRICT `== 1`
+    reading, only 22/535 = 4.1% of inhabited PLRs match citywide. Under the original
+    (iteration-2) labelling, all four seed PLRs were tested uniformly against this criterion
+    and recall was 1/4 = 0.25 (FAIL @ >= 0.5 threshold) -- disclosed honestly, not hidden.
+    ROUND-2 RESOLUTION (condition C1, both sign-offs): the other three seed PLRs (all
+    D2 == 2 / typology_stage == 'stable-established') were moved to the separate, non-gating
+    'emerging-east-watch' label (see seed_gentrification_ground_truth.csv and
+    transform/seeds/schema.yml) -- they were never expected to meet an "improving dynamism"
+    criterion (the R-B2b domain sign-off's own candidate table had already called them
+    "control"), so they must not count as recall misses here. The gated 'emerging-east'
+    class now contains only 11300724 Roedeliusplatz.
 
-    Note (R-C2 grounding, data limitation disclosure -- OPEN QUESTION, not domain-blessed):
-    the design's third criterion, "Altbau" (pre-1919/Gründerzeit building stock), has no
-    warehouse column and is not computationally gated here. The code currently ASSERTS --
-    without domain-expert confirmation -- that it is satisfied qualitatively for all four
-    candidate PLRs via their cited Milieuschutz Soziale-Erhaltungsgebiet designations.
-    Milieuschutz and Altbau-era building stock are related but NOT definitionally identical;
-    this substitution is flagged as an open question for domain-expert sign-off in
-    docs/methodology/backtest.md and transform/seeds/schema.yml, not a settled fact.
-
-    Pass threshold: recall >= 0.5 (same rationale as Tests B/C: 50% is the minimum for a
-    useful discriminator at a criterion this narrow). Current result: FAIL (see above) --
-    reported honestly as a real finding, not suppressed.
+    Note (R-C2 grounding, resolved at round-2 per gentrification-domain-expert sign-off,
+    condition C3): the design's third criterion, "Altbau" (pre-1919/Gründerzeit building
+    stock), has no warehouse column and is not computationally gated here. Milieuschutz is
+    used as the computational gate only because the warehouse has no PLR-level building-era
+    column -- NOT because Milieuschutz designation implies Altbau as a general rule. §172
+    BauGB Soziale-Erhaltungsrecht protects the social composition of the resident population
+    against displacement, not building era; a Soziale-Erhaltungsgebiet can, and some do,
+    include non-Altbau stock. For these four specific Lichtenberg PLRs (the gated archetype
+    plus the three watch-class PLRs), Altbau/Gründerzeit stock IS domain-confirmed per-row in
+    the seed notes (R-B2b research); Milieuschutz and Altbau genuinely coincide for this
+    corpus. This coincidence is NOT assumed to generalize to other Berlin PLRs or another
+    city (Epic H).
     """
     ee_ids = set(gt_df[gt_df["label"] == "emerging-east"]["plr_id"].tolist())
     n_ee = len(ee_ids)
@@ -737,9 +783,11 @@ def test_emerging_east_recall(mss_df, gt_df) -> dict:
             f"Strict dynamism-aware criterion (D1=2 AND D2==1 AND under_milieuschutz, "
             f"tightened at iteration-2 review to match the SPEC's literal 'improving' "
             f"wording): {n_criterion_matched}/{n_matched} emerging-east PLRs match. "
-            "See module docstring for the citywide base-rate comparison (22/542 strict "
-            "vs. 169/542 for the previously-implemented loose reading) and the open "
-            "question on whether the 3 non-matching PLRs belong in a separate control class."
+            "Non-gating as of round-2 (condition C2): reported descriptively, excluded "
+            "from OVERALL. See module docstring for the citywide base-rate comparison "
+            "(22/535 = 4.1% strict vs. 169/535 = 31.6% for the previously-implemented "
+            "loose reading) and the round-2 relabel that moved the 3 non-archetype PLRs "
+            "to the non-gating 'emerging-east-watch' class."
         ),
     }
 
@@ -753,15 +801,20 @@ def test_emerging_east_recall(mss_df, gt_df) -> dict:
 def diagnostic_merged_hotspot_recall(index_df, gt_df) -> dict:
     """Diagnostic only -- NOT a pass/fail gate, not part of the OVERALL verdict.
 
-    Quantifies what the R-B2b domain sign-off predicted: folding 'emerging-east' PLRs
-    into Test B's 'hotspot' top-decile criterion would dilute (not inflate) the hotspot
-    recall metric, because the emerging-east PLRs sit at mittel status_index (2), below
-    the top-decile threshold (observed 3.0). This function exists solely to make that
-    prediction empirically checkable and to document, in the back-test record, why Test B
-    and Test E are kept as separate test paths (R-B2c design Option 1) rather than merged.
+    Quantifies what the R-B2b domain sign-off predicted: folding the eastern-Berlin frontier
+    PLRs into Test B's 'hotspot' top-decile criterion would dilute (not inflate) the hotspot
+    recall metric, because those PLRs sit at mittel status_index (2), below the top-decile
+    threshold (observed 3.0). This function exists solely to make that prediction empirically
+    checkable and to document, in the back-test record, why Test B and Test E are kept as
+    separate test paths (R-B2c design Option 1) rather than merged.
+
+    Uses EMERGING_EAST_LABELS (both the Test-E-gated 'emerging-east' archetype and the
+    non-gating 'emerging-east-watch' control class, round-2 relabel #278) so this diagnostic
+    keeps covering the full 4-PLR eastern-frontier candidate set regardless of the round-2
+    Test E scoping change -- it is descriptive only and never feeds OVERALL.
     """
     hotspot_ids = set(gt_df[gt_df["label"] == "hotspot"]["plr_id"].tolist())
-    ee_ids = set(gt_df[gt_df["label"] == "emerging-east"]["plr_id"].tolist())
+    ee_ids = set(gt_df[gt_df["label"].isin(EMERGING_EAST_LABELS)]["plr_id"].tolist())
     merged_ids = hotspot_ids | ee_ids
 
     threshold_90 = float(np.percentile(index_df["status_index"].dropna().values, 90))
@@ -883,7 +936,9 @@ def print_results(
             )
 
     if res_e is not None:
-        print("\n--- Test E: Emerging-east recall (dynamism-aware, STRICT) (R-B2c, #278) ---")
+        print(
+            "\n--- Test E: Emerging-east recall (dynamism-aware, STRICT, NON-GATING) (R-B2c, #278) ---"
+        )
         print(f"  n emerging-east in seed: {res_e['n_emerging_east']}")
         print(f"  n found in warehouse:    {res_e['n_matched']}")
         print(
@@ -891,8 +946,8 @@ def print_results(
         )
         if res_e.get("recall") is not None:
             print(f"  recall = {res_e['recall']:.2f}")
-        print(f"  Threshold: recall >= {THRESHOLD_RECALL}")
-        print(f"  Result: {_pass_str(res_e['pass'])}")
+        print(f"  Threshold: recall >= {THRESHOLD_RECALL} (informational only, see note)")
+        print(f"  Result: {_pass_str(res_e['pass'])} (non-gating -- excluded from OVERALL)")
         if "details" in res_e:
             for d in res_e["details"]:
                 flag = "MEETS CRITERION" if d["meets_criterion"] else "does NOT meet criterion"
@@ -907,11 +962,13 @@ def print_results(
         )
         print(f"  {diag['note']}")
 
+    # Test E is deliberately excluded from OVERALL (R-B2c round-2, condition C2, both
+    # sign-offs): at n=1 (post round-2 relabel) it is a non-gating descriptive archetype
+    # confirmation, not a powered recall gate -- mirrors the non-gating treatment already
+    # given to the merged-hotspot diagnostic above.
     overall_tests = [res_a["pass"], res_b["pass"], res_c["pass"]]
     if res_d is not None:
         overall_tests.append(res_d["pass"])
-    if res_e is not None:
-        overall_tests.append(res_e["pass"])
     overall = all(overall_tests)
     print("\n" + "=" * 80)
     print(f"OVERALL: {'ALL PASS' if overall else 'ONE OR MORE FAIL'}")
@@ -929,11 +986,13 @@ def write_backtest_md(
     """Write (overwrite) docs/methodology/backtest.md with methodology and results."""
     OUTPUT_MD.parent.mkdir(parents=True, exist_ok=True)
     run_date = datetime.now().strftime("%Y-%m-%d")
+    # Test E is deliberately excluded from OVERALL (R-B2c round-2, condition C2, both
+    # sign-offs): at n=1 (post round-2 relabel) it is a non-gating descriptive archetype
+    # confirmation, not a powered recall gate -- mirrors the non-gating treatment already
+    # given to the merged-hotspot diagnostic (which never contributes a "pass" either).
     overall_tests = [res_a["pass"], res_b["pass"], res_c["pass"]]
     if res_d is not None:
         overall_tests.append(res_d["pass"])
-    if res_e is not None:
-        overall_tests.append(res_e["pass"])
     overall = all(overall_tests)
     overall_str = "ALL PASS" if overall else "ONE OR MORE FAIL"
 
@@ -1019,15 +1078,19 @@ def write_backtest_md(
             "(R-B2b, #264). |\n"
         )
         f.write(
-            f"| E: Emerging-east recall (R-B2c, #278; STRICT criterion, tightened at "
-            f"iteration-2 review) | >= {THRESHOLD_RECALL:.0%} | "
-            "Same 50% recall rationale as Tests B/C, applied to the STRICT dynamism-aware "
-            "criterion (D1=2 AND D2==1 'improving' AND under_milieuschutz) rather than the "
-            "top-decile status_index criterion, matching the R-B2b domain sign-off's literal "
-            "wording. An independent reviewer found the originally-implemented loosened "
-            "reading (D2<=2, 'non-declining') to be a silent, unilateral loosening that was "
-            "nearly vacuous at citywide scale (169/542 = 31% of Berlin PLRs); see "
-            '"Open questions for methodology sign-off" below for the full disclosure. |\n\n'
+            "| E: Emerging-east recall (R-B2c, #278; STRICT criterion; "
+            "NON-GATING as of round-2) | N/A -- reported, not gated | "
+            "Applies the STRICT dynamism-aware criterion (D1=2 AND D2==1 'improving' AND "
+            "under_milieuschutz) rather than the top-decile status_index criterion, matching "
+            "the R-B2b domain sign-off's literal wording. Round-2 (condition C2, geo-DS + "
+            "domain-expert sign-off): with the gated `emerging-east` positive set at n=1 "
+            "(after the round-2 relabel, see below), a recall >= 50% pass/fail carries no "
+            "statistical power. Unlike Tests B/C, this is NOT a decile test, so the "
+            '"chance at the 10% decile" rationale does not transfer -- Test E\'s true '
+            "citywide base rate is 22/535 = 4.1%. At this n, Test E is a descriptive "
+            "archetype confirmation, not a powered recall gate; it is reported below but "
+            "excluded from OVERALL. Promote to a gating test once the seed grows a "
+            "defensible n (candidate pool: the 22 citywide strict-criterion matches). |\n\n"
         )
 
         f.write("### Label semantics\n\n")
@@ -1047,18 +1110,23 @@ def write_backtest_md(
             "expected to fall clearly in either decile; used for narrative context only.\n"
         )
         f.write(
-            "- **emerging-east** (R-B2c, #278): eastern-Berlin (Lichtenberg) gentrification "
-            "frontier at mittel status (D1=2) under Milieuschutz protection. Deprivation "
-            "and pressure do NOT coincide here (the R-B2b domain sign-off found no "
-            "Lichtenberg PLR is both a documented frontier and top-decile deprived) -- "
-            "these PLRs are **not** expected in Test B's top decile, and are tested instead "
-            "by the separate, dynamism-aware Test E, which (as of the iteration-2 review) "
-            "STRICTLY requires D2==1 'improving' dynamism, matching the R-B2b sign-off's "
-            "literal wording. Only 1 of the 4 seed PLRs (Roedeliusplatz) meets this strict "
-            "reading; the other 3 are D2=2 ('stabil') / `typology_stage`='stable-established' "
-            '-- see "Open questions for methodology sign-off" below for the disclosed '
-            "trade-off between the strict and a looser reading, and whether those 3 PLRs "
-            "belong in a separate, non-gated control class instead.\n\n"
+            "- **emerging-east** (R-B2c, #278; scope tightened at round-2, condition C1): "
+            "eastern-Berlin (Lichtenberg) gentrification **archetype** frontier at mittel "
+            "status (D1=2), STRICTLY improving (D2==1) dynamism, under Milieuschutz "
+            "protection -- currently only Roedeliusplatz. Deprivation and pressure do NOT "
+            "coincide here (the R-B2b domain sign-off found no Lichtenberg PLR is both a "
+            "documented frontier and top-decile deprived) -- this PLR is **not** expected "
+            "in Test B's top decile, and is tested instead by the separate, dynamism-aware "
+            "Test E (non-gating as of round-2; see the Pass thresholds table above).\n"
+        )
+        f.write(
+            "- **emerging-east-watch** (R-B2c round-2, #278, condition C1): the three "
+            "Lichtenberg PLRs (Victoriastadt/Kaskelkiez, Weitlingkiez, Frankfurter Allee "
+            "Süd) originally folded into `emerging-east` but carrying D2=2 ('stabil') -- "
+            "the R-B2b domain sign-off's own candidate table had already called these three "
+            '"control", not archetype. Documented, Milieuschutz-protected mittel-status '
+            "watch PLRs that structurally cannot meet an 'improving dynamism' criterion by "
+            "design; tracked descriptively, **not** scored by Test E or any gate.\n\n"
         )
 
         f.write("---\n\n")
@@ -1166,7 +1234,9 @@ def write_backtest_md(
             f.write("\n")
 
         if res_e is not None:
-            f.write("### Test E — Emerging-east recall (dynamism-aware, STRICT) (R-B2c, #278)\n\n")
+            f.write(
+                "### Test E — Emerging-east recall (dynamism-aware, STRICT, NON-GATING) (R-B2c, #278)\n\n"
+            )
             f.write(
                 "Fraction of labelled `emerging-east` PLRs from `seed_gentrification_ground_truth` "
                 "that meet the STRICT dynamism-aware criterion: mittel status (`status_index == 2`) "
@@ -1176,9 +1246,11 @@ def write_backtest_md(
                 "into Test B's recall (see the diagnostic below for why). Design Option 1 of the "
                 "R-B2b domain sign-off's follow-up recommendation "
                 "(docs/methodology/R-B2b-domain-signoff.md), with the criterion **tightened at "
-                'iteration-2 review** to the SPEC\'s literal "D2 (improving dynamism)" wording -- '
-                'see "Open questions for methodology sign-off" below for the full disclosure of '
-                "why, and the resulting FAIL.\n\n"
+                'iteration-2 review** to the SPEC\'s literal "D2 (improving dynamism)" wording. '
+                "**Round-2 (condition C2, geo-DS + gentrification-domain-expert dual sign-off, "
+                "docs/epic-e/R-B2c-emerging-east-{geo,domain}-signoff.md): Test E is non-gating** "
+                "-- its result is reported here but excluded from the OVERALL result above (see "
+                '"Methodology resolution" below for the full rationale).\n\n'
             )
             f.write(f"- n emerging-east PLRs in seed: {res_e['n_emerging_east']}\n")
             f.write(f"- n found in warehouse: {res_e['n_matched']}\n")
@@ -1188,8 +1260,11 @@ def write_backtest_md(
                     f"- Recall = **{res_e['recall']:.2f}** "
                     f"({res_e['n_criterion_matched']}/{res_e['n_matched']})\n"
                 )
-            f.write(f"- Threshold: recall >= {THRESHOLD_RECALL}\n")
-            f.write(f"- **Result: {_pass_str(res_e['pass'])}**\n\n")
+            f.write(f"- Threshold: recall >= {THRESHOLD_RECALL} (informational only; non-gating)\n")
+            f.write(
+                f"- **Result: {_pass_str(res_e['pass'])}** "
+                "(non-gating -- excluded from OVERALL, see condition C2)\n\n"
+            )
 
             if "details" in res_e:
                 f.write("#### Emerging-east PLR details\n\n")
@@ -1207,12 +1282,16 @@ def write_backtest_md(
                 f.write("\n")
 
         if diag is not None:
-            f.write("#### Diagnostic (non-gating): hotspot recall if merged with emerging-east\n\n")
+            f.write(
+                "#### Diagnostic (non-gating): hotspot recall if merged with the eastern-Berlin "
+                "frontier PLRs\n\n"
+            )
             f.write(
                 "This diagnostic is **not** a pass/fail gate and does **not** count toward the "
                 "overall result above -- it exists only to make the R-B2b domain sign-off's "
-                "prediction empirically checkable: does folding `emerging-east` PLRs into "
-                "`hotspot` and testing them against Test B's *unchanged* top-decile "
+                "prediction empirically checkable: does folding the eastern-Berlin frontier PLRs "
+                "(`emerging-east` archetype + `emerging-east-watch` control, all 4 Lichtenberg "
+                "PLRs) into `hotspot` and testing them against Test B's *unchanged* top-decile "
                 "`status_index` criterion inflate or dilute recall?\n\n"
             )
             f.write(f"- Top-decile threshold (status_index): {diag['decile_threshold']}\n")
@@ -1224,7 +1303,7 @@ def write_backtest_md(
                 )
             if diag.get("merged_recall") is not None:
                 f.write(
-                    f"- Hotspot+emerging-east merged recall (hypothetical, NOT implemented): "
+                    f"- Hotspot+eastern-frontier merged recall (hypothetical, NOT implemented): "
                     f"**{diag['merged_recall']:.2f}** "
                     f"({diag['merged_n_in_decile']}/{diag['merged_n']})\n"
                 )
@@ -1232,28 +1311,34 @@ def write_backtest_md(
 
         if res_e is not None:
             f.write("---\n\n")
-            f.write("## Open questions for methodology sign-off (R-B2c, #278, iteration 2)\n\n")
+            f.write("## Methodology resolution (R-B2c round-2, #278)\n\n")
             f.write(
-                "Two open questions from the iteration-2 independent review are surfaced "
-                "here explicitly for the geo-DS + gentrification-domain-expert dual sign-off "
-                "gate to rule on. Neither has been resolved unilaterally by the coder.\n\n"
+                "The iteration-2 independent review surfaced two open questions, both resolved "
+                "at the round-2 geo-DS + gentrification-domain-expert dual sign-off "
+                "(docs/epic-e/R-B2c-emerging-east-geo-signoff.md, "
+                "docs/epic-e/R-B2c-emerging-east-domain-signoff.md, both Verdict: PASS with "
+                "conditions). Neither was resolved unilaterally by the coder.\n\n"
             )
-            f.write("### Open question 1 — strict vs. loosened D2 criterion for Test E\n\n")
+            f.write(
+                "### Resolution 1 — strict D2 criterion kept; label split into archetype vs. "
+                "watch (condition C1)\n\n"
+            )
             f.write(
                 "The R-B2b domain sign-off's literal recommendation (Item 2, recommendation 1) "
                 'reads: *"D2 (improving dynamism) + Milieuschutz + Altbau"*. The first '
                 'implementation (iteration 1) read this as "non-declining" (`dynamik_index` '
                 "in {1, 2}), which an independent reviewer flagged as a silent, unilateral "
                 "loosening with two quantified problems, verified against the live warehouse "
-                "(MSS 2025, all 542 Berlin PLRs):\n\n"
+                "(MSS 2025, the 535 inhabited Berlin PLRs):\n\n"
             )
             f.write(
-                "| Reading | Citywide match count | Match rate | Seed recall |\n"
+                "| Reading | Citywide match count | Match rate | Seed recall (iteration-2, "
+                "pre-relabel) |\n"
                 "|---|---|---|---|\n"
-                "| STRICT (`dynamik_index == 1`, now implemented) | 22 / 542 | 4.1% | "
-                "0.25 (1/4) — **FAIL** |\n"
-                "| LOOSE (`dynamik_index <= 2`, iteration-1 implementation) | 169 / 542 | "
-                "31.2% | 1.00 (4/4) — PASS |\n\n"
+                "| STRICT (`dynamik_index == 1`, implemented) | 22 / 535 | 4.1% | "
+                "0.25 (1/4) |\n"
+                "| LOOSE (`dynamik_index <= 2`, iteration-1 implementation) | 169 / 535 | "
+                "31.6% | 1.00 (4/4) |\n\n"
             )
             f.write(
                 "Under the loose reading, the 169 citywide matches concentrate in the "
@@ -1263,79 +1348,91 @@ def write_backtest_md(
                 "Charlottenburg-Wilmersdorf 20), with only 9 of 169 in Lichtenberg — i.e. "
                 "the loose criterion is nearly vacuous as an eastern-frontier-specific "
                 "discriminator (it removes only 10 of the 179 mittel-status+Milieuschutz "
-                "PLRs from consideration).\n\n"
+                "PLRs from consideration). Both sign-offs endorsed keeping the **STRICT** "
+                "reading; the loose reading was rightly rejected as unfaithful to the "
+                '"improving dynamism" wording and near-vacuous as a discriminator.\n\n'
             )
             f.write(
-                "This module now implements the **STRICT** reading, matching the SPEC's "
-                "literal wording. Under this reading, only `11300724` Roedeliusplatz "
-                "(D1=2, D2=1, `typology_stage`='active-gentrification') meets the criterion; "
-                "the other three seed PLRs (`11400927` Victoriastadt/Kaskelkiez, `11400929` "
-                "Weitlingkiez, `11300826` Frankfurter Allee Süd) are all D2=2 ('stabil') / "
-                "`typology_stage`='stable-established' (ADR-0008 D1xD2 matrix, "
-                "`transform/macros/typology_stage.sql`) — the same typology stage label "
-                "already used elsewhere in the seed for the *completed*/`mixed` PLR "
-                "Kollwitzplatz. Test E recall accordingly drops to **0.25 (1/4)**, below the "
-                "0.5 pass threshold — reported honestly as a FAIL, not hidden or re-loosened "
-                "to force a pass.\n\n"
+                "Under the strict reading, only `11300724` Roedeliusplatz (D1=2, D2=1, "
+                "`typology_stage`='active-gentrification') meets the criterion; the other "
+                "three PLRs originally folded into `emerging-east` (`11400927` "
+                "Victoriastadt/Kaskelkiez, `11400929` Weitlingkiez, `11300826` Frankfurter "
+                "Allee Süd) are all D2=2 ('stabil') / `typology_stage`='stable-established' "
+                "(ADR-0008 D1xD2 matrix, `transform/macros/typology_stage.sql`). The R-B2b "
+                "domain sign-off's own candidate table had already called Roedeliusplatz the "
+                '"emerging-east (hotspot-by-dynamism)" archetype and the other three '
+                '"emerging-east / control" -- testing all four uniformly against an '
+                '"improving dynamism" criterion treated three deliberately-chosen controls as '
+                "positives and reported the resulting mismatch as a 0.25 recall FAIL, which "
+                "both sign-offs ruled was a label/criterion artifact, not an index deficiency.\n\n"
             )
             f.write(
-                "**Decision needed at sign-off:** the R-B2b domain sign-off's own turnkey "
-                "candidate table (docs/methodology/R-B2b-domain-signoff.md) already labelled "
-                'Roedeliusplatz "emerging-east (hotspot-by-dynamism)" but the other three '
-                '"emerging-east / control" — a distinction the iteration-1 implementation did '
-                "not preserve (all four were folded into a single `emerging-east` label tested "
-                "uniformly by Test E). Two resolutions are on the table for the geo-DS + "
-                "domain-expert to choose between (or propose a third):\n\n"
-                "1. **Accept the strict-criterion FAIL as the honest result.** Document that "
-                "only Roedeliusplatz currently qualifies as an active (not just watched) "
-                "eastern gentrification frontier under the literal SPEC criterion; the other "
-                "three remain descriptively interesting (Milieuschutz-protected, mittel "
-                "status) but do not (yet) show accelerating dynamism.\n"
-                "2. **Re-label the 3 non-archetype PLRs** out of the Test-E-gated "
-                "`emerging-east` class into a separate, non-gating control class (the R-B2b "
-                "sign-off's design Option 2 — \"an explicitly separate control class... so "
-                "Test B's recall denominator is not silently changed\"), leaving `emerging-east` "
-                "as a single-PLR archetype class or expanding it only with future strict-"
-                "criterion matches.\n\n"
+                "**Resolution implemented:** the three D2=2 PLRs are now labelled "
+                "`emerging-east-watch` in the seed -- an explicitly non-gating descriptive "
+                "class (all cited rows retained; only the label, and hence Test E's scoring "
+                "membership, changed). Test E now scores only the true active-frontier "
+                "archetype, `emerging-east` (currently n=1, Roedeliusplatz). **Test E is "
+                "additionally demoted to non-gating** at this n (condition C2): a recall >= "
+                "0.5 pass/fail has no statistical power at n=1, and the decile-based "
+                'threshold rationale used for Tests B/C ("chance at the 10% decile = 10% '
+                'recall") does not apply to Test E, which is criterion-based (true citywide '
+                "base rate 22/535 = 4.1%). Test E is reported above as a descriptive archetype "
+                "confirmation, not a powered recall gate. **Follow-up (not implemented "
+                "here):** promote Test E to a gating recall test once the `emerging-east` "
+                "seed grows to a defensible n, drawing from the 22 citywide strict-criterion "
+                "matches (subset to literature-documented eastern frontiers) as the "
+                "candidate pool.\n\n"
             )
             f.write(
-                "### Open question 2 — Altbau (Gründerzeit building stock) criterion "
-                "substitution\n\n"
+                "### Resolution 2 — Milieuschutz-as-Altbau proxy: per-PLR, not general "
+                "(condition C3)\n\n"
             )
             f.write(
                 "The SPEC's Option 1 design lists three criteria: D2 (improving dynamism) + "
                 "Milieuschutz + **Altbau** (pre-1919/Gründerzeit building stock). The live "
                 "warehouse has no Altbau/building-vintage column at the PLR level, so this "
                 "implementation only computationally gates two of the three criteria (D2 + "
-                "Milieuschutz). The code asserts — in a code comment only, prior to this "
-                'review — that "Milieuschutz designation implies Altbau", i.e. that all '
-                "Berlin Soziale-Erhaltungsgebiete are, by definition, established over "
-                "documented Altbau-era displacement pressure. Milieuschutz and Altbau/"
-                "Gründerzeit building stock are **related but not definitionally identical** "
-                "— a Soziale-Erhaltungsgebiet could in principle be designated over "
-                "non-Altbau stock. **This substitution has not been blessed by the "
-                "gentrification-domain-expert** and is flagged here explicitly, and in "
-                "`transform/seeds/schema.yml`, as an open question for domain sign-off, not "
-                "a settled methodological fact.\n\n"
+                "Milieuschutz). An earlier code comment asserted, as a general rule, that "
+                '"Milieuschutz designation implies Altbau" -- the gentrification-domain-expert '
+                "ruled this **domain-incorrect as a universal claim**: §172 BauGB "
+                "Soziale-Erhaltungsrecht protects the **social composition** of the resident "
+                "population against displacement, **not building era**; a "
+                "Soziale-Erhaltungsgebiet can, and some do, include non-Altbau stock (interwar "
+                "Siedlungen, mixed, or postwar stock). Generalizing "
+                '"Milieuschutz ⇒ Altbau" would break the moment this label extends to other '
+                "Berlin PLRs or another city (Epic H).\n\n"
+            )
+            f.write(
+                "**Resolution implemented:** the general claim is removed. In its place: "
+                "Altbau/Gründerzeit stock is **domain-confirmed per-PLR** for these four "
+                "specific Lichtenberg Soziale-Erhaltungsgebiete (cited per-row in the seed "
+                "notes, from R-B2b research) -- Roedeliusplatz, Victoriastadt/Kaskelkiez, "
+                "Weitlingkiez, and Frankfurter Allee Süd are each independently documented as "
+                "Gründerzeit-Altbau quarters. Milieuschutz is used as the computational gate "
+                "only because the warehouse has no PLR-level building-era column, and for "
+                "these four specific PLRs the two happen to coincide. **This coincidence is "
+                "NOT assumed to generalize** to other Berlin PLRs or to another city.\n\n"
             )
 
         f.write("---\n\n")
         f.write("## Narrative summary\n\n")
 
-        # Auto-generate narrative based on results
+        # Auto-generate narrative based on results. Test E is intentionally excluded from
+        # core_tests / failed (R-B2c round-2, condition C2): it is a non-gating descriptive
+        # archetype confirmation at n=1, not a powered recall gate -- see "Methodology
+        # resolution" above. Its outcome is always reported separately below, regardless of
+        # pass/fail, via the "Test E (non-gating)" paragraph.
         core_tests = [res_a["pass"], res_b["pass"], res_c["pass"]]
         if res_d is not None:
             core_tests.append(res_d["pass"])
-        if res_e is not None:
-            core_tests.append(res_e["pass"])
         if all(core_tests):
             f.write(
-                "All tests passed. The live index shows structural consistency between "
+                "All gating tests passed. The live index shows structural consistency between "
                 "D1 status and D2 dynamism (Tests A/D), correctly identifies known "
                 "hotspot/coldspot PLRs at the expected tail of the status_index distribution "
-                "(Tests B and C), and correctly identifies eastern-Berlin emerging-east "
-                "frontiers under the dynamism-aware criterion (Test E, R-B2c). This confirms "
-                "the B2 back-test harness is working as intended.\n\n"
+                "(Tests B and C). Test E (R-B2c, non-gating as of round-2) is reported below as a "
+                "descriptive archetype confirmation. This confirms the B2 back-test harness is "
+                "working as intended.\n\n"
             )
         else:
             failed = []
@@ -1347,24 +1444,25 @@ def write_backtest_md(
                 failed.append("Test C (coldspot recall)")
             if res_d is not None and not res_d["pass"]:
                 failed.append("Test D (dynamism agreement)")
-            if res_e is not None and not res_e["pass"]:
-                failed.append("Test E (emerging-east recall)")
             f.write(
-                f"One or more tests did not pass: {', '.join(failed)}. "
+                f"One or more gating tests did not pass: {', '.join(failed)}. "
                 "Review the PLR-level detail tables above for specifics. "
                 "Possible causes: index pipeline issue (Test A/D), ground-truth seed mismatch "
-                "(Tests B/C/E), or a legitimate finding that known hotspots/coldspots/emerging-east "
+                "(Tests B/C), or a legitimate finding that known hotspots/coldspots "
                 "PLRs are no longer classifying as expected under the current MSS edition.\n\n"
             )
-            if res_e is not None and not res_e["pass"]:
-                f.write(
-                    "**Test E FAIL is a disclosed, expected finding, not a pipeline bug**: it "
-                    "reflects the strict-criterion tightening made at iteration-2 review (see "
-                    '"Open questions for methodology sign-off" above) -- only 1 of the 4 seed '
-                    "`emerging-east` PLRs meets the SPEC's literal 'D2 (improving dynamism)' "
-                    "criterion. This is left as an open question for the geo-DS + "
-                    "domain-expert sign-off to resolve, not silently patched over.\n\n"
-                )
+
+        if res_e is not None:
+            criterion_note = "meets" if res_e.get("pass") else "does not meet"
+            recall_note = f"{res_e['recall']:.2f}" if res_e.get("recall") is not None else "N/A"
+            f.write(
+                "**Test E (non-gating archetype confirmation, R-B2c round-2, #278):** "
+                f"Roedeliusplatz currently {criterion_note} the strict improving-dynamism "
+                f"criterion (recall {recall_note} at n={res_e.get('n_matched')}). At this n, "
+                "Test E is a descriptive confirmation, not a powered recall gate, and does "
+                'not contribute to OVERALL -- see "Methodology resolution" above '
+                "(condition C2).\n\n"
+            )
 
         if res_b.get("recall") is not None and res_b["n_matched"] > 0:
             n_completed = sum(1 for d in res_b.get("details", []) if not d["in_top_decile"])
@@ -1379,17 +1477,19 @@ def write_backtest_md(
 
         if res_e is not None:
             f.write(
-                "**Eastern-Berlin framing note (R-B2c, #278):** the `emerging-east` PLRs above "
-                "are tracked **descriptively** at mittel MSS status (D1=2) under documented "
-                "Milieuschutz protection; only Roedeliusplatz currently also shows strictly "
-                "improving (D2=1) dynamism under the tightened Test E criterion, the other "
-                "three show stabil (D2=2) dynamism. This is NOT an assertion that any of these "
-                "areas are causally destined to displace or complete gentrification -- it "
-                "documents a currently observed pressure signal per the cited literature "
-                "(Dangschat 1988; Holm & Schulz 2016) and the R-B2b domain sign-off. Any "
-                "published-facing (G2/O2) framing of this class must preserve that distinction "
-                "and must not overstate Test E's recall (see \"Open questions for methodology "
-                'sign-off" above).\n\n'
+                "**Eastern-Berlin framing note (R-B2c, #278):** the `emerging-east` archetype "
+                "(Roedeliusplatz) and the `emerging-east-watch` control PLRs (Victoriastadt/"
+                "Kaskelkiez, Weitlingkiez, Frankfurter Allee Süd) are all tracked "
+                "**descriptively** at mittel MSS status (D1=2) under documented Milieuschutz "
+                "protection; only Roedeliusplatz shows strictly improving (D2=1) dynamism under "
+                "Test E's criterion, the three `emerging-east-watch` PLRs show stabil (D2=2) "
+                "dynamism by design -- they are not tested for improving dynamism (condition C1). "
+                "This is NOT an assertion that any of these areas are causally destined to "
+                "displace or complete gentrification -- it documents a currently observed "
+                "pressure signal per the cited literature (Dangschat 1988; Holm & Schulz 2016) "
+                "and the R-B2b domain sign-off. Any published-facing (G2/O2) framing of this "
+                "class must preserve that distinction and must not overstate Test E's recall "
+                '(see "Methodology resolution" above).\n\n'
             )
 
         f.write("## Sources\n\n")
@@ -1494,9 +1594,12 @@ def main() -> None:
     res_c = test_coldspot_recall(index_df, gt_df)
     print(f"  recall={res_c.get('recall')}, result={_pass_str(res_c['pass'])}")
 
-    print("Running Test E: Emerging-east recall (dynamism-aware) (R-B2c, #278)...")
+    print("Running Test E: Emerging-east recall (dynamism-aware, NON-GATING) (R-B2c, #278)...")
     res_e = test_emerging_east_recall(mss_df, gt_df)
-    print(f"  recall={res_e.get('recall')}, result={_pass_str(res_e['pass'])}")
+    print(
+        f"  recall={res_e.get('recall')}, result={_pass_str(res_e['pass'])} "
+        "(non-gating -- excluded from OVERALL)"
+    )
 
     diag = diagnostic_merged_hotspot_recall(index_df, gt_df)
     print(f"  Diagnostic (non-gating): {diag['note']}")

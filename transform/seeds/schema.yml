@@ -432,51 +432,63 @@ seeds:
           the bottom decile (lowest status_index = least deprived).
         'mixed' — areas that have completed gentrification or are in
           transition; not expected to appear cleanly in either decile.
-        'emerging-east' (R-B2c, #278) — eastern-Berlin (Lichtenberg) gentrification
-          frontiers that do NOT fit the 'hotspot' shape: the R-B2b domain sign-off
+        'emerging-east' (R-B2c, #278; scope tightened at round-2, condition C1) —
+          the eastern-Berlin (Lichtenberg) gentrification ARCHETYPE frontier that
+          does NOT fit the 'hotspot' shape: the R-B2b domain sign-off
           (docs/methodology/R-B2b-domain-signoff.md) found no Lichtenberg PLR is
           simultaneously a documented gentrification frontier AND top-decile
-          deprived — the real frontiers sit at mittel status (D1=2), under active
-          Milieuschutz protection, inheriting invasion-succession pressure from
-          Friedrichshain (Dangschat 1988). Tested by its own path, Test E
-          (dynamism-aware recall, STRICT reading as of iteration-2 review:
-          D1=2 AND D2==1 'improving' AND under_milieuschutz), NOT by Test B's
-          top-decile criterion — folding these PLRs into 'hotspot' would either
-          mis-sign GDR-era Plattenbau deprivation as gentrification-by-proxy or
-          silently dilute what Test B measures (R-B2b domain sign-off). Tracked
-          descriptively at mittel status, not asserted as causally destined to
-          displace (G2/O2 framing guard).
+          deprived — the real frontier sits at mittel status (D1=2), STRICTLY
+          IMPROVING dynamism (D2==1), under active Milieuschutz protection,
+          inheriting invasion-succession pressure from Friedrichshain
+          (Dangschat 1988). Currently a single PLR (11300724 Roedeliusplatz).
+          Tested by its own path, Test E (dynamism-aware recall, STRICT reading:
+          D1=2 AND D2==1 'improving' AND under_milieuschutz) — NON-GATING as of
+          round-2 (condition C2): at n=1 a recall gate has no statistical power,
+          so Test E is reported descriptively and excluded from the back-test's
+          OVERALL result. NOT tested by Test B's top-decile criterion — folding
+          this PLR into 'hotspot' would either mis-sign GDR-era Plattenbau
+          deprivation as gentrification-by-proxy or silently dilute what Test B
+          measures (R-B2b domain sign-off). Tracked descriptively at mittel
+          status, not asserted as causally destined to displace (G2/O2 framing
+          guard).
+        'emerging-east-watch' (R-B2c round-2, #278, condition C1) — the three
+          Lichtenberg PLRs (11400927 Victoriastadt/Kaskelkiez, 11400929
+          Weitlingkiez, 11300826 Frankfurter Allee Süd) originally folded into
+          'emerging-east' in iteration 2 but carrying D2=2 ('stabil') dynamism.
+          The R-B2b domain sign-off's own candidate table had already called
+          these three "control" (as distinct from Roedeliusplatz's "archetype"):
+          documented, Milieuschutz-protected, mittel-status Gründerzeit-Altbau
+          quarters that are watched but structurally cannot meet an "improving
+          dynamism" (D2==1) criterion by design. Explicitly NON-GATING: not
+          scored by Test E or any other gate — tracked descriptively only, so
+          they are never counted as recall misses against a criterion they were
+          never expected to meet.
 
-      OPEN QUESTION 1 (Test E strict-vs-loose D2 criterion, R-C1 methodology gate,
-      flagged at iteration-2 review, #278): only 1 of the 4 'emerging-east' rows
-      (11300724 Roedeliusplatz, D2=1 'improving', typology_stage='active-gentrification')
-      meets the SPEC's literal "D2 (improving dynamism)" criterion. The other 3
-      (11400927 Victoriastadt/Kaskelkiez, 11400929 Weitlingkiez, 11300826 Frankfurter
-      Allee Süd) are D2=2 ('stabil') / typology_stage='stable-established'
-      (ADR-0008 D1xD2 matrix, transform/macros/typology_stage.sql) — the R-B2b domain
-      sign-off's own turnkey table already distinguished Roedeliusplatz as
-      "emerging-east (hotspot-by-dynamism)" from the other three as "emerging-east /
-      control". Test E's recall under the strict reading is 0.25 (1/4), below the
-      0.5 pass threshold — an honestly-disclosed FAIL, not silently loosened back to
-      pass. Whether the 3 non-archetype rows should be re-labelled out of this
-      Test-E-gated class into a separate, non-gating control class (R-B2b sign-off
-      design Option 2) is an open decision for the geo-DS + domain-expert sign-off,
-      not resolved unilaterally in this seed. Full citywide base-rate comparison
-      (strict 22/542 vs. loose 169/542 Berlin PLRs) in docs/methodology/backtest.md
-      "Open questions for methodology sign-off".
+      RESOLVED (R-B2c round-2, #278): the geo-DS + gentrification-domain-expert
+      dual sign-off (docs/epic-e/R-B2c-emerging-east-geo-signoff.md,
+      docs/epic-e/R-B2c-emerging-east-domain-signoff.md, both Verdict: PASS with
+      conditions) settled the two questions flagged at iteration-2 review:
 
-      OPEN QUESTION 2 (Altbau criterion substitution, flagged at iteration-2 review,
-      #278): the SPEC's Option 1 design lists three criteria for 'emerging-east' —
-      D2 (improving dynamism) + Milieuschutz + Altbau (pre-1919/Gründerzeit building
-      stock). The warehouse has no Altbau/building-vintage column at PLR level, so
-      only D2 + Milieuschutz are computationally gated by Test E; the code has
-      (in a comment only, prior to this flag) ASSERTED that Milieuschutz designation
-      implies Altbau-era building stock for these four PLRs. Milieuschutz
-      (Soziale-Erhaltungsgebiet) and Altbau/Gründerzeit building stock are related
-      but NOT definitionally identical. This substitution has NOT been blessed by
-      the gentrification-domain-expert and is an explicit open question for domain
-      sign-off, not a settled fact — see docs/methodology/backtest.md "Open questions
-      for methodology sign-off".
+      1. Strict-vs-loose D2 criterion: the STRICT reading (D2==1 'improving')
+      is endorsed and kept (the loose D2<=2 reading was rejected as
+      near-vacuous: 169/535 = 31.6% of inhabited Berlin PLRs vs. 22/535 = 4.1%
+      strict). The label was split (condition C1) so the strict criterion is
+      scored only against the true archetype ('emerging-east', n=1); the three
+      D2=2 rows moved to the non-gating 'emerging-east-watch' class. Test E is
+      additionally demoted to non-gating (condition C2) at this n — see
+      docs/methodology/backtest.md "Methodology resolution" for the full
+      citywide base-rate table and follow-up (promote to gating once the seed
+      grows from the 22 citywide strict-criterion matches).
+
+      2. Milieuschutz-as-Altbau substitution (condition C3): the general claim
+      "Milieuschutz implies Altbau" is domain-incorrect (§172 BauGB Soziale-
+      Erhaltungsrecht protects social composition, not building era) and has
+      been removed from code/docs. For these four specific Lichtenberg PLRs,
+      Altbau/Gründerzeit stock IS domain-confirmed per-row (see notes below,
+      from R-B2b research); Milieuschutz is used only as the computational gate
+      because the warehouse has no PLR-level building-era column, and for this
+      corpus the two coincide. This is NOT assumed to generalize to other
+      Berlin PLRs or another city (Epic H).
 
       Sources: Döring & Ulbricht (2016), Holm & Schulz (2016), Helweg 2018
       thesis, Dangschat (1988) invasion-succession, and MSS 2023/2025 direct
@@ -507,19 +519,19 @@ seeds:
         description: >
           Ground-truth gentrification label: 'hotspot' (under pressure / vulnerable,
           west-Berlin-shaped, tested @ top decile by Test B), 'coldspot' (stable /
-          low deprivation), 'mixed' (transitional / completed), or 'emerging-east'
-          (R-B2c, #278 — eastern-Berlin mittel-status frontier, tested by the
-          STRICT dynamism-aware Test E as of iteration-2 review (D2==1 'improving'
-          only), not Test B. See the seed description's "OPEN QUESTION 1" above:
-          only 1 of the 4 current 'emerging-east' rows meets this strict criterion;
-          whether the other 3 should move to a separate control class is an open
-          methodology-gate decision, not yet resolved).
+          low deprivation), 'mixed' (transitional / completed), 'emerging-east'
+          (R-B2c, #278 — eastern-Berlin mittel-status ARCHETYPE frontier, D2==1
+          'improving' only, currently n=1; tested by the STRICT dynamism-aware
+          Test E, NON-GATING as of round-2 condition C2 -- see the seed
+          description above), or 'emerging-east-watch' (R-B2c round-2, #278,
+          condition C1 -- the 3 D2=2 'stabil' Lichtenberg control PLRs,
+          descriptive only, not scored by any gate).
         data_tests:
 
           - not_null
           - accepted_values:
               arguments:
-                values: [hotspot, coldspot, mixed, emerging-east]
+                values: [hotspot, coldspot, mixed, emerging-east, emerging-east-watch]
       - name: source
         description: >
           Short citation for the label assignment (e.g. 'Döring & Ulbricht 2016',
