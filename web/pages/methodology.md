@@ -90,7 +90,9 @@ as a **baseline covariate**: a PLR with a young, highly mobile, migrant-heavy po
 long-tenure residents is read (per Döring & Ulbricht 2016) as more *susceptible* to gentrification,
 not as already gentrifying. It answers "how pre-gentrification did this area look at the start?", not
 "is this area gentrifying right now?" — see §4 for why that distinction is enforced strictly in the
-model.
+model. One field, share of residents with a migration background, changed its official definition in
+2017 (a Mikrozensus reform); this project restricts any comparison of that field across years to
+2017 onward and does not compare pre-2017 and post-2017 values directly.
 
 ### OSM POI — OpenStreetMap points of interest
 
@@ -217,6 +219,13 @@ crosses that boundary without an explicit, documented area crosswalk. If you wan
 this specific area changed since the 2018 thesis," use the [area detail page](/berlin/area-detail)'s
 trajectory chart, which is built to handle the boundary discipline correctly, rather than comparing a
 `standard` number to a `live_data` number by eye.
+
+There is a second, smaller structured break within `live_data` itself: the Berlin Senate's own MSS
+Status/Dynamik definition changed in 2023, adding a fourth input (the share of children in
+single-parent households) to what had been a three-indicator classification. The Senate maintains
+class continuity in spirit across this change — pre-2023 and 2023+ classes remain comparable in
+*interpretation* — but they are not computed from an identical input set, so a small movement in an
+area's class right around 2023 should not be over-read as a sudden real change.
 
 ## 6. Known limitations
 
@@ -379,9 +388,18 @@ honestly compute. We'd rather say that plainly than manufacture a misleading num
   "which neighbourhood is about to change" targeting signal.
 - Aggregate business-type counts are unreliable in areas with very few mapped
   businesses; per-area results should not be over-read at the individual-area level.
+  A minimum-POI-base flag/suppression for individual thinly-mapped PLRs is planned but
+  **not yet applied** to the [POI & Offering Advantage map](/berlin/poi-map) — treat any
+  single PLR with very few mapped businesses on that map cautiously until it is.
 - No multiple-comparison correction was applied; treat all figures here as
   **directional indicators**, consistent (or not) with a hypothesis, not confirmatory
   proof.
+- Offering Advantage is computed with an **isotropic (equal-in-all-directions) catchment**
+  around each area — it does not account for how Berlin's actual street/transit network
+  shapes which businesses residents can realistically reach, a known simplification of the
+  real accessibility surface. Whether the OA ranking above is sensitive to the exact
+  catchment radius (bandwidth) chosen has **not yet been tested** — that cross-bandwidth
+  check is a planned, tracked follow-up, not a result reported here.
 
 This section's own further reading: [the 2018 thesis, re-checked](/thesis-recheck) (the faithful
 revival, hypothesis by hypothesis), [three-way comparison findings (OA-C.1)](https://github.com/dhelweg/gentriduck/blob/main/docs/epic-e/C1-three-way-comparison-findings.md)
