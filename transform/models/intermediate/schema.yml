@@ -2226,6 +2226,78 @@ models:
           Milieuschutz designation ([0,1]), NULL when under_milieuschutz is
           false. Same time-invariance caveat as under_milieuschutz above.
 
+  - name: int_gentrification_ts_unified_2021
+    description: >
+      R-A8b (#260) -- DRAFT / PENDING GEO-DS + DOMAIN SIGN-OFF (R-C1). NOT yet consumed by any
+      downstream model. Builds a single continuous (city_code='BER', area_code=plr_id_2021,
+      snapshot_year) outcome panel across all 7 MSS editions (2013-2025) by remapping the
+      lor_pre2021 branch of int_gentrification_ts onto lor_2021 PLRs via the DOMINANT-PLR
+      crosswalk (int_berlin_lor_crosswalk_dominant_2021, QA-7b #205) -- not areal-weighted
+      apportionment, because status_index/dynamik_index/typology_stage are ordinal
+      classifications assigned to a whole PLR, not counts/shares that can be validly split
+      across a fractional area overlap (see model header for full R-C2 grounding and the open
+      questions flagged for the geo-DS/domain sign-off this ticket requires before any
+      downstream model may consume it).
+
+      Grain: (city_code, area_code [lor_2021], snapshot_year).
+    meta:
+      dbt_meta_owner: data-engineer
+    data_tests:
+
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns:
+              - city_code
+              - area_code
+              - snapshot_year
+      - assert_not_empty:
+          config:
+            severity: error
+    columns:
+      - name: city_code
+        description: City identifier (ADR-0005). Always 'BER' (Berlin-only source panel).
+        data_tests:
+
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ["BER"]
+      - name: area_code
+        description: >
+          lor_2021 PLR area code (8-digit, zero-padded). All rows -- including remapped
+          lor_pre2021-origin editions -- are keyed to the lor_2021 scheme.
+        data_tests:
+
+          - not_null
+      - name: snapshot_year
+        description: MSS edition year (2013, 2015, 2017, 2019, 2021, 2023, 2025).
+        data_tests:
+
+          - not_null
+      - name: status_index
+        description: >
+          D1 social-status ordinal (1=hoch...4=sehr_niedrig), passed through unchanged
+          (lor_2021 editions) or copied from the dominant-crosswalk-matched pre-2021 PLR
+          (lor_pre2021-origin editions). NULL for uninhabited PLRs.
+      - name: dynamik_index
+        description: D2 social-direction ordinal (1=positiv, 2=stabil, 3=negativ). Same remap semantics as status_index.
+      - name: typology_stage
+        description: Six-stage D1xD2 typology label. Same remap semantics as status_index.
+      - name: is_uninhabited
+        description: True when the source MSS edition has gesamtindex IS NULL for this PLR/year.
+      - name: remap_method
+        description: "'passthrough' (lor_2021-native) or 'dominant_plr_crosswalk' (lor_pre2021-origin, remapped)."
+        data_tests:
+
+          - accepted_values:
+              arguments:
+                values: ["passthrough", "dominant_plr_crosswalk"]
+      - name: remap_weight
+        description: >
+          1.0 for passthrough rows. For dominant_plr_crosswalk rows, the crosswalk's
+          dominant_weight (areal-overlap fraction of the matched pre-2021 PLR) -- carried
+          through for diagnostic/QA use, NOT used as a computation weight (dominant-PLR
+          selection, not weighted apportionment; see model header).
   - name: int_ewr_lead_lag
     description: >
       #114: EWR-based annual lead-lag panel for same-era H2/H3 thesis comparison.
