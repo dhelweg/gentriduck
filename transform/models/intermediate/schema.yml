@@ -2381,7 +2381,6 @@ models:
       - name: is_post_designation
         description: True/false for treated PLR-years (snapshot_year >= designation_year); NULL for control PLR-years (never a 0/1 -- controls are never "post").
   - name: int_ewr_lead_lag
-  - name: int_ewr_lead_lag
     description: >
       #114: EWR-based annual lead-lag panel for same-era H2/H3 thesis comparison.
 
@@ -4160,6 +4159,47 @@ models:
                 expression: ">= 0"
               config:
                 where: "area_code is not null and oa_type is not null"
+      - name: oa_domain_min_base_flag
+        description: >
+          #274 (ADR-0017 D5 D-3 discharge, advisory): true when
+          all_domains_stock_local (this PLR-year's TOTAL poi count across every
+          domain) is below the `oa_min_poi_base_n` dbt var (default 10) -- the
+          compositional-LQ small-denominator instability the domain sign-off
+          names ("a single POI can swing a type's local share"). Constant
+          across every domain/category/type row of the same (city_code,
+          snapshot_year, area_code, area_vintage, weight_variant) -- this is a
+          PLR-year-level "thinly-mapped" property, not domain-specific. See
+          model header for the threshold derivation and the poi-map page's use
+          of this flag to suppress oa_domain in flagged PLRs.
+        data_tests:
+
+          - not_null:
+              config:
+                where: "area_code is not null"
+      - name: oa_category_min_base_flag
+        description: >
+          #274 (ADR-0017 D5 D-3 discharge, advisory): true when
+          domain_stock_local (this row's parent DOMAIN's own local total
+          within the PLR -- oa_category's actual denominator, ADR-0017 D1) is
+          below `oa_min_poi_base_n` (default 10).
+        data_tests:
+
+          - not_null:
+              config:
+                where: "area_code is not null"
+      - name: oa_type_min_base_flag
+        description: >
+          #274 (ADR-0017 D5 D-3 discharge, advisory): true when
+          domain_stock_local (the parent DOMAIN's local total within the PLR
+          -- oa_type's actual denominator too, ADR-0017 D1: type nests under
+          domain, not category) is below `oa_min_poi_base_n` (default 10).
+          Identical value to oa_category_min_base_flag on the same row by
+          construction (both level's denominator is domain_stock_local).
+        data_tests:
+
+          - not_null:
+              config:
+                where: "area_code is not null"
 
   - name: int_mss_bzr_aggregate
     description: >

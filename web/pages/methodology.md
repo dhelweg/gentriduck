@@ -388,24 +388,35 @@ honestly compute. We'd rather say that plainly than manufacture a misleading num
   "which neighbourhood is about to change" targeting signal.
 - Aggregate business-type counts are unreliable in areas with very few mapped
   businesses; per-area results should not be over-read at the individual-area level.
-  A minimum-POI-base flag/suppression for individual thinly-mapped PLRs is planned but
-  **not yet applied** to the [POI & Offering Advantage map](/berlin/poi-map) — treat any
-  single PLR with very few mapped businesses on that map cautiously until it is.
+  A minimum-POI-base flag/suppression for individual thinly-mapped PLRs is now **applied**
+  on the [POI & Offering Advantage map](/berlin/poi-map): PLR-years with fewer than 10
+  total mapped places are shown as a blank/unshaded gap rather than a potentially
+  misleading Offering Advantage value (#274, ADR-0017 D5 D-3).
 - No multiple-comparison correction was applied; treat all figures here as
   **directional indicators**, consistent (or not) with a hypothesis, not confirmatory
   proof.
 - Offering Advantage is computed with an **isotropic (equal-in-all-directions) catchment**
   around each area — it does not account for how Berlin's actual street/transit network
   shapes which businesses residents can realistically reach, a known simplification of the
-  real accessibility surface. Whether the OA ranking above is sensitive to the exact
-  catchment radius (bandwidth) chosen has **not yet been tested** — that cross-bandwidth
-  check is a planned, tracked follow-up, not a result reported here.
+  real accessibility surface. **Offering Advantage is bandwidth-sensitive at the edges of
+  its sensitivity sweep.** A dedicated {500 m, 1000 m, 1500 m} bandwidth sweep
+  (`analysis/oa_bandwidth_sweep.py`, #274, ADR-0017 D5 C-4) found OA rankings **stable**
+  close to the 1000 m headline catchment (500 m↔1000 m and 1000 m↔1500 m both rank-correlate
+  above the 0.7 publish-gate threshold, Spearman, in every year 2008–2026) but **re-ranked
+  meaningfully** across the sweep's full {500 m, 1500 m} span (pooled Spearman r = 0.69,
+  below 0.7 in most individual years) — see the
+  [bandwidth-sweep findings](https://github.com/dhelweg/gentriduck/blob/main/docs/epic-g/G2-oa-bandwidth-sweep-findings.md)
+  for the full detail. Read this as a substantive finding about the spatial grain of
+  commercial succession, not merely an implementation caveat: the exact catchment radius
+  chosen changes which neighbourhoods read as commercially over/under-represented.
 
 This section's own further reading: [the 2018 thesis, re-checked](/thesis-recheck) (the faithful
 revival, hypothesis by hypothesis), [three-way comparison findings (OA-C.1)](https://github.com/dhelweg/gentriduck/blob/main/docs/epic-e/C1-three-way-comparison-findings.md)
 (the full statistical detail behind this section), [ADR-0018](https://github.com/dhelweg/gentriduck/blob/main/docs/adr/0018-causal-tiered-poi-selection.md)
-(the curation rule), and [ADR-0017](https://github.com/dhelweg/gentriduck/blob/main/docs/adr/0017-poi-offering-advantage-revival.md)
-(the Offering Advantage construct and the faithful/improved separation).
+(the curation rule), [ADR-0017](https://github.com/dhelweg/gentriduck/blob/main/docs/adr/0017-poi-offering-advantage-revival.md)
+(the Offering Advantage construct and the faithful/improved separation), and the
+[OA bandwidth-sweep findings (#274)](https://github.com/dhelweg/gentriduck/blob/main/docs/epic-g/G2-oa-bandwidth-sweep-findings.md)
+(the C-4 bandwidth-fragility publish-gate discharge).
 
 ## 8. Further reading
 

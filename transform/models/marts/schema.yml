@@ -1104,6 +1104,33 @@ models:
         description: Category-level Offering Advantage, parent-relative to its domain.
       - name: oa_type
         description: Type-level Offering Advantage, parent-relative to its domain.
+      - name: oa_domain_min_base_flag
+        description: >
+          #274 (ADR-0017 D5 D-3 discharge): true when this PLR-year's total
+          POI count across every domain is below the minimum-POI-base
+          threshold (`oa_min_poi_base_n` dbt var, default 10) -- flags
+          thinly-mapped PLR-years where the compositional LQ is unstable. See
+          int_poi_offering_advantage for the full derivation.
+        data_tests:
+
+          - not_null
+      - name: oa_category_min_base_flag
+        description: >
+          #274 (ADR-0017 D5 D-3 discharge): true when this row's parent
+          domain's own local POI total within the PLR is below
+          `oa_min_poi_base_n` -- oa_category's actual denominator.
+        data_tests:
+
+          - not_null
+      - name: oa_type_min_base_flag
+        description: >
+          #274 (ADR-0017 D5 D-3 discharge): true when this row's parent
+          domain's own local POI total within the PLR is below
+          `oa_min_poi_base_n` -- oa_type's actual denominator too (type nests
+          under domain, not category; ADR-0017 D1).
+        data_tests:
+
+          - not_null
       - name: poi_count
         description: >
           Count of POIs in this (city, year, area, vintage, domain, category,
@@ -1205,6 +1232,17 @@ models:
           Domain-level Offering Advantage (location quotient), carried through
           unchanged from mart_poi_offering_advantage (constant within this
           group by construction -- see model header).
+      - name: oa_domain_min_base_flag
+        description: >
+          #274 (ADR-0017 D5 D-3 discharge): true when this PLR-year's total
+          POI count across every domain is below the minimum-POI-base
+          threshold (`oa_min_poi_base_n` dbt var, default 10) -- a
+          PLR-year-level "thinly-mapped" property, constant across every
+          domain of the same PLR-year (see model header). The /berlin/poi-map
+          page suppresses oa_domain to NULL on this flag before display.
+        data_tests:
+
+          - not_null
       - name: poi_count
         description: >
           SUM(poi_count) across this domain's (poi_category_h, poi_type_h)

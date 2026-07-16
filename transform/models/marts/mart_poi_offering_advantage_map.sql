@@ -28,6 +28,14 @@
 -- parquet (COUNT(DISTINCT oa_domain) = 1 per group, sampled). any_value(...)
 -- is therefore lossless here, not a lossy approximation.
 --
+-- #274 (ADR-0017 D5 D-3 discharge): oa_domain_min_base_flag is carried through
+-- the same way (any_value) -- it is in fact constant across this PLR-year's
+-- EVERY domain, not just this one (int_poi_offering_advantage header: it is
+-- keyed on all_domains_stock_local, the PLR-year's grand total, a
+-- PLR-year-level property), so collapsing it here is exact, not lossy.
+-- web/pages/berlin/poi-map.md suppresses oa_domain on this flag before
+-- display (C-4/D-3 publish-gate discharge).
+--
 -- poi_density_per_km2 is NOT simply averaged/any_value'd across leaves --
 -- it is recomputed as SUM(poi_count) / area_km2 so the domain-level density
 -- is the true total (e.g. "all Gastronomy POIs per km2"), not one arbitrary
@@ -38,7 +46,7 @@
 -- (poi_category_h, poi_type_h)-collapsed subset of mart_poi_offering_advantage's
 -- grain, ~1/3 the row count (251,159 vs 856,464 rows measured on the same
 -- build) with 4 fewer columns (poi_category_h, poi_type_h, oa_category,
--- oa_type dropped).
+-- oa_type dropped) and 1 added (oa_domain_min_base_flag, #274) -- net 3 fewer.
 --
 -- dbt_meta_owner: data-engineer
 -- depends_on: {{ ref('mart_poi_offering_advantage') }}
@@ -54,6 +62,9 @@ select
     poi_domain_h,
     -- Constant within the group (see header) -- any_value is lossless.
     any_value(oa_domain) as oa_domain,
+    -- #274: constant across the WHOLE PLR-year, a fortiori constant within
+    -- this domain group -- any_value is exact (see header).
+    any_value(oa_domain_min_base_flag) as oa_domain_min_base_flag,
     sum(poi_count) as poi_count,
     any_value(area_km2) as area_km2,
     sum(poi_count) / nullif(any_value(area_km2), 0) as poi_density_per_km2
