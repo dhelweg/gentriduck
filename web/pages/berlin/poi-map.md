@@ -54,11 +54,16 @@ sidebar_position: 5
   page's SQL, since it's a display decision, not a new methodology value -- the underlying oa_domain
   is still exposed unsuppressed everywhere else, e.g. mart_poi_offering_advantage). (2) C-4
   bandwidth-fragility: analysis/oa_bandwidth_sweep.py ran the actual {500,1000,1500}m sweep --
-  finding OA stable near its 1000m headline but re-ranking meaningfully at the sweep's full span
-  (docs/epic-g/G2-oa-bandwidth-sweep-findings.md) -- so this page now flags OA as
-  bandwidth-sensitive per C-4, replacing the prior "has not yet been tested" caveat. This IS
-  methodology-bearing at the page-display level (new suppression logic + a resolved bandwidth
-  disclosure) -- see the R-C1 sign-off files for this ticket.
+  finding the GAUSSIAN-WEIGHTED variant stable near its 1000m headline but re-ranking meaningfully
+  at the sweep's full span (docs/epic-g/G2-oa-bandwidth-sweep-findings.md). Iteration-2 review
+  correction: this page filters weight_variant='standard' below (the bandwidth-free, hard
+  point-in-polygon variant), which the sweep never tested -- 'standard' has no bandwidth parameter
+  and so is bandwidth-invariant by construction. The disclosure below is now careful to attribute
+  the fragility finding to the gaussian-weighted variant only, and flags that whether the published
+  headline should ever switch to that weighted construct is a separate, still-open question
+  (OA-C.1, #174) -- it does NOT claim the sweep characterizes the oa_domain values actually shown
+  on this map. This IS methodology-bearing at the page-display level (new suppression logic + a
+  bandwidth disclosure) -- see the R-C1 sign-off files for this ticket.
 -->
 
 <script>
@@ -130,12 +135,17 @@ for the full method, or the [methodology page](/methodology) for a plain-languag
   can swing its Offering Advantage value disproportionately. PLR-years with fewer than 10 total
   mapped places (across every domain) are shown as an unshaded gap on the map rather than a
   potentially misleading Offering Advantage value; the raw mapped-place count for the selected
-  domain is always visible in the tooltip so you can judge borderline cases yourself. <b>Offering
-  Advantage is also bandwidth-sensitive</b>: it is stable close to its 1000 m headline catchment (500m
-  vs 1000m and 1000m vs 1500m both rank-correlate above 0.7 across every year 2008-2026), but the
-  full {500 m, 1500 m} sweep re-ranks PLRs meaningfully (pooled Spearman r = 0.69, below 0.7 in most
-  years) -- read the exact bandwidth as a real methodological choice, not an arbitrary
-  implementation detail. See the <a href="/methodology">methodology page §7</a> and
+  domain is always visible in the tooltip so you can judge borderline cases yourself. <b>A
+  bandwidth sweep found the Gaussian-weighted Offering Advantage construct bandwidth-sensitive at
+  wide catchments</b>: it is stable close to its 1000 m headline catchment (500m vs 1000m and 1000m
+  vs 1500m both rank-correlate above 0.7 across every year 2008-2026), but re-ranks meaningfully
+  across the full {500 m, 1500 m} sweep (pooled Spearman r = 0.68). <b>The map above does not use
+  that weighted construct</b> -- it uses the hard point-in-polygon variant, which has no bandwidth
+  parameter and is therefore bandwidth-invariant by construction; the sweep is disclosed here as
+  relevant context for a separate, still-open question
+  ([#174](https://github.com/dhelweg/gentriduck/issues/174)) about whether the published headline
+  should switch to the bandwidth-weighted construct, not as a characterization of the numbers shown
+  above. See the <a href="/methodology">methodology page §7</a> and
   [the bandwidth-sweep findings](https://github.com/dhelweg/gentriduck/blob/main/docs/epic-g/G2-oa-bandwidth-sweep-findings.md)
   for the full detail.
 </Alert>
@@ -453,15 +463,21 @@ order by snapshot_year
   D-3). PLR-years with fewer than 10 total mapped places are shown as a blank/unshaded gap on the
   map above rather than a potentially misleading value; the raw mapped-place count is always in
   the tooltip so you can judge near-threshold cases yourself.
-- **Offering Advantage is bandwidth-sensitive at the edges of its sweep** (#274, ADR-0017 D5 C-4).
-  A dedicated {500 m, 1000 m, 1500 m} bandwidth sweep (`analysis/oa_bandwidth_sweep.py`) found OA
-  rankings **stable** close to the 1000 m headline catchment (500m↔1000m and 1000m↔1500m both
-  rank-correlate above 0.7, Spearman, every year 2008–2026) but **re-ranked meaningfully** across
-  the sweep's full {500 m, 1500 m} span (pooled Spearman r = 0.69, below the 0.7 publish-gate
-  threshold in most years) — see the
+- **The Gaussian-weighted Offering Advantage construct is bandwidth-sensitive at the edges of its
+  sweep — but that is not the construct shown on the map above** (#274, ADR-0017 D5 C-4). A
+  dedicated {500 m, 1000 m, 1500 m} bandwidth sweep (`analysis/oa_bandwidth_sweep.py`) found the
+  Gaussian-weighted variant's OA rankings **stable** close to the 1000 m headline catchment
+  (500m↔1000m and 1000m↔1500m both rank-correlate above 0.7, Spearman, every year 2008–2026) but
+  **re-ranked meaningfully** across the sweep's full {500 m, 1500 m} span (pooled Spearman r = 0.68,
+  below the 0.7 publish-gate threshold in 17 of 19 years) — see the
   [full findings](https://github.com/dhelweg/gentriduck/blob/main/docs/epic-g/G2-oa-bandwidth-sweep-findings.md).
-  Read the exact catchment radius as a real methodological choice that shapes which neighbourhoods
-  read as commercially over/under-represented, not an arbitrary implementation detail.
+  The map above uses the **hard point-in-polygon variant** instead, which has no bandwidth
+  parameter and is therefore bandwidth-invariant by construction — this finding does not describe
+  the values shown here; it is disclosed because it bears on a separate, still-open question
+  ([OA-C.1, #174](https://github.com/dhelweg/gentriduck/issues/174)) about whether the published
+  headline should ever switch to the bandwidth-weighted construct. Read the exact catchment radius,
+  where one is actually in use, as a real methodological choice, not an arbitrary implementation
+  detail.
 
 ## Further reading
 

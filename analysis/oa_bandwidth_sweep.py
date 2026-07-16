@@ -44,13 +44,29 @@ OA, only two consumers actually need). So this script:
 Flagged here for reviewer visibility -- this is a one-off exception for this
 discharge ticket, not a new general analysis-script pattern.
 
-Compares `oa_domain` (the level actually displayed on
-web/pages/berlin/poi-map.md) across the {500, 1000, 1500} m sweep
-(spatial-methods.md §11.2, ADR-0017 D2.3), reporting Spearman rank
-correlation (equivalent to a6_maup.py's own "Pearson correlation of
-rankings") for each bandwidth pair, per snapshot_year AND pooled across all
+Compares `oa_domain` (the coarsest OA taxonomy level) across the
+{500, 1000, 1500} m sweep (spatial-methods.md §11.2, ADR-0017 D2.3), reporting
+Spearman rank correlation (equivalent to a6_maup.py's own "Pearson correlation
+of rankings") for each bandwidth pair, per snapshot_year AND pooled across all
 years, for city_code='BER' (Hamburg's index/OA isn't signed off yet, #125),
 weight_variant='gaussian_<bw>m' / methodology_variant='faithful' throughout.
+
+CORRECTION (iteration 2 review, #274): this docstring previously claimed
+`oa_domain` here is "the level actually displayed on
+web/pages/berlin/poi-map.md" -- that is FALSE. That page filters
+`weight_variant = 'standard'` (the bandwidth-free, hard point-in-polygon
+variant, unchanged by this ticket), never a `gaussian_<bw>m` variant, and
+every analysis script behind the methodology.md §7 headline correlation
+(c_three_way_comparison.py, c_offering_relevance_validation.py,
+e1_regressions.py, e4_early_warning.py) also hardcodes
+`weight_variant='standard'`. This script's sweep therefore characterizes ONLY
+the gaussian-weighted construct's own bandwidth sensitivity -- it says
+nothing about the bandwidth-sensitivity of any currently-published figure,
+since 'standard' has no bandwidth parameter to vary in the first place. See
+docs/epic-g/G2-oa-bandwidth-sweep-findings.md ("What this sweep does NOT
+characterize") for the full corrected disclosure, and OA-C.1 (#174) for the
+separate, still-open question of whether the published headline should ever
+switch from 'standard' to a gaussian_<bw>m construct.
 
 Acceptance threshold: r > 0.7, mirroring spatial-methods.md §7's MAUP publish
 gate (ADR-0017 D5 C-4 explicitly "mirrors the §7 r > 0.7 MAUP publish gate").
@@ -203,19 +219,35 @@ def load_oa_domain(con, pd, bandwidth_m: int):
     carry canonical 'BER'. This is a raw DuckDB query reading the intermediate
     layer directly (not through the mart's `canonical_city_code()` dbt macro),
     so both spellings must be matched explicitly here.
+
+    Review finding (iteration 2, #274): int_poi_offering_advantage's grain is
+    (..., poi_category_h, poi_type_h, ...) -- a domain-level oa_domain value is
+    repeated once per (category, type) leaf under that domain (verified:
+    raw_rows=321,092 vs distinct (area_code, snapshot_year, poi_domain_h)
+    triples=76,731 at gaussian_500m alone -- some keys repeat 33-34x). Without
+    deduplicating here, compare_pair()'s merge on matching keys performs a
+    many-to-many cross-product on top of that duplication, inflating n_units
+    into the millions and implicitly over-weighting domains with more
+    category/type leaves (e.g. Retail). GROUP BY + any_value(oa_domain)
+    mirrors the same lossless collapse already used in
+    transform/models/marts/mart_poi_offering_advantage_map.sql (oa_domain is
+    constant across all (poi_category_h, poi_type_h) leaves within a domain by
+    construction -- int_poi_offering_advantage computes it once per domain and
+    repeats it across that domain's leaf rows).
     """
     sql = f"""
         SELECT
             area_code,
             snapshot_year,
             poi_domain_h,
-            oa_domain
+            any_value(oa_domain) AS oa_domain
         FROM int_poi_offering_advantage
         WHERE (lower(city_code) = 'berlin' OR city_code = 'BER')
           AND weight_variant = 'gaussian_{bandwidth_m}m'
           AND methodology_variant = 'faithful'
           AND area_code IS NOT NULL
           AND oa_domain IS NOT NULL
+        GROUP BY area_code, snapshot_year, poi_domain_h
     """
     return con.execute(sql).df()
 
