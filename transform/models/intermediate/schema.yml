@@ -2226,6 +2226,93 @@ models:
           Milieuschutz designation ([0,1]), NULL when under_milieuschutz is
           false. Same time-invariance caveat as under_milieuschutz above.
 
+  - name: int_gentrification_ts_unified_2021
+    description: >
+      R-A8b (#260) -- DRAFT / PENDING FRESH GEO-DS + DOMAIN SIGN-OFF (R-C1), iteration 2. NOT
+      yet consumed by any downstream model. Builds a single continuous (city_code='BER',
+      area_code=plr_id_2021, snapshot_year) outcome panel across all 7 MSS editions
+      (2013-2025) by remapping the lor_pre2021 editions onto lor_2021 PLRs via a
+      POPULATION-weighted dominant crosswalk (int_berlin_lor_crosswalk_dominant_pop_2021,
+      revised per both reviewers' iteration-1 concerns), sourcing status/dynamik/typology
+      directly from stg_berlin_mss (not the POI-inner-joined int_gentrification_ts, which
+      silently dropped the 2013 edition in iteration 1). See model header for the full
+      revision history, R-C2 grounding, and the concerns still open for downstream/public
+      consumption (domain C-1 seam-aware trajectory handling; clustering remains out of
+      scope).
+
+      Grain: (city_code, area_code [lor_2021], snapshot_year).
+    meta:
+      dbt_meta_owner: data-engineer
+    data_tests:
+
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns:
+              - city_code
+              - area_code
+              - snapshot_year
+      - assert_not_empty:
+          config:
+            severity: error
+    columns:
+      - name: city_code
+        description: City identifier (ADR-0005). Always 'BER' (Berlin-only source panel).
+        data_tests:
+
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ["BER"]
+      - name: area_code
+        description: >
+          lor_2021 PLR area code (8-digit, zero-padded). All rows -- including remapped
+          lor_pre2021-origin editions -- are keyed to the lor_2021 scheme.
+        data_tests:
+
+          - not_null
+      - name: snapshot_year
+        description: MSS edition year (2013, 2015, 2017, 2019, 2021, 2023, 2025).
+        data_tests:
+
+          - not_null
+      - name: status_index
+        description: >
+          D1 social-status ordinal (1=hoch...4=sehr_niedrig), sourced directly from
+          stg_berlin_mss -- passed through unchanged (lor_2021 editions) or copied from the
+          population-dominant-crosswalk-matched pre-2021 PLR (lor_pre2021-origin editions).
+          NULL for uninhabited PLRs.
+      - name: dynamik_index
+        description: D2 social-direction ordinal (1=positiv, 2=stabil, 3=negativ). Same remap semantics as status_index.
+      - name: typology_stage
+        description: >
+          Six-stage D1xD2 typology label, computed via the shared
+          transform/macros/typology_stage.sql macro. Same remap semantics as status_index.
+      - name: is_uninhabited
+        description: True when the source MSS edition has gesamtindex IS NULL for this PLR/year.
+      - name: remap_method
+        description: "'passthrough' (lor_2021-native) or 'dominant_pop_crosswalk' (lor_pre2021-origin, population-weighted remap)."
+        data_tests:
+
+          - accepted_values:
+              arguments:
+                values: ["passthrough", "dominant_pop_crosswalk"]
+      - name: is_bridged
+        description: >
+          Domain sign-off C-2/C-3 (pseudo-replication disclosure): true for remapped
+          lor_pre2021-origin rows (a "borrowed" value from the dominant-population-matched
+          pre-2021 PLR, not a native lor_2021 measurement). Public per-PLR content MUST NOT
+          present a bridged row as neighbourhood-specific measured history without this flag.
+      - name: population_dominance_frac
+        description: >
+          For is_bridged rows: what share of the target 2021 PLR's estimated 2019-baseline
+          population the dominant pre-2021 source actually represents ([0,1]; exposed as a
+          diagnostic, no materiality threshold applied here -- domain C-2's "low-confidence
+          remap" signal, on a population basis). 1.0 for passthrough (non-bridged) rows.
+      - name: n_lor2021_plrs_sharing_this_source
+        description: >
+          For is_bridged rows: how many lor_2021 PLRs (including this one) share the same
+          dominant pre-2021 source PLR -- domain sign-off's pseudo-replication count (up to 6
+          observed). NULL for passthrough (non-bridged) rows.
   - name: int_ewr_lead_lag
     description: >
       #114: EWR-based annual lead-lag panel for same-era H2/H3 thesis comparison.
@@ -2782,6 +2869,76 @@ models:
 
           - not_null
 
+  - name: int_berlin_lor_crosswalk_dominant_pop_2021
+    description: >
+      R-A8b (#260) fix: POPULATION-weighted dominant pre-2021 <-> 2021 PLR crosswalk, built in
+      response to the geo-DS and gentrification-domain-expert sign-offs on
+      int_gentrification_ts_unified_2021.sql -- both concluded that for a population-derived
+      MSS classification, the representative pre-2021 source PLR should be selected by
+      estimated POPULATION contribution (residents_total * area_weight, the same
+      extensive-apportionment idiom int_berlin_ewr_plr2021 uses for population counts), not by
+      land area (as the sibling int_berlin_lor_crosswalk_dominant_2021 does for its own,
+      separate POI-count-bridging use case -- NOT modified here, to avoid an unreviewed
+      behaviour change to that model's existing consumer, analysis/e1_regressions.py).
+      Population baseline: 2019 (int_ewr_socioeco_pre2021, last pre-reform EWR edition).
+      Deterministic tie-break: ORDER BY estimated_population_contribution DESC, plr_id_pre2021.
+
+      Also carries the pseudo-replication disclosure columns the domain sign-off required
+      (n_lor2021_plrs_sharing_this_source) and a population_dominance_frac diagnostic.
+
+      Grain: one row per plr_id_2021 (all 542 lor_2021 PLRs resolve to exactly one dominant
+      pre-2021 PLR by estimated population contribution).
+    meta:
+      dbt_meta_owner: data-engineer
+      status: draft_pending_methodology_signoff
+    data_tests:
+
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns:
+              - plr_id_2021
+      - assert_not_empty:
+          config:
+            severity: error
+    columns:
+      - name: city_code
+        description: City identifier (ADR-0005). Always 'BER' (Berlin-specific LOR crosswalk).
+        data_tests:
+
+          - not_null
+      - name: plr_id_2021
+        description: PLR area code in the LOR 2021 reform scheme (8-digit string, zero-padded).
+        data_tests:
+
+          - not_null
+          - unique
+      - name: plr_id_pre2021
+        description: The population-dominant pre-2021 PLR area code for this plr_id_2021.
+        data_tests:
+
+          - not_null
+      - name: area_weight
+        description: The underlying geometric crosswalk weight (informational; not the selection criterion here).
+      - name: reverse_weight
+        description: The underlying geometric reverse-crosswalk weight (informational; not the selection criterion here).
+      - name: pre2021_plr_residents_total_2019
+        description: 2019 EWR residents_total for the dominant pre-2021 PLR (population baseline).
+      - name: dominant_population_weight
+        description: estimated_population_contribution for the selected dominant source (residents_total_2019 * area_weight).
+      - name: population_dominance_frac
+        description: >
+          What share of the target 2021 PLR's total estimated 2019-baseline population the
+          dominant source represents ([0,1]). Diagnostic only, no threshold applied here.
+        data_tests:
+
+          - not_null
+      - name: n_lor2021_plrs_sharing_this_source
+        description: >
+          How many lor_2021 PLRs (including this one) share the same dominant pre-2021 source
+          PLR -- domain sign-off's pseudo-replication disclosure count.
+        data_tests:
+
+          - not_null
   - name: int_berlin_brw_plr
     description: >
       D3 (#29): Area-weighted spatial join of BRW land value zones → LOR 2021 PLR boundaries.
