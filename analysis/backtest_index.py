@@ -4,7 +4,7 @@ analysis/backtest_index.py
 B2 ground-truth back-test harness: validate the live gentrification index against
 MSS Status/Dynamik classes and known Berlin hotspot/coldspot PLRs.
 
-Three tests are run:
+Five tests are run:
 
   Test A — MSS agreement:
     Spearman rank correlation between the live `status_index` (from gentrification_index,
@@ -29,6 +29,30 @@ Three tests are run:
     in the bottom decile (10th percentile and below) of status_index (least deprived).
     Coldspot PLRs are stable, affluent outer-city areas (MSS D1 Status = 1 = hoch).
     Pass threshold: recall >= 0.5.
+
+  Test D — Dynamism (D2) agreement:
+    Spearman rank correlation between the live `dynamism_index` (from gentrification_index,
+    live_data variant) and the MSS D2 Dynamik ordinal (from int_gentrification_ts, latest
+    edition). Mirrors Test A one dimension over (R-B2b, #264).
+    Pass threshold: rho > 0.3, p < 0.05.
+
+  Test E — Emerging-east recall (R-B2c, #278):
+    Fraction of labelled 'emerging-east' PLRs from seed_gentrification_ground_truth that
+    meet the dynamism-aware criterion: mittel status (D1 status_index == 2) AND
+    non-declining dynamism (D2 dynamik_index in {1 improving, 2 stabil}) AND under active
+    Milieuschutz protection (under_milieuschutz = true). This replaces Test B's top-decile
+    status_index criterion for the eastern-Berlin frontier class, per the R-B2b domain
+    sign-off's finding that no Lichtenberg PLR is simultaneously a documented gentrification
+    frontier and top-decile deprived (docs/methodology/R-B2b-domain-signoff.md). Run as its
+    own test path -- NOT folded into Test B's 'hotspot' recall, which would either mis-sign
+    GDR-era Plattenbau deprivation as gentrification or silently dilute what Test B measures.
+    Pass threshold: recall >= 0.5 (same rationale as Tests B/C).
+    Note: the design's third criterion, "Altbau" (pre-1919 Gründerzeit building stock), has
+    no corresponding warehouse column and is NOT computationally gated here -- it is
+    satisfied qualitatively for all four candidate PLRs by the cited Milieuschutz
+    Soziale-Erhaltungsgebiet designations (Senate protection areas are, by definition,
+    established over documented Altbau displacement pressure); this is a disclosed data
+    limitation, not a silent substitution.
 
 Data-presence guard: if the DB is missing or required tables are empty, exit 0 cleanly.
 
@@ -121,16 +145,22 @@ def load_data(con: duckdb.DuckDBPyConnection) -> dict:
     # gentrification_index.status_index (live_data) should agree with
     # int_gentrification_ts.status_index at the matching edition.
     # Both encode the same MSS D1 class but live via different model paths.
+    # under_milieuschutz / typology_stage (added R-B2c, #278) feed Test E's
+    # dynamism-aware emerging-east criterion (D1=2 AND D2<=2 AND under_milieuschutz);
+    # both already exist on int_gentrification_ts (int_berlin_milieuschutz_plr_flag
+    # disclosure-only join; typology_stage from the D1xD2 matrix, ADR-0008).
     mss_df = con.execute("""
         SELECT
             area_code,
             area_vintage,
             snapshot_year,
             mss_edition,
-            status_index    AS mss_status_index,
-            dynamik_index   AS mss_dynamik_index,
-            dynamism_score  AS mss_dynamism_score,
-            ewr_composite
+            status_index        AS mss_status_index,
+            dynamik_index       AS mss_dynamik_index,
+            dynamism_score      AS mss_dynamism_score,
+            ewr_composite,
+            typology_stage      AS mss_typology_stage,
+            under_milieuschutz  AS mss_under_milieuschutz
         FROM main.int_gentrification_ts
         WHERE area_vintage = 'lor_2021'
           AND mss_edition = (
@@ -143,9 +173,11 @@ def load_data(con: duckdb.DuckDBPyConnection) -> dict:
     """).df()
 
     # seed_gentrification_ground_truth: curated PLR-level labels
-    # 'hotspot' = currently under gentrification pressure (high D1 = high deprivation)
-    # 'coldspot' = stable, affluent, low deprivation (D1 = 1 = hoch)
-    # 'mixed'    = transitional / completed gentrification process
+    # 'hotspot'       = currently under gentrification pressure (high D1 = high deprivation)
+    # 'coldspot'      = stable, affluent, low deprivation (D1 = 1 = hoch)
+    # 'mixed'         = transitional / completed gentrification process
+    # 'emerging-east' = eastern-Berlin mittel-status frontier (R-B2c, #278); tested by
+    #                   Test E's dynamism-aware criterion, NOT Test B's top-decile criterion
     # dbt seeds land in the 'main_seeds' schema (dbt_project.yml +schema: seeds)
     gt_df = con.execute("""
         SELECT
@@ -548,6 +580,172 @@ def test_coldspot_recall(index_df, gt_df) -> dict:
 
 
 # ---------------------------------------------------------------------------
+# Test E — Emerging-east recall (dynamism-aware) (R-B2c, #278)
+# ---------------------------------------------------------------------------
+
+
+def test_emerging_east_recall(mss_df, gt_df) -> dict:
+    """Test E (R-B2c, #278): dynamism-aware recall for the 'emerging-east' label.
+
+    Eastern-Berlin (Lichtenberg) gentrification frontiers do not fit the west-Berlin-shaped
+    'hotspot' criterion (D1 top-decile deprived): the R-B2b domain sign-off
+    (docs/methodology/R-B2b-domain-signoff.md) found no Lichtenberg PLR is simultaneously
+    a documented gentrification frontier AND top-decile deprived on `status_index` -- the
+    real frontiers sit at mittel status (D1=2) with stabil-or-improving dynamism (D2 in
+    {1,2}), inheriting invasion-succession pressure from Friedrichshain (Dangschat 1988)
+    and formally recognised via Milieuschutz (Soziale Erhaltungsverordnung) designation.
+
+    Criterion (replaces Test B's top-decile status_index criterion for this label):
+      mittel status (mss_status_index == 2)
+      AND non-declining dynamism (mss_dynamik_index in {1, 2}; excludes 3=negativ/declining,
+          which the D1xD2 typology matrix treats as filtering-down, not gentrification --
+          transform/macros/typology_stage.sql)
+      AND under active Milieuschutz protection (mss_under_milieuschutz = true)
+
+    This is a genuinely different test PATH from Test B, not a relaxed version of it -- run
+    alongside (not merged into) Test B so the existing hotspot recall metric's denominator
+    and meaning are unchanged (design Option 1 of the R-B2c SPEC, the domain-expert's own
+    "faithful operationalisation").
+
+    Note (R-C2 grounding, data limitation disclosure): the design's third criterion,
+    "Altbau" (pre-1919/Gründerzeit building stock), has no warehouse column and is not
+    computationally gated here. It is satisfied qualitatively for all four candidate PLRs
+    per their cited Milieuschutz Soziale-Erhaltungsgebiet designations (Senate protection
+    areas are, by definition, established over documented Altbau displacement pressure;
+    see seed notes for per-PLR citations) -- disclosed here, not silently dropped.
+
+    Pass threshold: recall >= 0.5 (same rationale as Tests B/C: 50% is the minimum for a
+    useful discriminator at a criterion this narrow).
+    """
+    ee_ids = set(gt_df[gt_df["label"] == "emerging-east"]["plr_id"].tolist())
+    n_ee = len(ee_ids)
+
+    if n_ee == 0:
+        return {
+            "n_emerging_east": 0,
+            "n_matched": 0,
+            "n_criterion_matched": 0,
+            "recall": None,
+            "pass": False,
+            "note": "No emerging-east PLRs in ground truth seed.",
+        }
+
+    # PLRs meeting the dynamism-aware criterion (computed over ALL PLRs, not just the
+    # labelled set, so the criterion is applied identically regardless of label -- same
+    # discipline as Test B's top-decile threshold).
+    criterion_mask = (
+        (mss_df["mss_status_index"] == 2)
+        & (mss_df["mss_dynamik_index"].isin([1, 2]))
+        & (mss_df["mss_under_milieuschutz"].fillna(False))
+    )
+    criterion_ids = set(mss_df.loc[criterion_mask, "area_code"].tolist())
+
+    matched_ids = ee_ids & set(mss_df["area_code"].tolist())
+    n_matched = len(matched_ids)
+
+    if n_matched == 0:
+        return {
+            "n_emerging_east": n_ee,
+            "n_matched": 0,
+            "n_criterion_matched": 0,
+            "recall": None,
+            "pass": False,
+            "note": "None of the emerging-east PLRs found in int_gentrification_ts.",
+        }
+
+    n_criterion_matched = len(matched_ids & criterion_ids)
+    recall = n_criterion_matched / n_matched
+    pass_flag = recall >= THRESHOLD_RECALL
+
+    details = []
+    for plr_id in sorted(matched_ids):
+        row = gt_df[gt_df["plr_id"] == plr_id].iloc[0]
+        mss_row = mss_df[mss_df["area_code"] == plr_id]
+        d1 = float(mss_row["mss_status_index"].iloc[0]) if len(mss_row) > 0 else None
+        d2 = float(mss_row["mss_dynamik_index"].iloc[0]) if len(mss_row) > 0 else None
+        typ = str(mss_row["mss_typology_stage"].iloc[0]) if len(mss_row) > 0 else None
+        ms = bool(mss_row["mss_under_milieuschutz"].iloc[0]) if len(mss_row) > 0 else None
+        details.append(
+            {
+                "plr_id": plr_id,
+                "plr_name": row["plr_name"],
+                "d1_status": d1,
+                "d2_dynamik": d2,
+                "typology_stage": typ,
+                "under_milieuschutz": ms,
+                "meets_criterion": plr_id in criterion_ids,
+                "source": row["source"],
+            }
+        )
+
+    return {
+        "n_emerging_east": n_ee,
+        "n_matched": n_matched,
+        "n_criterion_matched": n_criterion_matched,
+        "recall": recall,
+        "pass": pass_flag,
+        "details": details,
+        "note": (
+            f"Dynamism-aware criterion (D1=2 AND D2<=2 AND under_milieuschutz): "
+            f"{n_criterion_matched}/{n_matched} emerging-east PLRs match."
+        ),
+    }
+
+
+# ---------------------------------------------------------------------------
+# Diagnostic (non-gating) — hotspot+emerging-east merged under Test B's
+# top-decile criterion (R-B2c, #278)
+# ---------------------------------------------------------------------------
+
+
+def diagnostic_merged_hotspot_recall(index_df, gt_df) -> dict:
+    """Diagnostic only -- NOT a pass/fail gate, not part of the OVERALL verdict.
+
+    Quantifies what the R-B2b domain sign-off predicted: folding 'emerging-east' PLRs
+    into Test B's 'hotspot' top-decile criterion would dilute (not inflate) the hotspot
+    recall metric, because the emerging-east PLRs sit at mittel status_index (2), below
+    the top-decile threshold (observed 3.0). This function exists solely to make that
+    prediction empirically checkable and to document, in the back-test record, why Test B
+    and Test E are kept as separate test paths (R-B2c design Option 1) rather than merged.
+    """
+    hotspot_ids = set(gt_df[gt_df["label"] == "hotspot"]["plr_id"].tolist())
+    ee_ids = set(gt_df[gt_df["label"] == "emerging-east"]["plr_id"].tolist())
+    merged_ids = hotspot_ids | ee_ids
+
+    threshold_90 = float(np.percentile(index_df["status_index"].dropna().values, 90))
+    top_decile_ids = set(index_df[index_df["status_index"] >= threshold_90]["area_code"].tolist())
+
+    def _recall(label_ids):
+        matched = label_ids & set(index_df["area_code"].tolist())
+        if len(matched) == 0:
+            return None, 0, 0
+        in_decile = len(matched & top_decile_ids)
+        return in_decile / len(matched), in_decile, len(matched)
+
+    hotspot_only_recall, hs_in, hs_n = _recall(hotspot_ids)
+    merged_recall, merged_in, merged_n = _recall(merged_ids)
+
+    return {
+        "decile_threshold": threshold_90,
+        "hotspot_only_recall": hotspot_only_recall,
+        "hotspot_only_n_in_decile": hs_in,
+        "hotspot_only_n": hs_n,
+        "merged_recall": merged_recall,
+        "merged_n_in_decile": merged_in,
+        "merged_n": merged_n,
+        "note": (
+            "Diagnostic only (not a gate): if 'emerging-east' PLRs were folded into "
+            "'hotspot' and tested against Test B's unchanged top-decile status_index "
+            "criterion, recall would move from "
+            f"{hotspot_only_recall:.2f} ({hs_in}/{hs_n}) to {merged_recall:.2f} "
+            f"({merged_in}/{merged_n}) -- a dilution, not an inflation, confirming the "
+            "R-B2b domain sign-off's prediction and the R-B2c decision to keep Test E "
+            "as its own path rather than merge the labels."
+        ),
+    }
+
+
+# ---------------------------------------------------------------------------
 # Output helpers
 # ---------------------------------------------------------------------------
 
@@ -558,9 +756,17 @@ def _pass_str(flag: bool | None) -> str:
     return "PASS" if flag else "FAIL"
 
 
-def print_results(res_a: dict, res_b: dict, res_c: dict, res_d: dict | None = None) -> None:
-    """Print a summary of test results to stdout. res_d (Test D, R-B2b #264) is optional
-    for backward compatibility with any external caller not yet updated."""
+def print_results(
+    res_a: dict,
+    res_b: dict,
+    res_c: dict,
+    res_d: dict | None = None,
+    res_e: dict | None = None,
+    diag: dict | None = None,
+) -> None:
+    """Print a summary of test results to stdout. res_d (Test D, R-B2b #264) and
+    res_e/diag (Test E + merged-recall diagnostic, R-B2c #278) are optional for
+    backward compatibility with any external caller not yet updated."""
     print("\n" + "=" * 80)
     print("B2 BACK-TEST HARNESS RESULTS")
     print("=" * 80)
@@ -624,22 +830,58 @@ def print_results(res_a: dict, res_b: dict, res_c: dict, res_d: dict | None = No
                 f"    {d['plr_id']} {d['plr_name']:<30} si={d['status_index']} {d['status_class']:<25} [{flag}]"
             )
 
+    if res_e is not None:
+        print("\n--- Test E: Emerging-east recall (dynamism-aware) (R-B2c, #278) ---")
+        print(f"  n emerging-east in seed: {res_e['n_emerging_east']}")
+        print(f"  n found in warehouse:    {res_e['n_matched']}")
+        print(
+            f"  n meeting criterion (D1=2 AND D2<=2 AND under_milieuschutz): {res_e.get('n_criterion_matched')}"
+        )
+        if res_e.get("recall") is not None:
+            print(f"  recall = {res_e['recall']:.2f}")
+        print(f"  Threshold: recall >= {THRESHOLD_RECALL}")
+        print(f"  Result: {_pass_str(res_e['pass'])}")
+        if "details" in res_e:
+            for d in res_e["details"]:
+                flag = "MEETS CRITERION" if d["meets_criterion"] else "does NOT meet criterion"
+                print(
+                    f"    {d['plr_id']} {d['plr_name']:<30} D1={d['d1_status']} D2={d['d2_dynamik']} "
+                    f"{d['typology_stage']:<25} milieuschutz={d['under_milieuschutz']} [{flag}]"
+                )
+
+    if diag is not None:
+        print(
+            "\n--- Diagnostic (non-gating): merged hotspot+emerging-east @ Test B's top decile ---"
+        )
+        print(f"  {diag['note']}")
+
     overall_tests = [res_a["pass"], res_b["pass"], res_c["pass"]]
     if res_d is not None:
         overall_tests.append(res_d["pass"])
+    if res_e is not None:
+        overall_tests.append(res_e["pass"])
     overall = all(overall_tests)
     print("\n" + "=" * 80)
     print(f"OVERALL: {'ALL PASS' if overall else 'ONE OR MORE FAIL'}")
     print("=" * 80)
 
 
-def write_backtest_md(res_a: dict, res_b: dict, res_c: dict, res_d: dict | None = None) -> None:
+def write_backtest_md(
+    res_a: dict,
+    res_b: dict,
+    res_c: dict,
+    res_d: dict | None = None,
+    res_e: dict | None = None,
+    diag: dict | None = None,
+) -> None:
     """Write (overwrite) docs/methodology/backtest.md with methodology and results."""
     OUTPUT_MD.parent.mkdir(parents=True, exist_ok=True)
     run_date = datetime.now().strftime("%Y-%m-%d")
     overall_tests = [res_a["pass"], res_b["pass"], res_c["pass"]]
     if res_d is not None:
         overall_tests.append(res_d["pass"])
+    if res_e is not None:
+        overall_tests.append(res_e["pass"])
     overall = all(overall_tests)
     overall_str = "ALL PASS" if overall else "ONE OR MORE FAIL"
 
@@ -665,12 +907,15 @@ def write_backtest_md(res_a: dict, res_b: dict, res_c: dict, res_d: dict | None 
             "through two independent model paths — using Spearman rank correlation.\n\n"
         )
         f.write(
-            "2. **Known hotspot/coldspot PLRs** (`seed_gentrification_ground_truth`): a "
-            "curated seed of ~20 Berlin PLRs with literature-based labels drawn from "
-            "Döring & Ulbricht (2016), Holm & Schulz (2016), the 2018 thesis (Helweg 2018), "
-            "and direct MSS 2023/2025 class assignments. Tests B and C check whether "
-            "labelled 'hotspot' and 'coldspot' PLRs appear in the expected tail of the "
-            "status_index distribution.\n\n"
+            "2. **Known hotspot/coldspot/emerging-east PLRs** (`seed_gentrification_ground_truth`): "
+            "a curated seed of Berlin PLRs with literature-based labels drawn from "
+            "Döring & Ulbricht (2016), Holm & Schulz (2016), Dangschat (1988), the 2018 thesis "
+            "(Helweg 2018), and direct MSS 2023/2025 class assignments. Tests B and C check "
+            "whether labelled 'hotspot' and 'coldspot' PLRs appear in the expected tail of the "
+            "status_index distribution. Test E (R-B2c, #278) checks whether labelled "
+            "'emerging-east' PLRs -- eastern-Berlin frontiers that do NOT fit the "
+            "top-decile-deprived 'hotspot' shape -- meet a separate, dynamism-aware criterion "
+            "instead.\n\n"
         )
 
         f.write("## Methodology\n\n")
@@ -713,7 +958,20 @@ def write_backtest_md(res_a: dict, res_b: dict, res_c: dict, res_d: dict | None 
         f.write(
             f"| C: Coldspot recall | >= {THRESHOLD_RECALL:.0%} | "
             "Same rationale as Test B. Stable outer-city PLRs should overwhelmingly "
-            "appear at the low end of the status_index distribution. |\n\n"
+            "appear at the low end of the status_index distribution. |\n"
+        )
+        f.write(
+            f"| D: Dynamism (D2) agreement (rho) | rho > {THRESHOLD_MSS_RHO}, p < {THRESHOLD_MSS_P} | "
+            "Cross-validates gentrification_index.dynamism_index against "
+            "int_gentrification_ts.dynamik_index, mirroring Test A for the D2 dimension "
+            "(R-B2b, #264). |\n"
+        )
+        f.write(
+            f"| E: Emerging-east recall (R-B2c, #278) | >= {THRESHOLD_RECALL:.0%} | "
+            "Same 50% recall rationale as Tests B/C, applied to the dynamism-aware "
+            "criterion (D1=2 AND D2<=2 AND under_milieuschutz) rather than the top-decile "
+            "status_index criterion -- the criterion the R-B2b domain sign-off found "
+            "faithfully operationalises eastern-Berlin gentrification frontiers. |\n\n"
         )
 
         f.write("### Label semantics\n\n")
@@ -721,7 +979,8 @@ def write_backtest_md(res_a: dict, res_b: dict, res_c: dict, res_d: dict | None 
             "- **hotspot**: PLR under active gentrification pressure or with documented "
             "high vulnerability (typically D1 status 3–4 = niedrig/sehr_niedrig). "
             "These areas are expected to appear in the top decile (most deprived = "
-            "highest status_index).\n"
+            "highest status_index). West-Berlin-shaped: deprivation and pressure "
+            "coincide. Tested by Test B.\n"
         )
         f.write(
             "- **coldspot**: Stable, affluent outer-city PLR (typically D1 status 1 = hoch). "
@@ -729,7 +988,16 @@ def write_backtest_md(res_a: dict, res_b: dict, res_c: dict, res_d: dict | None 
         )
         f.write(
             "- **mixed**: Transitional area or completed-gentrification PLR. Not "
-            "expected to fall clearly in either decile; used for narrative context only.\n\n"
+            "expected to fall clearly in either decile; used for narrative context only.\n"
+        )
+        f.write(
+            "- **emerging-east** (R-B2c, #278): eastern-Berlin (Lichtenberg) gentrification "
+            "frontier at mittel status (D1=2) with stabil-or-improving dynamism (D2 in "
+            "{1,2}) under Milieuschutz protection. Deprivation and pressure do NOT "
+            "coincide here (the R-B2b domain sign-off found no Lichtenberg PLR is both a "
+            "documented frontier and top-decile deprived) -- these PLRs are **not** "
+            "expected in Test B's top decile, and are tested instead by the separate, "
+            "dynamism-aware Test E.\n\n"
         )
 
         f.write("---\n\n")
@@ -764,9 +1032,10 @@ def write_backtest_md(res_a: dict, res_b: dict, res_c: dict, res_d: dict | None 
                 "Spearman rank correlation between `gentrification_index.dynamism_index` "
                 "(live_data variant) and `int_gentrification_ts.dynamik_index` at the latest "
                 "MSS edition. Mirrors Test A's design for the D2 (Dynamik) dimension: both "
-                "columns carry the same MSS D2 ordinal via different model paths. **Proposed "
-                "design, pending geo-DS + domain-expert confirmation** (see the R-B2 sign-offs' "
-                "original follow-up recommendation and #264).\n\n"
+                "columns carry the same MSS D2 ordinal via different model paths. Design "
+                "confirmed by both geo-DS and gentrification-domain-expert "
+                "(docs/methodology/R-B2b-geo-signoff.md, R-B2b-domain-signoff.md, both "
+                "Verdict: PASS, #264).\n\n"
             )
             if res_d.get("mss_edition"):
                 f.write(f"- MSS edition used for cross-validation: {res_d['mss_edition']}\n")
@@ -775,7 +1044,7 @@ def write_backtest_md(res_a: dict, res_b: dict, res_c: dict, res_d: dict | None 
             f.write(f"- Distinct dynamism classes: {res_d['n_classes']}\n")
             if res_d["rho"] is not None:
                 f.write(f"- Spearman rho = **{res_d['rho']:.4f}**, p = {res_d['p']:.4f}\n")
-            f.write(f"- Threshold: rho > {THRESHOLD_MSS_RHO}, p < {THRESHOLD_MSS_P} (proposed)\n")
+            f.write(f"- Threshold: rho > {THRESHOLD_MSS_RHO}, p < {THRESHOLD_MSS_P}\n")
             f.write(f"- **Result: {_pass_str(res_d['pass'])}**\n\n")
             f.write(f"*{res_d['note']}*\n\n")
 
@@ -835,16 +1104,86 @@ def write_backtest_md(res_a: dict, res_b: dict, res_c: dict, res_d: dict | None 
                 )
             f.write("\n")
 
+        if res_e is not None:
+            f.write("### Test E — Emerging-east recall (dynamism-aware) (R-B2c, #278)\n\n")
+            f.write(
+                "Fraction of labelled `emerging-east` PLRs from `seed_gentrification_ground_truth` "
+                "that meet the dynamism-aware criterion: mittel status (`status_index == 2`) AND "
+                "non-declining dynamism (`dynamik_index` in {1 improving, 2 stabil}) AND under "
+                "active Milieuschutz protection (`under_milieuschutz = true`). This **replaces** "
+                "Test B's top-decile `status_index` criterion for this label -- run as its own "
+                "test path, not merged into Test B's recall (see the diagnostic below for why). "
+                'Design confirmed as Option 1 ("the faithful operationalisation") of the R-B2b '
+                "domain sign-off's follow-up recommendation "
+                "(docs/methodology/R-B2b-domain-signoff.md).\n\n"
+            )
+            f.write(f"- n emerging-east PLRs in seed: {res_e['n_emerging_east']}\n")
+            f.write(f"- n found in warehouse: {res_e['n_matched']}\n")
+            f.write(f"- n meeting criterion: {res_e.get('n_criterion_matched')}\n")
+            if res_e.get("recall") is not None:
+                f.write(
+                    f"- Recall = **{res_e['recall']:.2f}** "
+                    f"({res_e['n_criterion_matched']}/{res_e['n_matched']})\n"
+                )
+            f.write(f"- Threshold: recall >= {THRESHOLD_RECALL}\n")
+            f.write(f"- **Result: {_pass_str(res_e['pass'])}**\n\n")
+
+            if "details" in res_e:
+                f.write("#### Emerging-east PLR details\n\n")
+                f.write(
+                    "| PLR ID | Name | D1 status | D2 dynamik | Typology stage | "
+                    "Under Milieuschutz | Meets criterion | Source |\n"
+                )
+                f.write("|---|---|---|---|---|---|---|---|\n")
+                for d in res_e["details"]:
+                    flag = "Yes" if d["meets_criterion"] else "No"
+                    f.write(
+                        f"| {d['plr_id']} | {d['plr_name']} | {d['d1_status']} | {d['d2_dynamik']} "
+                        f"| {d['typology_stage']} | {d['under_milieuschutz']} | {flag} | {d['source']} |\n"
+                    )
+                f.write("\n")
+
+        if diag is not None:
+            f.write("#### Diagnostic (non-gating): hotspot recall if merged with emerging-east\n\n")
+            f.write(
+                "This diagnostic is **not** a pass/fail gate and does **not** count toward the "
+                "overall result above -- it exists only to make the R-B2b domain sign-off's "
+                "prediction empirically checkable: does folding `emerging-east` PLRs into "
+                "`hotspot` and testing them against Test B's *unchanged* top-decile "
+                "`status_index` criterion inflate or dilute recall?\n\n"
+            )
+            f.write(f"- Top-decile threshold (status_index): {diag['decile_threshold']}\n")
+            if diag.get("hotspot_only_recall") is not None:
+                f.write(
+                    f"- Hotspot-only recall (current Test B, unchanged): "
+                    f"**{diag['hotspot_only_recall']:.2f}** "
+                    f"({diag['hotspot_only_n_in_decile']}/{diag['hotspot_only_n']})\n"
+                )
+            if diag.get("merged_recall") is not None:
+                f.write(
+                    f"- Hotspot+emerging-east merged recall (hypothetical, NOT implemented): "
+                    f"**{diag['merged_recall']:.2f}** "
+                    f"({diag['merged_n_in_decile']}/{diag['merged_n']})\n"
+                )
+            f.write(f"\n*{diag['note']}*\n\n")
+
         f.write("---\n\n")
         f.write("## Narrative summary\n\n")
 
         # Auto-generate narrative based on results
-        if res_a["pass"] and res_b["pass"] and res_c["pass"]:
+        core_tests = [res_a["pass"], res_b["pass"], res_c["pass"]]
+        if res_d is not None:
+            core_tests.append(res_d["pass"])
+        if res_e is not None:
+            core_tests.append(res_e["pass"])
+        if all(core_tests):
             f.write(
-                "All three tests passed. The live index shows structural consistency between "
-                "D1 status and D2 dynamism (Test A), and correctly identifies known "
+                "All tests passed. The live index shows structural consistency between "
+                "D1 status and D2 dynamism (Tests A/D), correctly identifies known "
                 "hotspot/coldspot PLRs at the expected tail of the status_index distribution "
-                "(Tests B and C). This confirms the B2 back-test harness is working as intended.\n\n"
+                "(Tests B and C), and correctly identifies eastern-Berlin emerging-east "
+                "frontiers under the dynamism-aware criterion (Test E, R-B2c). This confirms "
+                "the B2 back-test harness is working as intended.\n\n"
             )
         else:
             failed = []
@@ -854,12 +1193,16 @@ def write_backtest_md(res_a: dict, res_b: dict, res_c: dict, res_d: dict | None 
                 failed.append("Test B (hotspot recall)")
             if not res_c["pass"]:
                 failed.append("Test C (coldspot recall)")
+            if res_d is not None and not res_d["pass"]:
+                failed.append("Test D (dynamism agreement)")
+            if res_e is not None and not res_e["pass"]:
+                failed.append("Test E (emerging-east recall)")
             f.write(
                 f"One or more tests did not pass: {', '.join(failed)}. "
                 "Review the PLR-level detail tables above for specifics. "
-                "Possible causes: index pipeline issue (Test A), ground-truth seed mismatch "
-                "(Tests B/C), or a legitimate finding that known hotspots/coldspots are no "
-                "longer classifying as expected under the current MSS edition.\n\n"
+                "Possible causes: index pipeline issue (Test A/D), ground-truth seed mismatch "
+                "(Tests B/C/E), or a legitimate finding that known hotspots/coldspots/emerging-east "
+                "PLRs are no longer classifying as expected under the current MSS edition.\n\n"
             )
 
         if res_b.get("recall") is not None and res_b["n_matched"] > 0:
@@ -873,11 +1216,26 @@ def write_backtest_md(res_a: dict, res_b: dict, res_c: dict, res_d: dict | None 
                     "See `mixed`-labelled PLRs in the seed for documented examples.\n\n"
                 )
 
+        if res_e is not None:
+            f.write(
+                "**Eastern-Berlin framing note (R-B2c, #278):** the `emerging-east` PLRs above "
+                "are tracked **descriptively** at mittel MSS status (D1=2) with "
+                "stabil-or-improving dynamism (D2 in {1,2}) under documented Milieuschutz "
+                "protection. This is NOT an assertion that these areas are causally destined "
+                "to displace or complete gentrification -- it documents a currently observed "
+                "pressure signal per the cited literature (Dangschat 1988; Holm & Schulz 2016) "
+                "and the R-B2b domain sign-off. Any published-facing (G2/O2) framing of this "
+                "class must preserve that distinction.\n\n"
+            )
+
         f.write("## Sources\n\n")
         f.write("- Döring, T. & Ulbricht, K. (2016): *Gentrification-Hotspots und ")
         f.write("Verdrängungsprozesse in Berlin*. Stadtforschung und Statistik 1/2016.\n")
         f.write("- Holm, A. & Schulz, M. (2016): Gentrification in Berlin: ")
         f.write("Neighbourhood indices and typologies.\n")
+        f.write("- Dangschat, J. (1988): Gentrification: Der Verlauf sozialräumlicher ")
+        f.write("Veränderungsprozesse in Großstädten (double invasion-succession cycle; ")
+        f.write("R-B2c Test E emerging-east criterion).\n")
         f.write("- Helweg, D. (2018): *Gentrifizierung in Berlin* (unpublished thesis).\n")
         f.write("- Senatsverwaltung für Stadtentwicklung, Bauen und Wohnen (2023/2025): ")
         f.write("Monitoring Soziale Stadtentwicklung (MSS), Berlin.\n")
@@ -972,10 +1330,17 @@ def main() -> None:
     res_c = test_coldspot_recall(index_df, gt_df)
     print(f"  recall={res_c.get('recall')}, result={_pass_str(res_c['pass'])}")
 
-    # Print and write results
-    print_results(res_a, res_b, res_c, res_d)
+    print("Running Test E: Emerging-east recall (dynamism-aware) (R-B2c, #278)...")
+    res_e = test_emerging_east_recall(mss_df, gt_df)
+    print(f"  recall={res_e.get('recall')}, result={_pass_str(res_e['pass'])}")
 
-    write_backtest_md(res_a, res_b, res_c, res_d)
+    diag = diagnostic_merged_hotspot_recall(index_df, gt_df)
+    print(f"  Diagnostic (non-gating): {diag['note']}")
+
+    # Print and write results
+    print_results(res_a, res_b, res_c, res_d, res_e, diag)
+
+    write_backtest_md(res_a, res_b, res_c, res_d, res_e, diag)
     print(f"\nResults written to: {OUTPUT_MD}")
 
 

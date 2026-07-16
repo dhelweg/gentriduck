@@ -11,7 +11,7 @@ This document records the results of the B2 ground-truth back-test harness, whic
 
 1. **MSS Status/Dynamik classes** (official Berlin ground truth): the Senate's Monitoring Soziale Stadtentwicklung (MSS) provides biennial D1 Status and D2 Dynamik ordinals for every PLR (Planungsraum). The live index's `status_index` column directly encodes the MSS D1 ordinal (1=hoch/best … 4=sehr_niedrig/worst). Test A cross-validates `gentrification_index.status_index` (live_data variant) against `int_gentrification_ts.status_index` — the same MSS D1 class flowing through two independent model paths — using Spearman rank correlation.
 
-2. **Known hotspot/coldspot PLRs** (`seed_gentrification_ground_truth`): a curated seed of ~20 Berlin PLRs with literature-based labels drawn from Döring & Ulbricht (2016), Holm & Schulz (2016), the 2018 thesis (Helweg 2018), and direct MSS 2023/2025 class assignments. Tests B and C check whether labelled 'hotspot' and 'coldspot' PLRs appear in the expected tail of the status_index distribution.
+2. **Known hotspot/coldspot/emerging-east PLRs** (`seed_gentrification_ground_truth`): a curated seed of Berlin PLRs with literature-based labels drawn from Döring & Ulbricht (2016), Holm & Schulz (2016), Dangschat (1988), the 2018 thesis (Helweg 2018), and direct MSS 2023/2025 class assignments. Tests B and C check whether labelled 'hotspot' and 'coldspot' PLRs appear in the expected tail of the status_index distribution. Test E (R-B2c, #278) checks whether labelled 'emerging-east' PLRs -- eastern-Berlin frontiers that do NOT fit the top-decile-deprived 'hotspot' shape -- meet a separate, dynamism-aware criterion instead.
 
 ## Methodology
 
@@ -33,12 +33,15 @@ This polarity is **inverse** relative to the 2018 thesis `status_summe` (where h
 | A: MSS agreement (rho) | rho > 0.3, p < 0.05 | Cross-validates gentrification_index.status_index against int_gentrification_ts.status_index. Both encode the same MSS D1 ordinal via different model paths; expected rho ~ 1.0. A threshold of 0.3 is conservative — any real pipeline alignment gives rho >> 0.3. A lower rho would indicate a vintage mismatch or polarity reversal. |
 | B: Hotspot recall | >= 50% | Recall of 50% at the top decile is the minimum for a useful discriminator; chance performance at the 10% decile = 10% recall. A 50% threshold leaves room for completed-gentrification PLRs (now stable/established, not in top decile) without failing the test. |
 | C: Coldspot recall | >= 50% | Same rationale as Test B. Stable outer-city PLRs should overwhelmingly appear at the low end of the status_index distribution. |
+| D: Dynamism (D2) agreement (rho) | rho > 0.3, p < 0.05 | Cross-validates gentrification_index.dynamism_index against int_gentrification_ts.dynamik_index, mirroring Test A for the D2 dimension (R-B2b, #264). |
+| E: Emerging-east recall (R-B2c, #278) | >= 50% | Same 50% recall rationale as Tests B/C, applied to the dynamism-aware criterion (D1=2 AND D2<=2 AND under_milieuschutz) rather than the top-decile status_index criterion -- the criterion the R-B2b domain sign-off found faithfully operationalises eastern-Berlin gentrification frontiers. |
 
 ### Label semantics
 
-- **hotspot**: PLR under active gentrification pressure or with documented high vulnerability (typically D1 status 3–4 = niedrig/sehr_niedrig). These areas are expected to appear in the top decile (most deprived = highest status_index).
+- **hotspot**: PLR under active gentrification pressure or with documented high vulnerability (typically D1 status 3–4 = niedrig/sehr_niedrig). These areas are expected to appear in the top decile (most deprived = highest status_index). West-Berlin-shaped: deprivation and pressure coincide. Tested by Test B.
 - **coldspot**: Stable, affluent outer-city PLR (typically D1 status 1 = hoch). Expected in the bottom decile (least deprived = lowest status_index).
 - **mixed**: Transitional area or completed-gentrification PLR. Not expected to fall clearly in either decile; used for narrative context only.
+- **emerging-east** (R-B2c, #278): eastern-Berlin (Lichtenberg) gentrification frontier at mittel status (D1=2) with stabil-or-improving dynamism (D2 in {1,2}) under Milieuschutz protection. Deprivation and pressure do NOT coincide here (the R-B2b domain sign-off found no Lichtenberg PLR is both a documented frontier and top-decile deprived) -- these PLRs are **not** expected in Test B's top decile, and are tested instead by the separate, dynamism-aware Test E.
 
 ---
 
@@ -64,14 +67,14 @@ Spearman rank correlation between `gentrification_index.status_index` (live_data
 
 ### Test D — Dynamism (D2) agreement (R-B2b, #264)
 
-Spearman rank correlation between `gentrification_index.dynamism_index` (live_data variant) and `int_gentrification_ts.dynamik_index` at the latest MSS edition. Mirrors Test A's design for the D2 (Dynamik) dimension: both columns carry the same MSS D2 ordinal via different model paths. **Proposed design, pending geo-DS + domain-expert confirmation** (see the R-B2 sign-offs' original follow-up recommendation and #264).
+Spearman rank correlation between `gentrification_index.dynamism_index` (live_data variant) and `int_gentrification_ts.dynamik_index` at the latest MSS edition. Mirrors Test A's design for the D2 (Dynamik) dimension: both columns carry the same MSS D2 ordinal via different model paths. Design confirmed by both geo-DS and gentrification-domain-expert (docs/methodology/R-B2b-geo-signoff.md, R-B2b-domain-signoff.md, both Verdict: PASS, #264).
 
 - MSS edition used for cross-validation: 2025
 - n (cross-validated pairs): 535
 - dynamism_index range: (1.0, 3.0)
 - Distinct dynamism classes: 3
 - Spearman rho = **1.0000**, p = 0.0000
-- Threshold: rho > 0.3, p < 0.05 (proposed)
+- Threshold: rho > 0.3, p < 0.05
 - **Result: PASS**
 
 *Spearman(gentrification_index.dynamism_index, int_gentrification_ts.dynamik_index) at MSS edition 2025. Cross-validates that the mart and the intermediate model agree on the MSS D2 ordinal (mirrors Test A's design for D1). n_paired=535. Threshold: rho > 0.3, p < 0.05 (design confirmed by geo-DS + domain-expert sign-off, docs/methodology/R-B2b-geo-signoff.md, R-B2b-domain-signoff.md).*
@@ -124,16 +127,49 @@ Fraction of labelled `coldspot` PLRs from `seed_gentrification_ground_truth` tha
 | 06400844 | Dahlem | 1.0 | stable-established | Yes | MSS 2023 Status=1 |
 | 11100101 | Dörfer Malchow-Wartenberg | 1.0 | stable-established | Yes | MSS 2023 Status=1 |
 
+### Test E — Emerging-east recall (dynamism-aware) (R-B2c, #278)
+
+Fraction of labelled `emerging-east` PLRs from `seed_gentrification_ground_truth` that meet the dynamism-aware criterion: mittel status (`status_index == 2`) AND non-declining dynamism (`dynamik_index` in {1 improving, 2 stabil}) AND under active Milieuschutz protection (`under_milieuschutz = true`). This **replaces** Test B's top-decile `status_index` criterion for this label -- run as its own test path, not merged into Test B's recall (see the diagnostic below for why). Design confirmed as Option 1 ("the faithful operationalisation") of the R-B2b domain sign-off's follow-up recommendation (docs/methodology/R-B2b-domain-signoff.md).
+
+- n emerging-east PLRs in seed: 4
+- n found in warehouse: 4
+- n meeting criterion: 4
+- Recall = **1.00** (4/4)
+- Threshold: recall >= 0.5
+- **Result: PASS**
+
+#### Emerging-east PLR details
+
+| PLR ID | Name | D1 status | D2 dynamik | Typology stage | Under Milieuschutz | Meets criterion | Source |
+|---|---|---|---|---|---|---|---|
+| 11300724 | Roedeliusplatz | 2.0 | 1.0 | active-gentrification | True | Yes | Dangschat 1988; R-B2b domain sign-off |
+| 11300826 | Frankfurter Allee Sued | 2.0 | 2.0 | stable-established | True | Yes | Holm & Schulz 2016 |
+| 11400927 | Victoriastadt (Kaskelkiez) | 2.0 | 2.0 | stable-established | True | Yes | Holm & Schulz 2016 |
+| 11400929 | Weitlingkiez | 2.0 | 2.0 | stable-established | True | Yes | Holm & Schulz 2016 |
+
+#### Diagnostic (non-gating): hotspot recall if merged with emerging-east
+
+This diagnostic is **not** a pass/fail gate and does **not** count toward the overall result above -- it exists only to make the R-B2b domain sign-off's prediction empirically checkable: does folding `emerging-east` PLRs into `hotspot` and testing them against Test B's *unchanged* top-decile `status_index` criterion inflate or dilute recall?
+
+- Top-decile threshold (status_index): 3.0
+- Hotspot-only recall (current Test B, unchanged): **1.00** (8/8)
+- Hotspot+emerging-east merged recall (hypothetical, NOT implemented): **0.67** (8/12)
+
+*Diagnostic only (not a gate): if 'emerging-east' PLRs were folded into 'hotspot' and tested against Test B's unchanged top-decile status_index criterion, recall would move from 1.00 (8/8) to 0.67 (8/12) -- a dilution, not an inflation, confirming the R-B2b domain sign-off's prediction and the R-B2c decision to keep Test E as its own path rather than merge the labels.*
+
 ---
 
 ## Narrative summary
 
-All three tests passed. The live index shows structural consistency between D1 status and D2 dynamism (Test A), and correctly identifies known hotspot/coldspot PLRs at the expected tail of the status_index distribution (Tests B and C). This confirms the B2 back-test harness is working as intended.
+All tests passed. The live index shows structural consistency between D1 status and D2 dynamism (Tests A/D), correctly identifies known hotspot/coldspot PLRs at the expected tail of the status_index distribution (Tests B and C), and correctly identifies eastern-Berlin emerging-east frontiers under the dynamism-aware criterion (Test E, R-B2c). This confirms the B2 back-test harness is working as intended.
+
+**Eastern-Berlin framing note (R-B2c, #278):** the `emerging-east` PLRs above are tracked **descriptively** at mittel MSS status (D1=2) with stabil-or-improving dynamism (D2 in {1,2}) under documented Milieuschutz protection. This is NOT an assertion that these areas are causally destined to displace or complete gentrification -- it documents a currently observed pressure signal per the cited literature (Dangschat 1988; Holm & Schulz 2016) and the R-B2b domain sign-off. Any published-facing (G2/O2) framing of this class must preserve that distinction.
 
 ## Sources
 
 - Döring, T. & Ulbricht, K. (2016): *Gentrification-Hotspots und Verdrängungsprozesse in Berlin*. Stadtforschung und Statistik 1/2016.
 - Holm, A. & Schulz, M. (2016): Gentrification in Berlin: Neighbourhood indices and typologies.
+- Dangschat, J. (1988): Gentrification: Der Verlauf sozialräumlicher Veränderungsprozesse in Großstädten (double invasion-succession cycle; R-B2c Test E emerging-east criterion).
 - Helweg, D. (2018): *Gentrifizierung in Berlin* (unpublished thesis).
 - Senatsverwaltung für Stadtentwicklung, Bauen und Wohnen (2023/2025): Monitoring Soziale Stadtentwicklung (MSS), Berlin.
 - `docs/methodology/index-definition.md` — D1 polarity, ordinal treatment, vulnerability-positive orientation.
