@@ -147,7 +147,7 @@ for the full method, or the [methodology page](/methodology) for a plain-languag
   bandwidth sweep found the Gaussian-weighted Offering Advantage construct bandwidth-sensitive at
   wide catchments</b>: it is stable close to its 1000 m headline catchment (500m vs 1000m and 1000m
   vs 1500m both rank-correlate above 0.7 across every year 2008-2026), but re-ranks meaningfully
-  across the full {500 m, 1500 m} sweep (pooled Spearman r = 0.68). <b>The map above does not use
+  across the full 500 m to 1500 m sweep (pooled Spearman r = 0.68). <b>The map above does not use
   that weighted construct</b> -- it uses the hard point-in-polygon variant, which has no bandwidth
   parameter and is therefore bandwidth-invariant by construction -- meaning only that it makes no
   bandwidth choice, not that it has been tested and found spatially robust: it remains untested for
@@ -483,10 +483,10 @@ order by snapshot_year
   a blank PLR should not be read as evidence that nothing is happening there.
 - **The Gaussian-weighted Offering Advantage construct is bandwidth-sensitive at the edges of its
   sweep — but that is not the construct shown on the map above** (#274, ADR-0017 D5 C-4). A
-  dedicated {500 m, 1000 m, 1500 m} bandwidth sweep (`analysis/oa_bandwidth_sweep.py`) found the
+  dedicated 500 m, 1000 m, and 1500 m bandwidth sweep (`analysis/oa_bandwidth_sweep.py`) found the
   Gaussian-weighted variant's OA rankings **stable** close to the 1000 m headline catchment
   (500m↔1000m and 1000m↔1500m both rank-correlate above 0.7, Spearman, every year 2008–2026) but
-  **re-ranked meaningfully** across the sweep's full {500 m, 1500 m} span (pooled Spearman r = 0.68,
+  **re-ranked meaningfully** across the sweep's full 500 m to 1500 m span (pooled Spearman r = 0.68,
   below the 0.7 publish-gate threshold in 17 of 19 years) — see the
   [full findings](https://github.com/dhelweg/gentriduck/blob/main/docs/epic-g/G2-oa-bandwidth-sweep-findings.md).
   The map above uses the **hard point-in-polygon variant** instead, which has no bandwidth

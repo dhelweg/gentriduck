@@ -438,12 +438,12 @@ Neither result, on its own, is the headline. What *is* worth reporting:
   is therefore bandwidth-invariant by construction — that means only that it makes no bandwidth
   choice, not that it has been tested and found spatially robust; it remains untested for the
   fragility described next and sits at the sharp/narrow end of the same spatial-grain family.
-  Separately, a dedicated {500 m, 1000 m,
-  1500 m} bandwidth sweep (`analysis/oa_bandwidth_sweep.py`, #274, ADR-0017 D5 C-4) tested a
+  Separately, a dedicated 500 m, 1000 m, and
+  1500 m bandwidth sweep (`analysis/oa_bandwidth_sweep.py`, #274, ADR-0017 D5 C-4) tested a
   **Gaussian distance-weighted variant** of OA (not the one used above) and found its
   rankings **stable** close to the 1000 m headline catchment (500 m↔1000 m and
   1000 m↔1500 m both rank-correlate above the 0.7 publish-gate threshold, Spearman, in every
-  year 2008–2026) but **re-ranked meaningfully** across the sweep's full {500 m, 1500 m}
+  year 2008–2026) but **re-ranked meaningfully** across the sweep's full 500 m to 1500 m
   span (pooled Spearman r = 0.68, below 0.7 in 17 of 19 years) — see the
   [bandwidth-sweep findings](https://github.com/dhelweg/gentriduck/blob/main/docs/epic-g/G2-oa-bandwidth-sweep-findings.md)
   for the full detail, including why this finding does not describe the figures above. It is
