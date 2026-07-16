@@ -28,7 +28,7 @@ Per ADR-0008, the model has four active dimensions and one deferred slot:
 | **D2** | Social change | **Outcome (direction)** | MSS Dynamik-Index class (`stg_berlin_mss`) | (edition, PLR) |
 | **D3** | Commercial / amenity | **Predictor (feature)** | POI status + dynamism (`int_poi_status_dynamism`) | (year, PLR) |
 | **D4** | Socio-demographic vulnerability | **Predictor/baseline covariate** | EWR composite (`int_ewr_socioeco`) | (year, PLR) |
-| (D5) | Displacement / affordability | Predictor — **deferred (Epic D)** | reserved nullable slot | (year, PLR) |
+| (D5) | Displacement / affordability | Predictor (feature) — **partially wired (#258, D5-wire)** | `int_berlin_displacement_subindex` (turnover + rent-pressure, partial-availability composite) + Milieuschutz disclosure flag | (year, PLR); Berlin lor_2021 only |
 
 ### 0.3 Two cross-cutting conventions
 
@@ -54,10 +54,13 @@ frameworks the methodology page (G2) must name:
   high share of welfare recipients, young adults, migrants, and a *low* share of long-tenure residents
   marks areas susceptible to gentrification. This grounds D4's polarity and the §4 levels-vs-changes
   discipline.
-- **Smith (rent-gap) — absent until D5.** The capital/rent driver of gentrification is **not**
-  represented in D1–D4. The model captures the *social outcome* (MSS) and *commercial/demographic
-  correlates* (D3/D4); it does **not** capture the economic driver. The G2 page must not claim
-  otherwise (R-A7 domain Note B).
+- **Smith (rent-gap) — partially represented via D5 (#258) and `brw_trend` (#273).** The capital/rent
+  driver of gentrification is now partially captured: `brw_trend` (BRW land-value change, wired #273)
+  and `displacement_subindex` (turnover + rent-pressure, wired #258) are both PREDICTOR/lead-side
+  columns in `int_gentrification_ts`, Berlin lor_2021 only. Neither feeds the D1×D2 typology stage
+  matrix (§1) — stage names still assert only MSS-observed status/direction, never a displacement
+  *event* (G-1 below is unaffected). The G2 page must state precisely which columns exist and which
+  do not feed the typology (R-A7 domain Note B).
 - **Berlin official frame — MSS (Monitoring Soziale Stadtentwicklung) Status/Dynamik** as the governed
   social outcome (Holm 2010; Senate MSS documentation), consumed as published classes, not re-derived.
 
@@ -84,8 +87,12 @@ stage (it is a baseline covariate, §4).
 
 **G-1 — No stage may assert an unobserved displacement *event*.** Open data (MSS + EWR + OSM) can
 observe socio-economic *upgrading* and demographic *recomposition*; it **cannot** observe that a
-specific household was *involuntarily displaced*. Displacement is an *inference*, not a measurement,
-until D5 (Milieuschutz + rent-burden + turnover) lands in Epic D. Therefore:
+specific household was *involuntarily displaced*. Displacement is an *inference*, not a measurement.
+D5 (#258, D5-wire) now exists as PREDICTOR columns (`displacement_subindex`,
+`under_milieuschutz`/`milieuschutz_overlap_frac`) in `int_gentrification_ts`, but is **not** wired
+into the D1×D2 typology matrix below — no stage name currently reads D5, so this guardrail's
+conclusion is unchanged: stage names must still use risk/signal/pressure framing, not an asserted
+displacement event. Therefore:
 
 - The candidate name **"post-displacement"** is **prohibited** — it asserts displacement *occurred*.
 - Use **risk/signal/pressure** framing: `consolidation-pressure`, `high-displacement-signal`. These
@@ -194,8 +201,11 @@ Two structured breaks must be stated on G2, not smoothed over (R-A7 domain C1(e)
 attribute, never as a typology stage.** Rationale: designation is simultaneously (a) a *signal* that
 the Senate identified upgrading/displacement pressure, and (b) an *intervention* that *suppresses* the
 very displacement it flags. Folding it into a stage would conflate a risk signal with its own treatment
-effect. Implementation seam: a nullable boolean/category overlay on the typology, populated in Epic D
-when D5 lands. R-A1 leaves the slot; it does **not** populate it. **(Follow-up now tracked: #258 (D5-wire) — see `docs/planning/deferred-work-audit-2026-07.md`.)**
+effect. **(#258, D5-wire): implemented as designed** — `under_milieuschutz` /
+`milieuschutz_overlap_frac` are disclosure-only, time-invariant overlay columns in
+`int_gentrification_ts` (Berlin lor_2021 only), carried alongside but never blended into
+`displacement_subindex` or any typology stage. See `docs/methodology/D5-wire-geo-signoff.md` and
+`docs/methodology/D5-wire-domain-signoff.md`.
 
 ### 1.9 Cut-point governance
 
@@ -475,6 +485,8 @@ integrates both.
 | **D3-price** | `brw_trend` (`int_berlin_brw_trend`, #263; wired into `int_gentrification_ts`, #273) | Per-(city_code, snapshot_year) z-score of `brw_yoy_pct_change` (percentage year-over-year change in `brw_weighted_avg_eur_m2`) | **Change-positive, upgrading-pressure-positive** — high = land value rose faster than the citywide PLR average that year = rent-gap realisation actively occurring (Smith 1979) | As published (change-positive); OPPOSITE convention from a vulnerability composite — never pooled unsigned into one. | **Predictor/lead side** (ADR-0008); distinct from the D3-price LEVEL row above; wired into `int_gentrification_ts` (Berlin lor_2021 branch only, NULL for lor_pre2021/Hamburg, #273) as a predictor column alongside the `*_improved` OA columns. Left at the `int_gentrification_ts` layer only — NOT surfaced on the contract-enforced `gentrification_index` mart: it is a single indicator, not a full status/dynamism replacement, so it does not fit that mart's per-variant contract shape without its own deliberate contract-extension ticket (a future decision, not made here). | Explicit, separately-polarised change indicator discharging this table's own prior deferral (see BRW-level row). Not a measured rent or displacement outcome — read jointly with low-status/low-Wohnlage context (D3-brw-trend-domain-signoff D2). Back-series depth: 7 change-years (2018-2024) as of this ticket. Source: `int_berlin_brw_plr` → `int_berlin_brw_trend` → `int_gentrification_ts`. |
 | **D3-price** | `wohnlage_score` (ordinal mean gut=high) / `pct_einfach` (`mart_price_rent_dimension`) | `wohnlage_score` = pct_einfach×1 + pct_mittel×2 + pct_gut×3; higher = more desirable; `pct_einfach` = share of addresses in the einfach tier | `pct_einfach`: **vulnerability-positive** (high share = more upgrading headroom = more exposed to gentrification; Milieuschutz target profile; Holm 2010). `wohnlage_score`: **desirability-positive** (high = more desirable = consolidated = LOW remaining vulnerability headroom) — opposite polarity to `pct_einfach` | `pct_einfach`: as published (positive). `wohnlage_score`: **FLIP required** for vulnerability composite (high score = low vulnerability). Winsorized z-score. | **Structural-level context covariate** (D4-levels pattern, §4.6). Wohnlage LEVEL (cross-sectional) = vulnerability/headroom PRECONDITION (Blasius & Dangschat 1990 Aufwertung). The Aufwertung OUTCOME is the DECLINING einfach share over vintages — a change signal, built separately if used as such, never as a level. Context-condition on locational desirability: peripheral low quality ≠ gentrification pressure without co-inciding demand. | `wohnlage_score` is an ORDINAL-MEAN APPROXIMATION — tiers are ordered but not equidistant; do not treat as interval-scaled in regression without flagging. Source: `int_berlin_wohnlage_plr` → `mart_price_rent_dimension`. |
 | **D3-price** | `est_rent_mid` / `est_rent_low` / `est_rent_high` (`mart_price_rent_dimension`) | Higher = higher modelled Mietspiegel reference rent per PLR (EUR/m²/month at fixed profile) | **Affordability-negative** — higher = less affordable = more cost pressure; relevant for displacement-susceptibility of existing residents (Holm 2010 ~84% rental Berlin) | As published (positive for affordability pressure). Winsorized z-score. | **Structural-level affordability context covariate** (D4-levels pattern, §4.6). NEVER blended into Status×Dynamik typology. | "modelled/estimated net cold rent at a fixed reference dwelling profile (60–90 m², 1950–1964 construction year) — NOT observed rent paid." Mietspiegel Bestandsmiete/ortsübliche Vergleichsmiete: **lagging, conservative** affordability level of the standing stock; understates leading-edge/new-letting pressure that drives displacement. Disclose on G2 (domain D7). Fixed profile is a modelling choice, not a measurement. Source: `mart_price_rent_dimension` (Wohnlage shares × Mietspiegel rent cells). |
+| **D5** | `displacement_subindex` (`int_berlin_displacement_subindex`, #258; wired into `int_gentrification_ts`) | Partial-availability mean of `turnover_proxy` (EWR long-tenure-share YoY change, negated) and `rent_pressure_proxy` (Mietspiegel rent + MSS transfer-stress composite) | **Pressure-positive** — high = long-tenure residents leaving faster and/or above-median rent combined with above-median transfer-dependency, from whichever signal(s) are available that year | As published (pressure-positive); NULL only when both inputs are null (verified: the two inputs have zero overlapping lor_2021 years today, so a strict-both rule would be permanently empty — see model header). `displacement_subindex_is_partial` flags single-component rows. | **Predictor/lead side** (ADR-0008); Berlin lor_2021 rows only, NULL for lor_pre2021/Hamburg. NOT wired into the contract-enforced `gentrification_index` mart (separate future contract decision) and NOT wired into the D1×D2 typology stage matrix (§1.8 unaffected). | Not a measured displacement outcome — read jointly with `under_milieuschutz`/`milieuschutz_overlap_frac` and low-status context (D5-wire-domain-signoff.md), never alone as a displacement-risk score. Source: `int_berlin_turnover_proxy` + `int_berlin_rent_pressure_proxy` → `int_berlin_displacement_subindex` → `int_gentrification_ts`. |
+| **D5** | `under_milieuschutz` / `milieuschutz_overlap_frac` (`int_berlin_milieuschutz_plr_flag`, #70; wired into `int_gentrification_ts` via #258) | Spatial overlap of PLR with current Sec. 172 BauGB Milieuschutz designations | **Policy marker of recognized displacement risk** — TIME-INVARIANT (current-state WFS only, ADR-0019 Open Question #2); NOT itself evidence displacement pressure changed this year | DISCLOSURE-ONLY — never z-scored or folded into `displacement_subindex` (would fabricate temporal signal that does not exist in the source). | **Disclosure overlay** (§1.8) — never a typology stage, never blended into any composite. | "PLRs without the flag are not thereby 'safe from displacement,' only 'not (yet) formally protected'" (ADR-0019 Consequences). Source: `stg_berlin_milieuschutz` + `stg_berlin_lor` → `int_berlin_milieuschutz_plr_flag` → `int_berlin_displacement_subindex` → `int_gentrification_ts`. |
 
 **Worked sign example — D1 end-to-end (thesis → current model):**
 A PLR with MSS `status_index = 4` (`sehr_niedrig`) is the **most deprived / most vulnerable**.
@@ -668,8 +680,9 @@ thesis p. 91).
 | ADR-0008 Decision 3.3 (predictor/outcome separation) | §0.2, §8.4 |
 | ADR-0008 Decision 4 (sensitivity analysis) | §8 |
 | ADR-0008 Decision 5 (C5 completeness correction) | §2.4 |
-| Smith rent-gap absent until D5 (domain Note B) | §0.4 |
+| Smith rent-gap now partially represented via D5/`brw_trend` (domain Note B) | §0.4 |
 | Milieuschutz not a stage (R-A7 domain Note A; R-A4 condition 6) | §1.8 |
+| D5-wire (#258): displacement_subindex partial-availability composite + polarity | §0.2, §5 (D5 rows) |
 
 ---
 
