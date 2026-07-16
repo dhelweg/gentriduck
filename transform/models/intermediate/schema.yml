@@ -545,6 +545,86 @@ models:
           marker (Smith 1979, ADR-0017 D-2). Kept separate from
           status/dynamism_score_improved, never summed into one composite.
 
+  - name: int_poi_status_dynamism_improved_pre2021
+    description: >
+      OA-ablation (#261): "improved" companion to int_poi_status_dynamism_pre2021 --
+      status_score_improved / dynamism_score_improved / disinvestment_score_improved,
+      computed from the SAME causality-first tier-weighted amenity composite
+      (int_poi_amenity_weighted_base) as int_poi_status_dynamism_improved, but staying
+      in the lor_pre2021 (448-PLR, 2008-2020) coordinate system instead of the
+      crosswalked-to-2021 grain int_poi_status_dynamism_improved consumes. Built to
+      enable a true same-anchor faithful-vs-improved ablation against the 2018 golden
+      (analysis/c_three_way_comparison.py Part 2). See the model SQL header for the
+      full #261 tier-weight review (conclusion: seed_poi_offering_relevance transfers
+      to the pre-2021 taxonomy UNCHANGED -- full type-level coverage confirmed, no new
+      weights authored). methodology_variant='improved' throughout; never blended with
+      the faithful scores (ADR-0017 D3/D4). Z-scores are normalised within the
+      lor_pre2021 PLR population for each snapshot_year -- NOT directly comparable to
+      int_poi_status_dynamism_improved's lor_2021 z-scores (different reference
+      population, same rule as int_poi_status_dynamism_pre2021). Berlin only.
+    meta:
+      dbt_meta_owner: data-engineer
+    data_tests:
+
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns:
+              - city_code
+              - snapshot_year
+              - area_code
+              - area_vintage
+          config:
+            where: "area_code is not null"
+      - assert_not_empty:
+          config:
+            severity: error
+    columns:
+      - name: city_code
+        data_tests:
+
+          - accepted_values:
+              arguments:
+                values: ["BER"]
+              config:
+                where: "area_code is not null"
+      - name: area_vintage
+        description: Always 'lor_pre2021' for this model.
+        data_tests:
+
+          - accepted_values:
+              arguments:
+                values: ["lor_pre2021"]
+              config:
+                where: "area_code is not null"
+      - name: methodology_variant
+        description: Always 'improved' (ADR-0017 D4).
+        data_tests:
+
+          - accepted_values:
+              arguments:
+                values: ["improved"]
+              config:
+                where: "area_code is not null"
+      - name: status_score_improved
+        description: >
+          D3 PREDICTOR (curated): z-score of amenity_weighted_count relative to
+          all lor_pre2021 PLRs that year. NOT an outcome; never blended with the
+          faithful status_score.
+      - name: dynamism_score_improved
+        description: >
+          D3 PREDICTOR (curated, C5-equivalent share-normalized): z-score of
+          amenity_share_yoy_change. NOT an outcome; never blended with the
+          faithful dynamism_score.
+      - name: disinvestment_score_improved
+        description: >
+          z-score of vacancy_weighted_count -- the opposite-pole disinvestment
+          marker (Smith 1979, ADR-0017 D-2). Kept separate from
+          status/dynamism_score_improved, never summed into one composite.
+          NULL/undefined in the earliest snapshot years (2008-2011) where
+          Vacancy-domain OSM coverage is near-zero (STDDEV=0 guard) -- a known,
+          accepted limitation, same as int_poi_status_dynamism_improved's own
+          early-year behaviour (B3-geo-signoff.md §2.4), not a defect.
+
   - name: int_poi_status_dynamism
     description: >
       C4/C5 intermediate: per-PLR per-year POI status and dynamism scores.
@@ -1933,6 +2013,10 @@ models:
       Branch B — lor_pre2021 (editions 2015, 2017, 2019, ~447 PLRs, B7 #117): MSS +
       int_poi_status_dynamism_pre2021 + int_ewr_socioeco_pre2021. All in lor_pre2021 PLR
       coordinate system. Enables thesis-era H2/H3 lead-lag panel in int_mss_lead_lag.
+      OA-ablation (#261): also carries status_score_improved / dynamism_score_improved /
+      disinvestment_score_improved from int_poi_status_dynamism_improved_pre2021 (NOT
+      NULL here anymore, unlike before #261 -- see that model's header for the
+      tier-weight review).
 
       Branch C — Hamburg 'current' (annual editions 2013-2025, #40 H1 integration slice,
       ADR-0014): int_hamburg_sozialmonitoring_index (outcome, numeric-mapped D1/D2) +
@@ -2143,23 +2227,32 @@ models:
           and D3 columns for predictor analysis (R-A1; ADR-0008).
       - name: status_score_improved
         description: >
-          OA-B.3 (#172): "improved" D3 PREDICTOR -- z-score of the causality-first
-          tier-weighted amenity-OA composite (int_poi_status_dynamism_improved),
-          Vacancy domain excluded (ADR-0017 D-2). Berlin lor_2021 rows only; NULL
-          for the lor_pre2021 and Hamburg branches. NEVER blended with the
-          faithful status_score above (ADR-0017 D3/D4 methodology_variant rule).
+          OA-B.3 (#172) / OA-ablation (#261): "improved" D3 PREDICTOR -- z-score
+          of the causality-first tier-weighted amenity-OA composite
+          (int_poi_status_dynamism_improved for lor_2021 rows;
+          int_poi_status_dynamism_improved_pre2021 for lor_pre2021 rows, #261),
+          Vacancy domain excluded (ADR-0017 D-2). Berlin lor_2021 AND
+          lor_pre2021 rows; NULL for the Hamburg branch only. Each vintage's
+          z-scores are normalised WITHIN that vintage's own PLR population --
+          NOT cross-vintage comparable (542 vs 448 PLRs). NEVER blended with
+          the faithful status_score above (ADR-0017 D3/D4 methodology_variant
+          rule).
       - name: dynamism_score_improved
         description: >
-          OA-B.3 (#172): "improved" D3 PREDICTOR -- z-score of the YoY change in
-          the tier-weighted amenity-OA composite's city share (C5-equivalent
-          normalization). Berlin lor_2021 rows only; NULL elsewhere. NEVER
-          blended with the faithful dynamism_score above.
+          OA-B.3 (#172) / OA-ablation (#261): "improved" D3 PREDICTOR -- z-score
+          of the YoY change in the tier-weighted amenity-OA composite's city
+          share (C5-equivalent normalization). Berlin lor_2021 AND lor_pre2021
+          rows (#261); NULL for Hamburg. NEVER blended with the faithful
+          dynamism_score above.
       - name: disinvestment_score_improved
         description: >
-          OA-B.3 (#172): z-score of the Vacancy-domain weighted stock -- the
-          theorised OPPOSITE-POLE disinvestment/rent-gap marker (Smith 1979;
-          ADR-0017 D-2). Kept SEPARATE from status/dynamism_score_improved --
-          never summed into one composite. Berlin lor_2021 rows only.
+          OA-B.3 (#172) / OA-ablation (#261): z-score of the Vacancy-domain
+          weighted stock -- the theorised OPPOSITE-POLE disinvestment/rent-gap
+          marker (Smith 1979; ADR-0017 D-2). Kept SEPARATE from
+          status/dynamism_score_improved -- never summed into one composite.
+          Berlin lor_2021 AND lor_pre2021 rows (#261); NULL for Hamburg.
+          NULL/undefined in the earliest lor_pre2021 years (2008-2011, near-zero
+          Vacancy-domain OSM coverage) -- known, accepted limitation.
       - name: brw_trend
         description: >
           D3-brw-wire (#273): PREDICTOR/lead-side (ADR-0008) BRW change/

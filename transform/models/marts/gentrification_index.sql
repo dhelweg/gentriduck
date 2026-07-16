@@ -8,7 +8,8 @@
 -- (variant='standard'/'distance_weighted')
 -- 2. int_gentrification_ts — R-A1 re-grounded live-data index (variant='live_data')
 -- 3. int_gentrification_ts — OA-B.3 (#172) tier-weighted improved OA predictor
--- (variant='improved', Berlin lor_2021 only; see that block below for scope)
+-- (variant='improved', Berlin lor_2021 AND lor_pre2021 rows since OA-ablation
+-- #261 -- see that block below for scope)
 --
 -- R-A1 re-grounding (#64): status_index now carries MSS social status (D1, ordinal
 -- 1–4),
@@ -170,17 +171,22 @@ where {{ published_cities_filter('ts.city_code') }}
 
 union all
 
--- OA-B.3 (#172): "improved" variant -- the causality-first tier-weighted OA
--- predictor (int_poi_status_dynamism_improved via int_gentrification_ts),
--- Berlin lor_2021 rows only. This variant swaps the D3 POI PREDICTOR for its
--- curated counterpart; it does NOT recompute the D1/D2 MSS social-status
--- OUTCOME, so status_class/dynamism_class/status_class_bi/dynamism_class_bi
--- are NULL here (no typology stage exists for a bare predictor score) --
--- consumers wanting the D1xD2 typology should read the 'live_data' variant.
--- NEVER blended with 'live_data' or the thesis variants (ADR-0017 D3/D4).
--- Filtered to rows where the improved predictor actually computed (excludes
--- the lor_pre2021/Hamburg branches where it is NULL by construction -- see
--- int_gentrification_ts header).
+-- OA-B.3 (#172) / OA-ablation (#261): "improved" variant -- the causality-first
+-- tier-weighted OA predictor (int_poi_status_dynamism_improved for lor_2021 rows,
+-- int_poi_status_dynamism_improved_pre2021 for lor_pre2021 rows, via
+-- int_gentrification_ts), Berlin lor_2021 AND lor_pre2021 rows (still NOT
+-- Hamburg -- seed_poi_offering_relevance is not validated for Hamburg's
+-- taxonomy). This variant swaps the D3 POI PREDICTOR for its curated
+-- counterpart; it does NOT recompute the D1/D2 MSS social-status OUTCOME, so
+-- status_class/dynamism_class/status_class_bi/dynamism_class_bi are NULL here
+-- (no typology stage exists for a bare predictor score) -- consumers wanting
+-- the D1xD2 typology should read the 'live_data' variant. NEVER blended with
+-- 'live_data' or the thesis variants (ADR-0017 D3/D4). Filtered to rows where
+-- the improved predictor actually computed (excludes the Hamburg branch where
+-- it is NULL by construction -- see int_gentrification_ts header). lor_2021
+-- and lor_pre2021 rows here are NOT cross-vintage comparable (each vintage's
+-- z-scores are normalised within its own PLR population, 542 vs 448 PLRs) --
+-- same rule as every other z-score column in this pipeline.
 select
     ts.city_code,
     da.area_level,

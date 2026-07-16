@@ -72,15 +72,24 @@
 -- depends_on: {{ ref('int_hamburg_sozialmonitoring_index') }}
 -- depends_on: {{ ref('int_ewr_socioeco_hamburg') }}
 -- depends_on: {{ ref('int_poi_status_dynamism_improved') }}
+-- depends_on: {{ ref('int_poi_status_dynamism_improved_pre2021') }}
 -- depends_on: {{ ref('int_berlin_brw_trend') }}
 -- depends_on: {{ ref('int_berlin_displacement_subindex') }}
 --
--- OA-B.3 (#172): status_score_improved / dynamism_score_improved /
--- disinvestment_score_improved columns carry the tier-weighted "improved" POI
--- predictor (int_poi_status_dynamism_improved), joined into Branch A
--- (lor_2021, Berlin) only -- NULL in Branch B (lor_pre2021) and Branch C
--- (Hamburg). NEVER blended with the faithful status_score/dynamism_score
--- above (ADR-0017 D3/D4 methodology_variant discriminator).
+-- OA-B.3 (#172) / OA-ablation (#261): status_score_improved /
+-- dynamism_score_improved / disinvestment_score_improved columns carry the
+-- tier-weighted "improved" POI predictor, joined into Branch A (lor_2021,
+-- Berlin, via int_poi_status_dynamism_improved) AND Branch B (lor_pre2021,
+-- Berlin, via int_poi_status_dynamism_improved_pre2021, #261) -- STILL NULL in
+-- Branch C (Hamburg; seed_poi_offering_relevance is not validated for
+-- Hamburg's taxonomy, out of #261's scope). NEVER blended with the faithful
+-- status_score/dynamism_score above (ADR-0017 D3/D4 methodology_variant
+-- discriminator). Branch A and Branch B improved z-scores are each normalised
+-- within their own PLR population/vintage (542 vs 448 PLRs) -- NOT cross-
+-- vintage comparable, same rule as every other z-score column here (see
+-- int_poi_status_dynamism_improved_pre2021's header for the #261 tier-weight
+-- review that grounds reusing seed_poi_offering_relevance unchanged for the
+-- lor_pre2021 taxonomy).
 --
 -- D3-brw-wire (#273): brw_trend / brw_yoy_pct_change columns thread the BRW
 -- change/rent-gap-realisation signal (int_berlin_brw_trend, #263) through as
@@ -160,6 +169,14 @@ with
         select * from {{ ref("stg_berlin_mss") }} where area_vintage = 'lor_pre2021'
     ),
     ewr_pre2021 as (select * from {{ ref("int_ewr_socioeco_pre2021") }}),
+
+    -- OA-ablation (#261): tier-weighted "improved" POI predictor, lor_pre2021
+    -- branch (see int_poi_status_dynamism_improved_pre2021 header for the
+    -- tier-weight review grounding this extension). Joined into Branch B
+    -- below; NOT joined into Branch C (Hamburg).
+    poi_improved_pre2021 as (
+        select * from {{ ref("int_poi_status_dynamism_improved_pre2021") }}
+    ),
 
     -- Branch C sources: Hamburg 'current' (2013-2025, #40 H1 integration slice)
     poi_hamburg as (
@@ -286,15 +303,18 @@ with
             -- DO NOT compare across vintages or use for new analysis.
             (poi.status_score + poi.dynamism_score - ewr.ewr_composite)
             / 3.0 as legacy_gentrification_score,
-            -- OA-B.3 (#172): "improved" predictor not computed for the
-            -- lor_pre2021 branch (seed_poi_offering_relevance tier weights are
-            -- validated against Berlin's current taxonomy/literature review
-            -- only, not re-derived for the thesis-era 448-PLR system) --
-            -- NULL, never backfilled from the lor_2021 branch (no cross-vintage
-            -- comparison, same rule as every other z-score column here).
-            cast(null as double) as status_score_improved,
-            cast(null as double) as dynamism_score_improved,
-            cast(null as double) as disinvestment_score_improved,
+            -- OA-ablation (#261): "improved" predictor now computed for the
+            -- lor_pre2021 branch too (int_poi_status_dynamism_improved_pre2021
+            -- -- see that model's header for the tier-weight review
+            -- concluding seed_poi_offering_relevance transfers unchanged).
+            -- NULL where int_poi_status_dynamism_improved_pre2021 has no
+            -- matching row, same graceful-degradation convention as every
+            -- other predictor here. Normalised within the lor_pre2021
+            -- population (448 PLRs) -- NOT cross-vintage comparable with
+            -- Branch A's lor_2021-normalised improved z-scores.
+            poi_improved_pre2021.status_score_improved,
+            poi_improved_pre2021.dynamism_score_improved,
+            poi_improved_pre2021.disinvestment_score_improved,
             -- D3-brw-wire (#273): int_berlin_brw_trend is lor_2021-grain only
             -- (BRW pre2021 back-series depth is an open, unresolved question,
             -- not addressed by this ticket) -- NULL, never backfilled from
@@ -319,6 +339,10 @@ with
             ewr_pre2021 as ewr
             on mss.area_code = ewr.area_code
             and mss.edition = ewr.reference_year
+        left join
+            poi_improved_pre2021
+            on mss.area_code = poi_improved_pre2021.area_code
+            and mss.edition = poi_improved_pre2021.snapshot_year
     ),
 
     -- Branch C: Hamburg join (#40 H1 integration slice).
