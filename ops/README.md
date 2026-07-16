@@ -223,6 +223,12 @@ Evidence build gets a cheap local signal before it reaches the release routine a
 after `poe refresh` any time a model or schema touching a published mart changes, not just at
 weekly release time.
 
+**Build-time trend (#248 item 3):** `poe web-build`'s final step now runs through
+`ops/time_web_build.py` instead of a bare `npm run build` — a stdlib-only timer that appends one
+line (timestamp, elapsed seconds, status) to the committed `ops/web-build-timings.log` per run, so
+the Evidence prerender time (currently ~15 min for 559 pages) has a visible trend as page count
+grows (#247, future city expansion) before it becomes a release-time problem worth its own ADR.
+
 > **Cost note:** continuous mode burns usage continuously and will hit session limits; the
 > restart-on-reset loop handles that but it is not cheap. The light `sonnet`/`medium` defaults keep
 > it affordable; for an even lower-burn cadence, run the script under a `cron`/`systemd timer` window

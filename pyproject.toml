@@ -191,7 +191,14 @@ refresh = { sequence = ["verify-data", "deps", "ingest", "build", "export-servin
 # routine as an explicit, reusable task instead of hand-typed shell. Requires `poe refresh` (or at
 # least `export-serving` + `export-area-geojson`) to have populated `data/serving/` and
 # `web/static/geo/` first -- this task does not re-run the data pipeline.
-web-build = { sequence = ["npm ci", "npm run sources", "npm run build"], cwd = "web", default_item_type = "cmd" }
+#
+# #248 item 3 (architect review, "no action now, monitor"): the final step wraps
+# `npm run build` in ops/time_web_build.py, a stdlib-only timer that appends one
+# line to ops/web-build-timings.log per run (committed, so the prerender-time trend
+# is visible across releases before it becomes a visible fraction of the release --
+# no new tool, same discipline as #251's ingestion driver). Exit code is unchanged
+# (a failed build still fails this poe sequence).
+web-build = { sequence = ["npm ci", "npm run sources", "python ../ops/time_web_build.py"], cwd = "web", default_item_type = "cmd" }
 # O2 (#82) / ADR-0013: single-command reproducible whitepaper build (Quarto + Typst,
 # quarto-cli installed into the repo-local .venv). Renders docs/whitepaper/whitepaper.qmd to
 # HTML + PDF under the gitignored data/whitepaper/. Content is a staged slice (see the
