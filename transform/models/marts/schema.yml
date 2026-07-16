@@ -76,10 +76,14 @@ models:
           Index variant. 'standard' uses non-distance-weighted POI features;
           'distance_weighted' uses POI inverse-distance weighting;
           'live_data' uses the C4 time-series pipeline (OSM + EWR, all years);
-          'improved' (OA-B.3 #172) carries the causality-first tier-weighted OA
-          predictor (int_poi_status_dynamism_improved), Berlin lor_2021 rows
-          only -- a separate, never-blended methodology_variant from
-          'live_data' (ADR-0017 D3/D4).
+          'improved' (OA-B.3 #172; extended to lor_pre2021 by OA-ablation #261)
+          carries the causality-first tier-weighted OA predictor
+          (int_poi_status_dynamism_improved for Berlin lor_2021 rows,
+          int_poi_status_dynamism_improved_pre2021 for Berlin lor_pre2021 rows)
+          -- a separate, never-blended methodology_variant from 'live_data'
+          (ADR-0017 D3/D4). Still Berlin-only; still NOT computed for Hamburg
+          (seed_poi_offering_relevance is not validated for Hamburg's
+          taxonomy).
         data_type: varchar
         data_tests:
 

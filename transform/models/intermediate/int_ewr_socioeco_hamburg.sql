@@ -7,10 +7,14 @@
 -- before integration into develop.
 --
 -- STANDING REQUIREMENT (H1 geo-signoff Condition 2, re-homed via #265/H-reg-SE -- see
--- docs/epic-h/EPIC-H-METHODOLOGY.md): this composite is estimated at Stadtteil grain (~104-105
--- areas) and disaggregated onto Gebiet grain (~941-945 areas) below. Any future regression that
--- includes ewr_composite or the z_* columns at Gebiet grain must cluster standard errors at
--- Stadtteil grain (or aggregate the whole spec to Stadtteil grain) and report the effective N
+-- docs/epic-h/EPIC-H-METHODOLOGY.md): this composite is estimated at Stadtteil grain
+-- (~104-105
+-- areas) and disaggregated onto Gebiet grain (~941-945 areas) below. Any future
+-- regression that
+-- includes ewr_composite or the z_* columns at Gebiet grain must cluster standard
+-- errors at
+-- Stadtteil grain (or aggregate the whole spec to Stadtteil grain) and report the
+-- effective N
 -- honestly (~104, not ~941) -- a change-of-support/MAUP issue, not a stylistic choice.
 --
 -- Implementation note: the Stadtteil -> Gebiet disaggregation JOIN logic lives
