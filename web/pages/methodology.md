@@ -401,7 +401,10 @@ honestly compute. We'd rather say that plainly than manufacture a misleading num
   real accessibility surface. Berlin's headline OA figures on this site (including the
   faithful/improved comparison above) are built from the **hard point-in-polygon variant**
   (`weight_variant='standard'`), which has no distance-decay bandwidth parameter at all and
-  is therefore bandwidth-invariant by construction. Separately, a dedicated {500 m, 1000 m,
+  is therefore bandwidth-invariant by construction — that means only that it makes no bandwidth
+  choice, not that it has been tested and found spatially robust; it remains untested for the
+  fragility described next and sits at the sharp/narrow end of the same spatial-grain family.
+  Separately, a dedicated {500 m, 1000 m,
   1500 m} bandwidth sweep (`analysis/oa_bandwidth_sweep.py`, #274, ADR-0017 D5 C-4) tested a
   **Gaussian distance-weighted variant** of OA (not the one used above) and found its
   rankings **stable** close to the 1000 m headline catchment (500 m↔1000 m and

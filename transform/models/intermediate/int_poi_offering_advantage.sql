@@ -177,6 +177,20 @@
 -- see mart_poi_offering_advantage_map/web/pages/berlin/poi-map.md) or simply
 -- surface it; the underlying oa_* value is still computed and exposed so nothing
 -- is silently hidden from a caller that wants the raw number.
+-- Anti-erasure framing (domain sign-off #274 Condition D1): a flagged/thin PLR-year
+-- means "too thinly observed to compute a stable ratio", NEVER "commercially dead".
+-- OSM mapping completeness is not spatially neutral -- it varies within a given year
+-- and tends to correlate with area advantage, i.e. poorer/peripheral areas are
+-- typically less thoroughly mapped than richer/central ones (Haklay, M. 2010, "How
+-- Good is Volunteered Geographical Information?", Environment and Planning B), on
+-- top of the early-year temporal completeness bias already noted above. So a low
+-- all_domains_stock_local/domain_stock_local count -- and the flag/suppression it
+-- triggers -- can itself reflect an OSM coverage gap rather than a genuine absence
+-- of commercial activity. Any caller displaying this flag on a public,
+-- displacement-adjacent surface (poi-map does) must disclose this half of the
+-- sparsity story, not just the temporal one, or a blank/suppressed cell risks being
+-- misread as "nothing happening here" and stigmatizing exactly the under-mapped
+-- lower-income/peripheral Kieze this project exists to protect.
 --
 -- Graceful degradation: returns zero rows when fct_poi_development and/or
 -- int_osm_poi_plr_weighted have no rows (OSM/LOR ingestion not yet run).

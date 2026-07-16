@@ -71,6 +71,23 @@ stable centre of the sweep; the fragility is concentrated at the sweep's own out
 itself only ever a sensitivity-check bandwidth, never a candidate headline (spatial-methods.md §11.2:
 "500 m is too narrow ... 1500 m is acceptable only as the sweep's upper bound").
 
+**Temper (domain sign-off #274 advisory R2): this is a measurement claim about the metric first, a
+succession-process claim only speculatively.** A rank-correlation sweep characterizes how the
+**metric's** PLR ordering moves with bandwidth; it cannot by itself isolate whether that movement is
+telling us something about the real-world **succession process**. In particular, `oa_domain` is a
+compositional location quotient (a local share relative to the citywide share), and the domain
+sign-off for the P0.1 spike (`docs/epic-b/P0.1-oa-variant-domain-signoff.md` §2) already establishes
+that this class of metric **mechanically washes toward 1 as the catchment widens** — pulling the local
+mix toward the city mean and attenuating the very contrast the metric is built to detect, independent
+of anything happening in the underlying commercial-succession dynamics. That means a meaningful share
+of the observed 500↔1500 m re-ranking above is plausibly just this known, expected scale-attenuation
+property of a share-relative-to-city construct, not a discovery about how succession is spatially
+organized. The "spatial grain of succession" framing (C-4-mandated, ADR-0017 D5) is not withdrawn —
+the sweep is still legitimate evidence that PLR ordering is scale-contingent, which is itself
+domain-relevant — but it should be read as a property of the compositional construct's known scale
+behaviour first, and only speculatively as a property of the succession process a rank sweep alone
+cannot isolate.
+
 ## What this sweep does NOT characterize (iteration 2 correction)
 
 This sweep tested `oa_domain` under `weight_variant='gaussian_{500,1000,1500}m'` — the
@@ -139,3 +156,11 @@ than reimplementing the kernel math in Python.
 - **This sweep only tested the gaussian-weighted variant, not the `standard` variant actually
   displayed on the live public pages** — see "What this sweep does NOT characterize" above. This is
   the most important caveat in this document; it was missing from the original draft.
+- **The D-3 min-POI-base threshold (`oa_min_poi_base_n`, default 10) is a conventional
+  small-sample-size floor, not empirically fit** (domain sign-off #274, advisory R3) — it was chosen
+  because the P0.1 domain sign-off left the exact number advisory/unspecified, and it errs on the
+  permissive/anti-stigma side: at the domain level it suppresses only ~0.4% of PLR-years in the
+  current (2025) snapshot, so it is not over-suppressing legitimately-thin-but-real areas. A future
+  review may revisit whether it is *high* enough to reliably catch compositional instability without
+  tipping into over-suppression — see `int_poi_offering_advantage.sql`'s D-3 header for the full
+  threshold rationale.
