@@ -128,6 +128,7 @@ def load_data(con: duckdb.DuckDBPyConnection) -> dict:
             snapshot_year,
             mss_edition,
             status_index    AS mss_status_index,
+            dynamik_index   AS mss_dynamik_index,
             dynamism_score  AS mss_dynamism_score,
             ewr_composite
         FROM main.int_gentrification_ts
@@ -254,6 +255,102 @@ def test_mss_agreement(index_df, mss_df) -> dict:
             f"at MSS edition {mss_edition}. "
             "Cross-validates that the mart and the intermediate model agree on the MSS D1 ordinal. "
             f"n_paired={n_paired}. Threshold: rho > {THRESHOLD_MSS_RHO}, p < {THRESHOLD_MSS_P}."
+        ),
+    }
+
+
+# ---------------------------------------------------------------------------
+# Test D — Dynamism (D2) agreement (R-B2b, #264)
+# ---------------------------------------------------------------------------
+
+
+def test_dynamism_agreement(index_df, mss_df) -> dict:
+    """Test D (R-B2b, #264): Spearman rank correlation between live dynamism_index and
+    MSS D2 (dynamik_index).
+
+    Mirrors Test A's design exactly, one dimension over: gentrification_index.dynamism_index
+    (live_data variant) carries MSS D2 Dynamik (transform/models/marts/gentrification_index.sql
+    line ~135: `cast(ts.dynamik_index as double) as dynamism_index`) via int_poi_status_dynamism;
+    int_gentrification_ts.dynamik_index is the same MSS D2 ordinal sourced directly from
+    stg_berlin_mss. Both encode the identical MSS D2 class (1=positiv/improving,
+    2=stabil, 3=negativ/declining) via different model paths -- this test cross-validates
+    pipeline alignment, exactly as Test A does for D1/status_index, not a new statistical
+    claim about dynamism per se.
+
+    Filed as a follow-up in both R-B2 sign-offs (docs/methodology/R-B2-geo-signoff.md,
+    "Add a dynamism_index back-test as a follow-up ticket") -- #264 re-opens it. Mirrors
+    Test A's exact methodology (Spearman rho, same thresholds) as the natural D2 analogue.
+    Confirmed appropriate by both geo-DS (docs/methodology/R-B2b-geo-signoff.md, Verdict:
+    PASS -- "the D2 analogue of Test A... mirroring is the consistent and defensible
+    choice") and gentrification-domain-expert (docs/methodology/R-B2b-domain-signoff.md,
+    Verdict: PASS -- "a pure DE pipeline sanity check with no domain content to gate").
+
+    Pass threshold: rho > 0.3, p < 0.05 (same as Test A -- proposed, not independently
+    re-derived here).
+    """
+    n_total = len(index_df)
+    dynamism_vals = index_df["dynamism_index"].dropna().values.astype(float)
+    n_valid = len(dynamism_vals)
+    dynamism_range = (
+        (float(dynamism_vals.min()), float(dynamism_vals.max())) if n_valid > 0 else (None, None)
+    )
+    n_classes = len(np.unique(dynamism_vals)) if n_valid > 0 else 0
+
+    merged = (
+        index_df[["area_code", "dynamism_index"]]
+        .merge(
+            mss_df[["area_code", "mss_dynamik_index"]],
+            on="area_code",
+            how="inner",
+        )
+        .dropna()
+    )
+
+    n_paired = len(merged)
+    if n_paired < 10:
+        return {
+            "n_total": n_total,
+            "n_valid": n_valid,
+            "n_paired": n_paired,
+            "dynamism_range": dynamism_range,
+            "n_classes": n_classes,
+            "rho": None,
+            "p": None,
+            "pass": False,
+            "note": (
+                "Too few paired observations for Test D Spearman "
+                "(gentrification_index vs int_gentrification_ts join returned < 10 rows)."
+            ),
+        }
+
+    rho, p = stats.spearmanr(
+        merged["dynamism_index"].values.astype(float),
+        merged["mss_dynamik_index"].values.astype(float),
+    )
+    rho = float(rho)
+    p = float(p)
+
+    pass_flag = (rho > THRESHOLD_MSS_RHO) and (p < THRESHOLD_MSS_P)
+
+    mss_edition = int(mss_df["mss_edition"].iloc[0]) if len(mss_df) > 0 else None
+
+    return {
+        "n_total": n_total,
+        "n_valid": n_valid,
+        "n_paired": n_paired,
+        "dynamism_range": dynamism_range,
+        "n_classes": n_classes,
+        "rho": rho,
+        "p": p,
+        "pass": pass_flag,
+        "mss_edition": mss_edition,
+        "note": (
+            f"Spearman(gentrification_index.dynamism_index, int_gentrification_ts.dynamik_index) "
+            f"at MSS edition {mss_edition}. "
+            "Cross-validates that the mart and the intermediate model agree on the MSS D2 ordinal "
+            "(mirrors Test A's design for D1). "
+            f"n_paired={n_paired}. Threshold: rho > {THRESHOLD_MSS_RHO}, p < {THRESHOLD_MSS_P} "
+            "(design confirmed by geo-DS + domain-expert sign-off, docs/methodology/R-B2b-geo-signoff.md, R-B2b-domain-signoff.md)."
         ),
     }
 
@@ -461,8 +558,9 @@ def _pass_str(flag: bool | None) -> str:
     return "PASS" if flag else "FAIL"
 
 
-def print_results(res_a: dict, res_b: dict, res_c: dict) -> None:
-    """Print a summary of all three test results to stdout."""
+def print_results(res_a: dict, res_b: dict, res_c: dict, res_d: dict | None = None) -> None:
+    """Print a summary of test results to stdout. res_d (Test D, R-B2b #264) is optional
+    for backward compatibility with any external caller not yet updated."""
     print("\n" + "=" * 80)
     print("B2 BACK-TEST HARNESS RESULTS")
     print("=" * 80)
@@ -479,6 +577,20 @@ def print_results(res_a: dict, res_b: dict, res_c: dict) -> None:
     print(f"  Threshold: rho > {THRESHOLD_MSS_RHO}, p < {THRESHOLD_MSS_P}")
     print(f"  Result: {_pass_str(res_a['pass'])}")
     print(f"  Note: {res_a['note']}")
+
+    if res_d is not None:
+        print("\n--- Test D: Dynamism (D2) agreement (R-B2b, #264) ---")
+        print(f"  n (total PLRs):  {res_d['n_total']}")
+        print(f"  n (cross-validated pairs): {res_d['n_paired']}")
+        if res_d.get("mss_edition"):
+            print(f"  MSS edition: {res_d['mss_edition']}")
+        print(f"  dynamism_index range: {res_d['dynamism_range']}")
+        print(f"  n distinct classes: {res_d['n_classes']}")
+        if res_d["rho"] is not None:
+            print(f"  rho = {res_d['rho']:.4f}, p = {res_d['p']:.4f}")
+        print(f"  Threshold: rho > {THRESHOLD_MSS_RHO}, p < {THRESHOLD_MSS_P}")
+        print(f"  Result: {_pass_str(res_d['pass'])}")
+        print(f"  Note: {res_d['note']}")
 
     print("\n--- Test B: Hotspot recall @ top 10% ---")
     print(f"  n hotspots in seed: {res_b['n_hotspots']}")
@@ -512,17 +624,23 @@ def print_results(res_a: dict, res_b: dict, res_c: dict) -> None:
                 f"    {d['plr_id']} {d['plr_name']:<30} si={d['status_index']} {d['status_class']:<25} [{flag}]"
             )
 
-    overall = all([res_a["pass"], res_b["pass"], res_c["pass"]])
+    overall_tests = [res_a["pass"], res_b["pass"], res_c["pass"]]
+    if res_d is not None:
+        overall_tests.append(res_d["pass"])
+    overall = all(overall_tests)
     print("\n" + "=" * 80)
     print(f"OVERALL: {'ALL PASS' if overall else 'ONE OR MORE FAIL'}")
     print("=" * 80)
 
 
-def write_backtest_md(res_a: dict, res_b: dict, res_c: dict) -> None:
+def write_backtest_md(res_a: dict, res_b: dict, res_c: dict, res_d: dict | None = None) -> None:
     """Write (overwrite) docs/methodology/backtest.md with methodology and results."""
     OUTPUT_MD.parent.mkdir(parents=True, exist_ok=True)
     run_date = datetime.now().strftime("%Y-%m-%d")
-    overall = all([res_a["pass"], res_b["pass"], res_c["pass"]])
+    overall_tests = [res_a["pass"], res_b["pass"], res_c["pass"]]
+    if res_d is not None:
+        overall_tests.append(res_d["pass"])
+    overall = all(overall_tests)
     overall_str = "ALL PASS" if overall else "ONE OR MORE FAIL"
 
     with open(OUTPUT_MD, "w") as f:
@@ -639,6 +757,27 @@ def write_backtest_md(res_a: dict, res_b: dict, res_c: dict) -> None:
         f.write(f"- Threshold: rho > {THRESHOLD_MSS_RHO}, p < {THRESHOLD_MSS_P}\n")
         f.write(f"- **Result: {_pass_str(res_a['pass'])}**\n\n")
         f.write(f"*{res_a['note']}*\n\n")
+
+        if res_d is not None:
+            f.write("### Test D — Dynamism (D2) agreement (R-B2b, #264)\n\n")
+            f.write(
+                "Spearman rank correlation between `gentrification_index.dynamism_index` "
+                "(live_data variant) and `int_gentrification_ts.dynamik_index` at the latest "
+                "MSS edition. Mirrors Test A's design for the D2 (Dynamik) dimension: both "
+                "columns carry the same MSS D2 ordinal via different model paths. **Proposed "
+                "design, pending geo-DS + domain-expert confirmation** (see the R-B2 sign-offs' "
+                "original follow-up recommendation and #264).\n\n"
+            )
+            if res_d.get("mss_edition"):
+                f.write(f"- MSS edition used for cross-validation: {res_d['mss_edition']}\n")
+            f.write(f"- n (cross-validated pairs): {res_d['n_paired']}\n")
+            f.write(f"- dynamism_index range: {res_d['dynamism_range']}\n")
+            f.write(f"- Distinct dynamism classes: {res_d['n_classes']}\n")
+            if res_d["rho"] is not None:
+                f.write(f"- Spearman rho = **{res_d['rho']:.4f}**, p = {res_d['p']:.4f}\n")
+            f.write(f"- Threshold: rho > {THRESHOLD_MSS_RHO}, p < {THRESHOLD_MSS_P} (proposed)\n")
+            f.write(f"- **Result: {_pass_str(res_d['pass'])}**\n\n")
+            f.write(f"*{res_d['note']}*\n\n")
 
         f.write("### Test B — Hotspot recall @ top 10%\n\n")
         f.write(
@@ -821,6 +960,10 @@ def main() -> None:
     res_a = test_mss_agreement(index_df, mss_df)
     print(f"  rho={res_a.get('rho')}, p={res_a.get('p')}, result={_pass_str(res_a['pass'])}")
 
+    print("Running Test D: Dynamism (D2) agreement (R-B2b, #264)...")
+    res_d = test_dynamism_agreement(index_df, mss_df)
+    print(f"  rho={res_d.get('rho')}, p={res_d.get('p')}, result={_pass_str(res_d['pass'])}")
+
     print("Running Test B: Hotspot recall @ top 10%...")
     res_b = test_hotspot_recall(index_df, gt_df)
     print(f"  recall={res_b.get('recall')}, result={_pass_str(res_b['pass'])}")
@@ -830,9 +973,9 @@ def main() -> None:
     print(f"  recall={res_c.get('recall')}, result={_pass_str(res_c['pass'])}")
 
     # Print and write results
-    print_results(res_a, res_b, res_c)
+    print_results(res_a, res_b, res_c, res_d)
 
-    write_backtest_md(res_a, res_b, res_c)
+    write_backtest_md(res_a, res_b, res_c, res_d)
     print(f"\nResults written to: {OUTPUT_MD}")
 
 
