@@ -2313,6 +2313,69 @@ models:
           For is_bridged rows: how many lor_2021 PLRs (including this one) share the same
           dominant pre-2021 source PLR -- domain sign-off's pseudo-replication count (up to 6
           observed). NULL for passthrough (non-bridged) rows.
+  - name: int_berlin_milieuschutz_event_panel
+    description: >
+      A10-P2 (#259) -- DRAFT / PENDING GEO-DS + DOMAIN SIGN-OFF (R-C1). NOT yet consumed by
+      any analysis script. Mechanical treatment/control panel assembly for a future
+      difference-in-differences / event-study on Milieuschutz designation (#80 Part 2,
+      re-opened): joins the MSS outcome series (sourced directly from stg_berlin_mss, not
+      the POI-inner-joined int_gentrification_ts -- applying #260's C2 lesson proactively) to
+      int_berlin_milieuschutz_plr_flag's designation status per PLR, computing event time
+      (years since designation) for treated PLRs. Does NOT run any DiD/event-study
+      regression, choose a control-matching strategy, or apply spatial controls -- see model
+      header for the open questions (staggered-adoption estimator choice, control-group
+      definition, event-time resolution, cross-vintage handling, outcome-variable choice)
+      flagged for the geo-DS/domain sign-off this ticket requires before any estimation code
+      may consume it.
+
+      Grain: (city_code, area_code, area_vintage, snapshot_year).
+    meta:
+      dbt_meta_owner: data-engineer
+    data_tests:
+
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns:
+              - city_code
+              - area_code
+              - area_vintage
+              - snapshot_year
+      - assert_not_empty:
+          config:
+            severity: error
+    columns:
+      - name: city_code
+        description: City identifier (ADR-0005). Always 'BER' (Milieuschutz is a Berlin-only ADR-0019 source).
+        data_tests:
+
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ["BER"]
+      - name: area_code
+        description: PLR area code, within its area_vintage's coordinate scheme.
+        data_tests:
+
+          - not_null
+      - name: area_vintage
+        description: "'lor_pre2021' or 'lor_2021', matching int_gentrification_ts's own vintage-separated grain."
+        data_tests:
+
+          - not_null
+      - name: snapshot_year
+        description: MSS edition year.
+      - name: under_milieuschutz
+        description: Boolean treatment flag, from int_berlin_milieuschutz_plr_flag (current-designation-state, ST_Intersects any overlap).
+        data_tests:
+
+          - not_null
+      - name: designation_year
+        description: Year extracted from earliest_in_force_date; NULL for never-treated (control) PLRs.
+      - name: event_time_years
+        description: snapshot_year minus designation_year, for treated PLR-years only; NULL for control PLR-years or where designation_year is unavailable.
+      - name: is_post_designation
+        description: True/false for treated PLR-years (snapshot_year >= designation_year); NULL for control PLR-years (never a 0/1 -- controls are never "post").
+  - name: int_ewr_lead_lag
   - name: int_ewr_lead_lag
     description: >
       #114: EWR-based annual lead-lag panel for same-era H2/H3 thesis comparison.
