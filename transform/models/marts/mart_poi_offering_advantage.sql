@@ -13,6 +13,12 @@
 -- "plumbing" framing already used for dim_area_geometry.sql. Not on the R-C1
 -- gated-file list.
 --
+-- #274 (ADR-0017 D5 D-3 discharge): also passes through the min-POI-base
+-- flags (oa_domain_min_base_flag/oa_category_min_base_flag/
+-- oa_type_min_base_flag) computed in int_poi_offering_advantage -- pure
+-- pass-through of an upstream, already-computed column, no new flag logic
+-- introduced at this layer.
+--
 -- Grain: one row per (city_code, snapshot_year, area_code, area_vintage,
 -- weight_variant, methodology_variant, poi_domain_h, poi_category_h,
 -- poi_type_h) -- identical to int_poi_offering_advantage's own grain (ADR-0017
@@ -69,7 +75,10 @@ with
             poi_type_h,
             oa_domain,
             oa_category,
-            oa_type
+            oa_type,
+            oa_domain_min_base_flag,
+            oa_category_min_base_flag,
+            oa_type_min_base_flag
         from {{ ref("int_poi_offering_advantage") }}
     ),
 
@@ -131,6 +140,9 @@ select
     oa.oa_domain,
     oa.oa_category,
     oa.oa_type,
+    oa.oa_domain_min_base_flag,
+    oa.oa_category_min_base_flag,
+    oa.oa_type_min_base_flag,
     pc.poi_count,
     ak.area_km2,
     pc.poi_count / nullif(ak.area_km2, 0) as poi_density_per_km2

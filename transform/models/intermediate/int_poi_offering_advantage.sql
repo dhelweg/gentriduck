@@ -136,10 +136,61 @@
 -- reader; the causal-tier curation (Workstream 2, OA-B.1-4 #170-173) is the
 -- ONLY sanctioned mechanism for dropping/weighting types -- it must not be
 -- short-circuited here (ADR-0017 D3 firm rule).
--- D-3 (advisory, not blocking here): the compositional LQ is unstable in low-
--- POI-base PLRs (a single POI can swing a type's local share). A minimum-
--- POI-base flag/suppression is deferred to a later ticket (OA-C.1/G2 per
--- ADR-0017 D5) -- NOT implemented in this model.
+-- D-3 (advisory; #274 G2-oa-publish-gates DISCHARGES this): the compositional
+-- LQ is unstable in low-POI-base PLRs (a single POI can swing a type's local
+-- share -- docs/epic-b/P0.1-oa-variant-domain-signoff.md §4, "compositional
+-- small-denominator instability"). The instability lives in the LOCAL SHARE's
+-- denominator (this level's own parent base within the PLR), not the
+-- numerator: when the parent base is a handful of POIs, one POI entering or
+-- leaving swings the local share -- and hence the LQ -- disproportionately;
+-- once the parent base is large, the same +/-1 POI barely moves the ratio.
+-- So the flag/suppression is keyed on each level's own denominator:
+-- oa_domain_min_base_flag   := all_domains_stock_local < {{ var("oa_min_poi_base_n", 10) }}
+-- (all_domains_stock_local is the PLR-year's TOTAL poi count across every
+-- domain -- identical for every domain/category/type row of that PLR-year
+-- by construction, i.e. this flag reads as "this whole PLR-year is
+-- thinly-mapped", exactly the D-3 "thinly-mapped PLR" framing, not a
+-- domain-specific property).
+-- oa_category_min_base_flag / oa_type_min_base_flag := domain_stock_local <
+-- {{ var("oa_min_poi_base_n", 10) }} (the parent DOMAIN's own local total
+-- within this PLR -- category/type OA's actual denominator, D1).
+-- Threshold: per-city dbt var `oa_min_poi_base_n` (ADR-0005 per-city-parameter
+-- pattern, mirrors `poi_kernel_bandwidth_m`), default 10 -- a conventional
+-- small-sample-size cutoff, chosen (not empirically fit) because the domain
+-- sign-off left the exact number advisory/unspecified ("Consider a minimum-
+-- POI-base flag ... for OA in thinly-mapped PLRs"); at this default, measured
+-- against the Berlin standard-variant build: ~0.4% of PLR-years are flagged
+-- at the domain level in the current/latest snapshot (2025: 2/542), rising to
+-- ~6% pooled across the full 2008-2026 history (519/8820) -- early years are
+-- flagged far more often, an OSM-completeness-bias interaction (fewer
+-- contributors mapped early on, so more PLRs read as genuinely thin; the same
+-- early-year caveat the citywide POI chart already carries on the poi-map
+-- page). The exceptions in the current snapshot are genuinely near-empty
+-- peripheral/green PLRs, e.g. Tempelhofer Feld/Grunewald/Flughafensee, the
+-- same PLRs the §11.3 leakage guard names. At the category/type level
+-- (domain_stock_local, naturally much smaller than the all-domains total),
+-- ~44% of PLR-domain rows are flagged in the current/latest snapshot (2025),
+-- ~54% pooled across the full history -- consistent with D-3's own framing
+-- that the type/category share is the more exposed level. This is advisory
+-- (flag, not a hard row-level drop -- OA-C.1/
+-- G2 per ADR-0017 D5): callers may suppress on the flag (poi-map page does,
+-- see mart_poi_offering_advantage_map/web/pages/berlin/poi-map.md) or simply
+-- surface it; the underlying oa_* value is still computed and exposed so nothing
+-- is silently hidden from a caller that wants the raw number.
+-- Anti-erasure framing (domain sign-off #274 Condition D1): a flagged/thin PLR-year
+-- means "too thinly observed to compute a stable ratio", NEVER "commercially dead".
+-- OSM mapping completeness is not spatially neutral -- it varies within a given year
+-- and tends to correlate with area advantage, i.e. poorer/peripheral areas are
+-- typically less thoroughly mapped than richer/central ones (Haklay, M. 2010, "How
+-- Good is Volunteered Geographical Information?", Environment and Planning B), on
+-- top of the early-year temporal completeness bias already noted above. So a low
+-- all_domains_stock_local/domain_stock_local count -- and the flag/suppression it
+-- triggers -- can itself reflect an OSM coverage gap rather than a genuine absence
+-- of commercial activity. Any caller displaying this flag on a public,
+-- displacement-adjacent surface (poi-map does) must disclose this half of the
+-- sparsity story, not just the temporal one, or a blank/suppressed cell risks being
+-- misread as "nothing happening here" and stigmatizing exactly the under-mapped
+-- lower-income/peripheral Kieze this project exists to protect.
 --
 -- Graceful degradation: returns zero rows when fct_poi_development and/or
 -- int_osm_poi_plr_weighted have no rows (OSM/LOR ingestion not yet run).
@@ -329,6 +380,15 @@ select
     -- oa_helper_gastro_t_restaurant_italiener_stock, oa_helper =
     -- d_gastronomie_city / t_restaurant_italiener_city.
     (type_stock_local / nullif(domain_stock_local, 0))
-    / nullif(type_stock_city / nullif(domain_stock_city, 0), 0) as oa_type
+    / nullif(type_stock_city / nullif(domain_stock_city, 0), 0) as oa_type,
+
+    -- D-3 min-POI-base flags (#274 discharge -- see header comment above for
+    -- the full rationale/threshold derivation). Keyed on each level's OWN
+    -- local-share denominator, not a shared/arbitrary cutoff:
+    all_domains_stock_local
+    < {{ var("oa_min_poi_base_n", 10) }} as oa_domain_min_base_flag,
+    domain_stock_local
+    < {{ var("oa_min_poi_base_n", 10) }} as oa_category_min_base_flag,
+    domain_stock_local < {{ var("oa_min_poi_base_n", 10) }} as oa_type_min_base_flag
 
 from with_bases

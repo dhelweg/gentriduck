@@ -45,6 +45,25 @@ sidebar_position: 5
   misplace the center for an asymmetric data range. POI density (`density`, "Stock" view) has no
   natural center -- it stays on Evidence's default single-hue sequential scale, consistent with
   `/maps`'s scalar indicators (geo-DS consulted).
+
+  #274 (G2-oa-publish-gates): discharges ADR-0017's two OA publish gates that #262 (G2-audit) had
+  only flagged as interim "not yet tested/applied" disclosures. (1) D-3 min-POI-base: PLR-years
+  with < oa_min_poi_base_n (default 10) total mapped places are now suppressed to NULL (unshaded
+  gap on the map) via mart_poi_offering_advantage_map.oa_domain_min_base_flag
+  (int_poi_offering_advantage.sql, upstream, computes the flag; suppression itself happens in this
+  page's SQL, since it's a display decision, not a new methodology value -- the underlying oa_domain
+  is still exposed unsuppressed everywhere else, e.g. mart_poi_offering_advantage). (2) C-4
+  bandwidth-fragility: analysis/oa_bandwidth_sweep.py ran the actual {500,1000,1500}m sweep --
+  finding the GAUSSIAN-WEIGHTED variant stable near its 1000m headline but re-ranking meaningfully
+  at the sweep's full span (docs/epic-g/G2-oa-bandwidth-sweep-findings.md). Iteration-2 review
+  correction: this page filters weight_variant='standard' below (the bandwidth-free, hard
+  point-in-polygon variant), which the sweep never tested -- 'standard' has no bandwidth parameter
+  and so is bandwidth-invariant by construction. The disclosure below is now careful to attribute
+  the fragility finding to the gaussian-weighted variant only, and flags that whether the published
+  headline should ever switch to that weighted construct is a separate, still-open question
+  (OA-C.1, #174) -- it does NOT claim the sweep characterizes the oa_domain values actually shown
+  on this map. This IS methodology-bearing at the page-display level (new suppression logic + a
+  bandwidth disclosure) -- see the R-C1 sign-off files for this ticket.
 -->
 
 <script>
@@ -53,6 +72,10 @@ sidebar_position: 5
   // #233 (I16): tooltip leads with the human place name (Areas.svelte's default tooltip would
   // otherwise lead with the bare PLR area_code); the current metric/view's value column follows,
   // then area_code stays, de-emphasised, as a secondary line.
+  // #274 (ADR-0017 D5 D-3 discharge): poi_count (this domain's raw mapped-place count in this
+  // PLR-year) is now always shown too -- both so a blank/suppressed Offering Advantage cell is
+  // self-explanatory (its own raw count is right there) and as general transparency for
+  // near-threshold PLRs that aren't suppressed but are still low.
   $: areaTooltip = [
     { id: 'area_name', showColumnName: false, valueClass: 'font-bold text-sm', fmt: 'id' },
     {
@@ -62,6 +85,7 @@ sidebar_position: 5
       title: inputs.metric.value === 'density' ? 'POI density / km²' : 'Offering Advantage',
       fmt: 'num1'
     },
+    { id: 'poi_count', title: 'Mapped places (this domain)', fmt: 'num0' },
     { id: 'area_code', title: 'Area code', valueClass: 'text-xs opacity-60', fmt: 'id' }
   ];
 
@@ -103,6 +127,38 @@ for the full method, or the [methodology page](/methodology) for a plain-languag
   instead, since there's no natural centre to diverge around. This map covers Berlin only for now;
   Hamburg's underlying gentrification index isn't signed off yet
   ([#125](https://github.com/dhelweg/gentriduck/issues/125)).
+</Alert>
+
+<Alert status="warning">
+  <b>Thinly-mapped PLRs are left blank.</b> Offering Advantage is a compositional ratio (a location
+  quotient) -- in a PLR-year with very few mapped places overall, a single new or removed business
+  can swing its Offering Advantage value disproportionately. PLR-years with fewer than 10 total
+  mapped places (across every domain) are shown as an unshaded gap on the map rather than a
+  potentially misleading Offering Advantage value; the raw mapped-place count for the selected
+  domain is always visible in the tooltip so you can judge borderline cases yourself. <b>A blank
+  cell means only "too thinly observed to compute a stable ratio" -- never "commercially dead."</b>
+  OSM's mapping coverage is not spatially neutral: besides the early-year effect on the citywide
+  chart below, completeness also varies *within* a given year and tends to correlate with area
+  advantage -- poorer/peripheral areas are typically less thoroughly mapped than richer/central ones
+  (Haklay, M. 2010, "How Good is Volunteered Geographical Information?", *Environment and Planning
+  B*). So a low mapped-place count -- and the blank cell it produces -- can reflect an OSM coverage
+  gap rather than a real absence of commercial activity; please don't read a blank PLR as evidence
+  that nothing is happening there. <b>A
+  bandwidth sweep found the Gaussian-weighted Offering Advantage construct bandwidth-sensitive at
+  wide catchments</b>: it is stable close to its 1000 m headline catchment (500m vs 1000m and 1000m
+  vs 1500m both rank-correlate above 0.7 across every year 2008-2026), but re-ranks meaningfully
+  across the full {500 m, 1500 m} sweep (pooled Spearman r = 0.68). <b>The map above does not use
+  that weighted construct</b> -- it uses the hard point-in-polygon variant, which has no bandwidth
+  parameter and is therefore bandwidth-invariant by construction -- meaning only that it makes no
+  bandwidth choice, not that it has been tested and found spatially robust: it remains untested for
+  this exact fragility and sits at the sharp/narrow end of the same spatial-grain family swept above
+  (the 500 m end was the more volatile side of the fragile pair); the sweep is disclosed here as
+  relevant context for a separate, still-open question
+  ([#174](https://github.com/dhelweg/gentriduck/issues/174)) about whether the published headline
+  should switch to the bandwidth-weighted construct, not as a characterization of the numbers shown
+  above. See the <a href="/methodology">methodology page §7</a> and
+  [the bandwidth-sweep findings](https://github.com/dhelweg/gentriduck/blob/main/docs/epic-g/G2-oa-bandwidth-sweep-findings.md)
+  for the full detail.
 </Alert>
 
 <Dropdown name="metric" title="Metric" defaultValue="density">
@@ -161,20 +217,25 @@ for the full method, or the [methodology page](/methodology) for a plain-languag
 -- grain it doesn't read.
 -- density_delta / oa_delta: year-over-year change vs. the immediately preceding snapshot_year
 -- present in the mart for the same area + domain (window function over the full series, before
--- the year filter below) -- "development" = movement, not a re-derived indicator.
+-- the year filter below) -- "development" = movement, not a re-derived indicator. Computed on
+-- the RAW (pre-suppression) oa_domain_raw so a suppressed neighbouring year doesn't break the
+-- lag chain; suppression (#274, ADR-0017 D5 D-3) is applied once, at the very end, based on
+-- THIS row's own oa_domain_min_base_flag (see final select below).
 with
     base as (
         select
             area_code,
             snapshot_year,
             poi_density_per_km2,
-            oa_domain,
+            poi_count,
+            oa_domain as oa_domain_raw,
+            oa_domain_min_base_flag,
             poi_density_per_km2
             - lag(poi_density_per_km2) over (
                 partition by area_code order by snapshot_year
             ) as density_delta,
             oa_domain
-            - lag(oa_domain) over (partition by area_code order by snapshot_year) as oa_delta
+            - lag(oa_domain) over (partition by area_code order by snapshot_year) as oa_delta_raw
         from gentriduck_marts.mart_poi_offering_advantage_map
         where
             city_code = 'BER'
@@ -192,9 +253,17 @@ select
     b.area_code,
     n.area_name,
     b.poi_density_per_km2,
-    b.oa_domain,
+    b.poi_count,
+    -- #274 (ADR-0017 D5 D-3 discharge): suppress oa_domain/oa_delta to NULL for
+    -- thinly-mapped PLR-years (< oa_min_poi_base_n total mapped POIs, default 10 --
+    -- int_poi_offering_advantage.sql) -- renders as an unshaded gap on the choropleth
+    -- rather than a compositional-LQ value a single POI could have swung. poi_density
+    -- is UNAFFECTED (it is not a compositional ratio, so it is not subject to the
+    -- same small-denominator instability -- D-3 only names the LQ).
+    case when b.oa_domain_min_base_flag then null else b.oa_domain_raw end as oa_domain,
     b.density_delta,
-    b.oa_delta,
+    case when b.oa_domain_min_base_flag then null else b.oa_delta_raw end as oa_delta,
+    b.oa_domain_min_base_flag,
     -- basePath-aware click-through (see /berlin/maps' `<script>` header comment): AreaMap's link
     -- column does a raw `window.location.href = link` (EvidenceMap.js), unlike Evidence's own
     -- nav/DataTable links, so `${base}` (SvelteKit's deployment.basePath) must be interpolated
@@ -399,16 +468,43 @@ order by snapshot_year
   A high OA or fast-growing POI count is read as a signal of commercial succession, never as a
   standalone claim that an area is gentrifying — see [methodology §1](/methodology) for the
   double invasion-succession model this reads into.
-- **Offering Advantage is unstable in thinly-mapped PLRs.** It is a compositional ratio (a
-  location quotient), so in a PLR with very few mapped businesses a single new or removed
-  business can swing its OA value disproportionately. A minimum-POI-base flag/suppression for
-  these PLRs is planned but **not yet applied** on this map — read a PLR's OA cautiously if its
-  raw POI count (visible in the tooltip) is low, rather than taking the value at face value.
+- **Offering Advantage is unstable in thinly-mapped PLRs — now suppressed, not just flagged.** It
+  is a compositional ratio (a location quotient), so in a PLR-year with very few mapped businesses
+  a single new or removed business can swing its OA value disproportionately (#274, ADR-0017 D5
+  D-3). PLR-years with fewer than 10 total mapped places are shown as a blank/unshaded gap on the
+  map above rather than a potentially misleading value; the raw mapped-place count is always in
+  the tooltip so you can judge near-threshold cases yourself. **A blank/low cell means "too thinly
+  observed to compute a stable ratio," never "commercially dead."** OSM coverage is not spatially
+  neutral — beyond the early-year completeness bias noted above, mapping completeness also varies
+  *within* a given year and tends to correlate with area advantage, with poorer/peripheral areas
+  typically less thoroughly mapped than richer/central ones (Haklay, M. 2010, "How Good is
+  Volunteered Geographical Information?", *Environment and Planning B*). A low mapped-place count
+  can therefore reflect an OSM coverage gap rather than a real absence of commercial activity —
+  a blank PLR should not be read as evidence that nothing is happening there.
+- **The Gaussian-weighted Offering Advantage construct is bandwidth-sensitive at the edges of its
+  sweep — but that is not the construct shown on the map above** (#274, ADR-0017 D5 C-4). A
+  dedicated {500 m, 1000 m, 1500 m} bandwidth sweep (`analysis/oa_bandwidth_sweep.py`) found the
+  Gaussian-weighted variant's OA rankings **stable** close to the 1000 m headline catchment
+  (500m↔1000m and 1000m↔1500m both rank-correlate above 0.7, Spearman, every year 2008–2026) but
+  **re-ranked meaningfully** across the sweep's full {500 m, 1500 m} span (pooled Spearman r = 0.68,
+  below the 0.7 publish-gate threshold in 17 of 19 years) — see the
+  [full findings](https://github.com/dhelweg/gentriduck/blob/main/docs/epic-g/G2-oa-bandwidth-sweep-findings.md).
+  The map above uses the **hard point-in-polygon variant** instead, which has no bandwidth
+  parameter and is therefore bandwidth-invariant by construction — meaning it makes no bandwidth
+  choice, not that it has been tested and found spatially robust: it remains untested for this
+  fragility and sits at the sharp/narrow end of the spatial-grain family swept above — this finding
+  does not describe the values shown here; it is disclosed because it bears on a separate, still-open question
+  ([OA-C.1, #174](https://github.com/dhelweg/gentriduck/issues/174)) about whether the published
+  headline should ever switch to the bandwidth-weighted construct. Read the exact catchment radius,
+  where one is actually in use, as a real methodological choice, not an arbitrary implementation
+  detail.
 
 ## Further reading
 
 See [ADR-0017](https://github.com/dhelweg/gentriduck/blob/main/docs/adr/0017-poi-offering-advantage-revival.md)
-for how Offering Advantage is computed, the [area detail page](/berlin/area-detail) for a
+for how Offering Advantage is computed, the
+[bandwidth-sweep findings](https://github.com/dhelweg/gentriduck/blob/main/docs/epic-g/G2-oa-bandwidth-sweep-findings.md)
+for the C-4 discharge detail, the [area detail page](/berlin/area-detail) for a
 single-neighbourhood breakdown of these same signals alongside the governed index, or the
 [gentrification-pressure map](/berlin/maps) for the governed index itself.
 

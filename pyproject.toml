@@ -149,6 +149,14 @@ analysis = { sequence = [
 # B2: back-test harness — validates live index against MSS classes and known hotspot/coldspot PLRs.
 # Run after `poe build`. Results written to docs/methodology/backtest.md.
 backtest = "python analysis/backtest_index.py"
+# #274 (G2-oa-publish-gates, ADR-0017 D5 C-4): OA-specific bandwidth-fragility sweep
+# ({500,1000,1500}m). NOT part of the `analysis` sequence above -- unlike its siblings this
+# script itself invokes `dbt run` with `--vars` overrides three times (see its module
+# docstring for why) and RESTORES the warehouse to its default-bandwidth build before
+# exiting, so it is heavier and mutates/restores build state rather than only reading it.
+# Run after `poe build`. Results written to data/analysis/oa_bandwidth_sweep.csv; findings
+# write-up in docs/epic-g/G2-oa-bandwidth-sweep-findings.md.
+oa-bandwidth-sweep = "python analysis/oa_bandwidth_sweep.py"
 # Ingestion scripts — rebuild raw data from open sources (gitignored artefacts).
 # Run once before `poe build` on a fresh checkout. See ingestion/README.md for the full
 # module-by-module reference (inputs/outputs, licensing, cross-platform notes).
