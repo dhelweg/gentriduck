@@ -2823,6 +2823,96 @@ models:
           PLRs yield NULL brw_weighted_avg_eur_m2 and NULL here — transparent, not silently 0.
           (geo condition 4; index-definition §7 "exclude, don't zero-impute").
 
+  - name: int_berlin_brw_trend
+    description: >
+      D3-brw-change (#263): explicit, separately-polarised BRW *change* signal
+      (brw_yoy/brw_trend), distinct from the BRW *level* (int_berlin_brw_plr).
+      Follow-up to D3 geo-signoff condition 14 / D3 domain-signoff point D5,
+      which both pre-approved this exact construction and deferred it here.
+
+      Method: explicit year_t/year_t-1 self-join on int_berlin_brw_plr (not
+      LAG(), so a real gap in the back-series yields omission rather than a
+      silently-wrong multi-year delta). brw_yoy_pct_change = pct change in
+      brw_weighted_avg_eur_m2; brw_trend = per-(city_code, snapshot_year)
+      z-score of brw_yoy_pct_change across PLRs (NULLIF(stddev_pop,0) guard).
+
+      Polarity (Smith 1979 rent-gap realisation): HIGH brw_trend = land value
+      rose faster than the citywide PLR average that year = upgrading pressure
+      being actively realised. Change-positive, NOT vulnerability-positive --
+      belongs on the predictor/lead side of the index (ADR-0008), never folded
+      into the D3 level dimension or an unsigned vulnerability composite.
+
+      Back-series depth: 2017-2024 (int_berlin_brw_plr), so brw_yoy/brw_trend
+      populate for snapshot_year 2018-2024 (2017 has no year_t-1 predecessor).
+
+      Zero consumers as of this model -- same staged-slice pattern as
+      int_berlin_rent_pressure_proxy/int_berlin_turnover_proxy/the Milieuschutz
+      flag; wiring into int_gentrification_ts is scoped to its own follow-up
+      integration ticket (mirrors #258 D5-wire).
+
+      See docs/methodology/D3-brw-trend-geo-signoff.md and
+      docs/methodology/D3-brw-trend-domain-signoff.md.
+
+      Source: int_berlin_brw_plr.
+    meta:
+      dbt_meta_owner: data-engineer
+    data_tests:
+
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns:
+              - city_code
+              - area_code
+              - area_vintage
+              - snapshot_year
+    columns:
+      - name: city_code
+        description: City identifier (ADR-0005), normalised to 'BER' (inherited from int_berlin_brw_plr).
+        data_tests:
+
+          - not_null
+      - name: area_code
+        description: PLR area code in LOR 2021 scheme (matches int_berlin_brw_plr).
+        data_tests:
+
+          - not_null
+      - name: area_vintage
+        description: LOR geometry vintage. Always 'lor_2021' (inherited from int_berlin_brw_plr).
+        data_tests:
+
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ["lor_2021"]
+      - name: snapshot_year
+        description: >
+          BRW reference year_t (the later of the two years differenced). Ranges
+          2018-2024 (2017 is the first available year and has no predecessor).
+        data_tests:
+
+          - not_null
+      - name: brw_weighted_avg_eur_m2
+        description: BRW level at year_t, carried through from int_berlin_brw_plr.
+      - name: brw_weighted_avg_eur_m2_prev
+        description: BRW level at year_t-1 (matched via explicit self-join, not LAG()).
+      - name: brw_residential_coverage_frac
+        description: Residential BRW coverage fraction at year_t, carried through from int_berlin_brw_plr.
+      - name: brw_yoy_delta_eur_m2
+        description: brw_weighted_avg_eur_m2(t) - brw_weighted_avg_eur_m2(t-1), raw EUR/m² delta.
+      - name: brw_yoy_pct_change
+        description: >
+          brw_yoy_delta_eur_m2 / brw_weighted_avg_eur_m2_prev. Percentage form used as the
+          z-scoring input so PLRs with very different absolute price levels are compared on
+          a scale-free basis before standardising.
+      - name: brw_trend
+        description: >
+          Per-(city_code, snapshot_year) z-score of brw_yoy_pct_change across PLRs. HIGH
+          (positive) = land value rose faster than the citywide PLR average that year --
+          rent-gap realisation / upgrading-pressure signal (Smith 1979). Change-positive,
+          NOT vulnerability-positive; predictor/lead side only (ADR-0008); never folded into
+          the D3 level dimension. Not a measured rent or displacement outcome -- read jointly
+          with low-status/low-Wohnlage context, per D3 domain sign-off.
+
   - name: int_berlin_wohnlage_plr
     description: >
       D3 (#29): Wohnlage residential quality tier composition per PLR per WFS edition year.
