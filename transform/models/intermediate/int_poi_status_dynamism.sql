@@ -41,6 +41,15 @@
 -- others) may create spurious share dynamics. Option B (ohsome edit-density
 -- normalization) is available for a future epic if needed post-publication.
 --
+-- QA-winsor (#268, geo-DS approved -- docs/epic-c/QA-winsor-geo-signoff.md):
+-- dynamism_score is winsorized at +/-3 SD (see winsorize() macro) so a small
+-- number of thin-PLR extreme observations cannot swing downstream composites,
+-- maps, or narratives. This was recommended as a non-blocking follow-up across
+-- four prior sign-offs (C4/C5/C6/G2) and left open until now. dynamism_score_raw
+-- carries the pre-winsorization value for diagnostics; every governed downstream
+-- consumer (fct_gentrification_change, gentrification_index, E-series analysis)
+-- should read dynamism_score, not dynamism_score_raw.
+--
 -- Hamburg re-validation (H-C1 #158, geo-DS spike docs/epic-h/158-hc1-geo-spike.md):
 -- The C5 sign-off's two empirical premises -- (1) the bulk of OSM coverage growth
 -- predates 2015, with post-2015 coverage more stable, and (2) uniform-ish
@@ -130,7 +139,22 @@ select
     -- Dynamism z-score (C5): how fast is share changing relative to city-wide?
     -- Uses share_yoy_change instead of raw count delta to control for OSM
     -- completeness-bias (geo-DS approved 2026-06-19, C5-geo-signoff.md).
+    -- Raw (unwinsorized) value kept for any consumer that needs the untrimmed
+    -- z-score (QA-winsor, #268).
     (share_yoy_change - avg(share_yoy_change) over w_year)
-    / nullif(stddev(share_yoy_change) over w_year, 0) as dynamism_score
+    / nullif(stddev(share_yoy_change) over w_year, 0) as dynamism_score_raw,
+    -- QA-winsor (#268, geo-DS approved -- docs/epic-c/QA-winsor-geo-signoff.md):
+    -- winsorize dynamism_score at +/-3 SD so a handful of thin-PLR extreme
+    -- observations (149 obs beyond +/-3 SD, range -5.1 to +13.4, per
+    -- C6-geo-signoff.md) cannot swing downstream composites/maps/narratives.
+    -- This is the value all downstream consumers (fct_gentrification_change,
+    -- gentrification_index, E-series analysis) should use; dynamism_score_raw
+    -- above is retained for diagnostics only.
+    {{
+        winsorize(
+            "(share_yoy_change - avg(share_yoy_change) over w_year) / nullif(stddev(share_yoy_change) over w_year, 0)"
+        )
+    }}
+    as dynamism_score
 from lag_base
 window w_year as (partition by city_code, snapshot_year)

@@ -229,7 +229,11 @@ We would rather state these plainly than have you discover them by surprise.
   correction cancels out; only an area gaining points of interest *faster than the rest of the city*
   registers a real signal. This is an approximation, not a perfect fix: coverage did not grow
   perfectly evenly across the city, and already-popular inner-city areas were typically mapped earlier
-  than peripheral ones.
+  than peripheral ones. A small number of very-low-POI areas can still produce statistically extreme
+  dynamism values from a tiny denominator (a single new business changing their share disproportionately);
+  since 2026-07 these are winsorized at ±3 standard deviations before they reach any map, chart, or
+  composite score, so one thin-data area cannot visually dominate the rest of the city (the raw,
+  unclipped value remains available for diagnostics).
 - **Ecological fallacy — aggregate, not individual, statistics.** Every number on this site describes
   a small-area aggregate of thousands of residents. It is not, and cannot be, a statement about any
   specific person, household, or building. Inferring an individual's situation from an area-level

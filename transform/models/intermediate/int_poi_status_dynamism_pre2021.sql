@@ -24,6 +24,11 @@
 -- not raw count deltas, to control for OSM completeness-bias.
 -- City-wide total is computed within the lor_pre2021 population each year.
 --
+-- QA-winsor (#268, geo-DS approved -- docs/epic-c/QA-winsor-geo-signoff.md):
+-- dynamism_score is winsorized at +/-3 SD (see winsorize() macro), mirroring
+-- int_poi_status_dynamism. dynamism_score_raw carries the pre-winsorization
+-- value for diagnostics only.
+--
 -- Graceful degradation: returns zero rows when int_poi_share_base has no
 -- lor_pre2021 rows.
 --
@@ -75,7 +80,16 @@ select
     (total_poi_count - avg(total_poi_count) over w_year)
     / nullif(stddev(total_poi_count) over w_year, 0) as status_score,
     -- D3 dynamism face (C5-corrected; index-definition.md §2.4): relative share growth.
+    -- Raw (unwinsorized) value kept for diagnostics (QA-winsor, #268).
     (share_yoy_change - avg(share_yoy_change) over w_year)
-    / nullif(stddev(share_yoy_change) over w_year, 0) as dynamism_score
+    / nullif(stddev(share_yoy_change) over w_year, 0) as dynamism_score_raw,
+    -- QA-winsor (#268): winsorized at +/-3 SD -- the value governed downstream
+    -- consumers (int_gentrification_ts B7 thesis-era panel) should read.
+    {{
+        winsorize(
+            "(share_yoy_change - avg(share_yoy_change) over w_year) / nullif(stddev(share_yoy_change) over w_year, 0)"
+        )
+    }}
+    as dynamism_score
 from lag_base
 window w_year as (partition by city_code, snapshot_year)

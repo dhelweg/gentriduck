@@ -35,6 +35,12 @@ raw_path = "{% macro raw_path(relative_path) %}/tmp/raw/{{ relative_path }}{% en
 # syntactically-valid single-value IN clause; the real published_cities var
 # list is only resolved at dbt-execute time.
 published_cities_filter = "{% macro published_cities_filter(column) %}{{ column }} in ('BER'){% endmacro %}"
+# QA-winsor (#268): stub for the project's winsorize() macro
+# (transform/macros/winsorize.sql) so sqlfluff's plain-jinja templater can parse
+# call sites without a dbt-macro loader. Returns the expression wrapped in a
+# syntactically-valid LEAST/GREATEST clip; the real bound args are only
+# resolved at dbt-execute time (default +/-3 matches the macro's default).
+winsorize = "{% macro winsorize(expr, lower=-3, upper=3) %}least(greatest({{ expr }}, {{ lower }}), {{ upper }}){% endmacro %}"
 
 [sqlfluff:templater:jinja:context]
 # Default value for file_count used in stg_osm_poi.sql graceful-degradation logic.
