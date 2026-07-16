@@ -2315,18 +2315,23 @@ models:
           observed). NULL for passthrough (non-bridged) rows.
   - name: int_berlin_milieuschutz_event_panel
     description: >
-      A10-P2 (#259) -- DRAFT / PENDING GEO-DS + DOMAIN SIGN-OFF (R-C1). NOT yet consumed by
-      any analysis script. Mechanical treatment/control panel assembly for a future
-      difference-in-differences / event-study on Milieuschutz designation (#80 Part 2,
-      re-opened): joins the MSS outcome series (sourced directly from stg_berlin_mss, not
-      the POI-inner-joined int_gentrification_ts -- applying #260's C2 lesson proactively) to
+      A10-P2 (#259) -- DRAFT / PENDING FRESH GEO-DS + DOMAIN SIGN-OFF (R-C1), header-fix
+      revision. NOT yet consumed by any analysis script. Mechanical treatment/control panel
+      assembly for a future difference-in-differences / event-study on Milieuschutz
+      designation (#80 Part 2, re-opened): joins the MSS outcome series (sourced directly
+      from stg_berlin_mss, applying #260's C2 lesson proactively -- this model never joins
+      to int_gentrification_ts or any POI-derived table) to
       int_berlin_milieuschutz_plr_flag's designation status per PLR, computing event time
       (years since designation) for treated PLRs. Does NOT run any DiD/event-study
-      regression, choose a control-matching strategy, or apply spatial controls -- see model
-      header for the open questions (staggered-adoption estimator choice, control-group
-      definition, event-time resolution, cross-vintage handling, outcome-variable choice)
-      flagged for the geo-DS/domain sign-off this ticket requires before any estimation code
-      may consume it.
+      regression, choose a control-matching strategy, or apply spatial controls. CENTRAL
+      DOMAIN CONCERN (see model header for full detail): Milieuschutz designation is an
+      ENDOGENOUS policy response to observed/anticipated upgrading pressure, not an
+      exogenous shock -- the textbook selection-on-outcome confounder for DiD (B1 domain
+      sign-off §b; #80 finding W3). The naive never-treated control pool is NOT DEFENSIBLE
+      UNMATCHED. Designations span 1999-2026 (verified), so pre-window designations are
+      "always-treated" and must be excluded from both cohort and control roles. All of
+      these bind the future estimation ticket's own dual gate, not this panel-construction
+      step.
 
       Grain: (city_code, area_code, area_vintage, snapshot_year).
     meta:
@@ -2358,7 +2363,7 @@ models:
 
           - not_null
       - name: area_vintage
-        description: "'lor_pre2021' or 'lor_2021', matching int_gentrification_ts's own vintage-separated grain."
+        description: "'lor_pre2021' or 'lor_2021' -- both directly from stg_berlin_mss, not unified via the still-gated #260 crosswalk (see model header)."
         data_tests:
 
           - not_null
