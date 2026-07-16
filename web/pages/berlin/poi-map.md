@@ -399,6 +399,11 @@ order by snapshot_year
   A high OA or fast-growing POI count is read as a signal of commercial succession, never as a
   standalone claim that an area is gentrifying — see [methodology §1](/methodology) for the
   double invasion-succession model this reads into.
+- **Offering Advantage is unstable in thinly-mapped PLRs.** It is a compositional ratio (a
+  location quotient), so in a PLR with very few mapped businesses a single new or removed
+  business can swing its OA value disproportionately. A minimum-POI-base flag/suppression for
+  these PLRs is planned but **not yet applied** on this map — read a PLR's OA cautiously if its
+  raw POI count (visible in the tooltip) is low, rather than taking the value at face value.
 
 ## Further reading
 
