@@ -73,6 +73,7 @@
 -- depends_on: {{ ref('int_ewr_socioeco_hamburg') }}
 -- depends_on: {{ ref('int_poi_status_dynamism_improved') }}
 -- depends_on: {{ ref('int_berlin_brw_trend') }}
+-- depends_on: {{ ref('int_berlin_displacement_subindex') }}
 --
 -- OA-B.3 (#172): status_score_improved / dynamism_score_improved /
 -- disinvestment_score_improved columns carry the tier-weighted "improved" POI
@@ -96,6 +97,27 @@
 -- or displacement outcome -- read jointly with low-status/low-Wohnlage
 -- context (D3-brw-trend-domain-signoff point D5), never alone as a
 -- displacement-risk score.
+--
+-- D5-wire (#258): displacement_subindex / displacement_subindex_is_partial /
+-- under_milieuschutz / milieuschutz_overlap_frac columns thread the ADR-0008
+-- D5 displacement/affordability predictor (int_berlin_displacement_subindex)
+-- through as a PREDICTOR/lead-side field, same side as D3 -- NEVER blended
+-- with the D1/D2 MSS outcome or the D4 ewr_composite baseline. Higher
+-- displacement_subindex = higher displacement/affordability pressure from
+-- whichever of {turnover_proxy, rent_pressure_proxy} is available for that
+-- year (NULL only when both underlying proxies are null -- a verified
+-- coverage finding in that model's header shows a strict both-required rule
+-- would be permanently empty given today's data, so this is a documented
+-- partial-availability composite, not silent imputation).
+-- displacement_subindex_is_partial flags rows fed by only one component.
+-- under_milieuschutz / milieuschutz_overlap_frac are DISCLOSURE-ONLY and
+-- time-invariant (current-state Sec. 172 BauGB designation, repeated across
+-- every snapshot_year of a PLR) -- read jointly, never treated as a third
+-- annual input to displacement_subindex (D5-wire-domain-signoff.md point
+-- D-1). Berlin lor_2021 rows only (int_berlin_displacement_subindex's own
+-- scope constraint, same as D3-brw-wire); NULL in Branch B (lor_pre2021) and
+-- Branch C (Hamburg), same graceful-degradation convention as brw_trend
+-- above.
 {{ config(materialized="table", meta={"dbt_meta_owner": "data-engineer"}) }}
 
 {% set typology_case %}
@@ -157,6 +179,13 @@ with
     -- columns are NULL there (see joined_pre2021/joined_hamburg).
     brw_2021 as (select * from {{ ref("int_berlin_brw_trend") }}),
 
+    -- D5-wire (#258): displacement/affordability predictor, Berlin lor_2021
+    -- branch only (see int_berlin_displacement_subindex header -- grain is
+    -- fixed by its turnover_proxy spine, same constraint class as brw_2021
+    -- above). NOT joined into Branch B/C below; those columns are NULL there
+    -- (see joined_pre2021/joined_hamburg).
+    displacement_2021 as (select * from {{ ref("int_berlin_displacement_subindex") }}),
+
     -- Branch B sources: lor_pre2021 (2015, 2017, 2019)
     poi_pre2021 as (select * from {{ ref("int_poi_status_dynamism_pre2021") }}),
     mss_pre2021 as (
@@ -214,7 +243,15 @@ with
             -- same graceful-degradation convention as every other predictor
             -- here).
             brw.brw_trend,
-            brw.brw_yoy_pct_change
+            brw.brw_yoy_pct_change,
+            -- D5-wire (#258): predictor/lead-side, pressure-positive (never
+            -- blended with D1/D2 outcome or D4 baseline above). NULL where
+            -- int_berlin_displacement_subindex has no matching row, same
+            -- graceful-degradation convention as every other predictor here.
+            disp.displacement_subindex,
+            disp.is_partial_availability as displacement_subindex_is_partial,
+            disp.under_milieuschutz,
+            disp.milieuschutz_overlap_frac
         from mss_2021 as mss
         inner join
             poi_2021 as poi
@@ -233,6 +270,11 @@ with
             on mss.area_code = brw.area_code
             and mss.area_vintage = brw.area_vintage
             and mss.edition = brw.snapshot_year
+        left join
+            displacement_2021 as disp
+            on mss.area_code = disp.area_code
+            and mss.area_vintage = disp.area_vintage
+            and mss.edition = disp.reference_year
     ),
 
     -- Branch B: lor_pre2021 join (B7 #117).
@@ -289,7 +331,15 @@ with
             -- the lor_2021 branch (no cross-vintage comparison, same rule as
             -- every other predictor column here).
             cast(null as double) as brw_trend,
-            cast(null as double) as brw_yoy_pct_change
+            cast(null as double) as brw_yoy_pct_change,
+            -- D5-wire (#258): int_berlin_displacement_subindex is lor_2021-
+            -- grain only (its own turnover_proxy spine constraint) -- NULL,
+            -- never backfilled from the lor_2021 branch (no cross-vintage
+            -- comparison, same rule as every other predictor column here).
+            cast(null as double) as displacement_subindex,
+            cast(null as boolean) as displacement_subindex_is_partial,
+            cast(null as boolean) as under_milieuschutz,
+            cast(null as double) as milieuschutz_overlap_frac
         from mss_pre2021 as mss
         inner join
             poi_pre2021 as poi
@@ -359,7 +409,15 @@ with
             -- product; Hamburg BRW sourcing is an open, unresolved question,
             -- not addressed by this ticket) -- NULL for Hamburg.
             cast(null as double) as brw_trend,
-            cast(null as double) as brw_yoy_pct_change
+            cast(null as double) as brw_yoy_pct_change,
+            -- D5-wire (#258): int_berlin_displacement_subindex is Berlin-only
+            -- (source proxies are all Berlin GIS/EWR/MSS products; Hamburg
+            -- sourcing is an open, unresolved question, not addressed by this
+            -- ticket) -- NULL for Hamburg.
+            cast(null as double) as displacement_subindex,
+            cast(null as boolean) as displacement_subindex_is_partial,
+            cast(null as boolean) as under_milieuschutz,
+            cast(null as double) as milieuschutz_overlap_frac
         from mss_hamburg as mss
         inner join
             poi_hamburg as poi

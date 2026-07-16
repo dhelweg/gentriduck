@@ -2180,6 +2180,51 @@ models:
           change in brw_weighted_avg_eur_m2, threaded alongside brw_trend
           for consumers wanting the unstandardized magnitude. Same polarity/
           scope caveats as brw_trend above.
+      - name: displacement_subindex
+        description: >
+          D5-wire (#258): PREDICTOR/lead-side (ADR-0008) displacement/
+          affordability composite, threaded from
+          int_berlin_displacement_subindex. Partial-availability mean of
+          whichever of {turnover_proxy, rent_pressure_proxy} is available
+          for that year -- NULL only when both are null (a verified coverage
+          finding in that model's header shows the two inputs have zero
+          overlapping lor_2021 years today, so a strict both-required rule
+          would be permanently empty; see displacement_subindex_is_partial).
+          Pressure-positive polarity: high = more long-tenure-resident
+          turnover and/or above-median rent + transfer-dependency pressure --
+          consistent orientation with the vulnerability-positive D1/D2/D4
+          columns, but a PREDICTOR not an outcome (never blended with
+          status_index/dynamik_index/ewr_composite). Berlin lor_2021 rows
+          only (int_berlin_displacement_subindex's own scope constraint);
+          NULL for lor_pre2021 and Hamburg branches. Not a measured
+          displacement outcome -- read jointly with
+          under_milieuschutz/milieuschutz_overlap_frac and low-status
+          context (D5-wire-domain-signoff.md), never alone as a
+          displacement-risk score.
+      - name: displacement_subindex_is_partial
+        description: >
+          D5-wire (#258): TRUE when displacement_subindex was fed by only
+          one of {turnover_proxy, rent_pressure_proxy} rather than both (see
+          int_berlin_displacement_subindex.is_partial_availability). NULL
+          when displacement_subindex itself is NULL. Berlin lor_2021 rows
+          only; NULL for lor_pre2021 and Hamburg branches.
+      - name: under_milieuschutz
+        description: >
+          D5-wire (#258): DISCLOSURE-ONLY, threaded from
+          int_berlin_displacement_subindex / int_berlin_milieuschutz_plr_flag.
+          TRUE if any part of this PLR is under a current Sec. 172 BauGB
+          Milieuschutz designation. TIME-INVARIANT (the WFS exposes only the
+          current designation set, ADR-0019 Open Question #2) -- the same
+          value repeats for every snapshot_year of a given PLR. NEVER folded
+          into displacement_subindex above (would fabricate temporal signal
+          that does not exist in the source; see model header). Berlin
+          lor_2021 rows only; NULL for lor_pre2021 and Hamburg branches.
+      - name: milieuschutz_overlap_frac
+        description: >
+          D5-wire (#258): DISCLOSURE-ONLY, threaded alongside
+          under_milieuschutz. Fraction of the PLR's area covered by a
+          Milieuschutz designation ([0,1]), NULL when under_milieuschutz is
+          false. Same time-invariance caveat as under_milieuschutz above.
 
   - name: int_ewr_lead_lag
     description: >
@@ -3358,6 +3403,132 @@ models:
           under_milieuschutz is FALSE. Lets a consumer distinguish
           marginal-boundary-touch from near-total-coverage without this
           model imposing a materiality threshold itself.
+
+  - name: int_berlin_displacement_subindex
+    description: >
+      #258 (D5-wire): builds the ADR-0008 D5 displacement/affordability
+      predictor from the three proxies staged under #70 [B1] --
+      int_berlin_turnover_proxy, int_berlin_rent_pressure_proxy,
+      int_berlin_milieuschutz_plr_flag -- giving each a real consumer.
+
+      COVERAGE FINDING (verified, not assumed): turnover_proxy (annual EWR
+      panel) and rent_pressure_proxy (irregular Wohnlage WFS editions) have
+      ZERO overlapping lor_2021 years today -- turnover_proxy only has rows
+      for 2009-2020 (EWR ingestion gap #197 leaves 2021+ empty/NULL),
+      rent_pressure_proxy's lor_2021 rows only exist for 2023 and 2026. A
+      strict all-or-nothing composite would therefore be PERMANENTLY EMPTY
+      given the data as ingested. displacement_subindex is instead a
+      PARTIAL-AVAILABILITY mean of whichever of {turnover_proxy,
+      rent_pressure_proxy} is non-null (NULL only when both are null) --
+      n_components_available / is_partial_availability disclose which.
+      This averages only signals that ARE present, never imputes a missing
+      one.
+
+      Milieuschutz is still NOT folded into this numeric composite -- its
+      own model explicitly states it does not reconstruct a status panel
+      across years (WFS exposes only the current designation set, ADR-0019
+      Open Question #2); blending a time-invariant flag into an annual
+      composite would fabricate temporal signal that does not exist in the
+      source. under_milieuschutz / milieuschutz_overlap_frac are instead
+      carried through as separate DISCLOSURE-ONLY, time-invariant columns.
+
+      rent_pressure_proxy alignment: matched via nearest-<=-vintage (most
+      recent Wohnlage snapshot_year known as of the spine year) -- the same
+      "nearest edition <= year" pattern int_berlin_rent_pressure_proxy
+      itself already uses (geo condition 8 precedent), not a new alignment
+      rule invented for this ticket. turnover_proxy is matched by EXACT
+      reference_year (already annual).
+
+      Grain: UNION of every year either proxy covers (not just
+      turnover_proxy's own years -- see coverage finding above). Berlin
+      lor_2021 rows only (both source proxies are lor_2021-only as
+      ingested), same scope constraint as int_berlin_brw_trend
+      (D3-brw-wire, #273).
+
+      Consumed by int_gentrification_ts as a new PREDICTOR/lead-side field
+      (ADR-0008), Branch A (lor_2021) only. NOT wired into the
+      contract-enforced gentrification_index mart (a separate, larger
+      contract-change decision).
+
+      See docs/methodology/D5-wire-geo-signoff.md and
+      docs/methodology/D5-wire-domain-signoff.md.
+
+      Source: int_berlin_turnover_proxy + int_berlin_rent_pressure_proxy +
+      int_berlin_milieuschutz_plr_flag.
+    meta:
+      dbt_meta_owner: data-engineer
+    data_tests:
+
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns:
+              - city_code
+              - area_code
+              - area_vintage
+              - reference_year
+      # Guards against the design regressing back to the permanently-empty
+      # strict composite (see header coverage finding) -- at least some rows
+      # must carry a non-null displacement_subindex given today's real data.
+      - assert_not_empty:
+          config:
+            severity: error
+    columns:
+      - name: city_code
+        description: City identifier (ADR-0005), normalised to 'BER'.
+        data_tests:
+
+          - not_null
+      - name: area_code
+        description: PLR identifier (matches int_ewr_socioeco / int_berlin_turnover_proxy).
+      - name: area_vintage
+        description: LOR boundary vintage (lor_2021 throughout -- both source proxies are lor_2021-only).
+      - name: reference_year
+        description: >
+          The UNION spine year -- either an EWR reference_year
+          (int_berlin_turnover_proxy) or a Wohnlage snapshot_year
+          (int_berlin_rent_pressure_proxy), whichever contributed this row
+          (see model header coverage finding).
+      - name: turnover_proxy
+        description: Passthrough from int_berlin_turnover_proxy (see that model). NULL if this spine year has no turnover_proxy row.
+      - name: rent_pressure_proxy
+        description: >
+          Passthrough from int_berlin_rent_pressure_proxy, matched to this
+          spine year via nearest-<=-vintage on snapshot_year (see model
+          header). NULL when no Wohnlage snapshot_year <= this year exists
+          yet, or when the underlying rent_pressure_proxy itself is NULL
+          (see that model's own coverage-limitation note).
+      - name: matched_rent_pressure_snapshot_year
+        description: >
+          The Wohnlage snapshot_year actually matched to this spine year
+          (nearest-<= rule) -- audit trail for the match.
+      - name: displacement_subindex
+        description: >
+          Partial-availability mean of whichever of {turnover_proxy,
+          rent_pressure_proxy} is non-null -- NULL only when BOTH are null
+          (see model header for why a strict all-or-nothing rule would be
+          permanently empty given today's real coverage). Higher = higher
+          displacement/affordability pressure from whichever signal(s) are
+          available.
+      - name: n_components_available
+        description: 0, 1, or 2 -- how many of {turnover_proxy, rent_pressure_proxy} fed displacement_subindex for this row.
+      - name: is_partial_availability
+        description: TRUE when exactly one of the two components is available (n_components_available = 1) -- lets a consumer filter to full-coverage rows only if desired.
+      - name: any_endpoint_partial
+        description: Passthrough from int_berlin_turnover_proxy (cross-era pooling caution). NULL when no turnover_proxy row exists for this spine year.
+      - name: under_milieuschutz
+        description: >
+          DISCLOSURE-ONLY, passthrough from int_berlin_milieuschutz_plr_flag.
+          TIME-INVARIANT -- the same value repeats for every reference_year
+          of a given PLR (see model header). Defaults to FALSE when no
+          Milieuschutz row exists for this (city_code, area_code,
+          area_vintage). NEVER folded into displacement_subindex above.
+      - name: milieuschutz_overlap_frac
+        description: >
+          DISCLOSURE-ONLY, passthrough from int_berlin_milieuschutz_plr_flag.
+          Same time-invariance caveat as under_milieuschutz above. NULL when
+          no Milieuschutz row exists for this PLR.
+      - name: earliest_in_force_date
+        description: Passthrough from int_berlin_milieuschutz_plr_flag (see that model).
 
   - name: int_price_rent_brw_wohnlage_combined
     description: >
