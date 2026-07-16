@@ -652,12 +652,24 @@ models:
           Z-score of total_poi_count relative to all PLRs for that year.
           Captures how POI-rich this area is compared to the city-wide average.
           NULL when total_poi_count is NULL or stddev is 0 (< 2 PLRs).
+      - name: dynamism_score_raw
+        description: >
+          C5 normalized (pre-winsorization): z-score of share_yoy_change relative
+          to all PLRs for that year, before the QA-winsor (#268) +/-3 SD clip.
+          Positive = this PLR's share grew more than the city average.
+          NULL for the first year per PLR/vintage or when stddev is 0.
+          Diagnostics only -- downstream consumers should read dynamism_score.
       - name: dynamism_score
         description: >
-          C5 normalized: z-score of share_yoy_change relative to all PLRs for
-          that year. Positive = this PLR's share grew more than the city average.
-          NULL for the first year per PLR/vintage or when stddev is 0.
-          Controls OSM completeness-bias vs pre-C5 raw-count-delta z-score.
+          C5 normalized, QA-winsor (#268) winsorized at +/-3 SD: z-score of
+          share_yoy_change relative to all PLRs for that year, clipped to
+          [-3, 3] so a handful of thin-PLR extreme observations (149 obs beyond
+          +/-3 SD pre-winsorization, range -5.1 to +13.4, per C6-geo-signoff.md)
+          cannot swing downstream composites/maps/narratives. Positive = this
+          PLR's share grew more than the city average. NULL for the first year
+          per PLR/vintage or when stddev is 0. This is the governed value every
+          downstream consumer (fct_gentrification_change, gentrification_index,
+          E-series analysis) should read.
 
   - name: int_poi_status_dynamism_pre2021
     description: >

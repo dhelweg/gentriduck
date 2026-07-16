@@ -84,7 +84,10 @@ cancels the noise; only a neighbourhood that gains points of interest *faster th
 registers a real commercial-change signal. This is not a perfect fix — mapping coverage does not grow
 perfectly evenly, and inner-city, already-popular areas were typically mapped earlier than peripheral
 ones (a documented limitation, C5 signoff §2) — but it removes the dominant source of bias and requires
-no new data source.
+no new data source. Since QA-winsor (#268), the resulting dynamism score is additionally winsorized at
+±3 standard deviations before it reaches any composite, map, or chart, so a handful of very-low-POI
+areas with a noisy denominator cannot dominate the scale (`docs/epic-c/QA-winsor-geo-signoff.md`); the
+unclipped value remains available for diagnostics.
 
 ## 5. Spatial methods
 
@@ -203,7 +206,10 @@ a Berlin-equivalent data point.
    gentrification happens economically is outside D1–D4; we measure the *social outcome* and its
    *commercial/demographic correlates*, not the underlying land/capital mechanism.
 3. **OpenStreetMap completeness bias is corrected, not eliminated** (§4). The correction assumes
-   roughly uniform citywide mapping growth, which is only an approximation.
+   roughly uniform citywide mapping growth, which is only an approximation. The resulting dynamism
+   score is winsorized at ±3 SD (QA-winsor, #268) to stop a handful of thin-data outliers from
+   dominating downstream composites/visuals; this bounds display noise, it does not fix the
+   underlying uniform-growth approximation.
 4. **No multiple-comparison correction** has been applied across the battery of directional tests;
    results should be read as directional indicators, not confirmatory hypothesis tests.
 5. **Administrative-boundary changes.** Berlin's PLR boundaries changed in 2021 (447 → 542 areas); any
