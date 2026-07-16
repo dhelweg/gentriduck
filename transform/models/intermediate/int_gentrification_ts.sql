@@ -120,43 +120,11 @@
 -- above.
 {{ config(materialized="table", meta={"dbt_meta_owner": "data-engineer"}) }}
 
-{% set typology_case %}
-            case
-                when mss.status_index is null
-                then null  -- uninhabited PLR: no typology assignment
-                when mss.status_index = 1 and mss.dynamik_index = 1
-                then 'consolidation-pressure'
-                -- D-2 GUARD: status=1 + dynamik=2 or 3 → stable-established (NOT upgrading)
-                -- dynamik=3 in a high-status PLR is DECLINE, not gentrification (tension cell *)
-                when mss.status_index = 1 and mss.dynamik_index = 2
-                then 'stable-established'
-                when mss.status_index = 1 and mss.dynamik_index = 3
-                then 'stable-established'  -- tension: decline, not gentrification
-                when mss.status_index = 2 and mss.dynamik_index = 1
-                then 'active-gentrification'
-                when mss.status_index = 2 and mss.dynamik_index = 2
-                then 'stable-established'
-                -- D-2 GUARD: status=2 + dynamik=3 → pre-gentrification (NOT upgrading)
-                -- mid-status declining = filtering-down; tension cell *
-                when mss.status_index = 2 and mss.dynamik_index = 3
-                then 'pre-gentrification'  -- tension: filtering-down
-                -- status=3 + dynamik=1: low status improving → pioneer-signal
-                when mss.status_index = 3 and mss.dynamik_index = 1
-                then 'pioneer-signal'
-                when mss.status_index = 3 and mss.dynamik_index = 2
-                then 'pre-gentrification'
-                when mss.status_index = 3 and mss.dynamik_index = 3
-                then 'pre-gentrification'
-                -- status=4 + dynamik=1: improving-vulnerable (R-A3 C2; §1.3, §1.5 †)
-                when mss.status_index = 4 and mss.dynamik_index = 1
-                then 'improving-vulnerable'
-                when mss.status_index = 4 and mss.dynamik_index = 2
-                then 'pre-gentrification'
-                when mss.status_index = 4 and mss.dynamik_index = 3
-                then 'pre-gentrification'
-            end
-{% endset %}
-
+-- R-A8b (#260) refactor: typology classification extracted to the shared
+-- transform/macros/typology_stage.sql macro (behaviour-preserving -- identical CASE
+-- logic,
+-- now reusable by int_gentrification_ts_unified_2021.sql). Invoked below via the
+-- typology_stage macro call against the mss status_index/dynamik_index columns.
 with
     -- Branch A sources: lor_2021 (2021–2025)
     poi_2021 as (select * from {{ ref("int_poi_status_dynamism") }}),
@@ -217,7 +185,8 @@ with
             mss.gesamtindex,
             mss.edition as mss_edition,
             (mss.gesamtindex is null) as is_uninhabited,
-            {{ typology_case }} as typology_stage,
+            {{ typology_stage('mss.status_index', 'mss.dynamik_index') }}
+            as typology_stage,
             ewr.ewr_composite,
             ewr.foreigners_share,
             ewr.age_under18_share,
@@ -299,7 +268,8 @@ with
             mss.gesamtindex,
             mss.edition as mss_edition,
             (mss.gesamtindex is null) as is_uninhabited,
-            {{ typology_case }} as typology_stage,
+            {{ typology_stage('mss.status_index', 'mss.dynamik_index') }}
+            as typology_stage,
             ewr.ewr_composite,
             ewr.foreigners_share,
             ewr.age_under18_share,
@@ -354,7 +324,8 @@ with
     -- Branch C: Hamburg join (#40 H1 integration slice).
     -- mss_hamburg (int_hamburg_sozialmonitoring_index) already carries numeric
     -- status_index/dynamik_index on the SAME 1-4/1-3 scale as Berlin's MSS (see
-    -- that model's header for the label-mapping methodology), so typology_case
+    -- that model's header for the label-mapping methodology), so the typology_stage()
+    -- macro
     -- (D1xD2 matrix, ADR-0008) applies unmodified -- the matrix logic operates
     -- purely on the shared numeric scale, not on any Berlin-specific column.
     -- ewr_hamburg (int_ewr_socioeco_hamburg) carries a 3-indicator composite
@@ -385,7 +356,8 @@ with
             mss.gesamtindex,
             mss.edition as mss_edition,
             false as is_uninhabited,
-            {{ typology_case }} as typology_stage,
+            {{ typology_stage('mss.status_index', 'mss.dynamik_index') }}
+            as typology_stage,
             ewr.ewr_composite,
             ewr.foreigners_share,
             ewr.age_under18_share,
