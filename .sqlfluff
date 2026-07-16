@@ -41,6 +41,13 @@ published_cities_filter = "{% macro published_cities_filter(column) %}{{ column 
 # syntactically-valid LEAST/GREATEST clip; the real bound args are only
 # resolved at dbt-execute time (default +/-3 matches the macro's default).
 winsorize = "{% macro winsorize(expr, lower=-3, upper=3) %}least(greatest({{ expr }}, {{ lower }}), {{ upper }}){% endmacro %}"
+# R-A8b (#260): stub for the project's typology_stage() macro
+# (transform/macros/typology_stage.sql) so sqlfluff's plain-jinja templater can parse
+# call sites without a dbt-macro loader. Returns a syntactically-valid dummy CASE
+# expression (the real six-stage D1xD2 classification logic only matters at dbt-execute
+# time; sqlfluff only needs valid SQL shape here, same convention as every other stub
+# above).
+typology_stage = "{% macro typology_stage(status_index_col, dynamik_index_col) %}case when {{ status_index_col }} = {{ dynamik_index_col }} then 'stable-established' else 'mixed' end{% endmacro %}"
 
 [sqlfluff:templater:jinja:context]
 # Default value for file_count used in stg_osm_poi.sql graceful-degradation logic.
