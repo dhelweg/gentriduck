@@ -20,9 +20,14 @@
 -- output — this is correct behaviour; those rows are forward-looking drift
 -- definitions that become active once C1 is extended to capture secondary tags.
 --
--- craft=* namespace is not in C1 poi_mapping — flag PM for a follow-up ticket.
--- Follow-up now tracked: #271 (see
--- docs/epic-c/tickets/C-craft-taxonomy.md).
+-- craft=* namespace is not in C1 poi_mapping. #271 inventoried it (1,731 Berlin POIs /
+-- 138 distinct values as of the 2024 snapshot, ~1.1% of the current POI base) and decided
+-- NOT to adopt it into poi_mapping for now -- mixed gentrification relevance (mostly
+-- utility/trade crafts, not the artisanal/creative subset that would plausibly signal
+-- gentrification) and adoption would require a full multi-year C1 re-ingestion for a modest
+-- volume gain. Documented no-op decision + inventory data:
+-- docs/epic-c/tickets/C-craft-taxonomy-decision.md. A scoped future ticket (#275) is filed
+-- for a possible curated artisanal-only subset if a consumer ever needs it.
 --
 -- Provenance values:
 -- 'drift_remap'  — poi_type matched exactly one non-ambiguous drift rule and
