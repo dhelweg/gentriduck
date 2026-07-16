@@ -1,6 +1,6 @@
 # B2 Back-Test Harness: Live Index vs Ground Truth
 
-**Last run:** 2026-06-29
+**Last run:** 2026-07-16
 **Overall result:** ALL PASS
 
 ---
@@ -44,7 +44,7 @@ This polarity is **inverse** relative to the 2018 thesis `status_summe` (where h
 
 ## Latest Results
 
-**Run date:** 2026-06-29
+**Run date:** 2026-07-16
 **Index period:** latest available `live_data` PLR period
 **PLRs in index:** 535 (status_index not null: 535)
 
@@ -61,6 +61,20 @@ Spearman rank correlation between `gentrification_index.status_index` (live_data
 - **Result: PASS**
 
 *Spearman(gentrification_index.status_index, int_gentrification_ts.status_index) at MSS edition 2025. Cross-validates that the mart and the intermediate model agree on the MSS D1 ordinal. n_paired=535. Threshold: rho > 0.3, p < 0.05.*
+
+### Test D — Dynamism (D2) agreement (R-B2b, #264)
+
+Spearman rank correlation between `gentrification_index.dynamism_index` (live_data variant) and `int_gentrification_ts.dynamik_index` at the latest MSS edition. Mirrors Test A's design for the D2 (Dynamik) dimension: both columns carry the same MSS D2 ordinal via different model paths. **Proposed design, pending geo-DS + domain-expert confirmation** (see the R-B2 sign-offs' original follow-up recommendation and #264).
+
+- MSS edition used for cross-validation: 2025
+- n (cross-validated pairs): 535
+- dynamism_index range: (1.0, 3.0)
+- Distinct dynamism classes: 3
+- Spearman rho = **1.0000**, p = 0.0000
+- Threshold: rho > 0.3, p < 0.05 (proposed)
+- **Result: PASS**
+
+*Spearman(gentrification_index.dynamism_index, int_gentrification_ts.dynamik_index) at MSS edition 2025. Cross-validates that the mart and the intermediate model agree on the MSS D2 ordinal (mirrors Test A's design for D1). n_paired=535. Threshold: rho > 0.3, p < 0.05 (proposed, pending geo-DS/domain confirmation -- see function docstring).*
 
 ### Test B — Hotspot recall @ top 10%
 
