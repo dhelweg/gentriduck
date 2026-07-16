@@ -119,7 +119,7 @@ with
             *,
             row_number() over (
                 partition by plr_id_2021
-                order by estimated_population_contribution desc, plr_id_pre2021
+                order by estimated_population_contribution desc, plr_id_pre2021 asc
             ) as rn
         from weighted
     ),
