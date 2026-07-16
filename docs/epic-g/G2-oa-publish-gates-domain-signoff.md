@@ -18,7 +18,27 @@
 - **Reviewer:** gentrification-domain-expert
 - **Date:** 2026-07-16
 - **Branch:** feature/274-g2-oa-publish-gates → develop
-- **Verdict:** PASS WITH CONDITIONS
+- **Verdict:** PASS
+
+> **Confirming note (2026-07-16, commit `05d083ac`).** Upgraded from PASS WITH CONDITIONS to a clean
+> **PASS** after re-reading the fixed text. Required **Condition D1 is discharged** in all three
+> targeted locations: (1) the `web/pages/berlin/poi-map.md` `<Alert status="warning">` block now
+> states *"A blank cell means only 'too thinly observed to compute a stable ratio' -- never
+> 'commercially dead,'"* and adds the spatial/socioeconomic face of OSM sparsity (completeness varies
+> *within* a year and correlates with area advantage, poorer/peripheral areas less thoroughly mapped)
+> grounded in Haklay 2010; (2) the "Honest caveats" bullet carries the same anti-erasure sentence and
+> Haklay 2010 citation; (3) the `int_poi_offering_advantage.sql` D-3 header adds an "Anti-erasure
+> framing (Condition D1)" paragraph making the same point for any downstream caller. The three
+> advisories are also addressed without introducing new overclaim: **R1** — "bandwidth-invariant by
+> construction" is now explicitly qualified as *"makes no bandwidth choice, not tested and found
+> spatially robust"* in both `poi-map.md` (x2) and `methodology.md` §7, closing the false-reassurance
+> seam; **R2** — `G2-oa-bandwidth-sweep-findings.md` adds a "Temper" paragraph attributing much of the
+> 500↔1500 m re-ranking to the compositional-LQ mechanical wash-toward-1 (P0.1 §2), a metric property
+> first and only speculatively a succession-process claim, while correctly *not* withdrawing the
+> C-4-mandated framing; **R3** — the n=10 floor is recorded as a permissive, non-empirically-fit
+> domain-level cutoff. Nothing new is wrong. The D-1 (descriptive-not-causal) and D-2 (no summed raw
+> OA) invariants remain intact. Domain gate: **PASS** — clear to integrate into `develop`. The
+> original PASS-WITH-CONDITIONS analysis below is retained unchanged as the record.
 
 ---
 
@@ -185,7 +205,7 @@ application this converts to a clean PASS.
 
 ```json
 {
-  "verdict": "pass_with_conditions",
+  "verdict": "pass",
   "domain_rationale": "The C-4 bandwidth disclosure is honest and self-correcting (it explicitly declines to let a sweep of the gaussian-weighted variant be read as validating the displayed point-in-polygon variant, deferring the switch question to #174) and improves the live public posture over the interim #262 caveat. The D-3 min-POI-base flag is construct-valid: it is keyed on each level's own local-share denominator (all_domains_stock_local for the displayed oa_domain), matching where compositional-LQ instability actually lives (P0.1 sign-off §1.3/§4); suppression is a display decision, not a data deletion (raw oa_domain stays exposed, raw poi_count always in the tooltip); and in the map's default 2025/Retail view it blanks only ~0.4% of PLR-years, which are genuinely near-empty peripheral/green units (Tempelhofer Feld, Grunewald, Flughafensee), not residential Kieze. n=10 is a defensible conventional floor erring on the permissive/anti-stigma side. The 'spatial grain of succession' framing is authorized by C-4 and the write-up mostly stays on the measurement side of the claim.",
   "theory_risks": [
     "OSM data sparsity is not neutral across area characteristics (spatial/socioeconomic VGI bias, not only the early-year temporal bias the page discloses; Haklay 2010): a blanked/low cell can reflect under-observation of poorer/peripheral areas, risking a 'commercially dead / nothing here' stigma or erasure read on a displacement-adjacent public map (D-1 misuse surface) -> Condition D1",
@@ -208,4 +228,4 @@ application this converts to a clean PASS.
 
 ## Final Verdict
 
-Verdict: PASS with conditions
+Verdict: PASS (upgraded from PASS with conditions; Condition D1 discharged in commit 05d083ac)
