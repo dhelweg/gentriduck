@@ -2160,6 +2160,26 @@ models:
           theorised OPPOSITE-POLE disinvestment/rent-gap marker (Smith 1979;
           ADR-0017 D-2). Kept SEPARATE from status/dynamism_score_improved --
           never summed into one composite. Berlin lor_2021 rows only.
+      - name: brw_trend
+        description: >
+          D3-brw-wire (#273): PREDICTOR/lead-side (ADR-0008) BRW change/
+          rent-gap-realisation signal, threaded from int_berlin_brw_trend
+          (#263). Change-positive polarity: high = land value rose faster
+          than the citywide PLR average that year = upgrading pressure
+          actively being realised (Smith 1979) -- OPPOSITE convention from
+          the vulnerability-positive D1/D2/D4 columns above; NEVER pooled
+          unsigned into a vulnerability composite. Berlin lor_2021 rows only
+          (int_berlin_brw_trend's own grain constraint); NULL for
+          lor_pre2021 and Hamburg branches. Not a measured rent or
+          displacement outcome -- read jointly with low-status/low-Wohnlage
+          context (D3-brw-trend-domain-signoff D5), never alone as a
+          displacement-risk score.
+      - name: brw_yoy_pct_change
+        description: >
+          D3-brw-wire (#273): raw (non-z-scored) year-over-year percentage
+          change in brw_weighted_avg_eur_m2, threaded alongside brw_trend
+          for consumers wanting the unstandardized magnitude. Same polarity/
+          scope caveats as brw_trend above.
 
   - name: int_ewr_lead_lag
     description: >

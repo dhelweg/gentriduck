@@ -72,6 +72,7 @@
 -- depends_on: {{ ref('int_hamburg_sozialmonitoring_index') }}
 -- depends_on: {{ ref('int_ewr_socioeco_hamburg') }}
 -- depends_on: {{ ref('int_poi_status_dynamism_improved') }}
+-- depends_on: {{ ref('int_berlin_brw_trend') }}
 --
 -- OA-B.3 (#172): status_score_improved / dynamism_score_improved /
 -- disinvestment_score_improved columns carry the tier-weighted "improved" POI
@@ -79,6 +80,22 @@
 -- (lor_2021, Berlin) only -- NULL in Branch B (lor_pre2021) and Branch C
 -- (Hamburg). NEVER blended with the faithful status_score/dynamism_score
 -- above (ADR-0017 D3/D4 methodology_variant discriminator).
+--
+-- D3-brw-wire (#273): brw_trend / brw_yoy_pct_change columns thread the BRW
+-- change/rent-gap-realisation signal (int_berlin_brw_trend, #263) through as
+-- a PREDICTOR/lead-side field (ADR-0008; D3-brw-trend-geo-signoff condition
+-- C1) -- change-positive polarity (high = land value rising faster than the
+-- citywide PLR average = upgrading pressure being actively realised, Smith
+-- 1979), the OPPOSITE convention from the D1/D2 vulnerability-positive
+-- outcome side. NEVER blended with status_index/dynamik_index or the D4
+-- ewr_composite. Berlin lor_2021 rows only (int_berlin_brw_trend's own
+-- back-series/grain constraint -- BRW pre2021 back-series depth and Hamburg
+-- BRW sourcing are both open, unresolved questions, not addressed here);
+-- NULL in Branch B (lor_pre2021) and Branch C (Hamburg), same
+-- graceful-degradation convention as *_improved above. Not a measured rent
+-- or displacement outcome -- read jointly with low-status/low-Wohnlage
+-- context (D3-brw-trend-domain-signoff point D5), never alone as a
+-- displacement-risk score.
 {{ config(materialized="table", meta={"dbt_meta_owner": "data-engineer"}) }}
 
 {% set typology_case %}
@@ -133,6 +150,13 @@ with
     -- NULL there (see joined_pre2021/joined_hamburg).
     poi_improved_2021 as (select * from {{ ref("int_poi_status_dynamism_improved") }}),
 
+    -- D3-brw-wire (#273): BRW change/rent-gap-realisation predictor, Berlin
+    -- lor_2021 branch only (see int_berlin_brw_trend header -- grain is
+    -- fixed to lor_2021 PLR geometries; pre2021/Hamburg BRW sourcing is not
+    -- addressed by this ticket). NOT joined into Branch B/C below; those
+    -- columns are NULL there (see joined_pre2021/joined_hamburg).
+    brw_2021 as (select * from {{ ref("int_berlin_brw_trend") }}),
+
     -- Branch B sources: lor_pre2021 (2015, 2017, 2019)
     poi_pre2021 as (select * from {{ ref("int_poi_status_dynamism_pre2021") }}),
     mss_pre2021 as (
@@ -182,7 +206,15 @@ with
             -- graceful-degradation convention as every other predictor here).
             poi_improved.status_score_improved,
             poi_improved.dynamism_score_improved,
-            poi_improved.disinvestment_score_improved
+            poi_improved.disinvestment_score_improved,
+            -- D3-brw-wire (#273): predictor/lead-side, change-positive (never
+            -- blended with D1/D2 outcome or D4 baseline above). NULL where
+            -- int_berlin_brw_trend has no matching row (e.g. a PLR/year
+            -- without residential BRW coverage or the first change-year,
+            -- same graceful-degradation convention as every other predictor
+            -- here).
+            brw.brw_trend,
+            brw.brw_yoy_pct_change
         from mss_2021 as mss
         inner join
             poi_2021 as poi
@@ -196,6 +228,11 @@ with
             poi_improved_2021 as poi_improved
             on mss.area_code = poi_improved.area_code
             and mss.edition = poi_improved.snapshot_year
+        left join
+            brw_2021 as brw
+            on mss.area_code = brw.area_code
+            and mss.area_vintage = brw.area_vintage
+            and mss.edition = brw.snapshot_year
     ),
 
     -- Branch B: lor_pre2021 join (B7 #117).
@@ -245,7 +282,14 @@ with
             -- comparison, same rule as every other z-score column here).
             cast(null as double) as status_score_improved,
             cast(null as double) as dynamism_score_improved,
-            cast(null as double) as disinvestment_score_improved
+            cast(null as double) as disinvestment_score_improved,
+            -- D3-brw-wire (#273): int_berlin_brw_trend is lor_2021-grain only
+            -- (BRW pre2021 back-series depth is an open, unresolved question,
+            -- not addressed by this ticket) -- NULL, never backfilled from
+            -- the lor_2021 branch (no cross-vintage comparison, same rule as
+            -- every other predictor column here).
+            cast(null as double) as brw_trend,
+            cast(null as double) as brw_yoy_pct_change
         from mss_pre2021 as mss
         inner join
             poi_pre2021 as poi
@@ -309,7 +353,13 @@ with
             -- int_poi_status_dynamism_improved scope note) -- NULL for Hamburg.
             cast(null as double) as status_score_improved,
             cast(null as double) as dynamism_score_improved,
-            cast(null as double) as disinvestment_score_improved
+            cast(null as double) as disinvestment_score_improved,
+            -- D3-brw-wire (#273): int_berlin_brw_trend is Berlin-only (see
+            -- int_berlin_brw_plr header -- source BRW data is a Berlin GIS
+            -- product; Hamburg BRW sourcing is an open, unresolved question,
+            -- not addressed by this ticket) -- NULL for Hamburg.
+            cast(null as double) as brw_trend,
+            cast(null as double) as brw_yoy_pct_change
         from mss_hamburg as mss
         inner join
             poi_hamburg as poi
