@@ -278,11 +278,12 @@ def test_dynamism_agreement(index_df, mss_df) -> dict:
     claim about dynamism per se.
 
     Filed as a follow-up in both R-B2 sign-offs (docs/methodology/R-B2-geo-signoff.md,
-    "Add a dynamism_index back-test as a follow-up ticket") -- #264 re-opens it. This
-    implementation proposes Test A's exact methodology (Spearman rho, same thresholds) as
-    the natural mirror; PENDING GEO-DS + DOMAIN-EXPERT CONFIRMATION this is the intended
-    design (R-C1 gate, analysis/*.py) before being treated as a settled addition to the
-    published backtest.
+    "Add a dynamism_index back-test as a follow-up ticket") -- #264 re-opens it. Mirrors
+    Test A's exact methodology (Spearman rho, same thresholds) as the natural D2 analogue.
+    Confirmed appropriate by both geo-DS (docs/methodology/R-B2b-geo-signoff.md, Verdict:
+    PASS -- "the D2 analogue of Test A... mirroring is the consistent and defensible
+    choice") and gentrification-domain-expert (docs/methodology/R-B2b-domain-signoff.md,
+    Verdict: PASS -- "a pure DE pipeline sanity check with no domain content to gate").
 
     Pass threshold: rho > 0.3, p < 0.05 (same as Test A -- proposed, not independently
     re-derived here).
@@ -349,7 +350,7 @@ def test_dynamism_agreement(index_df, mss_df) -> dict:
             "Cross-validates that the mart and the intermediate model agree on the MSS D2 ordinal "
             "(mirrors Test A's design for D1). "
             f"n_paired={n_paired}. Threshold: rho > {THRESHOLD_MSS_RHO}, p < {THRESHOLD_MSS_P} "
-            "(proposed, pending geo-DS/domain confirmation -- see function docstring)."
+            "(design confirmed by geo-DS + domain-expert sign-off, docs/methodology/R-B2b-geo-signoff.md, R-B2b-domain-signoff.md)."
         ),
     }
 
@@ -578,7 +579,7 @@ def print_results(res_a: dict, res_b: dict, res_c: dict, res_d: dict | None = No
     print(f"  Note: {res_a['note']}")
 
     if res_d is not None:
-        print("\n--- Test D: Dynamism (D2) agreement (R-B2b, #264, proposed design) ---")
+        print("\n--- Test D: Dynamism (D2) agreement (R-B2b, #264) ---")
         print(f"  n (total PLRs):  {res_d['n_total']}")
         print(f"  n (cross-validated pairs): {res_d['n_paired']}")
         if res_d.get("mss_edition"):
@@ -959,7 +960,7 @@ def main() -> None:
     res_a = test_mss_agreement(index_df, mss_df)
     print(f"  rho={res_a.get('rho')}, p={res_a.get('p')}, result={_pass_str(res_a['pass'])}")
 
-    print("Running Test D: Dynamism (D2) agreement (R-B2b, #264, proposed design)...")
+    print("Running Test D: Dynamism (D2) agreement (R-B2b, #264)...")
     res_d = test_dynamism_agreement(index_df, mss_df)
     print(f"  rho={res_d.get('rho')}, p={res_d.get('p')}, result={_pass_str(res_d['pass'])}")
 

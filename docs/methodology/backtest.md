@@ -74,7 +74,7 @@ Spearman rank correlation between `gentrification_index.dynamism_index` (live_da
 - Threshold: rho > 0.3, p < 0.05 (proposed)
 - **Result: PASS**
 
-*Spearman(gentrification_index.dynamism_index, int_gentrification_ts.dynamik_index) at MSS edition 2025. Cross-validates that the mart and the intermediate model agree on the MSS D2 ordinal (mirrors Test A's design for D1). n_paired=535. Threshold: rho > 0.3, p < 0.05 (proposed, pending geo-DS/domain confirmation -- see function docstring).*
+*Spearman(gentrification_index.dynamism_index, int_gentrification_ts.dynamik_index) at MSS edition 2025. Cross-validates that the mart and the intermediate model agree on the MSS D2 ordinal (mirrors Test A's design for D1). n_paired=535. Threshold: rho > 0.3, p < 0.05 (design confirmed by geo-DS + domain-expert sign-off, docs/methodology/R-B2b-geo-signoff.md, R-B2b-domain-signoff.md).*
 
 ### Test B — Hotspot recall @ top 10%
 
