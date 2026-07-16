@@ -1,0 +1,6 @@
+# #248 item 3: Evidence (npm run build) wall-clock trend, one line per run via
+# ops/time_web_build.py (wired into `poe web-build`). Format: ISO8601 UTC timestamp
+# TAB elapsed-seconds TAB status. Seed line below is a manual backfill from #248's
+# own timing breakdown (2026-07-12 release run, 559 pages) -- not machine-generated,
+# kept for trend continuity.
+2026-07-12T13:48:00Z	900.0s	ok (manual backfill, 559 pages, #248)
