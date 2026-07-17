@@ -4421,20 +4421,25 @@ models:
   - name: int_poi_offering_advantage_methods
     description: >
       OA-D3/OA-D3b (#240/#280, ADR-0024): calculation-method columns for
-      Offering Advantage -- seven methods (nested_lq, global_lq, log_lq,
-      share_diff, shrunk_lq, raw_share, zscore_slq) x three taxonomy levels
-      domain/category/type = 21 value columns, all pure functions of
-      int_poi_offering_advantage's already-computed, already-tested stock
-      columns -- no new join, no new tool. The three remaining PROMOTED
-      modes (Getis-Ord, density, per-capita) are deliberately deferred: Getis-
-      Ord pending a system-architect/ADR-0025 ruling on the esda tooling
-      boundary (OA-D0 geo sign-off C9); density/per-capita pending their
-      EWR-population/ST_Area-geometry joins -- see model SQL header for the
-      split rationale.
+      Offering Advantage -- nine methods (nested_lq, global_lq, log_lq,
+      share_diff, shrunk_lq, raw_share, zscore_slq, density, percapita) x
+      three taxonomy levels domain/category/type = 27 value columns.
+      Methods 1-7 are pure functions of int_poi_offering_advantage's
+      already-computed, already-tested stock columns -- no new join, no new
+      tool. Methods 8-9 (density, percapita, this slice) join a NEW
+      denominator (ST_Area-derived area_km2; EWR residents_total) and are
+      NOT location quotients -- an absolute provision/centrality reading,
+      never blended/legend-shared with the LQ family (OA-D0 domain sign-off
+      Condition C). **Getis-Ord Gi\* remains DEFERRED**, pending a
+      system-architect/ADR-0025 ruling on the esda tooling boundary (OA-D0
+      geo sign-off C9) -- see model SQL header for the full split rationale.
 
       Grain: identical to int_poi_offering_advantage (one row per taxonomy
       leaf x weight_variant x methodology_variant) -- new columns only, no
-      new grain discriminator (ADR-0024 "methods as columns").
+      new grain discriminator (ADR-0024 "methods as columns"). density's
+      area_km2 and percapita's residents_total are joined at a coarser grain
+      (city_code/area_code/area_vintage[/snapshot_year]) and broadcast across
+      every leaf row for that area (C2 broadcast-once).
 
       C7 (geo sign-off, BLOCKING, never-blend): every column is a function of
       exactly one method against one stock pair; no combined/averaged score
@@ -4561,6 +4566,30 @@ models:
         description: Binomial-significance z-score of the category LQ (same construction as oa_domain_zscore_slq, category-relative base).
       - name: oa_type_zscore_slq
         description: Binomial-significance z-score of the type LQ (same construction as oa_domain_zscore_slq, type-relative base).
+      - name: oa_domain_density
+        description: >
+          OA-D3b (#280): domain_stock_local / area_km2 (ST_Area, native
+          metric CRS, PLR grain only) -- POIs per km2, an absolute
+          provision reading, NOT a location quotient (OA-D0 domain
+          sign-off Condition C). NULL where no area_km2 join match.
+      - name: oa_category_density
+        description: Category-level density (same construction as oa_domain_density, category stock numerator).
+      - name: oa_type_density
+        description: Type-level density (same construction as oa_domain_density, type stock numerator).
+      - name: oa_domain_percapita
+        description: >
+          OA-D3b (#280): domain_stock_local / EWR residents_total * 1000
+          (POIs per 1,000 residents), joined on an EXACT snapshot_year =
+          EWR reference_year match (OA-D0 geo sign-off C10 -- no
+          nearest-year fallback, no imputation) -- NULL where no exact-year
+          match exists. Absolute provision reading, NOT a location
+          quotient; population denominator is endogenous to displacement
+          (OA-D0 domain sign-off Condition C) -- caveat travels with every
+          downstream consumer.
+      - name: oa_category_percapita
+        description: Category-level per-capita (same construction as oa_domain_percapita, category stock numerator).
+      - name: oa_type_percapita
+        description: Type-level per-capita (same construction as oa_domain_percapita, type stock numerator).
 
   - name: int_poi_within_group_dominance
     description: >
