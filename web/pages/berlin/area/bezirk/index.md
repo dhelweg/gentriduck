@@ -23,6 +23,10 @@ sidebar_position: 6
   boundary BZRs/Bezirke" -- publishing it on a public profile page needs its own geo-DS pass on
   fitness for display, not just fitness for the MAUP probe it was built for (B10, #120). See the
   filed follow-up issue referenced in this ticket's closing comment.
+
+  #269 (I-ortsteile): added a link to the new /berlin/area/ortsteil list (97 Ortsteile/Stadtteile,
+  a different non-LOR geography -- see that page's own header comment) as this hub's other entry
+  point into a hierarchy nav page, alongside the existing Bezirk table below.
 -->
 
 <Hero compact eyebrow="Chapter 3 — The Evidence" title="District & area profiles" lede="Berlin's Bezirke (districts), Prognoseräume, and Bezirksregionen — coarser-grain profiles above the neighbourhood (Planungsraum) level, for readers who want the district or sub-district picture at a glance." />
@@ -31,7 +35,8 @@ Each level shows population and composition sums (never a re-scored index — se
 [methodology page](/methodology) for why coarse-grain areas are not re-scored) and how many of
 their constituent neighbourhoods currently sit in each gentrification stage. For a single
 neighbourhood's full profile, use the [district browse](/berlin/area-detail) or
-[full neighbourhood list](/berlin/area) instead.
+[full neighbourhood list](/berlin/area) instead. Berlin's 97 **Ortsteile** (Stadtteile) — a
+different, non-LOR district geography — have their own [Ortsteil list](/berlin/area/ortsteil).
 
 ```sql bezirke
 select

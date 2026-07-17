@@ -20,6 +20,12 @@ breadcrumb: "select bezirk_name as breadcrumb from (select '01' as bezirk_code, 
 
 
   #249 (I18-web-b, follow-on): adds an 'Approximate status & change' section reading the new gentriduck_marts.mart_mss_area_aggregate (thin display mart over int_mss_bzr_aggregate, B10/#120). This section's own display-fitness gate is docs/epic-i/I249-web-b-geo-signoff.md / I249-web-b-domain-signoff.md -- it does NOT extend the formula-level B10/#120 sign-off, only display fitness/wording of an already-approved research aggregation.
+
+  #269 (I-ortsteile): adds an "Ortsteile in this district" child table, same role/pattern as the
+  existing "Prognoseräume in this district" table below -- Ortsteil -> Bezirk nests EXACTLY
+  (a source-provided fact, see pages/berlin/area/ortsteil/[code].md's header comment), so this is a
+  plain dim_area_geometry lookup, not a crosswalk join. Gives readers a direct hierarchy path into
+  the new Ortsteil profile pages from the district they already land on here.
 -->
 
 ```sql bezirk_name
@@ -204,6 +210,29 @@ order by d.residents_total desc nulls last
 <DataTable data={children} rows=20 link=pgr_link>
     <Column id=area_name title="Prognoseraum"/>
     <Column id=residents_total title="Residents" fmt="num0"/>
+</DataTable>
+
+## Ortsteile in this district
+
+Ortsteil (Stadtteil) is a different, non-LOR district subdivision (it does not nest into the
+Prognoseraum/Bezirksregion/Planungsraum ladder above) — see the
+[Ortsteil profile page](/berlin/area/ortsteil) for how its own neighbourhood rollup is built.
+
+```sql ortsteile
+select
+    area_code,
+    area_name,
+    '/berlin/area/ortsteil/' || area_code as ortsteil_link
+from gentriduck_marts.dim_area_geometry
+where city_code = 'BER' and area_level = 'ortsteil'
+  -- #255-style defensive guard, see the matching comment above this page's "children" query.
+  and area_code is not null and trim(area_code) <> ''
+  and substr(area_code, 1, 2) = '${params.code}'
+order by area_name
+```
+
+<DataTable data={ortsteile} rows=20 link=ortsteil_link>
+    <Column id=area_name title="Ortsteil"/>
 </DataTable>
 
 ---
