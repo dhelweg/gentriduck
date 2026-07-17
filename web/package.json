@@ -2,8 +2,9 @@
   "name": "gentriduck-web",
   "version": "0.0.1",
   "scripts": {
-    "build": "evidence build && node scripts/postbuild-noindex.mjs && node scripts/postbuild-analytics.mjs",
-    "build:strict": "evidence build:strict && node scripts/postbuild-noindex.mjs && node scripts/postbuild-analytics.mjs",
+    "clean": "node -e \"require('fs').rmSync('build',{recursive:true,force:true})\"",
+    "build": "npm run clean && evidence build && node scripts/postbuild-noindex.mjs && node scripts/postbuild-analytics.mjs",
+    "build:strict": "npm run clean && evidence build:strict && node scripts/postbuild-noindex.mjs && node scripts/postbuild-analytics.mjs",
     "dev": "evidence dev --open /",
     "test": "evidence build",
     "sources": "evidence sources",

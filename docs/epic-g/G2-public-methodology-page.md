@@ -43,12 +43,15 @@ methodological upgrade in this revival (`index-definition.md` §0.2, ADR-0008 De
 | **D2 — Social change** | Berlin's official Dynamik-Index class (improving/stable/worsening) | Outcome (direction) | MSS |
 | **D3 — Commercial / amenity mix** | Commercial POI density and its year-over-year change | Predictor | OpenStreetMap |
 | **D4 — Socio-demographic baseline** | Composite of welfare-register shares (tenure, age, migration background) at a fixed baseline year | Baseline covariate | EWR |
-| **D5 — Displacement / affordability** | *Not yet built.* Milieuschutz zoning, rent burden, tenant turnover | Predictor (planned, Epic D) | — |
+| **D5 — Displacement / affordability** | *Not yet built.* **(Follow-up now tracked: #258 (D5-wire) — see `docs/planning/deferred-work-audit-2026-07.md`.)** Milieuschutz zoning, rent burden, tenant turnover | Predictor (planned, Epic D) | — |
 
 We report D1/D2 as the outcome that D3 and D4 are tested *against* — never averaged into one number.
 D5 (an explicit displacement/affordability signal) is the biggest current gap: without it, the model
 can observe socio-economic upgrading but **cannot distinguish** genuine incumbent-led improvement from
 gentrification-driven displacement (`index-definition.md` §1.3, tension cell `improving-vulnerable`).
+
+<!-- Caveat-completeness of this public methodology page is audited under #262 (G2-audit); see docs/planning/deferred-work-audit-2026-07.md. Keep this as a comment — do not surface an internal ticket number to public readers. -->
+
 
 ## 3. Why "lead-lag", not a snapshot
 
@@ -81,7 +84,10 @@ cancels the noise; only a neighbourhood that gains points of interest *faster th
 registers a real commercial-change signal. This is not a perfect fix — mapping coverage does not grow
 perfectly evenly, and inner-city, already-popular areas were typically mapped earlier than peripheral
 ones (a documented limitation, C5 signoff §2) — but it removes the dominant source of bias and requires
-no new data source.
+no new data source. Since QA-winsor (#268), the resulting dynamism score is additionally winsorized at
+±3 standard deviations before it reaches any composite, map, or chart, so a handful of very-low-POI
+areas with a noisy denominator cannot dominate the scale (`docs/epic-c/QA-winsor-geo-signoff.md`); the
+unclipped value remains available for diagnostics.
 
 ## 5. Spatial methods
 
@@ -200,7 +206,10 @@ a Berlin-equivalent data point.
    gentrification happens economically is outside D1–D4; we measure the *social outcome* and its
    *commercial/demographic correlates*, not the underlying land/capital mechanism.
 3. **OpenStreetMap completeness bias is corrected, not eliminated** (§4). The correction assumes
-   roughly uniform citywide mapping growth, which is only an approximation.
+   roughly uniform citywide mapping growth, which is only an approximation. The resulting dynamism
+   score is winsorized at ±3 SD (QA-winsor, #268) to stop a handful of thin-data outliers from
+   dominating downstream composites/visuals; this bounds display noise, it does not fix the
+   underlying uniform-growth approximation.
 4. **No multiple-comparison correction** has been applied across the battery of directional tests;
    results should be read as directional indicators, not confirmatory hypothesis tests.
 5. **Administrative-boundary changes.** Berlin's PLR boundaries changed in 2021 (447 → 542 areas); any
@@ -212,6 +221,8 @@ a Berlin-equivalent data point.
    not itself publicly downloadable; OpenStreetMap data is open under the Open Database Licence and
    requires attribution; Berlin's MSS data is published under Berlin's open-data licence. Full
    attribution is on the [Attribution & Licensing page](../adr/) *(G3, #39, pending)*.
+
+The completeness of these carry-forward caveats on this page is audited under #262 (G2-audit).
 
 ## 12. Sources
 

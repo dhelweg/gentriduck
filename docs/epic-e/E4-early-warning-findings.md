@@ -6,7 +6,7 @@
 
 ## NOT A CAUSAL EFFECT
 
-Every number below is a **predictive association** from an out-of-time classifier. This is the R-A10-P1 response to thesis finding **W3** ("causal/temporal inference is suggestive, not identified", docs/assessment/2018-thesis-critical-assessment.md): it upgrades the *validation discipline* (strictly-later held-out wave, not in-sample fit) but does **not** claim a causally identified displacement-causing effect. Part 2 of #80 (difference-in-differences / event-study on Milieuschutz designation, #70) is explicitly out of scope here and remains parked.
+Every number below is a **predictive association** from an out-of-time classifier. This is the R-A10-P1 response to thesis finding **W3** ("causal/temporal inference is suggestive, not identified", docs/assessment/2018-thesis-critical-assessment.md): it upgrades the *validation discipline* (strictly-later held-out wave, not in-sample fit) but does **not** claim a causally identified displacement-causing effect. Part 2 of #80 (difference-in-differences / event-study on Milieuschutz designation, #70) is explicitly out of scope here and remains parked. **(Follow-up now tracked: #259 (A10-P2) — see `docs/planning/deferred-work-audit-2026-07.md`.)**
 
 ## Target definition
 

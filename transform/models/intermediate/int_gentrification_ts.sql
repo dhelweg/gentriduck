@@ -72,52 +72,68 @@
 -- depends_on: {{ ref('int_hamburg_sozialmonitoring_index') }}
 -- depends_on: {{ ref('int_ewr_socioeco_hamburg') }}
 -- depends_on: {{ ref('int_poi_status_dynamism_improved') }}
+-- depends_on: {{ ref('int_poi_status_dynamism_improved_pre2021') }}
+-- depends_on: {{ ref('int_berlin_brw_trend') }}
+-- depends_on: {{ ref('int_berlin_displacement_subindex') }}
 --
--- OA-B.3 (#172): status_score_improved / dynamism_score_improved /
--- disinvestment_score_improved columns carry the tier-weighted "improved" POI
--- predictor (int_poi_status_dynamism_improved), joined into Branch A
--- (lor_2021, Berlin) only -- NULL in Branch B (lor_pre2021) and Branch C
--- (Hamburg). NEVER blended with the faithful status_score/dynamism_score
--- above (ADR-0017 D3/D4 methodology_variant discriminator).
+-- OA-B.3 (#172) / OA-ablation (#261): status_score_improved /
+-- dynamism_score_improved / disinvestment_score_improved columns carry the
+-- tier-weighted "improved" POI predictor, joined into Branch A (lor_2021,
+-- Berlin, via int_poi_status_dynamism_improved) AND Branch B (lor_pre2021,
+-- Berlin, via int_poi_status_dynamism_improved_pre2021, #261) -- STILL NULL in
+-- Branch C (Hamburg; seed_poi_offering_relevance is not validated for
+-- Hamburg's taxonomy, out of #261's scope). NEVER blended with the faithful
+-- status_score/dynamism_score above (ADR-0017 D3/D4 methodology_variant
+-- discriminator). Branch A and Branch B improved z-scores are each normalised
+-- within their own PLR population/vintage (542 vs 448 PLRs) -- NOT cross-
+-- vintage comparable, same rule as every other z-score column here (see
+-- int_poi_status_dynamism_improved_pre2021's header for the #261 tier-weight
+-- review that grounds reusing seed_poi_offering_relevance unchanged for the
+-- lor_pre2021 taxonomy).
+--
+-- D3-brw-wire (#273): brw_trend / brw_yoy_pct_change columns thread the BRW
+-- change/rent-gap-realisation signal (int_berlin_brw_trend, #263) through as
+-- a PREDICTOR/lead-side field (ADR-0008; D3-brw-trend-geo-signoff condition
+-- C1) -- change-positive polarity (high = land value rising faster than the
+-- citywide PLR average = upgrading pressure being actively realised, Smith
+-- 1979), the OPPOSITE convention from the D1/D2 vulnerability-positive
+-- outcome side. NEVER blended with status_index/dynamik_index or the D4
+-- ewr_composite. Berlin lor_2021 rows only (int_berlin_brw_trend's own
+-- back-series/grain constraint -- BRW pre2021 back-series depth and Hamburg
+-- BRW sourcing are both open, unresolved questions, not addressed here);
+-- NULL in Branch B (lor_pre2021) and Branch C (Hamburg), same
+-- graceful-degradation convention as *_improved above. Not a measured rent
+-- or displacement outcome -- read jointly with low-status/low-Wohnlage
+-- context (D3-brw-trend-domain-signoff point D5), never alone as a
+-- displacement-risk score.
+--
+-- D5-wire (#258): displacement_subindex / displacement_subindex_is_partial /
+-- under_milieuschutz / milieuschutz_overlap_frac columns thread the ADR-0008
+-- D5 displacement/affordability predictor (int_berlin_displacement_subindex)
+-- through as a PREDICTOR/lead-side field, same side as D3 -- NEVER blended
+-- with the D1/D2 MSS outcome or the D4 ewr_composite baseline. Higher
+-- displacement_subindex = higher displacement/affordability pressure from
+-- whichever of {turnover_proxy, rent_pressure_proxy} is available for that
+-- year (NULL only when both underlying proxies are null -- a verified
+-- coverage finding in that model's header shows a strict both-required rule
+-- would be permanently empty given today's data, so this is a documented
+-- partial-availability composite, not silent imputation).
+-- displacement_subindex_is_partial flags rows fed by only one component.
+-- under_milieuschutz / milieuschutz_overlap_frac are DISCLOSURE-ONLY and
+-- time-invariant (current-state Sec. 172 BauGB designation, repeated across
+-- every snapshot_year of a PLR) -- read jointly, never treated as a third
+-- annual input to displacement_subindex (D5-wire-domain-signoff.md point
+-- D-1). Berlin lor_2021 rows only (int_berlin_displacement_subindex's own
+-- scope constraint, same as D3-brw-wire); NULL in Branch B (lor_pre2021) and
+-- Branch C (Hamburg), same graceful-degradation convention as brw_trend
+-- above.
 {{ config(materialized="table", meta={"dbt_meta_owner": "data-engineer"}) }}
 
-{% set typology_case %}
-            case
-                when mss.status_index is null
-                then null  -- uninhabited PLR: no typology assignment
-                when mss.status_index = 1 and mss.dynamik_index = 1
-                then 'consolidation-pressure'
-                -- D-2 GUARD: status=1 + dynamik=2 or 3 → stable-established (NOT upgrading)
-                -- dynamik=3 in a high-status PLR is DECLINE, not gentrification (tension cell *)
-                when mss.status_index = 1 and mss.dynamik_index = 2
-                then 'stable-established'
-                when mss.status_index = 1 and mss.dynamik_index = 3
-                then 'stable-established'  -- tension: decline, not gentrification
-                when mss.status_index = 2 and mss.dynamik_index = 1
-                then 'active-gentrification'
-                when mss.status_index = 2 and mss.dynamik_index = 2
-                then 'stable-established'
-                -- D-2 GUARD: status=2 + dynamik=3 → pre-gentrification (NOT upgrading)
-                -- mid-status declining = filtering-down; tension cell *
-                when mss.status_index = 2 and mss.dynamik_index = 3
-                then 'pre-gentrification'  -- tension: filtering-down
-                -- status=3 + dynamik=1: low status improving → pioneer-signal
-                when mss.status_index = 3 and mss.dynamik_index = 1
-                then 'pioneer-signal'
-                when mss.status_index = 3 and mss.dynamik_index = 2
-                then 'pre-gentrification'
-                when mss.status_index = 3 and mss.dynamik_index = 3
-                then 'pre-gentrification'
-                -- status=4 + dynamik=1: improving-vulnerable (R-A3 C2; §1.3, §1.5 †)
-                when mss.status_index = 4 and mss.dynamik_index = 1
-                then 'improving-vulnerable'
-                when mss.status_index = 4 and mss.dynamik_index = 2
-                then 'pre-gentrification'
-                when mss.status_index = 4 and mss.dynamik_index = 3
-                then 'pre-gentrification'
-            end
-{% endset %}
-
+-- R-A8b (#260) refactor: typology classification extracted to the shared
+-- transform/macros/typology_stage.sql macro (behaviour-preserving -- identical CASE
+-- logic,
+-- now reusable by int_gentrification_ts_unified_2021.sql). Invoked below via the
+-- typology_stage macro call against the mss status_index/dynamik_index columns.
 with
     -- Branch A sources: lor_2021 (2021–2025)
     poi_2021 as (select * from {{ ref("int_poi_status_dynamism") }}),
@@ -133,12 +149,34 @@ with
     -- NULL there (see joined_pre2021/joined_hamburg).
     poi_improved_2021 as (select * from {{ ref("int_poi_status_dynamism_improved") }}),
 
+    -- D3-brw-wire (#273): BRW change/rent-gap-realisation predictor, Berlin
+    -- lor_2021 branch only (see int_berlin_brw_trend header -- grain is
+    -- fixed to lor_2021 PLR geometries; pre2021/Hamburg BRW sourcing is not
+    -- addressed by this ticket). NOT joined into Branch B/C below; those
+    -- columns are NULL there (see joined_pre2021/joined_hamburg).
+    brw_2021 as (select * from {{ ref("int_berlin_brw_trend") }}),
+
+    -- D5-wire (#258): displacement/affordability predictor, Berlin lor_2021
+    -- branch only (see int_berlin_displacement_subindex header -- grain is
+    -- fixed by its turnover_proxy spine, same constraint class as brw_2021
+    -- above). NOT joined into Branch B/C below; those columns are NULL there
+    -- (see joined_pre2021/joined_hamburg).
+    displacement_2021 as (select * from {{ ref("int_berlin_displacement_subindex") }}),
+
     -- Branch B sources: lor_pre2021 (2015, 2017, 2019)
     poi_pre2021 as (select * from {{ ref("int_poi_status_dynamism_pre2021") }}),
     mss_pre2021 as (
         select * from {{ ref("stg_berlin_mss") }} where area_vintage = 'lor_pre2021'
     ),
     ewr_pre2021 as (select * from {{ ref("int_ewr_socioeco_pre2021") }}),
+
+    -- OA-ablation (#261): tier-weighted "improved" POI predictor, lor_pre2021
+    -- branch (see int_poi_status_dynamism_improved_pre2021 header for the
+    -- tier-weight review grounding this extension). Joined into Branch B
+    -- below; NOT joined into Branch C (Hamburg).
+    poi_improved_pre2021 as (
+        select * from {{ ref("int_poi_status_dynamism_improved_pre2021") }}
+    ),
 
     -- Branch C sources: Hamburg 'current' (2013-2025, #40 H1 integration slice)
     poi_hamburg as (
@@ -164,7 +202,8 @@ with
             mss.gesamtindex,
             mss.edition as mss_edition,
             (mss.gesamtindex is null) as is_uninhabited,
-            {{ typology_case }} as typology_stage,
+            {{ typology_stage('mss.status_index', 'mss.dynamik_index') }}
+            as typology_stage,
             ewr.ewr_composite,
             ewr.foreigners_share,
             ewr.age_under18_share,
@@ -182,7 +221,23 @@ with
             -- graceful-degradation convention as every other predictor here).
             poi_improved.status_score_improved,
             poi_improved.dynamism_score_improved,
-            poi_improved.disinvestment_score_improved
+            poi_improved.disinvestment_score_improved,
+            -- D3-brw-wire (#273): predictor/lead-side, change-positive (never
+            -- blended with D1/D2 outcome or D4 baseline above). NULL where
+            -- int_berlin_brw_trend has no matching row (e.g. a PLR/year
+            -- without residential BRW coverage or the first change-year,
+            -- same graceful-degradation convention as every other predictor
+            -- here).
+            brw.brw_trend,
+            brw.brw_yoy_pct_change,
+            -- D5-wire (#258): predictor/lead-side, pressure-positive (never
+            -- blended with D1/D2 outcome or D4 baseline above). NULL where
+            -- int_berlin_displacement_subindex has no matching row, same
+            -- graceful-degradation convention as every other predictor here.
+            disp.displacement_subindex,
+            disp.is_partial_availability as displacement_subindex_is_partial,
+            disp.under_milieuschutz,
+            disp.milieuschutz_overlap_frac
         from mss_2021 as mss
         inner join
             poi_2021 as poi
@@ -196,6 +251,16 @@ with
             poi_improved_2021 as poi_improved
             on mss.area_code = poi_improved.area_code
             and mss.edition = poi_improved.snapshot_year
+        left join
+            brw_2021 as brw
+            on mss.area_code = brw.area_code
+            and mss.area_vintage = brw.area_vintage
+            and mss.edition = brw.snapshot_year
+        left join
+            displacement_2021 as disp
+            on mss.area_code = disp.area_code
+            and mss.area_vintage = disp.area_vintage
+            and mss.edition = disp.reference_year
     ),
 
     -- Branch B: lor_pre2021 join (B7 #117).
@@ -220,7 +285,8 @@ with
             mss.gesamtindex,
             mss.edition as mss_edition,
             (mss.gesamtindex is null) as is_uninhabited,
-            {{ typology_case }} as typology_stage,
+            {{ typology_stage('mss.status_index', 'mss.dynamik_index') }}
+            as typology_stage,
             ewr.ewr_composite,
             ewr.foreigners_share,
             ewr.age_under18_share,
@@ -237,15 +303,33 @@ with
             -- DO NOT compare across vintages or use for new analysis.
             (poi.status_score + poi.dynamism_score - ewr.ewr_composite)
             / 3.0 as legacy_gentrification_score,
-            -- OA-B.3 (#172): "improved" predictor not computed for the
-            -- lor_pre2021 branch (seed_poi_offering_relevance tier weights are
-            -- validated against Berlin's current taxonomy/literature review
-            -- only, not re-derived for the thesis-era 448-PLR system) --
-            -- NULL, never backfilled from the lor_2021 branch (no cross-vintage
-            -- comparison, same rule as every other z-score column here).
-            cast(null as double) as status_score_improved,
-            cast(null as double) as dynamism_score_improved,
-            cast(null as double) as disinvestment_score_improved
+            -- OA-ablation (#261): "improved" predictor now computed for the
+            -- lor_pre2021 branch too (int_poi_status_dynamism_improved_pre2021
+            -- -- see that model's header for the tier-weight review
+            -- concluding seed_poi_offering_relevance transfers unchanged).
+            -- NULL where int_poi_status_dynamism_improved_pre2021 has no
+            -- matching row, same graceful-degradation convention as every
+            -- other predictor here. Normalised within the lor_pre2021
+            -- population (448 PLRs) -- NOT cross-vintage comparable with
+            -- Branch A's lor_2021-normalised improved z-scores.
+            poi_improved_pre2021.status_score_improved,
+            poi_improved_pre2021.dynamism_score_improved,
+            poi_improved_pre2021.disinvestment_score_improved,
+            -- D3-brw-wire (#273): int_berlin_brw_trend is lor_2021-grain only
+            -- (BRW pre2021 back-series depth is an open, unresolved question,
+            -- not addressed by this ticket) -- NULL, never backfilled from
+            -- the lor_2021 branch (no cross-vintage comparison, same rule as
+            -- every other predictor column here).
+            cast(null as double) as brw_trend,
+            cast(null as double) as brw_yoy_pct_change,
+            -- D5-wire (#258): int_berlin_displacement_subindex is lor_2021-
+            -- grain only (its own turnover_proxy spine constraint) -- NULL,
+            -- never backfilled from the lor_2021 branch (no cross-vintage
+            -- comparison, same rule as every other predictor column here).
+            cast(null as double) as displacement_subindex,
+            cast(null as boolean) as displacement_subindex_is_partial,
+            cast(null as boolean) as under_milieuschutz,
+            cast(null as double) as milieuschutz_overlap_frac
         from mss_pre2021 as mss
         inner join
             poi_pre2021 as poi
@@ -255,12 +339,17 @@ with
             ewr_pre2021 as ewr
             on mss.area_code = ewr.area_code
             and mss.edition = ewr.reference_year
+        left join
+            poi_improved_pre2021
+            on mss.area_code = poi_improved_pre2021.area_code
+            and mss.edition = poi_improved_pre2021.snapshot_year
     ),
 
     -- Branch C: Hamburg join (#40 H1 integration slice).
     -- mss_hamburg (int_hamburg_sozialmonitoring_index) already carries numeric
     -- status_index/dynamik_index on the SAME 1-4/1-3 scale as Berlin's MSS (see
-    -- that model's header for the label-mapping methodology), so typology_case
+    -- that model's header for the label-mapping methodology), so the typology_stage()
+    -- macro
     -- (D1xD2 matrix, ADR-0008) applies unmodified -- the matrix logic operates
     -- purely on the shared numeric scale, not on any Berlin-specific column.
     -- ewr_hamburg (int_ewr_socioeco_hamburg) carries a 3-indicator composite
@@ -291,7 +380,8 @@ with
             mss.gesamtindex,
             mss.edition as mss_edition,
             false as is_uninhabited,
-            {{ typology_case }} as typology_stage,
+            {{ typology_stage('mss.status_index', 'mss.dynamik_index') }}
+            as typology_stage,
             ewr.ewr_composite,
             ewr.foreigners_share,
             ewr.age_under18_share,
@@ -309,7 +399,21 @@ with
             -- int_poi_status_dynamism_improved scope note) -- NULL for Hamburg.
             cast(null as double) as status_score_improved,
             cast(null as double) as dynamism_score_improved,
-            cast(null as double) as disinvestment_score_improved
+            cast(null as double) as disinvestment_score_improved,
+            -- D3-brw-wire (#273): int_berlin_brw_trend is Berlin-only (see
+            -- int_berlin_brw_plr header -- source BRW data is a Berlin GIS
+            -- product; Hamburg BRW sourcing is an open, unresolved question,
+            -- not addressed by this ticket) -- NULL for Hamburg.
+            cast(null as double) as brw_trend,
+            cast(null as double) as brw_yoy_pct_change,
+            -- D5-wire (#258): int_berlin_displacement_subindex is Berlin-only
+            -- (source proxies are all Berlin GIS/EWR/MSS products; Hamburg
+            -- sourcing is an open, unresolved question, not addressed by this
+            -- ticket) -- NULL for Hamburg.
+            cast(null as double) as displacement_subindex,
+            cast(null as boolean) as displacement_subindex_is_partial,
+            cast(null as boolean) as under_milieuschutz,
+            cast(null as double) as milieuschutz_overlap_frac
         from mss_hamburg as mss
         inner join
             poi_hamburg as poi

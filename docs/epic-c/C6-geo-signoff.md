@@ -198,7 +198,7 @@ hotspot. No anomaly found.
    onset + survivorship + small-PLR noise make pre-2013 dynamism unreliable). State this start-year
    on the methodology page (G2).
 2. **Implement winsorizing (±3 SD) of dynamism_score** (C5 recommendation, still open; 149 obs
-   currently beyond ±3 SD, max +13.4) before dynamism feeds E-series regressions or public visuals.
+   currently beyond ±3 SD, max +13.4) before dynamism feeds E-series regressions or public visuals. **(Follow-up now tracked: #268 (QA-winsor) — see `docs/planning/deferred-work-audit-2026-07.md`.)**
 3. **Verify the tag-drift seed is wired into harmonization** so `poi_category_h` actually applies
    the `since_year` remaps (protects per-category longitudinal series; aggregate counts already
    robust).

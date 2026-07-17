@@ -433,7 +433,7 @@ via I13 once content is revised and routes are frozen; the `/about` route never 
   gastro-type summary, curation rules that demote bench-class counts from default views;
   **new persona: prospective mover** added to I9/I12; display-only (index outputs byte-identical). ·
   *DE pair + data-analyst + web pair; **domain gate on mover framing** (inform, never recommend)* ·
-  I14, I18.
+  I14, I18. Filed as #244 (slices: #252 data, #253 domain/curation, #254 web).
 
 **I-C — Communication machinery**
 - **I8** **ADR: public communication surface & channel policy** — LinkedIn + Bluesky/Mastodon

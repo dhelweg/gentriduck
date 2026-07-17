@@ -20,6 +20,19 @@
 -- which would be circular).
 -- raum_id join key: golden CSVs sometimes drop the leading zero (Bezirk 1-9), so
 -- lpad to the WFS's zero-padded width (6 for bzr, 8 for plr) before joining.
+--
+-- #266 (QA-raumid) fix: the emitted `area_code` column itself is now lpad'd to the
+-- same width as the join key, at source -- previously only the JOIN condition
+-- lpad'd defensively while the SELECTed area_code carried the golden CSV's raw,
+-- sometimes-unpadded raum_id verbatim (e.g. '1011202', 7 chars, for Bezirk 1-9
+-- PLRs whose leading zero the CSV drops). That mismatch meant every downstream
+-- consumer joining on area_code (dim_area, gentrification_index) either had to
+-- re-lpad defensively itself or, if it didn't, got two distinct dim_area rows
+-- for the same real-world PLR (an orphan 7-char thesis-only row alongside the
+-- correct 8-char WFS row) -- confirmed empirically: 343 orphan 7-char PLR rows
+-- in dim_area before this fix, out of 990 total plr rows (both LOR vintages).
+-- Fixing at source (here) means every consumer now gets an already-padded,
+-- WFS-joinable area_code with no re-derivation needed.
 {{
     config(
         materialized="view",
@@ -47,7 +60,7 @@ with
         select
             bzr.city_code,
             bzr.area_level,
-            bzr.raum_id as area_code,
+            lpad(bzr.raum_id, 6, '0') as area_code,
             coalesce(wfs_names.area_name, bzr.raum_desc) as area_name,
             cast(bzr.zeit as varchar) as period_yyyymm,
             bzr.ew as population,
@@ -71,7 +84,7 @@ with
         select
             plr.city_code,
             plr.area_level,
-            plr.raum_id as area_code,
+            lpad(plr.raum_id, 8, '0') as area_code,
             coalesce(wfs_names.area_name, plr.raum_desc) as area_name,
             cast(plr.zeit as varchar) as period_yyyymm,
             plr.ew as population,
@@ -95,7 +108,7 @@ with
         select
             plr.city_code,
             plr.area_level,
-            plr.raum_id as area_code,
+            lpad(plr.raum_id, 8, '0') as area_code,
             coalesce(wfs_names.area_name, plr.raum_desc) as area_name,
             cast(plr.zeit as varchar) as period_yyyymm,
             plr.ew as population,

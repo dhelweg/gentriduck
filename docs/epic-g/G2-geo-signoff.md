@@ -43,7 +43,7 @@ not the underlying methodology (which is out of scope — it was gated at its ow
 None blocking. One non-blocking suggestion: §10.3 could additionally note that winsorizing
 `dynamism_score` at ±3 SD (a recommended, non-blocking C5 enhancement) has not yet been implemented —
 noted here for the next revision of this page rather than blocking this cycle's sign-off, since it
-does not change the correctness of any claim currently on the page.
+does not change the correctness of any claim currently on the page. **(Follow-up now tracked: #268 (QA-winsor) — see `docs/planning/deferred-work-audit-2026-07.md`.)**
 
 ## Verdict
 

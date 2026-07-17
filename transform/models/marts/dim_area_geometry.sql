@@ -20,6 +20,10 @@
 -- 4. stg_berlin_lor_pgr   -- WFS LOR Prognoseraum geometry (BER / pgr, both
 -- vintages). Added #242 (I18, geo-hierarchy pages) so PGR profile pages can
 -- render a choropleth polygon, same as BZR/PLR.
+-- 5. stg_berlin_ortsteil  -- WFS Ortsteil geometry (BER / ortsteil, single
+-- current vintage; area_vintage set to the literal 'current' since this
+-- source has no pre2021/2021 split). Added #269 (I-ortsteile) so Ortsteil
+-- profile pages can render a choropleth polygon, same as PGR/BZR/PLR.
 --
 -- Reprojection: native CRS per dim_city.native_crs_epsg (BER=EPSG:25833,
 -- HH=EPSG:25832) -> EPSG:4326 (WGS84 lon/lat), matching the st_transform(...,
@@ -96,6 +100,23 @@ with
         where geo.area_code is not null
     ),
 
+    -- #269 (I-ortsteile): single current vintage, no pre2021/2021 split (see
+    -- stg_berlin_ortsteil.sql header) -- 'current' literal keeps this CTE's
+    -- column shape identical to its siblings above for the UNION ALL.
+    berlin_ortsteil as (
+        select
+            ort.city_code,
+            ort.area_level,
+            ort.area_code,
+            ort.area_name,
+            cast('current' as varchar) as area_vintage,
+            ort.geometry_wkb,
+            city.native_crs_epsg
+        from {{ ref("stg_berlin_ortsteil") }} as ort
+        left join {{ ref("dim_city") }} as city on ort.city_code = city.city_code
+        where ort.area_code is not null
+    ),
+
     combined as (
         select *
         from berlin_plr
@@ -108,6 +129,9 @@ with
         union all
         select *
         from hamburg
+        union all
+        select *
+        from berlin_ortsteil
     )
 
 select

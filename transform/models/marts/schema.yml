@@ -76,10 +76,14 @@ models:
           Index variant. 'standard' uses non-distance-weighted POI features;
           'distance_weighted' uses POI inverse-distance weighting;
           'live_data' uses the C4 time-series pipeline (OSM + EWR, all years);
-          'improved' (OA-B.3 #172) carries the causality-first tier-weighted OA
-          predictor (int_poi_status_dynamism_improved), Berlin lor_2021 rows
-          only -- a separate, never-blended methodology_variant from
-          'live_data' (ADR-0017 D3/D4).
+          'improved' (OA-B.3 #172; extended to lor_pre2021 by OA-ablation #261)
+          carries the causality-first tier-weighted OA predictor
+          (int_poi_status_dynamism_improved for Berlin lor_2021 rows,
+          int_poi_status_dynamism_improved_pre2021 for Berlin lor_pre2021 rows)
+          -- a separate, never-blended methodology_variant from 'live_data'
+          (ADR-0017 D3/D4). Still Berlin-only; still NOT computed for Hamburg
+          (seed_poi_offering_relevance is not validated for Hamburg's
+          taxonomy).
         data_type: varchar
         data_tests:
 
@@ -945,7 +949,8 @@ models:
 
       Grain: one row per (city_code, area_level, area_code, area_vintage).
       Sources: stg_berlin_lor (plr), stg_berlin_lor_bzr (bzr), stg_berlin_lor_pgr
-      (pgr, added #242 I18), stg_hamburg_geo (district/subarea_l1/subarea_l2).
+      (pgr, added #242 I18), stg_hamburg_geo (district/subarea_l1/subarea_l2),
+      stg_berlin_ortsteil (ortsteil, added #269 I-ortsteile, area_vintage='current').
     meta:
       dbt_meta_owner: data-engineer
     data_tests:
@@ -1104,6 +1109,33 @@ models:
         description: Category-level Offering Advantage, parent-relative to its domain.
       - name: oa_type
         description: Type-level Offering Advantage, parent-relative to its domain.
+      - name: oa_domain_min_base_flag
+        description: >
+          #274 (ADR-0017 D5 D-3 discharge): true when this PLR-year's total
+          POI count across every domain is below the minimum-POI-base
+          threshold (`oa_min_poi_base_n` dbt var, default 10) -- flags
+          thinly-mapped PLR-years where the compositional LQ is unstable. See
+          int_poi_offering_advantage for the full derivation.
+        data_tests:
+
+          - not_null
+      - name: oa_category_min_base_flag
+        description: >
+          #274 (ADR-0017 D5 D-3 discharge): true when this row's parent
+          domain's own local POI total within the PLR is below
+          `oa_min_poi_base_n` -- oa_category's actual denominator.
+        data_tests:
+
+          - not_null
+      - name: oa_type_min_base_flag
+        description: >
+          #274 (ADR-0017 D5 D-3 discharge): true when this row's parent
+          domain's own local POI total within the PLR is below
+          `oa_min_poi_base_n` -- oa_type's actual denominator too (type nests
+          under domain, not category; ADR-0017 D1).
+        data_tests:
+
+          - not_null
       - name: poi_count
         description: >
           Count of POIs in this (city, year, area, vintage, domain, category,
@@ -1205,6 +1237,17 @@ models:
           Domain-level Offering Advantage (location quotient), carried through
           unchanged from mart_poi_offering_advantage (constant within this
           group by construction -- see model header).
+      - name: oa_domain_min_base_flag
+        description: >
+          #274 (ADR-0017 D5 D-3 discharge): true when this PLR-year's total
+          POI count across every domain is below the minimum-POI-base
+          threshold (`oa_min_poi_base_n` dbt var, default 10) -- a
+          PLR-year-level "thinly-mapped" property, constant across every
+          domain of the same PLR-year (see model header). The /berlin/poi-map
+          page suppresses oa_domain to NULL on this flag before display.
+        data_tests:
+
+          - not_null
       - name: poi_count
         description: >
           SUM(poi_count) across this domain's (poi_category_h, poi_type_h)
@@ -1230,6 +1273,13 @@ models:
       Rollup rule (extensive=sum, intensive=summed-numerator recompute)
       geo-DS approved (I19-geo-signoff.md, PASS), reusing int_mss_bzr_aggregate's
       precedent. Berlin only; Hamburg parity deferred to after H3 (#237).
+
+      #269 (I-ortsteile): extended with an 'ortsteil' level. Same rollup rule;
+      constituent-PLR membership comes from the DOMINANT PLR->Ortsteil
+      area-overlap crosswalk (int_berlin_plr_ortsteil_overlap.sql,
+      is_dominant_ortsteil), not a code-prefix substr() -- Ortsteil does not
+      nest into PLR (see dim_area_hierarchy.sql). 'ortsteil' rows are always
+      area_vintage='lor_2021' (the crosswalk's scope).
     meta:
       dbt_meta_owner: data-engineer
     data_tests:
@@ -1252,13 +1302,13 @@ models:
               arguments:
                 values: ["BER"]
       - name: area_level
-        description: Geo-hierarchy level (I18) -- plr, bzr, pgr, or bezirk.
+        description: Geo-hierarchy level (I18/I-ortsteile) -- plr, bzr, pgr, bezirk, or ortsteil.
         data_tests:
 
           - not_null
           - accepted_values:
               arguments:
-                values: ["plr", "bzr", "pgr", "bezirk"]
+                values: ["plr", "bzr", "pgr", "bezirk", "ortsteil"]
       - name: area_code
         description: LOR area code at this level's own grain (8/6/4/2-digit).
         data_tests:
@@ -1293,6 +1343,281 @@ models:
         description: >
           TRUE if this area/year (or, for rollups, any constituent PLR) had a
           suppressed source cell -- degrade gracefully, don't silently zero.
+        data_tests:
+
+          - not_null
+
+  - name: mart_area_amenities
+    description: >
+      #252 (I20 slice 1): display-only mart of everyday-infrastructure counts
+      (schools, kindergartens, doctors, dentists, pharmacies, supermarkets,
+      playgrounds, transit stops) and a dominant-gastro-cuisine breakdown, at
+      PLR grain and rolled up to BZR/PGR/Bezirk (I18 geo-hierarchy levels).
+      Not on the R-C1 gated-file list -- reads int_osm_poi_plr read-only, no
+      index weight/normalization change. "Interestingness" thresholds (n >=
+      floor before showing a dominant cuisine) and bench-class category
+      suppression are a web/curation-layer concern (I20 slice 2/3, #253/#254),
+      not modeled here. Berlin only; Hamburg parity deferred, same as I19.
+    meta:
+      dbt_meta_owner: data-engineer
+    data_tests:
+
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns:
+              - city_code
+              - area_level
+              - area_code
+              - area_vintage
+              - snapshot_year
+    columns:
+      - name: city_code
+        description: >
+          City identifier (ADR-0005), normalized via canonical_city_code()
+          from int_osm_poi_plr's legacy lowercase 'berlin'. Currently 'BER' only.
+        data_tests:
+
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ["BER"]
+      - name: area_level
+        description: Geo-hierarchy level (I18) -- plr, bzr, pgr, or bezirk.
+        data_tests:
+
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ["plr", "bzr", "pgr", "bezirk"]
+      - name: area_code
+        description: LOR area code at this level's own grain (8/6/4/2-digit).
+        data_tests:
+
+          - not_null
+      - name: snapshot_year
+        description: OSM snapshot year (matches int_osm_poi_plr's snapshot_year).
+        data_tests:
+
+          - not_null
+      - name: gastro_poi_count
+        description: Total Gastronomy-domain POIs (restaurants/cafes/fast food) in this area/year.
+      - name: gastro_poi_with_cuisine_count
+        description: >
+          Subset of gastro_poi_count that also carry an OSM `cuisine` tag.
+          Denominator for dominant_cuisine_share. Only non-zero for snapshot
+          years re-extracted after I20 (#252) added cuisine capture -- older
+          years correctly show 0/NULL here, not a fabricated value.
+      - name: dominant_cuisine
+        description: >
+          Most common raw OSM `cuisine` value among this area/year's gastro
+          POIs that carry the tag. NULL if gastro_poi_with_cuisine_count = 0.
+          Curation-rules threshold (I20 slice 2, #253) decides whether the web
+          layer actually displays this for a given n.
+      - name: dominant_cuisine_share
+        description: >
+          dominant_cuisine_count / gastro_poi_with_cuisine_count. NULL-safe
+          (nullif denominator).
+
+  - name: mart_mss_area_aggregate
+    description: >
+      #249 (I18-web-b): thin display mart exposing int_mss_bzr_aggregate (B10,
+      #120) at BZR/Bezirk grain to the web layer. Pure pass-through/rename --
+      no new aggregation formula (already geo-DS approved under B10, #120).
+      This ticket's own geo-DS pass (I249-web-b-geo-signoff.md) covers DISPLAY
+      fitness (confidence framing, boundary-mismatch caveat) of publishing this
+      classification on public profile pages, not the formula itself. Domain-
+      expert sign-off (I249-web-b-domain-signoff.md) covers lay-reader wording
+      of an approximated status/Dynamik figure at this grain. Berlin only.
+    meta:
+      dbt_meta_owner: data-engineer
+    data_tests:
+
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns:
+              - city_code
+              - area_level
+              - area_code
+              - area_vintage
+              - reference_year
+    columns:
+      - name: city_code
+        description: City identifier (ADR-0005). Currently 'BER' only.
+        data_tests:
+
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ["BER"]
+      - name: area_level
+        description: Geo-hierarchy level -- bzr or bezirk (this mart never carries plr rows).
+        data_tests:
+
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ["bzr", "bezirk"]
+      - name: area_code
+        description: LOR area code at this level's own grain (6-digit BZR / 2-digit Bezirk).
+        data_tests:
+
+          - not_null
+      - name: reference_year
+        description: Snapshot year this MSS/EWR/POI rollup represents (renamed from snapshot_year).
+        data_tests:
+
+          - not_null
+      - name: status_index
+        description: >
+          Population-weighted-mean-of-ordinals approximation of MSS status
+          index (1-4) at BZR/Bezirk grain. DIFFERS from the Senate's own
+          re-z-score-then-reclassify method -- see int_mss_bzr_aggregate.sql
+          header and I249-web-b-geo-signoff.md for the confidence framing this
+          caveat requires wherever this column is rendered.
+      - name: dynamik_index
+        description: >
+          Population-weighted-mean-of-ordinals approximation of MSS Dynamik
+          index (1-3) at BZR/Bezirk grain. Same approximation caveat as
+          status_index.
+      - name: typology_stage
+        description: >
+          Indicative D1xD2 typology stage derived from the aggregated
+          status_index/dynamik_index. NOT the official Senate BZR typology --
+          MAUP diagnostic / directional display only.
+      - name: n_plr
+        description: Number of constituent PLRs contributing to this row.
+        data_tests:
+
+          - not_null
+
+  - name: mart_ortsteil_plr_crosswalk
+    description: >
+      #269 (I-ortsteile): thin display mart exposing
+      int_berlin_plr_ortsteil_overlap to the web layer -- pure pass-through,
+      no new computation (see model header for the full method). Lets an
+      Ortsteil profile page join gentrification_index PLR rows to their
+      dominant Ortsteil assignment (filter is_dominant_ortsteil) to build a
+      constituent-PLR ("children") table, the Ortsteil-grain equivalent of
+      the substr(area_code, 1, N) trick BZR/PGR/Bezirk pages use.
+      GATE: the underlying area-overlap crosswalk + dominant-assignment
+      method is methodology-adjacent (geo-DS sign-off required per the #269
+      ticket gate) -- gated at int_berlin_plr_ortsteil_overlap.sql, not
+      re-decided here.
+    meta:
+      dbt_meta_owner: data-engineer
+    data_tests:
+
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns:
+              - plr_area_code
+              - ortsteil_area_code
+    columns:
+      - name: city_code
+        description: City identifier; always 'BER'.
+        data_tests:
+
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ["BER"]
+      - name: plr_area_code
+        description: 8-digit lor_2021 PLR code.
+        data_tests:
+
+          - not_null
+      - name: ortsteil_area_code
+        description: 4-digit Ortsteil code.
+        data_tests:
+
+          - not_null
+      - name: ortsteil_area_name
+        description: Ortsteil name, denormalized for convenience.
+      - name: bezirk_code
+        description: 2-digit Bezirk code the Ortsteil belongs to, denormalized for convenience.
+      - name: plr_area_m2
+        description: PLR polygon area (m^2), EPSG:25833.
+      - name: overlap_area_m2
+        description: Intersection area (m^2) between this PLR and this Ortsteil.
+      - name: overlap_frac_of_plr
+        description: overlap_area_m2 / plr_area_m2 -- the crosswalk weight.
+      - name: is_dominant_ortsteil
+        description: >
+          TRUE for the single largest-overlap-share Ortsteil per PLR -- the
+          assignment used by mart_area_demographics's ortsteil level and
+          mart_ortsteil_plr_stage_mix.
+        data_tests:
+
+          - not_null
+      - name: n_ortsteil_overlaps
+        description: >
+          Count of non-trivial Ortsteile this PLR overlaps. >1 means a
+          straddling PLR (82 of 542 lor_2021 PLRs, 15.1%, per
+          int_berlin_plr_ortsteil_overlap.sql's empirical count).
+
+  - name: mart_ortsteil_plr_stage_mix
+    description: >
+      #269 (I-ortsteile): child-PLR typology-STAGE DISTRIBUTION per Ortsteil,
+      e.g. "6 of 9 PLRs in this Ortsteil are in stage X" -- a descriptive
+      rollup, deliberately NOT a re-scored index at Ortsteil grain (matching
+      I18's "no re-scored index at coarser-than-PLR grain" decision, #247;
+      reaffirmed for BZR/PGR/Bezirk by #267 declining a coarse-index ticket --
+      same reasoning applies here). Ortsteil-grain equivalent of the inline
+      stage_mix query every BZR/PGR/Bezirk profile page runs against
+      gentrification_index via substr(area_code, 1, N) -- Ortsteil cannot use
+      that trick (PLR codes do not encode Ortsteil membership), so this mart
+      joins through the DOMINANT PLR->Ortsteil assignment instead (see
+      int_berlin_plr_ortsteil_overlap.sql). Source: gentrification_index
+      (ADR-0004 governed mart), variant='live_data', area_level='plr',
+      city_code='BER' -- same scope every existing stage-mix chart uses.
+      'uninhabited / no data' is an explicit bucket (uninhabited PLRs'
+      status_class is NULL by design, index-definition.md §7.1) -- never
+      silently dropped.
+    meta:
+      dbt_meta_owner: data-engineer
+    data_tests:
+
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns:
+              - city_code
+              - ortsteil_area_code
+              - period_yyyymm
+              - typology_stage
+    columns:
+      - name: city_code
+        description: City identifier; always 'BER'.
+        data_tests:
+
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ["BER"]
+      - name: ortsteil_area_code
+        description: 4-digit Ortsteil code.
+        data_tests:
+
+          - not_null
+      - name: ortsteil_area_name
+        description: Ortsteil name, denormalized for convenience.
+      - name: period_yyyymm
+        description: Period key matching gentrification_index's own period_yyyymm (YYYY12 snapshot convention for live_data).
+        data_tests:
+
+          - not_null
+      - name: typology_stage
+        description: >
+          D1xD2 typology stage name (gentrification_index.status_class for
+          variant='live_data'), or the literal 'uninhabited / no data' for
+          PLRs with no MSS classification. (Named typology_stage, not `stage`,
+          to avoid a reserved-keyword-as-identifier lint (RF04).)
+        data_tests:
+
+          - not_null
+      - name: n_plr
+        description: >
+          Count of this Ortsteil's dominantly-assigned constituent PLRs
+          currently in this typology_stage, for this period.
         data_tests:
 
           - not_null

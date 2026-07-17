@@ -18,9 +18,11 @@
 # One-time GitHub setup (maintainer, in the repo's web UI): Settings -> Pages ->
 # "Build and deployment" -> Source: "Deploy from a branch" -> Branch: gh-pages / (root).
 #
-# Optional (ADR-0012 Amendment B / #194): export GOATCOUNTER_CODE=<your-site-code> before
-# `npm run build` to enable the privacy-friendly analytics beacon (unset = no-op, no behavior
-# change). One-time setup: create a free site at https://www.goatcounter.com/ (maintainer).
+# Analytics (ADR-0012 Amendment B / #194): the privacy-friendly GoatCounter beacon is enabled via
+# the site code committed at web/goatcounter-code.txt (not a secret, works on every maintainer
+# machine via git pull) -- no env var needed. Override with GOATCOUNTER_CODE=<code> before
+# `npm run build` to test a different code; empty the file (and leave the env var unset) for a
+# no-op build.
 #
 # The gh-pages branch is force-replaced with a single fresh commit each deploy (no history
 # bloat) and is a generated artefact branch — never merge it into develop/main.

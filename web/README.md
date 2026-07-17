@@ -29,15 +29,26 @@ reads only the local `data/serving/*.parquet` snapshot.
 ## Analytics (optional, production only)
 
 The build injects a [GoatCounter](https://www.goatcounter.com/) (AGPL-3.0, open-source,
-cookieless, no consent banner) pageview beacon if `GOATCOUNTER_CODE` is set in the environment
-before `npm run build` — see `docs/adr/0012-serving-and-hosting-stack.md` Amendment B for the
-full decision. **Unset by default**, which is a no-op (no beacon, byte-identical build) — local
-dev/preview needs no account, per golden rule #5. To enable in production, create a free site at
-goatcounter.com and export its site code before building:
+cookieless, no consent banner) pageview beacon using the site code committed in
+`goatcounter-code.txt` (one line, plain text — not a secret, it's designed to sit in every page's
+public source) — see `docs/adr/0012-serving-and-hosting-stack.md` Amendment B for the full
+decision. Committing the code (rather than only an env var) means every maintainer machine gets it
+via `git pull`, with nothing to re-export per machine. If the file is empty/missing and
+`GOATCOUNTER_CODE` is unset, the build is a no-op (no beacon, byte-identical output) — local
+dev/preview needs no account, per golden rule #5. `GOATCOUNTER_CODE` still overrides the file when
+set, e.g. to test a different code without touching the committed default:
 
 ```bash
-GOATCOUNTER_CODE=<your-site-code> npm run build
+GOATCOUNTER_CODE=<other-site-code> npm run build
 ```
+
+> **Why this is safe to commit (and what is *not*).** The GoatCounter site *code* is a public
+> identifier, not a credential — it ships verbatim in every page's HTML (`data-goatcounter="…"`)
+> and grants no access on its own: viewing the dashboard, changing settings, or reading data all
+> require the maintainer's GoatCounter account login. So `goatcounter-code.txt` is the right home
+> for it. **Do not put actual secrets here or anywhere else in the repo** — a GoatCounter *API*
+> token, a `MOTHERDUCK_TOKEN`, or any key that authenticates or authorizes belongs in an untracked
+> `.env` / deploy-environment secret, never a tracked file.
 
 ## Layout
 - `sources/gentriduck_marts/` — DuckDB source (`:memory:`, reads `../data/serving/*.parquet`

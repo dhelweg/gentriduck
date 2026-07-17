@@ -20,7 +20,17 @@
 -- output — this is correct behaviour; those rows are forward-looking drift
 -- definitions that become active once C1 is extended to capture secondary tags.
 --
--- craft=* namespace is not in C1 poi_mapping — flag PM for a follow-up ticket.
+-- craft=* namespace is not in C1 poi_mapping. #271 inventoried it (1,731 Berlin POIs /
+-- 138 distinct values as of the 2024 snapshot, ~1.1% of the current POI base) and
+-- decided
+-- NOT to adopt it into poi_mapping for now -- mixed gentrification relevance (mostly
+-- utility/trade crafts, not the artisanal/creative subset that would plausibly signal
+-- gentrification) and adoption would require a full multi-year C1 re-ingestion for a
+-- modest
+-- volume gain. Documented no-op decision + inventory data:
+-- docs/epic-c/tickets/C-craft-taxonomy-decision.md. A scoped future ticket (#275) is
+-- filed
+-- for a possible curated artisanal-only subset if a consumer ever needs it.
 --
 -- Provenance values:
 -- 'drift_remap'  — poi_type matched exactly one non-ambiguous drift rule and
@@ -33,6 +43,9 @@
 -- pair has no entry in seed_poi_canonical_category.  Treated
 -- as native classification until the canonical seed is updated.
 --
+-- I20 (#252): `cuisine` passed through unchanged (display-only OSM secondary
+-- tag, not part of drift/canonical harmonization -- no cuisine-specific
+-- remapping exists or is planned).
 -- dbt_meta_owner: data-engineer
 {{ config(materialized="view", meta={"dbt_meta_owner": "data-engineer"}) }}
 
@@ -68,6 +81,7 @@ with
             src.lon,
             src.lat,
             src.source_attribution,
+            src.cuisine,
 
             -- Drift and canonical columns (null when no match)
             drft.canonical_key,
@@ -111,6 +125,7 @@ with
             lon,
             lat,
             source_attribution,
+            cuisine,
 
             -- Harmonized classification columns
             coalesce(canonical_poi_domain, poi_domain) as poi_domain_h,

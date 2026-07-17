@@ -82,7 +82,7 @@ and need their own review pass before they render publicly — this sign-off doe
   that content.
 - Consider a small standalone data-quality ticket to fix the unpadded thesis PLR `raum_id`s at the
   source (`int_thesis_2018_area_index.sql`) rather than defensively re-padding in every consumer;
-  out of scope here (large blast radius, self-consistent today) but worth tracking.
+  out of scope here (large blast radius, self-consistent today) but worth tracking. **(Follow-up now tracked: #266 (QA-raumid) — see `docs/planning/deferred-work-audit-2026-07.md`.)**
 
 ```json
 {

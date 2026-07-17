@@ -268,7 +268,7 @@ endorse them) and are tracked/discharged in D3 model headers, index-definition �
 4. **D4 — Record polarity meaning in index-definition §5** for all three level signals (BRW level,
    Wohnlage composition/%-einfach, modelled rent) before integration; vulnerability-positive
    convention; domain co-signs the meaning, geo the z-score arithmetic (= geo 12).
-5. **D5 — BRW change is the theory-valuable, separately-built signal.** Any `brw_trend`/rent-gap
+5. **D5 — BRW change is the theory-valuable, separately-built signal.** **(Follow-up now tracked: #263 (D3-brw-change) — see `docs/planning/deferred-work-audit-2026-07.md`.)** Any `brw_trend`/rent-gap
    reading is an **explicit, separately-polarised change indicator** on the predictor/lead side
    (Smith 1979 realisation), distinct from the level (= geo 14, domain-restated).
 6. **D6 — Modelled rent labelling.** Always "modelled/estimated net cold rent at a fixed reference

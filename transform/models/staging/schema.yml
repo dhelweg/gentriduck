@@ -491,6 +491,73 @@ models:
           config:
             where: "area_code is not null"
 
+  - name: stg_berlin_ortsteil
+    description: >
+      #269 (I-ortsteile): staging view over the Ortsteil (Stadtteil) boundary
+      geometry parquet for Berlin -- a non-LOR geography (96/97 legally-defined
+      Bezirk subdivisions, Berlin Bezirksverwaltungsgesetz Sec.2).
+      Source: ALKIS Berlin Ortsteile WFS, GDI Berlin, dl-de-zero-2.0.
+        https://gdi.berlin.de/services/wfs/alkis_ortsteile
+        (typeNames=alkis_ortsteile:ortsteile). Confirmed live 2026-07-17: 97
+        features (not the commonly-quoted "96" -- live source is authoritative).
+      Ingestion adapter: ingestion/berlin/ortsteile/ingest_ortsteil_geometries.py.
+      Storage: data/raw/berlin/ortsteile/ortsteile.parquet (gitignored).
+      Single current vintage (no pre2021/2021 split -- Ortsteil boundaries are
+      not part of the LOR reform).
+      parent_area_code is populated here (source-provided Bezirk 2-digit
+      prefix of the WFS `sch` attribute) -- see dim_area_hierarchy.sql for the
+      resulting ortsteil->bezirk edge. Ortsteil<->PLR does NOT nest and is
+      NOT resolved via this column -- see int_berlin_plr_ortsteil_overlap.sql.
+      Returns zero rows (typed stub) when no parquet has been ingested.
+    meta:
+      dbt_meta_owner: data-engineer
+    # Data-presence gate (docs/lessons/local-first-data-presence.md):
+    # grain test -- one row per Ortsteil (no vintage split, unlike the LOR
+    # siblings above).
+    data_tests:
+
+      - assert_not_empty:
+          config:
+            severity: error
+      - assert_min_rows:
+          arguments:
+            min_rows: 90
+          config:
+            severity: warn
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns:
+              - area_code
+          config:
+            where: "area_code is not null"
+    columns:
+      - name: city_code
+        description: City identifier; always 'BER'.
+        data_tests:
+
+          - accepted_values:
+              arguments:
+                values: ["BER"]
+              config:
+                where: "city_code is not null"
+      - name: area_level
+        description: Always 'ortsteil'.
+        data_tests:
+
+          - accepted_values:
+              arguments:
+                values: ["ortsteil"]
+              config:
+                where: "area_level is not null"
+      - name: area_code
+        description: 4-digit zero-padded Ortsteil code (Bezirk 2-digit + Ortsteil-within-Bezirk 2-digit).
+      - name: area_name
+        description: Ortsteil name (e.g. "Mitte", "Moabit").
+      - name: parent_area_code
+        description: >
+          2-digit Bezirk code (source-provided, first 2 chars of area_code) --
+          the Ortsteil's admin parent. Passed through to dim_area_hierarchy.
+
   - name: stg_hamburg_geo
     description: >
       Staging view over Hamburg geometry parquets (statistische Gebiete,

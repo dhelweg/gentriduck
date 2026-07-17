@@ -153,9 +153,11 @@ models:
                 field: city_code
       - name: area_level
         description: >
-          Area level identifier. Berlin uses 'bezirk'/'pgr'/'bzr'/'plr' (pgr
-          added #242, I18); Hamburg (#40 H1, ADR-0014) uses the generic
-          'district'/'subarea_l1'/'subarea_l2' levels (see seed_dim_area_level).
+          Area level identifier. Berlin uses 'bezirk'/'pgr'/'bzr'/'plr'/'ortsteil'
+          (pgr added #242 I18; ortsteil added #269 I-ortsteile -- a non-LOR
+          geography, see dim_area_hierarchy.sql); Hamburg (#40 H1, ADR-0014)
+          uses the generic 'district'/'subarea_l1'/'subarea_l2' levels (see
+          seed_dim_area_level).
         data_tests:
 
           - not_null
@@ -167,6 +169,7 @@ models:
                     "pgr",
                     "bzr",
                     "plr",
+                    "ortsteil",
                     "district",
                     "subarea_l1",
                     "subarea_l2",
@@ -196,6 +199,13 @@ models:
       Ortsteil non-nesting case). NOT on the R-C1 methodology-bearing model
       list -- structural code-prefix / source-passthrough derivation only, no
       indicator weighting, normalization, or index computation.
+
+      #269 (I-ortsteile): adds Ortsteil -> Bezirk (source-provided parent
+      code, passed through -- Ortsteil nests into Bezirk exactly). Ortsteil <->
+      PLR does NOT nest and is deliberately NOT in this model -- that
+      relationship is a separate, gated area-overlap crosswalk,
+      int_berlin_plr_ortsteil_overlap.sql (methodology-bearing, geo-DS
+      sign-off required).
     meta:
       dbt_meta_owner: data-engineer
     # Grain: one row per (city_code, area_level, area_code) that has a
@@ -228,7 +238,7 @@ models:
           - not_null
           - accepted_values:
               arguments:
-                values: ["pgr", "bzr", "plr", "subarea_l1"]
+                values: ["pgr", "bzr", "plr", "subarea_l1", "ortsteil"]
       - name: area_code
         description: >
           Child area code. Every row here is itself sourced from a dim_area
@@ -239,11 +249,13 @@ models:
           - not_null
       - name: parent_area_level
         description: >
-          Parent area level ('bzr', 'pgr', 'bezirk' for Berlin; 'district' for
+          Parent area level ('bzr', 'pgr', 'bezirk' for Berlin -- 'bezirk' is
+          both PGR's and, since #269, Ortsteil's parent level; 'district' for
           Hamburg). 'bezirk' intentionally has no corresponding dim_area row
           yet (Epic C; see dim_area's own accepted_values test, which already
-          anticipates this level_code) -- PGR's parent_area_code is still a
-          real administrative fact, recorded here ahead of its own geometry.
+          anticipates this level_code) -- PGR's and Ortsteil's parent_area_code
+          are still real administrative facts, recorded here ahead of a
+          Bezirk geometry row.
         data_tests:
 
           - not_null
@@ -265,6 +277,118 @@ models:
                 field: area_code
               config:
                 where: "parent_area_level != 'bezirk'"
+
+  - name: int_berlin_plr_ortsteil_overlap
+    description: >
+      #269 (I-ortsteile): area-overlap crosswalk between Berlin PLR (lor_2021)
+      and Ortsteil geometries -- Ortsteile do not nest into PLR (see
+      dim_area_hierarchy.sql), so this is a genuine areal-interpolation join
+      (ST_Intersects + ST_Area overlap, DuckDB spatial extension, EPSG:25833),
+      same class of problem as int_berlin_brw_plr.sql. Exposes the FULL
+      overlap-weight table (one row per non-trivial PLR x Ortsteil pair,
+      weight = overlap_area_m2 / plr_area_m2) plus a per-PLR
+      is_dominant_ortsteil flag (the largest-overlap-share Ortsteil).
+      Downstream rollups (mart_area_demographics's ortsteil level,
+      mart_ortsteil_plr_stage_mix) use ONLY the dominant assignment -- each
+      PLR is counted as belonging wholly to one Ortsteil, not fractionally
+      split (see model header for the full rationale: whole-PLR-unit
+      bridging, not a splittable-substrate apportionment).
+      Sliver guard: overlap >= 0.5% of the PLR's own area (fraction-only --
+      see header for why an absolute-area floor, used by int_berlin_brw_plr,
+      is scale-inappropriate here).
+      Empirical (2026-07-17): 82 of 542 lor_2021 PLRs (15.1%) straddle a
+      non-trivial Ortsteil boundary; 631 total crosswalk rows; all 542 PLRs
+      and all 97 Ortsteile covered; per-PLR overlap fractions sum to
+      0.994-1.000 (tessellations agree almost exactly); dominant-row
+      confidence ranges 43.6%-100%, averaging 97.9%.
+      GATE: methodology-adjacent (area-overlap crosswalk + dominant-assignment
+      rule) -- geo-DS sign-off required before integration (#269 ticket gate).
+    meta:
+      dbt_meta_owner: data-engineer
+    data_tests:
+
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns:
+              - plr_area_code
+              - ortsteil_area_code
+      # Exactly one dominant Ortsteil per PLR -- see the standalone
+      # transform/tests/test_ortsteil_overlap_one_dominant_per_plr.sql (guards
+      # against a future regression in the ROW_NUMBER() tie-break logic
+      # silently producing 0 or 2+ dominant rows for the same PLR).
+    columns:
+      - name: city_code
+        description: City identifier; always 'BER'.
+        data_tests:
+
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ["BER"]
+      - name: plr_area_code
+        description: 8-digit lor_2021 PLR code.
+        data_tests:
+
+          - not_null
+          # dbt_utils.relationships_where (not the plain `relationships` test):
+          # the `where` config on a plain `relationships` test filters THIS
+          # model's rows, not the referenced dim_area rows -- dim_area's
+          # area_code namespace is only unique WITHIN a given area_level, so
+          # the referenced side must be scoped to area_level='plr' via
+          # to_condition.
+          - dbt_utils.relationships_where:
+              arguments:
+                to: ref('dim_area')
+                field: area_code
+                to_condition: "area_level = 'plr'"
+      - name: ortsteil_area_code
+        description: 4-digit Ortsteil code.
+        data_tests:
+
+          - not_null
+          - dbt_utils.relationships_where:
+              arguments:
+                to: ref('dim_area')
+                field: area_code
+                to_condition: "area_level = 'ortsteil'"
+      - name: ortsteil_area_name
+        description: Ortsteil name, denormalized for convenience.
+      - name: bezirk_code
+        description: 2-digit Bezirk code the Ortsteil belongs to, denormalized for convenience.
+      - name: plr_area_m2
+        description: PLR polygon area (m^2), EPSG:25833.
+        data_tests:
+
+          - not_null
+      - name: overlap_area_m2
+        description: Intersection area (m^2) between this PLR and this Ortsteil.
+        data_tests:
+
+          - not_null
+      - name: overlap_frac_of_plr
+        description: >
+          overlap_area_m2 / plr_area_m2 -- the crosswalk WEIGHT. Sums to
+          approximately 1.0 across all rows for a given plr_area_code
+          (verified 0.994-1.000 across all 542 PLRs).
+        data_tests:
+
+          - not_null
+      - name: is_dominant_ortsteil
+        description: >
+          TRUE for the single largest-overlap_frac_of_plr row per PLR (the
+          assignment downstream rollups use). Exactly one TRUE per
+          plr_area_code.
+        data_tests:
+
+          - not_null
+      - name: n_ortsteil_overlaps
+        description: >
+          Count of non-trivial (post-sliver-guard) Ortsteile this PLR overlaps.
+          1 = fully contained in its dominant Ortsteil; >1 = a straddling PLR
+          (82 of 542, 15.1%, per the empirical count above).
+        data_tests:
+
+          - not_null
 
   - name: int_berlin_ewr_plr2021
     description: >
@@ -545,6 +669,86 @@ models:
           marker (Smith 1979, ADR-0017 D-2). Kept separate from
           status/dynamism_score_improved, never summed into one composite.
 
+  - name: int_poi_status_dynamism_improved_pre2021
+    description: >
+      OA-ablation (#261): "improved" companion to int_poi_status_dynamism_pre2021 --
+      status_score_improved / dynamism_score_improved / disinvestment_score_improved,
+      computed from the SAME causality-first tier-weighted amenity composite
+      (int_poi_amenity_weighted_base) as int_poi_status_dynamism_improved, but staying
+      in the lor_pre2021 (448-PLR, 2008-2020) coordinate system instead of the
+      crosswalked-to-2021 grain int_poi_status_dynamism_improved consumes. Built to
+      enable a true same-anchor faithful-vs-improved ablation against the 2018 golden
+      (analysis/c_three_way_comparison.py Part 2). See the model SQL header for the
+      full #261 tier-weight review (conclusion: seed_poi_offering_relevance transfers
+      to the pre-2021 taxonomy UNCHANGED -- full type-level coverage confirmed, no new
+      weights authored). methodology_variant='improved' throughout; never blended with
+      the faithful scores (ADR-0017 D3/D4). Z-scores are normalised within the
+      lor_pre2021 PLR population for each snapshot_year -- NOT directly comparable to
+      int_poi_status_dynamism_improved's lor_2021 z-scores (different reference
+      population, same rule as int_poi_status_dynamism_pre2021). Berlin only.
+    meta:
+      dbt_meta_owner: data-engineer
+    data_tests:
+
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns:
+              - city_code
+              - snapshot_year
+              - area_code
+              - area_vintage
+          config:
+            where: "area_code is not null"
+      - assert_not_empty:
+          config:
+            severity: error
+    columns:
+      - name: city_code
+        data_tests:
+
+          - accepted_values:
+              arguments:
+                values: ["BER"]
+              config:
+                where: "area_code is not null"
+      - name: area_vintage
+        description: Always 'lor_pre2021' for this model.
+        data_tests:
+
+          - accepted_values:
+              arguments:
+                values: ["lor_pre2021"]
+              config:
+                where: "area_code is not null"
+      - name: methodology_variant
+        description: Always 'improved' (ADR-0017 D4).
+        data_tests:
+
+          - accepted_values:
+              arguments:
+                values: ["improved"]
+              config:
+                where: "area_code is not null"
+      - name: status_score_improved
+        description: >
+          D3 PREDICTOR (curated): z-score of amenity_weighted_count relative to
+          all lor_pre2021 PLRs that year. NOT an outcome; never blended with the
+          faithful status_score.
+      - name: dynamism_score_improved
+        description: >
+          D3 PREDICTOR (curated, C5-equivalent share-normalized): z-score of
+          amenity_share_yoy_change. NOT an outcome; never blended with the
+          faithful dynamism_score.
+      - name: disinvestment_score_improved
+        description: >
+          z-score of vacancy_weighted_count -- the opposite-pole disinvestment
+          marker (Smith 1979, ADR-0017 D-2). Kept separate from
+          status/dynamism_score_improved, never summed into one composite.
+          NULL/undefined in the earliest snapshot years (2008-2011) where
+          Vacancy-domain OSM coverage is near-zero (STDDEV=0 guard) -- a known,
+          accepted limitation, same as int_poi_status_dynamism_improved's own
+          early-year behaviour (B3-geo-signoff.md §2.4), not a defect.
+
   - name: int_poi_status_dynamism
     description: >
       C4/C5 intermediate: per-PLR per-year POI status and dynamism scores.
@@ -652,12 +856,24 @@ models:
           Z-score of total_poi_count relative to all PLRs for that year.
           Captures how POI-rich this area is compared to the city-wide average.
           NULL when total_poi_count is NULL or stddev is 0 (< 2 PLRs).
+      - name: dynamism_score_raw
+        description: >
+          C5 normalized (pre-winsorization): z-score of share_yoy_change relative
+          to all PLRs for that year, before the QA-winsor (#268) +/-3 SD clip.
+          Positive = this PLR's share grew more than the city average.
+          NULL for the first year per PLR/vintage or when stddev is 0.
+          Diagnostics only -- downstream consumers should read dynamism_score.
       - name: dynamism_score
         description: >
-          C5 normalized: z-score of share_yoy_change relative to all PLRs for
-          that year. Positive = this PLR's share grew more than the city average.
-          NULL for the first year per PLR/vintage or when stddev is 0.
-          Controls OSM completeness-bias vs pre-C5 raw-count-delta z-score.
+          C5 normalized, QA-winsor (#268) winsorized at +/-3 SD: z-score of
+          share_yoy_change relative to all PLRs for that year, clipped to
+          [-3, 3] so a handful of thin-PLR extreme observations (149 obs beyond
+          +/-3 SD pre-winsorization, range -5.1 to +13.4, per C6-geo-signoff.md)
+          cannot swing downstream composites/maps/narratives. Positive = this
+          PLR's share grew more than the city average. NULL for the first year
+          per PLR/vintage or when stddev is 0. This is the governed value every
+          downstream consumer (fct_gentrification_change, gentrification_index,
+          E-series analysis) should read.
 
   - name: int_poi_status_dynamism_pre2021
     description: >
@@ -1921,6 +2137,10 @@ models:
       Branch B — lor_pre2021 (editions 2015, 2017, 2019, ~447 PLRs, B7 #117): MSS +
       int_poi_status_dynamism_pre2021 + int_ewr_socioeco_pre2021. All in lor_pre2021 PLR
       coordinate system. Enables thesis-era H2/H3 lead-lag panel in int_mss_lead_lag.
+      OA-ablation (#261): also carries status_score_improved / dynamism_score_improved /
+      disinvestment_score_improved from int_poi_status_dynamism_improved_pre2021 (NOT
+      NULL here anymore, unlike before #261 -- see that model's header for the
+      tier-weight review).
 
       Branch C — Hamburg 'current' (annual editions 2013-2025, #40 H1 integration slice,
       ADR-0014): int_hamburg_sozialmonitoring_index (outcome, numeric-mapped D1/D2) +
@@ -2131,24 +2351,252 @@ models:
           and D3 columns for predictor analysis (R-A1; ADR-0008).
       - name: status_score_improved
         description: >
-          OA-B.3 (#172): "improved" D3 PREDICTOR -- z-score of the causality-first
-          tier-weighted amenity-OA composite (int_poi_status_dynamism_improved),
-          Vacancy domain excluded (ADR-0017 D-2). Berlin lor_2021 rows only; NULL
-          for the lor_pre2021 and Hamburg branches. NEVER blended with the
-          faithful status_score above (ADR-0017 D3/D4 methodology_variant rule).
+          OA-B.3 (#172) / OA-ablation (#261): "improved" D3 PREDICTOR -- z-score
+          of the causality-first tier-weighted amenity-OA composite
+          (int_poi_status_dynamism_improved for lor_2021 rows;
+          int_poi_status_dynamism_improved_pre2021 for lor_pre2021 rows, #261),
+          Vacancy domain excluded (ADR-0017 D-2). Berlin lor_2021 AND
+          lor_pre2021 rows; NULL for the Hamburg branch only. Each vintage's
+          z-scores are normalised WITHIN that vintage's own PLR population --
+          NOT cross-vintage comparable (542 vs 448 PLRs). NEVER blended with
+          the faithful status_score above (ADR-0017 D3/D4 methodology_variant
+          rule).
       - name: dynamism_score_improved
         description: >
-          OA-B.3 (#172): "improved" D3 PREDICTOR -- z-score of the YoY change in
-          the tier-weighted amenity-OA composite's city share (C5-equivalent
-          normalization). Berlin lor_2021 rows only; NULL elsewhere. NEVER
-          blended with the faithful dynamism_score above.
+          OA-B.3 (#172) / OA-ablation (#261): "improved" D3 PREDICTOR -- z-score
+          of the YoY change in the tier-weighted amenity-OA composite's city
+          share (C5-equivalent normalization). Berlin lor_2021 AND lor_pre2021
+          rows (#261); NULL for Hamburg. NEVER blended with the faithful
+          dynamism_score above.
       - name: disinvestment_score_improved
         description: >
-          OA-B.3 (#172): z-score of the Vacancy-domain weighted stock -- the
-          theorised OPPOSITE-POLE disinvestment/rent-gap marker (Smith 1979;
-          ADR-0017 D-2). Kept SEPARATE from status/dynamism_score_improved --
-          never summed into one composite. Berlin lor_2021 rows only.
+          OA-B.3 (#172) / OA-ablation (#261): z-score of the Vacancy-domain
+          weighted stock -- the theorised OPPOSITE-POLE disinvestment/rent-gap
+          marker (Smith 1979; ADR-0017 D-2). Kept SEPARATE from
+          status/dynamism_score_improved -- never summed into one composite.
+          Berlin lor_2021 AND lor_pre2021 rows (#261); NULL for Hamburg.
+          NULL/undefined in the earliest lor_pre2021 years (2008-2011, near-zero
+          Vacancy-domain OSM coverage) -- known, accepted limitation.
+      - name: brw_trend
+        description: >
+          D3-brw-wire (#273): PREDICTOR/lead-side (ADR-0008) BRW change/
+          rent-gap-realisation signal, threaded from int_berlin_brw_trend
+          (#263). Change-positive polarity: high = land value rose faster
+          than the citywide PLR average that year = upgrading pressure
+          actively being realised (Smith 1979) -- OPPOSITE convention from
+          the vulnerability-positive D1/D2/D4 columns above; NEVER pooled
+          unsigned into a vulnerability composite. Berlin lor_2021 rows only
+          (int_berlin_brw_trend's own grain constraint); NULL for
+          lor_pre2021 and Hamburg branches. Not a measured rent or
+          displacement outcome -- read jointly with low-status/low-Wohnlage
+          context (D3-brw-trend-domain-signoff D5), never alone as a
+          displacement-risk score.
+      - name: brw_yoy_pct_change
+        description: >
+          D3-brw-wire (#273): raw (non-z-scored) year-over-year percentage
+          change in brw_weighted_avg_eur_m2, threaded alongside brw_trend
+          for consumers wanting the unstandardized magnitude. Same polarity/
+          scope caveats as brw_trend above.
+      - name: displacement_subindex
+        description: >
+          D5-wire (#258): PREDICTOR/lead-side (ADR-0008) displacement/
+          affordability composite, threaded from
+          int_berlin_displacement_subindex. Partial-availability mean of
+          whichever of {turnover_proxy, rent_pressure_proxy} is available
+          for that year -- NULL only when both are null (a verified coverage
+          finding in that model's header shows the two inputs have zero
+          overlapping lor_2021 years today, so a strict both-required rule
+          would be permanently empty; see displacement_subindex_is_partial).
+          Pressure-positive polarity: high = more long-tenure-resident
+          turnover and/or above-median rent + transfer-dependency pressure --
+          consistent orientation with the vulnerability-positive D1/D2/D4
+          columns, but a PREDICTOR not an outcome (never blended with
+          status_index/dynamik_index/ewr_composite). Berlin lor_2021 rows
+          only (int_berlin_displacement_subindex's own scope constraint);
+          NULL for lor_pre2021 and Hamburg branches. Not a measured
+          displacement outcome -- read jointly with
+          under_milieuschutz/milieuschutz_overlap_frac and low-status
+          context (D5-wire-domain-signoff.md), never alone as a
+          displacement-risk score.
+      - name: displacement_subindex_is_partial
+        description: >
+          D5-wire (#258): TRUE when displacement_subindex was fed by only
+          one of {turnover_proxy, rent_pressure_proxy} rather than both (see
+          int_berlin_displacement_subindex.is_partial_availability). NULL
+          when displacement_subindex itself is NULL. Berlin lor_2021 rows
+          only; NULL for lor_pre2021 and Hamburg branches.
+      - name: under_milieuschutz
+        description: >
+          D5-wire (#258): DISCLOSURE-ONLY, threaded from
+          int_berlin_displacement_subindex / int_berlin_milieuschutz_plr_flag.
+          TRUE if any part of this PLR is under a current Sec. 172 BauGB
+          Milieuschutz designation. TIME-INVARIANT (the WFS exposes only the
+          current designation set, ADR-0019 Open Question #2) -- the same
+          value repeats for every snapshot_year of a given PLR. NEVER folded
+          into displacement_subindex above (would fabricate temporal signal
+          that does not exist in the source; see model header). Berlin
+          lor_2021 rows only; NULL for lor_pre2021 and Hamburg branches.
+      - name: milieuschutz_overlap_frac
+        description: >
+          D5-wire (#258): DISCLOSURE-ONLY, threaded alongside
+          under_milieuschutz. Fraction of the PLR's area covered by a
+          Milieuschutz designation ([0,1]), NULL when under_milieuschutz is
+          false. Same time-invariance caveat as under_milieuschutz above.
 
+  - name: int_gentrification_ts_unified_2021
+    description: >
+      R-A8b (#260) -- DRAFT / PENDING FRESH GEO-DS + DOMAIN SIGN-OFF (R-C1), iteration 2. NOT
+      yet consumed by any downstream model. Builds a single continuous (city_code='BER',
+      area_code=plr_id_2021, snapshot_year) outcome panel across all 7 MSS editions
+      (2013-2025) by remapping the lor_pre2021 editions onto lor_2021 PLRs via a
+      POPULATION-weighted dominant crosswalk (int_berlin_lor_crosswalk_dominant_pop_2021,
+      revised per both reviewers' iteration-1 concerns), sourcing status/dynamik/typology
+      directly from stg_berlin_mss (not the POI-inner-joined int_gentrification_ts, which
+      silently dropped the 2013 edition in iteration 1). See model header for the full
+      revision history, R-C2 grounding, and the concerns still open for downstream/public
+      consumption (domain C-1 seam-aware trajectory handling; clustering remains out of
+      scope).
+
+      Grain: (city_code, area_code [lor_2021], snapshot_year).
+    meta:
+      dbt_meta_owner: data-engineer
+    data_tests:
+
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns:
+              - city_code
+              - area_code
+              - snapshot_year
+      - assert_not_empty:
+          config:
+            severity: error
+    columns:
+      - name: city_code
+        description: City identifier (ADR-0005). Always 'BER' (Berlin-only source panel).
+        data_tests:
+
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ["BER"]
+      - name: area_code
+        description: >
+          lor_2021 PLR area code (8-digit, zero-padded). All rows -- including remapped
+          lor_pre2021-origin editions -- are keyed to the lor_2021 scheme.
+        data_tests:
+
+          - not_null
+      - name: snapshot_year
+        description: MSS edition year (2013, 2015, 2017, 2019, 2021, 2023, 2025).
+        data_tests:
+
+          - not_null
+      - name: status_index
+        description: >
+          D1 social-status ordinal (1=hoch...4=sehr_niedrig), sourced directly from
+          stg_berlin_mss -- passed through unchanged (lor_2021 editions) or copied from the
+          population-dominant-crosswalk-matched pre-2021 PLR (lor_pre2021-origin editions).
+          NULL for uninhabited PLRs.
+      - name: dynamik_index
+        description: D2 social-direction ordinal (1=positiv, 2=stabil, 3=negativ). Same remap semantics as status_index.
+      - name: typology_stage
+        description: >
+          Six-stage D1xD2 typology label, computed via the shared
+          transform/macros/typology_stage.sql macro. Same remap semantics as status_index.
+      - name: is_uninhabited
+        description: True when the source MSS edition has gesamtindex IS NULL for this PLR/year.
+      - name: remap_method
+        description: "'passthrough' (lor_2021-native) or 'dominant_pop_crosswalk' (lor_pre2021-origin, population-weighted remap)."
+        data_tests:
+
+          - accepted_values:
+              arguments:
+                values: ["passthrough", "dominant_pop_crosswalk"]
+      - name: is_bridged
+        description: >
+          Domain sign-off C-2/C-3 (pseudo-replication disclosure): true for remapped
+          lor_pre2021-origin rows (a "borrowed" value from the dominant-population-matched
+          pre-2021 PLR, not a native lor_2021 measurement). Public per-PLR content MUST NOT
+          present a bridged row as neighbourhood-specific measured history without this flag.
+      - name: population_dominance_frac
+        description: >
+          For is_bridged rows: what share of the target 2021 PLR's estimated 2019-baseline
+          population the dominant pre-2021 source actually represents ([0,1]; exposed as a
+          diagnostic, no materiality threshold applied here -- domain C-2's "low-confidence
+          remap" signal, on a population basis). 1.0 for passthrough (non-bridged) rows.
+      - name: n_lor2021_plrs_sharing_this_source
+        description: >
+          For is_bridged rows: how many lor_2021 PLRs (including this one) share the same
+          dominant pre-2021 source PLR -- domain sign-off's pseudo-replication count (up to 6
+          observed). NULL for passthrough (non-bridged) rows.
+  - name: int_berlin_milieuschutz_event_panel
+    description: >
+      A10-P2 (#259) -- DRAFT / PENDING FRESH GEO-DS + DOMAIN SIGN-OFF (R-C1), header-fix
+      revision. NOT yet consumed by any analysis script. Mechanical treatment/control panel
+      assembly for a future difference-in-differences / event-study on Milieuschutz
+      designation (#80 Part 2, re-opened): joins the MSS outcome series (sourced directly
+      from stg_berlin_mss, applying #260's C2 lesson proactively -- this model never joins
+      to int_gentrification_ts or any POI-derived table) to
+      int_berlin_milieuschutz_plr_flag's designation status per PLR, computing event time
+      (years since designation) for treated PLRs. Does NOT run any DiD/event-study
+      regression, choose a control-matching strategy, or apply spatial controls. CENTRAL
+      DOMAIN CONCERN (see model header for full detail): Milieuschutz designation is an
+      ENDOGENOUS policy response to observed/anticipated upgrading pressure, not an
+      exogenous shock -- the textbook selection-on-outcome confounder for DiD (B1 domain
+      sign-off §b; #80 finding W3). The naive never-treated control pool is NOT DEFENSIBLE
+      UNMATCHED. Designations span 1999-2026 (verified), so pre-window designations are
+      "always-treated" and must be excluded from both cohort and control roles. All of
+      these bind the future estimation ticket's own dual gate, not this panel-construction
+      step.
+
+      Grain: (city_code, area_code, area_vintage, snapshot_year).
+    meta:
+      dbt_meta_owner: data-engineer
+    data_tests:
+
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns:
+              - city_code
+              - area_code
+              - area_vintage
+              - snapshot_year
+      - assert_not_empty:
+          config:
+            severity: error
+    columns:
+      - name: city_code
+        description: City identifier (ADR-0005). Always 'BER' (Milieuschutz is a Berlin-only ADR-0019 source).
+        data_tests:
+
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ["BER"]
+      - name: area_code
+        description: PLR area code, within its area_vintage's coordinate scheme.
+        data_tests:
+
+          - not_null
+      - name: area_vintage
+        description: "'lor_pre2021' or 'lor_2021' -- both directly from stg_berlin_mss, not unified via the still-gated #260 crosswalk (see model header)."
+        data_tests:
+
+          - not_null
+      - name: snapshot_year
+        description: MSS edition year.
+      - name: under_milieuschutz
+        description: Boolean treatment flag, from int_berlin_milieuschutz_plr_flag (current-designation-state, ST_Intersects any overlap).
+        data_tests:
+
+          - not_null
+      - name: designation_year
+        description: Year extracted from earliest_in_force_date; NULL for never-treated (control) PLRs.
+      - name: event_time_years
+        description: snapshot_year minus designation_year, for treated PLR-years only; NULL for control PLR-years or where designation_year is unavailable.
+      - name: is_post_designation
+        description: True/false for treated PLR-years (snapshot_year >= designation_year); NULL for control PLR-years (never a 0/1 -- controls are never "post").
   - name: int_ewr_lead_lag
     description: >
       #114: EWR-based annual lead-lag panel for same-era H2/H3 thesis comparison.
@@ -2705,6 +3153,76 @@ models:
 
           - not_null
 
+  - name: int_berlin_lor_crosswalk_dominant_pop_2021
+    description: >
+      R-A8b (#260) fix: POPULATION-weighted dominant pre-2021 <-> 2021 PLR crosswalk, built in
+      response to the geo-DS and gentrification-domain-expert sign-offs on
+      int_gentrification_ts_unified_2021.sql -- both concluded that for a population-derived
+      MSS classification, the representative pre-2021 source PLR should be selected by
+      estimated POPULATION contribution (residents_total * area_weight, the same
+      extensive-apportionment idiom int_berlin_ewr_plr2021 uses for population counts), not by
+      land area (as the sibling int_berlin_lor_crosswalk_dominant_2021 does for its own,
+      separate POI-count-bridging use case -- NOT modified here, to avoid an unreviewed
+      behaviour change to that model's existing consumer, analysis/e1_regressions.py).
+      Population baseline: 2019 (int_ewr_socioeco_pre2021, last pre-reform EWR edition).
+      Deterministic tie-break: ORDER BY estimated_population_contribution DESC, plr_id_pre2021.
+
+      Also carries the pseudo-replication disclosure columns the domain sign-off required
+      (n_lor2021_plrs_sharing_this_source) and a population_dominance_frac diagnostic.
+
+      Grain: one row per plr_id_2021 (all 542 lor_2021 PLRs resolve to exactly one dominant
+      pre-2021 PLR by estimated population contribution).
+    meta:
+      dbt_meta_owner: data-engineer
+      status: draft_pending_methodology_signoff
+    data_tests:
+
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns:
+              - plr_id_2021
+      - assert_not_empty:
+          config:
+            severity: error
+    columns:
+      - name: city_code
+        description: City identifier (ADR-0005). Always 'BER' (Berlin-specific LOR crosswalk).
+        data_tests:
+
+          - not_null
+      - name: plr_id_2021
+        description: PLR area code in the LOR 2021 reform scheme (8-digit string, zero-padded).
+        data_tests:
+
+          - not_null
+          - unique
+      - name: plr_id_pre2021
+        description: The population-dominant pre-2021 PLR area code for this plr_id_2021.
+        data_tests:
+
+          - not_null
+      - name: area_weight
+        description: The underlying geometric crosswalk weight (informational; not the selection criterion here).
+      - name: reverse_weight
+        description: The underlying geometric reverse-crosswalk weight (informational; not the selection criterion here).
+      - name: pre2021_plr_residents_total_2019
+        description: 2019 EWR residents_total for the dominant pre-2021 PLR (population baseline).
+      - name: dominant_population_weight
+        description: estimated_population_contribution for the selected dominant source (residents_total_2019 * area_weight).
+      - name: population_dominance_frac
+        description: >
+          What share of the target 2021 PLR's total estimated 2019-baseline population the
+          dominant source represents ([0,1]). Diagnostic only, no threshold applied here.
+        data_tests:
+
+          - not_null
+      - name: n_lor2021_plrs_sharing_this_source
+        description: >
+          How many lor_2021 PLRs (including this one) share the same dominant pre-2021 source
+          PLR -- domain sign-off's pseudo-replication disclosure count.
+        data_tests:
+
+          - not_null
   - name: int_berlin_brw_plr
     description: >
       D3 (#29): Area-weighted spatial join of BRW land value zones → LOR 2021 PLR boundaries.
@@ -2810,6 +3328,96 @@ models:
           Consumers: use to identify where the BRW signal is thin or absent. Zero-residential
           PLRs yield NULL brw_weighted_avg_eur_m2 and NULL here — transparent, not silently 0.
           (geo condition 4; index-definition §7 "exclude, don't zero-impute").
+
+  - name: int_berlin_brw_trend
+    description: >
+      D3-brw-change (#263): explicit, separately-polarised BRW *change* signal
+      (brw_yoy/brw_trend), distinct from the BRW *level* (int_berlin_brw_plr).
+      Follow-up to D3 geo-signoff condition 14 / D3 domain-signoff point D5,
+      which both pre-approved this exact construction and deferred it here.
+
+      Method: explicit year_t/year_t-1 self-join on int_berlin_brw_plr (not
+      LAG(), so a real gap in the back-series yields omission rather than a
+      silently-wrong multi-year delta). brw_yoy_pct_change = pct change in
+      brw_weighted_avg_eur_m2; brw_trend = per-(city_code, snapshot_year)
+      z-score of brw_yoy_pct_change across PLRs (NULLIF(stddev_pop,0) guard).
+
+      Polarity (Smith 1979 rent-gap realisation): HIGH brw_trend = land value
+      rose faster than the citywide PLR average that year = upgrading pressure
+      being actively realised. Change-positive, NOT vulnerability-positive --
+      belongs on the predictor/lead side of the index (ADR-0008), never folded
+      into the D3 level dimension or an unsigned vulnerability composite.
+
+      Back-series depth: 2017-2024 (int_berlin_brw_plr), so brw_yoy/brw_trend
+      populate for snapshot_year 2018-2024 (2017 has no year_t-1 predecessor).
+
+      Zero consumers as of this model -- same staged-slice pattern as
+      int_berlin_rent_pressure_proxy/int_berlin_turnover_proxy/the Milieuschutz
+      flag; wiring into int_gentrification_ts is scoped to its own follow-up
+      integration ticket (mirrors #258 D5-wire).
+
+      See docs/methodology/D3-brw-trend-geo-signoff.md and
+      docs/methodology/D3-brw-trend-domain-signoff.md.
+
+      Source: int_berlin_brw_plr.
+    meta:
+      dbt_meta_owner: data-engineer
+    data_tests:
+
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns:
+              - city_code
+              - area_code
+              - area_vintage
+              - snapshot_year
+    columns:
+      - name: city_code
+        description: City identifier (ADR-0005), normalised to 'BER' (inherited from int_berlin_brw_plr).
+        data_tests:
+
+          - not_null
+      - name: area_code
+        description: PLR area code in LOR 2021 scheme (matches int_berlin_brw_plr).
+        data_tests:
+
+          - not_null
+      - name: area_vintage
+        description: LOR geometry vintage. Always 'lor_2021' (inherited from int_berlin_brw_plr).
+        data_tests:
+
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ["lor_2021"]
+      - name: snapshot_year
+        description: >
+          BRW reference year_t (the later of the two years differenced). Ranges
+          2018-2024 (2017 is the first available year and has no predecessor).
+        data_tests:
+
+          - not_null
+      - name: brw_weighted_avg_eur_m2
+        description: BRW level at year_t, carried through from int_berlin_brw_plr.
+      - name: brw_weighted_avg_eur_m2_prev
+        description: BRW level at year_t-1 (matched via explicit self-join, not LAG()).
+      - name: brw_residential_coverage_frac
+        description: Residential BRW coverage fraction at year_t, carried through from int_berlin_brw_plr.
+      - name: brw_yoy_delta_eur_m2
+        description: brw_weighted_avg_eur_m2(t) - brw_weighted_avg_eur_m2(t-1), raw EUR/m² delta.
+      - name: brw_yoy_pct_change
+        description: >
+          brw_yoy_delta_eur_m2 / brw_weighted_avg_eur_m2_prev. Percentage form used as the
+          z-scoring input so PLRs with very different absolute price levels are compared on
+          a scale-free basis before standardising.
+      - name: brw_trend
+        description: >
+          Per-(city_code, snapshot_year) z-score of brw_yoy_pct_change across PLRs. HIGH
+          (positive) = land value rose faster than the citywide PLR average that year --
+          rent-gap realisation / upgrading-pressure signal (Smith 1979). Change-positive,
+          NOT vulnerability-positive; predictor/lead side only (ADR-0008); never folded into
+          the D3 level dimension. Not a measured rent or displacement outcome -- read jointly
+          with low-status/low-Wohnlage context, per D3 domain sign-off.
 
   - name: int_berlin_wohnlage_plr
     description: >
@@ -3030,6 +3638,7 @@ models:
       docs/methodology/B1-rent-pressure-domain-signoff.md.
 
       Source: int_price_rent_wohnlage_mietspiegel + stg_berlin_mss_indicators.
+      Follow-up now tracked: #258 (D5-wire).
     meta:
       dbt_meta_owner: data-engineer
     data_tests:
@@ -3117,6 +3726,7 @@ models:
       not imputation.
 
       Source: int_ewr_socioeco.
+      Follow-up now tracked: #258 (D5-wire).
     meta:
       dbt_meta_owner: data-engineer
     data_tests:
@@ -3234,6 +3844,132 @@ models:
           under_milieuschutz is FALSE. Lets a consumer distinguish
           marginal-boundary-touch from near-total-coverage without this
           model imposing a materiality threshold itself.
+
+  - name: int_berlin_displacement_subindex
+    description: >
+      #258 (D5-wire): builds the ADR-0008 D5 displacement/affordability
+      predictor from the three proxies staged under #70 [B1] --
+      int_berlin_turnover_proxy, int_berlin_rent_pressure_proxy,
+      int_berlin_milieuschutz_plr_flag -- giving each a real consumer.
+
+      COVERAGE FINDING (verified, not assumed): turnover_proxy (annual EWR
+      panel) and rent_pressure_proxy (irregular Wohnlage WFS editions) have
+      ZERO overlapping lor_2021 years today -- turnover_proxy only has rows
+      for 2009-2020 (EWR ingestion gap #197 leaves 2021+ empty/NULL),
+      rent_pressure_proxy's lor_2021 rows only exist for 2023 and 2026. A
+      strict all-or-nothing composite would therefore be PERMANENTLY EMPTY
+      given the data as ingested. displacement_subindex is instead a
+      PARTIAL-AVAILABILITY mean of whichever of {turnover_proxy,
+      rent_pressure_proxy} is non-null (NULL only when both are null) --
+      n_components_available / is_partial_availability disclose which.
+      This averages only signals that ARE present, never imputes a missing
+      one.
+
+      Milieuschutz is still NOT folded into this numeric composite -- its
+      own model explicitly states it does not reconstruct a status panel
+      across years (WFS exposes only the current designation set, ADR-0019
+      Open Question #2); blending a time-invariant flag into an annual
+      composite would fabricate temporal signal that does not exist in the
+      source. under_milieuschutz / milieuschutz_overlap_frac are instead
+      carried through as separate DISCLOSURE-ONLY, time-invariant columns.
+
+      rent_pressure_proxy alignment: matched via nearest-<=-vintage (most
+      recent Wohnlage snapshot_year known as of the spine year) -- the same
+      "nearest edition <= year" pattern int_berlin_rent_pressure_proxy
+      itself already uses (geo condition 8 precedent), not a new alignment
+      rule invented for this ticket. turnover_proxy is matched by EXACT
+      reference_year (already annual).
+
+      Grain: UNION of every year either proxy covers (not just
+      turnover_proxy's own years -- see coverage finding above). Berlin
+      lor_2021 rows only (both source proxies are lor_2021-only as
+      ingested), same scope constraint as int_berlin_brw_trend
+      (D3-brw-wire, #273).
+
+      Consumed by int_gentrification_ts as a new PREDICTOR/lead-side field
+      (ADR-0008), Branch A (lor_2021) only. NOT wired into the
+      contract-enforced gentrification_index mart (a separate, larger
+      contract-change decision).
+
+      See docs/methodology/D5-wire-geo-signoff.md and
+      docs/methodology/D5-wire-domain-signoff.md.
+
+      Source: int_berlin_turnover_proxy + int_berlin_rent_pressure_proxy +
+      int_berlin_milieuschutz_plr_flag.
+    meta:
+      dbt_meta_owner: data-engineer
+    data_tests:
+
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns:
+              - city_code
+              - area_code
+              - area_vintage
+              - reference_year
+      # Guards against the design regressing back to the permanently-empty
+      # strict composite (see header coverage finding) -- at least some rows
+      # must carry a non-null displacement_subindex given today's real data.
+      - assert_not_empty:
+          config:
+            severity: error
+    columns:
+      - name: city_code
+        description: City identifier (ADR-0005), normalised to 'BER'.
+        data_tests:
+
+          - not_null
+      - name: area_code
+        description: PLR identifier (matches int_ewr_socioeco / int_berlin_turnover_proxy).
+      - name: area_vintage
+        description: LOR boundary vintage (lor_2021 throughout -- both source proxies are lor_2021-only).
+      - name: reference_year
+        description: >
+          The UNION spine year -- either an EWR reference_year
+          (int_berlin_turnover_proxy) or a Wohnlage snapshot_year
+          (int_berlin_rent_pressure_proxy), whichever contributed this row
+          (see model header coverage finding).
+      - name: turnover_proxy
+        description: Passthrough from int_berlin_turnover_proxy (see that model). NULL if this spine year has no turnover_proxy row.
+      - name: rent_pressure_proxy
+        description: >
+          Passthrough from int_berlin_rent_pressure_proxy, matched to this
+          spine year via nearest-<=-vintage on snapshot_year (see model
+          header). NULL when no Wohnlage snapshot_year <= this year exists
+          yet, or when the underlying rent_pressure_proxy itself is NULL
+          (see that model's own coverage-limitation note).
+      - name: matched_rent_pressure_snapshot_year
+        description: >
+          The Wohnlage snapshot_year actually matched to this spine year
+          (nearest-<= rule) -- audit trail for the match.
+      - name: displacement_subindex
+        description: >
+          Partial-availability mean of whichever of {turnover_proxy,
+          rent_pressure_proxy} is non-null -- NULL only when BOTH are null
+          (see model header for why a strict all-or-nothing rule would be
+          permanently empty given today's real coverage). Higher = higher
+          displacement/affordability pressure from whichever signal(s) are
+          available.
+      - name: n_components_available
+        description: 0, 1, or 2 -- how many of {turnover_proxy, rent_pressure_proxy} fed displacement_subindex for this row.
+      - name: is_partial_availability
+        description: TRUE when exactly one of the two components is available (n_components_available = 1) -- lets a consumer filter to full-coverage rows only if desired.
+      - name: any_endpoint_partial
+        description: Passthrough from int_berlin_turnover_proxy (cross-era pooling caution). NULL when no turnover_proxy row exists for this spine year.
+      - name: under_milieuschutz
+        description: >
+          DISCLOSURE-ONLY, passthrough from int_berlin_milieuschutz_plr_flag.
+          TIME-INVARIANT -- the same value repeats for every reference_year
+          of a given PLR (see model header). Defaults to FALSE when no
+          Milieuschutz row exists for this (city_code, area_code,
+          area_vintage). NEVER folded into displacement_subindex above.
+      - name: milieuschutz_overlap_frac
+        description: >
+          DISCLOSURE-ONLY, passthrough from int_berlin_milieuschutz_plr_flag.
+          Same time-invariance caveat as under_milieuschutz above. NULL when
+          no Milieuschutz row exists for this PLR.
+      - name: earliest_in_force_date
+        description: Passthrough from int_berlin_milieuschutz_plr_flag (see that model).
 
   - name: int_price_rent_brw_wohnlage_combined
     description: >
@@ -3640,6 +4376,47 @@ models:
                 expression: ">= 0"
               config:
                 where: "area_code is not null and oa_type is not null"
+      - name: oa_domain_min_base_flag
+        description: >
+          #274 (ADR-0017 D5 D-3 discharge, advisory): true when
+          all_domains_stock_local (this PLR-year's TOTAL poi count across every
+          domain) is below the `oa_min_poi_base_n` dbt var (default 10) -- the
+          compositional-LQ small-denominator instability the domain sign-off
+          names ("a single POI can swing a type's local share"). Constant
+          across every domain/category/type row of the same (city_code,
+          snapshot_year, area_code, area_vintage, weight_variant) -- this is a
+          PLR-year-level "thinly-mapped" property, not domain-specific. See
+          model header for the threshold derivation and the poi-map page's use
+          of this flag to suppress oa_domain in flagged PLRs.
+        data_tests:
+
+          - not_null:
+              config:
+                where: "area_code is not null"
+      - name: oa_category_min_base_flag
+        description: >
+          #274 (ADR-0017 D5 D-3 discharge, advisory): true when
+          domain_stock_local (this row's parent DOMAIN's own local total
+          within the PLR -- oa_category's actual denominator, ADR-0017 D1) is
+          below `oa_min_poi_base_n` (default 10).
+        data_tests:
+
+          - not_null:
+              config:
+                where: "area_code is not null"
+      - name: oa_type_min_base_flag
+        description: >
+          #274 (ADR-0017 D5 D-3 discharge, advisory): true when
+          domain_stock_local (the parent DOMAIN's local total within the PLR
+          -- oa_type's actual denominator too, ADR-0017 D1: type nests under
+          domain, not category) is below `oa_min_poi_base_n` (default 10).
+          Identical value to oa_category_min_base_flag on the same row by
+          construction (both level's denominator is domain_stock_local).
+        data_tests:
+
+          - not_null:
+              config:
+                where: "area_code is not null"
 
   - name: int_mss_bzr_aggregate
     description: >

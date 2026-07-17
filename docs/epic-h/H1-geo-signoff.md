@@ -117,7 +117,7 @@ the models correctly return typed empty results throughout the new chain rather 
    parquet exist (target: ≥98% match; investigate and fix normalization for any residual mismatch
    before trusting the composite).
 2. Document the Stadtteil-grain effective-N / clustering requirement for D4 in any future Hamburg
-   E1/E2-equivalent regression ticket (add to that ticket's acceptance criteria when filed).
+   E1/E2-equivalent regression ticket (add to that ticket's acceptance criteria when filed). **(Follow-up now tracked: #265 (H-reg-SE) — see `docs/planning/deferred-work-audit-2026-07.md`.)**
 3. Carry the 3-indicator-vs-5-indicator and uniform-inheritance MAUP-cost caveats verbatim into the
    G2 methodology page when Epic G lands (already well-documented in SQL comments — this is a
    "don't lose it" note, not new work).

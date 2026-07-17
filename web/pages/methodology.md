@@ -90,7 +90,9 @@ as a **baseline covariate**: a PLR with a young, highly mobile, migrant-heavy po
 long-tenure residents is read (per Döring & Ulbricht 2016) as more *susceptible* to gentrification,
 not as already gentrifying. It answers "how pre-gentrification did this area look at the start?", not
 "is this area gentrifying right now?" — see §4 for why that distinction is enforced strictly in the
-model.
+model. One field, share of residents with a migration background, changed its official definition in
+2017 (a Mikrozensus reform); this project restricts any comparison of that field across years to
+2017 onward and does not compare pre-2017 and post-2017 values directly.
 
 ### OSM POI — OpenStreetMap points of interest
 
@@ -218,6 +220,13 @@ this specific area changed since the 2018 thesis," use the [area detail page](/b
 trajectory chart, which is built to handle the boundary discipline correctly, rather than comparing a
 `standard` number to a `live_data` number by eye.
 
+There is a second, smaller structured break within `live_data` itself: the Berlin Senate's own MSS
+Status/Dynamik definition changed in 2023, adding a fourth input (the share of children in
+single-parent households) to what had been a three-indicator classification. The Senate maintains
+class continuity in spirit across this change — pre-2023 and 2023+ classes remain comparable in
+*interpretation* — but they are not computed from an identical input set, so a small movement in an
+area's class right around 2023 should not be over-read as a sudden real change.
+
 ## 6. Known limitations
 
 We would rather state these plainly than have you discover them by surprise.
@@ -229,7 +238,11 @@ We would rather state these plainly than have you discover them by surprise.
   correction cancels out; only an area gaining points of interest *faster than the rest of the city*
   registers a real signal. This is an approximation, not a perfect fix: coverage did not grow
   perfectly evenly across the city, and already-popular inner-city areas were typically mapped earlier
-  than peripheral ones.
+  than peripheral ones. A small number of very-low-POI areas can still produce statistically extreme
+  dynamism values from a tiny denominator (a single new business changing their share disproportionately);
+  since 2026-07 these are winsorized at ±3 standard deviations before they reach any map, chart, or
+  composite score, so one thin-data area cannot visually dominate the rest of the city (the raw,
+  unclipped value remains available for diagnostics).
 - **Ecological fallacy — aggregate, not individual, statistics.** Every number on this site describes
   a small-area aggregate of thousands of residents. It is not, and cannot be, a statement about any
   specific person, household, or building. Inferring an individual's situation from an area-level
@@ -258,6 +271,18 @@ We would rather state these plainly than have you discover them by surprise.
 - **Small samples and no multiple-comparison correction** in the directional statistical tests behind
   this model. Results should be read as directional indicators, consistent with a hypothesis, not as
   confirmatory proof.
+- **No re-scored index value at BZR/PGR/Bezirk grain — by design, not oversight.** The Bezirk/PGR/BZR
+  profile pages on this site show sums and **distributions** of child-PLR typology stages, never a
+  single re-scored gentrification-index number for the coarser area itself. This was considered
+  ([#267](https://github.com/dhelweg/gentriduck/issues/267)) and declined by both the geo-data-scientist
+  and the gentrification-domain-expert: averaging the ordinal Status/Dynamik class codes across PLRs
+  into one coarse-grain value would violate the same "don't average ordinal codes as if metric" rule
+  this page states in §4, and — separately — a single coarse number would erase exactly the kind of
+  intra-Bezirk heterogeneity (a district containing both actively-gentrifying and stable PLRs at once)
+  that is the actual analytic point of a PLR-grain, frontier-based index. See the
+  [geo-data-scientist decision](https://github.com/dhelweg/gentriduck/blob/main/docs/epic-i/I-coarse-index-geo-decision.md)
+  and the [domain-expert decision](https://github.com/dhelweg/gentriduck/blob/main/docs/epic-i/I-coarse-index-domain-decision.md)
+  for the full reasoning.
 
 ## 7. Faithful vs improved — a methodology comparison
 
@@ -270,6 +295,15 @@ We would rather state these plainly than have you discover them by surprise.
   page's numbering. The three result sets (faithful, improved, comparison) stay visually and
   textually separated per ADR-0017 D3's firm "never blend" rule, same as before. That route is now
   a short redirect stub (`pages/methodology-comparison.md`).
+
+  OA-ablation (#261) update: the improved variant now ALSO computes natively at the 2018
+  thesis's own lor_pre2021 vintage (int_poi_status_dynamism_improved_pre2021), so a true
+  same-anchor ablation is now possible -- restates
+  docs/epic-e/C1-three-way-comparison-findings.md Part 2 unchanged. The original
+  approximate/structural comparison (Part 1) is KEPT below, clearly labeled "original
+  comparison", per the #261 ticket's explicit instruction not to delete history -- only the
+  "why we can't (yet) run the head-to-head test" section and the warning Alert have been
+  updated/removed since that limitation is now discharged.
 -->
 
 The [thesis re-check page](/thesis-recheck) already swaps in the 2018 thesis's own
@@ -283,14 +317,12 @@ data allows — sharpen the signal?** That curated version is the **improved** v
 The two are never blended into one number (see §3 above); the rest of this section
 shows them side by side.
 
-<Alert status="warning">
-  <b>Read this before the numbers below:</b> the improved variant is currently only
-  computed for Berlin's <b>current</b> area boundaries and years (2021–2025) — it has
-  <i>not</i> been computed for the 2018 thesis's own period and boundaries. That means
-  we cannot yet run a true head-to-head "does curation improve the exact same
-  prediction" test. Rather than force a misleading comparison, we report each
-  variant's own best-available result and are explicit about what is, and is not,
-  comparable.
+<Alert status="info">
+  <b>Update (#261):</b> the improved variant now also computes natively for the 2018
+  thesis's own period and area boundaries, so we can finally run a true head-to-head
+  "does curation improve the exact same prediction" test — see "The true head-to-head
+  test" below. The original, more limited comparison (before this extension) is kept
+  further down, clearly labeled, for continuity.
 </Alert>
 
 ### Two workstreams, one taxonomy, never blended
@@ -314,7 +346,50 @@ a coincidence of general density, not a signal, and the type stays excluded eith
 Vacancy is the one deliberate exception: it is tracked as its own, oppositely-signed
 disinvestment marker, never summed into the "more business = more upscaling" signal.
 
-### What we found
+### The true head-to-head test (#261)
+
+Building the curated, theory-weighted business-type list (ADR-0018) was originally
+grounded only in Berlin's *current* OpenStreetMap taxonomy — extending it to the 2018
+thesis's older area boundaries and business classifications needed its own review, not
+a mechanical rerun. That review is now done: the same curated business-type list
+transfers to the thesis-era data **unchanged** (every 2008–2020-era business type
+already had a tiered, cited entry in the existing list; no new weights were needed —
+see the [three-way comparison findings](https://github.com/dhelweg/gentriduck/blob/main/docs/epic-e/C1-three-way-comparison-findings.md)
+Part 2 for the full review). That makes a genuine, same-year, same-boundary,
+same-outcome comparison possible for the first time:
+
+- **Faithful** (all business types, uncurated) against the 2018 golden data:
+  **statistically significant but wrong-signed** (n=435 areas — same result as before,
+  repeated here as the left side of the comparison).
+- **Improved** (the curated, theory-weighted basket), now computed *natively* for 2018
+  thesis-era boundaries, against the *same* 2018 golden data: **essentially no
+  correlation** (rho ≈ 0.007, n=436, not statistically significant) — numerically
+  closer to zero than the faithful basket's wrong-signed result.
+- **On this genuine like-for-like test, curating the business-type list does not
+  sharpen the aggregate signal** — if anything the curated basket is weaker (closer to
+  a null result) than the uncurated one. This holds even on the strictest possible cut
+  (restricting to the identical set of areas where both predictors are available,
+  n=435).
+- **This still does not mean Offering Advantage "doesn't work."** As before, the
+  [thesis re-check page](/thesis-recheck) shows finer-grained, single-business-type
+  tests (fast food) using the *same* faithful OA construct remain significant,
+  correctly signed, and *stronger* under OA than under a raw count. A coarse
+  four-domain average — whether curated or not — smooths out exactly the kind of
+  type-specific signal those finer tests pick up. This result says the *aggregate
+  basket* isn't sharpened by curation, not that the curation approach or the
+  underlying OA construct is invalid.
+- This is a **single snapshot-year, single-city comparison of two correlation
+  coefficients** — read it as directional evidence about this particular aggregate
+  test, not as a general verdict on whether theory-driven curation improves prediction
+  in every setting.
+
+### The original (approximate) comparison — kept for context, superseded above
+
+*Before the #261 extension above, a true head-to-head test wasn't possible — the
+improved variant only existed for Berlin's current area boundaries and years
+(2021–2025), not the 2018 thesis's own period. The comparison below is kept, unchanged,
+for historical continuity; the numbers in "The true head-to-head test" above are the
+ones to read for the actual faithful-vs-improved question.*
 
 **Faithful (reproduces the thesis's own H1 test, all business types):** using the
 thesis's actual Offering-Advantage basket (the four business domains it identified as
@@ -335,55 +410,69 @@ Neither result, on its own, is the headline. What *is* worth reporting:
   improved result does not reach significance either way. Taken together this is a
   **directional-disagreement-with-theory** finding for the coarse aggregate basket —
   not a confirmation of the thesis's original H1 prior in either workstream.
-- **This does not mean Offering Advantage "doesn't work."** The [thesis re-check
-  page](/thesis-recheck) shows that finer-grained tests using the *same* faithful OA
-  construct — a single business type (fast food) rather than an averaged four-domain
-  basket — are significant and correctly signed, and get *stronger* under OA than under
-  a raw count. Averaging several business domains into one basket smooths out exactly
-  the kind of type-specific signal (fast food is one clear example) that the finer
-  tests pick up. The wrong-signed aggregate result here is a property of the coarse
-  basket, not evidence against the underlying construct.
-- **The two numbers above are not a fair head-to-head.** They come from different
-  years, different area boundaries, and — because the improved variant only exists for
-  the current period — different underlying social outcomes entirely. We are not
-  claiming curation "helped" or "hurt"; we are reporting that, on their own separate
-  best-available tests, the faithful basket clears significance in the *unexpected*
-  direction and the improved basket does not clear significance at all — neither
-  confirms the thesis's original H1 prior.
-
-### Why we can't (yet) run the head-to-head test
-
-Building the curated, theory-weighted business-type list (ADR-0018) was itself a
-research exercise, grounded in Berlin's *current* OpenStreetMap taxonomy and modern
-urban-sociology literature. Re-doing that exercise for the 2018 thesis's older area
-boundaries and business classifications would be a new piece of research in its own
-right, not a mechanical rerun — so it hasn't been done yet. Until it is, a literal
-apples-to-apples "does the curated basket predict better" test isn't something we can
-honestly compute. We'd rather say that plainly than manufacture a misleading number.
+- **The two numbers above were not a fair head-to-head** (this is the limitation
+  discharged by the section above): they came from different years, different area
+  boundaries, and different underlying social outcomes entirely.
 
 ### Honest caveats (this section)
 
 - **Neither correlation confirms the thesis's original H1 prior** — the faithful
   basket is statistically significant but wrong-signed, and the improved basket does
-  not reach significance either way. Read both as evidence against the *aggregate*
+  not reach significance either way (on the true same-anchor test above, the improved
+  basket is essentially uncorrelated). Read both as evidence against the *aggregate*
   basket confirming H1, not as confirmed findings in the thesis's predicted
   direction.
-- The comparison above is **structural, not a controlled experiment**: the two numbers
-  differ in outcome measure, time period, and area boundaries simultaneously.
+- The **true head-to-head test above** (#261) is a genuine ablation (same outcome,
+  year, and area boundaries for both predictors) — but it is still a single
+  snapshot-year, single-city comparison of two correlation coefficients, not a
+  controlled experiment with repeated trials; the **original comparison** further up
+  (kept for continuity) remains structural, not a controlled experiment, since it
+  compares different outcome measures, time periods, and area boundaries
+  simultaneously.
 - This section describes **correlational, descriptive** results. Nothing here is a
   causal claim about what makes an area gentrify, and nothing here should be read as a
   "which neighbourhood is about to change" targeting signal.
 - Aggregate business-type counts are unreliable in areas with very few mapped
   businesses; per-area results should not be over-read at the individual-area level.
+  A minimum-POI-base flag/suppression for individual thinly-mapped PLRs is now **applied**
+  on the [POI & Offering Advantage map](/berlin/poi-map): PLR-years with fewer than 10
+  total mapped places are shown as a blank/unshaded gap rather than a potentially
+  misleading Offering Advantage value (#274, ADR-0017 D5 D-3).
 - No multiple-comparison correction was applied; treat all figures here as
   **directional indicators**, consistent (or not) with a hypothesis, not confirmatory
   proof.
+- Offering Advantage is computed with an **isotropic (equal-in-all-directions) catchment**
+  around each area — it does not account for how Berlin's actual street/transit network
+  shapes which businesses residents can realistically reach, a known simplification of the
+  real accessibility surface. Berlin's headline OA figures on this site (including the
+  faithful/improved comparison above) are built from the **hard point-in-polygon variant**
+  (`weight_variant='standard'`), which has no distance-decay bandwidth parameter at all and
+  is therefore bandwidth-invariant by construction — that means only that it makes no bandwidth
+  choice, not that it has been tested and found spatially robust; it remains untested for the
+  fragility described next and sits at the sharp/narrow end of the same spatial-grain family.
+  Separately, a dedicated 500 m, 1000 m, and
+  1500 m bandwidth sweep (`analysis/oa_bandwidth_sweep.py`, #274, ADR-0017 D5 C-4) tested a
+  **Gaussian distance-weighted variant** of OA (not the one used above) and found its
+  rankings **stable** close to the 1000 m headline catchment (500 m↔1000 m and
+  1000 m↔1500 m both rank-correlate above the 0.7 publish-gate threshold, Spearman, in every
+  year 2008–2026) but **re-ranked meaningfully** across the sweep's full 500 m to 1500 m
+  span (pooled Spearman r = 0.68, below 0.7 in 17 of 19 years) — see the
+  [bandwidth-sweep findings](https://github.com/dhelweg/gentriduck/blob/main/docs/epic-g/G2-oa-bandwidth-sweep-findings.md)
+  for the full detail, including why this finding does not describe the figures above. It is
+  disclosed here because it bears on a separate, still-open question
+  ([OA-C.1, #174](https://github.com/dhelweg/gentriduck/issues/174)) of whether the published
+  headline should ever switch from the hard-count variant to a Gaussian-weighted one — if that
+  ever happens, the sweep's finding (stable near 1000 m, fragile at the sweep's full span)
+  becomes directly relevant to that variant's publish-readiness.
 
 This section's own further reading: [the 2018 thesis, re-checked](/thesis-recheck) (the faithful
 revival, hypothesis by hypothesis), [three-way comparison findings (OA-C.1)](https://github.com/dhelweg/gentriduck/blob/main/docs/epic-e/C1-three-way-comparison-findings.md)
 (the full statistical detail behind this section), [ADR-0018](https://github.com/dhelweg/gentriduck/blob/main/docs/adr/0018-causal-tiered-poi-selection.md)
-(the curation rule), and [ADR-0017](https://github.com/dhelweg/gentriduck/blob/main/docs/adr/0017-poi-offering-advantage-revival.md)
-(the Offering Advantage construct and the faithful/improved separation).
+(the curation rule), [ADR-0017](https://github.com/dhelweg/gentriduck/blob/main/docs/adr/0017-poi-offering-advantage-revival.md)
+(the Offering Advantage construct and the faithful/improved separation), and the
+[OA bandwidth-sweep findings (#274)](https://github.com/dhelweg/gentriduck/blob/main/docs/epic-g/G2-oa-bandwidth-sweep-findings.md)
+(the C-4 bandwidth-fragility publish-gate discharge for the Gaussian-weighted variant, and what
+it does and doesn't say about the hard-count variant published above).
 
 ## 8. Further reading
 
@@ -401,6 +490,7 @@ project's public GitHub repository:
 - [ADR-0019 — Berlin Milieuschutz displacement source](https://github.com/dhelweg/gentriduck/blob/main/docs/adr/0019-berlin-milieuschutz-displacement-source.md)
 - [ADR-0018 — causal-tiered POI selection](https://github.com/dhelweg/gentriduck/blob/main/docs/adr/0018-causal-tiered-poi-selection.md) and [ADR-0017 — Offering Advantage revival](https://github.com/dhelweg/gentriduck/blob/main/docs/adr/0017-poi-offering-advantage-revival.md) — the faithful/improved comparison in §7
 - B1 displacement/affordability sign-offs (§2): [Milieuschutz geo](https://github.com/dhelweg/gentriduck/blob/main/docs/methodology/B1-milieuschutz-geo-signoff.md) / [domain](https://github.com/dhelweg/gentriduck/blob/main/docs/methodology/B1-milieuschutz-domain-signoff.md), [rent-pressure geo](https://github.com/dhelweg/gentriduck/blob/main/docs/methodology/B1-rent-pressure-geo-signoff.md) / [domain](https://github.com/dhelweg/gentriduck/blob/main/docs/methodology/B1-rent-pressure-domain-signoff.md), [turnover geo](https://github.com/dhelweg/gentriduck/blob/main/docs/methodology/B1-turnover-geo-signoff.md) / [domain](https://github.com/dhelweg/gentriduck/blob/main/docs/methodology/B1-turnover-domain-signoff.md)
+- Coarse-grain (BZR/PGR/Bezirk) index-value decline (§6): [geo-data-scientist decision](https://github.com/dhelweg/gentriduck/blob/main/docs/epic-i/I-coarse-index-geo-decision.md) / [domain-expert decision](https://github.com/dhelweg/gentriduck/blob/main/docs/epic-i/I-coarse-index-domain-decision.md)
 
 See also the [home page](/) for the current index, [time-series](/berlin/time-series) for per-area
 trajectories, [maps](/berlin/maps) for a citywide choropleth, [area detail](/berlin/area-detail) for

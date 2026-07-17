@@ -22,6 +22,12 @@
 -- area_level string (matching the already-implemented 'bzr'/'plr' convention,
 -- not ADR-0003's aspirational generic 'subarea_l1' label -- architect-confirmed,
 -- no new ADR needed).
+-- 6. stg_berlin_ortsteil — WFS Ortsteil geometry staging (BER / ortsteil, single
+-- current vintage, not a LOR level). Added in #269 (I-ortsteile): 96/97 Berlin
+-- Stadtteile that nest cleanly into Bezirk but NOT into PLR -- see
+-- dim_area_hierarchy.sql (ortsteil -> bezirk edge) and
+-- int_berlin_plr_ortsteil_overlap.sql (the non-nesting PLR<->Ortsteil
+-- area-overlap crosswalk, kept separate from this dimension).
 --
 -- Deduplication strategy:
 -- - Area codes that appear in both sources get one row per (city_code, area_level,
@@ -82,6 +88,15 @@ with
         where area_code is not null
     ),
 
+    -- WFS Ortsteil areas (BER / ortsteil, single current vintage, issue #269
+    -- I-ortsteile). Non-LOR Berlin geography; see dim_area_hierarchy.sql and
+    -- int_berlin_plr_ortsteil_overlap.sql for the parent/PLR relationships.
+    ortsteil_areas as (
+        select distinct city_code, area_level, area_code, area_name
+        from {{ ref("stg_berlin_ortsteil") }}
+        where area_code is not null
+    ),
+
     -- Union all sources; keep all columns to allow dedup in next step.
     combined as (
         select *, 1 as source_priority
@@ -95,6 +110,9 @@ with
         union all
         select *, 1 as source_priority
         from hamburg_areas
+        union all
+        select *, 1 as source_priority
+        from ortsteil_areas
         union all
         select *, 2 as source_priority
         from thesis_areas

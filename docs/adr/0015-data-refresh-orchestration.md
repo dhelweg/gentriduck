@@ -92,10 +92,67 @@ living dataset" half of F3).
 - Scheduling remains manual for now; a documented, free, ADR-approved path (GitHub Actions
   `schedule`) exists to adopt without a new ADR fight if/when a real cadence need appears.
 
+## Amendment (2026-07-12) — per-source failure isolation + skip-if-fresh (#251)
+
+**Status:** Accepted (architect self-accepted per this ADR's own precedent — composes only
+already-approved tools, no new dependency, not methodology-bearing).
+
+**Context:** #248 root-caused a 2026-07-12 release taking ~93 minutes (33% wasted) to `poe
+ingest`'s all-or-nothing semantics: `poe`'s `sequence`/`cmd` item type aborts the **whole**
+sequence on the first non-zero exit. One flaky external source (`gdi.berlin.de` WFS, via
+`ingest_wohnlage`) killed the remaining ~7 ingestion sources *and* the downstream
+`build`/`export-serving`/`export-area-geojson`/deploy steps in the same `poe refresh` run, even
+though that week's tickets never touched Wohnlage. The architect review on #248 recommended two
+concrete, low-risk fixes (items 1+2 of that review); #251 implemented them.
+
+**Decision:**
+
+1. **`poe ingest` now runs through `ingestion/run_ingest.py`**, a thin stdlib-`subprocess` driver
+   (no new dependency) that runs each source as an isolated subprocess. A source's failure is
+   caught and reported in a summary table, not propagated — the rest of the sources still run.
+2. **Release-blocking allowlist** (`BLOCKING_SOURCE_IDS` in `run_ingest.py`): the driver's own exit
+   code is 1 only if a source in this small, explicit set fails (Berlin LOR geometries/crosswalk —
+   `dim_area`/`dim_city` structural per ADR-0005; Berlin EWR/MSS/MSS-indicators — the R-C1
+   socio-economic/outcome gate models). Every other source (price/rent, Mietspiegel, Wohnlage,
+   Milieuschutz, all Hamburg sources) is a **leaf dimension**: its failure degrades one part of the
+   site, not the core index or dbt build, so it does not fail the release. Downstream steps
+   (`build`/`export-serving`/`export-area-geojson`) fall back to whatever last-good parquet is
+   already on disk for a non-blocking source that failed (ADR-0016 already keeps last-good
+   artefacts; nothing is deleted on failure).
+3. **Skip-if-fresh:** before running a source, the driver reuses `verify_data.classify()`
+   (ADR-0016) against that source's committed manifest entry. If the on-disk output already matches
+   the manifest exactly (status `ok` — same row counts, schema, content hash, and the ingest
+   script itself hasn't moved on since the manifest was written), the source is skipped instead of
+   re-fetched. **Guardrail:** this is the *same* check that already gates `poe verify-data
+   --strict` for pinned-source drift, so a genuinely new upstream vintage (any shape/hash/script
+   mismatch) always reads as non-`ok` and is never skipped. `--force` (or `FORCE_REFRESH=1`)
+   disables skipping for a given run; `--only SOURCE_ID` restricts a run to named sources.
+4. **Circuit breaker in `ingest_wohnlage.py`:** `fetch_all_features` now bails out of a single
+   vintage immediately (instead of grinding the full 15-minute `MAX_RUNTIME_SECONDS` budget) when
+   the WFS endpoint appears down — page 0 failing after its own internal retries, or
+   `CIRCUIT_BREAKER_CONSECUTIVE_FAILURES` (3) consecutive page failures. `main()` treats this
+   "host down" signal as a reason to skip the *remaining* vintages against the same endpoint
+   rather than repeating the same doomed multi-minute fetch per vintage.
+
+**Not adopted from the #248 review (deferred, tracked on #248):** Evidence build/prerender-time
+monitoring (item 3 — no action needed yet, revisit when build time becomes a visible release
+fraction) and a manually-triggered CI job to move the pipeline off the maintainer's machine (item
+4 — this is a genuinely new decision needing its own ADR + maintainer approval, since it touches
+runner-minutes budget, ADR-0001's local-gate posture, and how a CI job would publish under
+ADR-0011's human-gated-`main` model).
+
+**Consequences:** a single flaky/leaf source can no longer abort an entire `poe refresh` run; a
+healthy weekly refresh skips sources that haven't changed since the last run instead of
+unconditionally re-fetching ~397k-feature WFS layers that update annually at most; a fully-down
+external endpoint costs roughly one circuit-breaker timeout instead of the full per-vintage time
+budget repeated across every vintage.
+
 ## References
 
 - #35 (F3 tracking issue). PROJECT_PLAN.md Epic F (F1/F2/F3).
+- #248 (architect review — release/deploy timing), #251 (this amendment's implementation ticket).
 - ADR-0002 (OSM POI history sourcing — login-gated exclusion precedent), ADR-0011 (autonomous
   `develop` merge — governs how any future scheduled job's output would reach `develop`/`main`),
   ADR-0012 (serving & hosting stack — `export-serving`/`export-area-geojson` origins; "refresh is
-  F3's decision" deferral this ADR discharges).
+  F3's decision" deferral this ADR discharges), ADR-0016 (ingested-data drift-detection manifest —
+  `verify_data.classify()` reused here for skip-if-fresh).
