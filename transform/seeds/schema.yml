@@ -811,12 +811,16 @@ seeds:
 
           - not_null
       - name: reference_point
-        description: parent-relative or city-relative.
+        description: >
+          parent-relative, city-relative, or absolute (density/percapita --
+          OA-D3b/#280: no city-share divisor at all, an absolute
+          provision/centrality reading, never blended/legend-shared with the
+          LQ family -- OA-D0 domain sign-off Condition C).
         data_tests:
 
           - accepted_values:
               arguments:
-                values: ["parent-relative", "city-relative"]
+                values: ["parent-relative", "city-relative", "absolute"]
       - name: golden_anchored
         description: Whether this method is validated against the 2018 thesis golden (only nested_lq is).
         data_tests:

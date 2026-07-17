@@ -1628,9 +1628,12 @@ models:
   - name: mart_poi_oa_methods
     description: >
       OA-D3/OA-D3b (#240/#280, ADR-0024): long-format serving view over
-      int_poi_offering_advantage_methods's seven method columns per taxonomy
-      level (ADR-0024 "methods as columns + a long serving view"). Pure
-      UNPIVOT/reshape -- not itself a new methodology decision beyond what
+      int_poi_offering_advantage_methods's nine method columns per taxonomy
+      level (ADR-0024 "methods as columns + a long serving view") --
+      density/percapita (this slice) are absolute provision readings, NOT
+      location quotients (OA-D0 domain sign-off Condition C -- never
+      blended/legend-shared with the LQ family). Pure UNPIVOT/reshape --
+      not itself a new methodology decision beyond what
       int_poi_offering_advantage_methods computes.
 
       Grain: one row per (city_code, snapshot_year, area_code, area_vintage,
