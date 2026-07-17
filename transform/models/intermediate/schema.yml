@@ -113,6 +113,15 @@ models:
         data_tests:
 
           - not_null
+      - name: oa_leaf_area_level
+        description: >
+          OA-D8 (#240): this city's OA leaf area_level ('plr' for Berlin,
+          'subarea_l2' for Hamburg) -- the per-city config
+          int_poi_offering_advantage_arealevel.sql joins against to identify
+          each city's own finest OA grain generically.
+        data_tests:
+
+          - not_null
 
   - name: dim_area
     description: >
@@ -4741,38 +4750,51 @@ models:
   - name: int_poi_offering_advantage_arealevel
     description: >
       OA-D2 (#240, ADR-0024): area_level roll-up of int_poi_offering_advantage's
-      faithful nested-LQ (domain/category/type), Berlin-first (Hamburg is D8,
-      not yet built -- Hamburg's subarea_l2->subarea_l1 edge is unresolved).
+      faithful nested-LQ (domain/category/type). OA-D8 (#240) generalized
+      this model from Berlin-only to city-agnostic (ADR-0005) -- it now
+      rolls up Berlin (plr/bzr/pgr/bezirk) AND Hamburg (subarea_l2/
+      subarea_l1/district, via OA-D1b's resolved parent edges) through the
+      same code path -- see model SQL header for the full generalization
+      mechanism (dim_city.oa_leaf_area_level + dim_area_hierarchy edges,
+      no more `city_code = 'BER'`/substr() literal).
 
-      Prefix-sums PLR-grain stock up the LOR RAUMID nesting (bzr=6, pgr=4,
-      bezirk=2 digit prefixes) per OA-D0 geo-DS sign-off Condition C1 (the
-      only roll-up option that provably preserves the C-1 mass-conservation
-      invariant -- re-kernelling per level would break it). City-wide totals
-      are broadcast unchanged from int_poi_offering_advantage rather than
-      re-windowed over the unioned multi-level rows (Condition C2 -- the
-      specific guard against an I15-class overcount at 4x scale).
+      Rolls up each city's leaf-grain stock via dim_area_hierarchy's
+      resolved parent edges (Berlin: LOR RAUMID prefix nesting; Hamburg:
+      OA-D1b's Gebiet->Stadtteil spatial crosswalk + WFS Stadtteil->Bezirk)
+      per OA-D0 geo-DS sign-off Condition C1 (the only roll-up option that
+      provably preserves the C-1 mass-conservation invariant -- re-kernelling
+      per level would break it). City-wide totals are broadcast unchanged
+      from int_poi_offering_advantage rather than re-windowed over the
+      unioned multi-level rows (Condition C2 -- the specific guard against an
+      I15-class overcount at 4x scale).
 
       Grain: one row per (city_code, snapshot_year, area_level, area_code,
       area_vintage, poi_domain_h, poi_category_h, poi_type_h, weight_variant,
-      methodology_variant). area_level in ('plr', 'bzr', 'pgr', 'bezirk');
-      'plr' rows are a 1:1 pass-through of int_poi_offering_advantage.
+      methodology_variant). area_level in ('plr', 'bzr', 'pgr', 'bezirk')
+      for Berlin, ('subarea_l2', 'subarea_l1', 'district') for Hamburg; each
+      city's leaf-level rows (dim_city.oa_leaf_area_level) are a 1:1
+      pass-through of int_poi_offering_advantage.
 
-      Bezirk rows are numeric-only (Condition C8's ST_Union dissolved
-      geometry is separate D6 scope, not built here).
+      Bezirk rows are numeric-only in this model (Condition C8's ST_Union
+      dissolved geometry lives in dim_area_geometry.sql, D6); Hamburg's
+      levels already have their own WFS polygons (no dissolve needed).
 
       C-1b invariance (geo sign-off Condition C6, BLOCKING): local stock
       summed over all areas at a level must equal that level's city-wide
-      total, AND the city-wide total must be identical across all four
-      area_level values -- enforced by
-      test_c1b_oa_arealevel_mass_conservation_invariance.sql.
+      total, AND the city-wide total must be identical across every
+      area_level value FOR A GIVEN CITY -- enforced by
+      test_c1b_oa_arealevel_mass_conservation_invariance.sql, which groups
+      by city_code and so validates Berlin and Hamburg independently.
 
       Deferred to later D-spine tickets (see model SQL header): D3
       calculation-method columns, C3 completeness-contamination gate and C5
-      MAUP rank-stability check (D5 comparison study), D6 Bezirk geometry, D8
-      Hamburg. Any consumer publishing a coarse-level (pgr/bezirk) figure
-      MUST carry the domain sign-off's binding Condition D ecological-fallacy
-      / "BZR is the recommended public headline scale, Bezirk is
-      context-only" framing -- not enforced by this model itself.
+      MAUP rank-stability check (D5 comparison study). Any consumer
+      publishing a coarse-level figure MUST carry the domain sign-off's
+      binding Condition D ecological-fallacy / headline-scale framing (Berlin:
+      BZR headline, Bezirk context-only; Hamburg, OA-D8: subarea_l1/Stadtteil
+      headline, district/Bezirk context-only, argued independently per the
+      OA-D1b domain sign-off forward condition 1) -- not enforced by this
+      model itself, see mart_poi_oa_arealevel.sql.
 
       Graceful degradation: zero rows when int_poi_offering_advantage has no
       rows.
@@ -4797,12 +4819,12 @@ models:
             where: "area_code is not null"
     columns:
       - name: city_code
-        description: City identifier (ADR-0005). Berlin-only ('BER') for this model today.
+        description: City identifier (ADR-0005). 'BER' (Berlin) or 'HH' (Hamburg, OA-D8, #240).
         data_tests:
 
           - accepted_values:
               arguments:
-                values: ["BER"]
+                values: ["BER", "HH"]
               config:
                 where: "area_code is not null"
       - name: snapshot_year
@@ -4814,31 +4836,38 @@ models:
                 where: "area_code is not null"
       - name: area_level
         description: >
-          Spatial roll-up level. 'plr' is the pass-through finest grain;
-          'bzr'/'pgr'/'bezirk' are prefix-sum roll-ups (see model SQL header).
+          Spatial roll-up level. Each city's own leaf level (dim_city.
+          oa_leaf_area_level: 'plr' for Berlin, 'subarea_l2' for Hamburg) is
+          the pass-through finest grain; 'bzr'/'pgr'/'bezirk' (Berlin) and
+          'subarea_l1'/'district' (Hamburg, OA-D8) are roll-ups via
+          dim_area_hierarchy's resolved parent edges (see model SQL header).
         data_tests:
 
           - accepted_values:
               arguments:
-                values: ["plr", "bzr", "pgr", "bezirk"]
+                values:
+                  ["plr", "bzr", "pgr", "bezirk", "subarea_l2", "subarea_l1", "district"]
               config:
                 where: "area_code is not null"
       - name: area_code
         description: >
           Area code at this row's area_level (8-digit PLR, 6-digit BZR,
-          4-digit PGR, or 2-digit Bezirk prefix). Vintage-specific.
+          4-digit PGR, or 2-digit Bezirk prefix for Berlin; native Gebiet/
+          Stadtteil/Bezirk id for Hamburg). Vintage-specific.
         data_tests:
 
           - not_null:
               config:
                 where: "snapshot_year is not null"
       - name: area_vintage
-        description: Spatial-join vintage ('lor_pre2021'/'lor_2021'), carried through from int_poi_offering_advantage.
+        description: >
+          Spatial-join vintage. 'lor_pre2021'/'lor_2021' for Berlin;
+          'current' for Hamburg (OA-D8, single WFS edition, ADR-0014).
         data_tests:
 
           - accepted_values:
               arguments:
-                values: ["lor_pre2021", "lor_2021"]
+                values: ["lor_pre2021", "lor_2021", "current"]
               config:
                 where: "area_code is not null"
       - name: poi_domain_h

@@ -1,16 +1,28 @@
 -- test_c1b_oa_arealevel_mass_conservation_invariance.sql
 -- OA-D2 (#240, ADR-0024) -- geo-DS sign-off Condition C6 (BLOCKING).
--- int_poi_offering_advantage_arealevel.sql prefix-sums PLR-grain stock up to
--- bzr/pgr/bezirk (C1) and MUST preserve the C-1 mass-conservation invariant
--- at every level: for a given (city, year, vintage, weight_variant, taxonomy
+-- int_poi_offering_advantage_arealevel.sql rolls up leaf-grain stock to its
+-- ancestor levels (Berlin: bzr/pgr/bezirk; Hamburg: subarea_l1/district,
+-- OA-D8 #240) and MUST preserve the C-1 mass-conservation invariant at
+-- every level: for a given (city, year, vintage, weight_variant, taxonomy
 -- leaf), summing the LOCAL stock over every area at a given area_level must
 -- equal that leaf's CITY-WIDE total -- and because area_level is a re-grain
 -- of the SAME underlying stock (never a re-derivation, see model header C2),
--- the city-wide total itself must be IDENTICAL across all four area_level
--- values. The second assertion is what specifically catches a broadcast-
--- denominator error (e.g. a future edit that re-windows the city total over
--- the unioned multi-level rows instead of carrying it through unchanged --
--- exactly the I15-class bug at 4x scale the geo sign-off calls out).
+-- the city-wide total itself must be IDENTICAL across every area_level
+-- value FOR THAT CITY. The second assertion is what specifically catches a
+-- broadcast-denominator error (e.g. a future edit that re-windows the city
+-- total over the unioned multi-level rows instead of carrying it through
+-- unchanged -- exactly the I15-class bug at 4x scale the geo sign-off calls
+-- out).
+--
+-- This test's own GROUP BY already includes city_code (unchanged since its
+-- OA-D2 build), so OA-D8 (#240) generalizing int_poi_offering_advantage_
+-- arealevel to also emit Hamburg rows means this test now validates Berlin
+-- and Hamburg INDEPENDENTLY with no SQL change here -- each city's local
+-- sums are only ever compared against that SAME city's own city-wide
+-- totals, never pooled across cities. See the sibling
+-- test_c1c_oa_arealevel_city_level_coverage.sql (OA-D8) for the companion
+-- check that this test isn't vacuously passing because a city's rows never
+-- arrived in the first place.
 --
 -- Checked at the type-leaf grain (the finest taxonomy level -- domain/
 -- category totals are strict roll-ups of type and so are implied, matching

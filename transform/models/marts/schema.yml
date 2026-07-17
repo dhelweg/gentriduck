@@ -1708,11 +1708,16 @@ models:
     description: >
       OA-D6 (#240, ADR-0024): serving mart for OA-D2's area_level roll-up
       (int_poi_offering_advantage_arealevel) -- nested-LQ Offering Advantage
-      at plr/bzr/pgr/bezirk grain. Not methodology-bearing beyond what
-      OA-D0/OA-D2 already signed off; adds two derived disclosure columns,
-      maup_caveat_required and area_level_publish_tier (see model SQL header
-      for the OA-D5 forward-binding condition and OA-D0 domain sign-off
-      Condition D headline-scale framing these discharge).
+      at plr/bzr/pgr/bezirk (Berlin) and subarea_l2/subarea_l1/district
+      (Hamburg, OA-D8) grain. Adds two derived disclosure columns,
+      maup_caveat_required and area_level_publish_tier -- OA-D8 (#240)
+      generalized both from Berlin-only literals to a per-city
+      (dim_city.oa_leaf_area_level) / per-level (seed_dim_area_level.
+      publish_tier) lookup; see model SQL header for the OA-D5
+      forward-binding condition, the OA-D0 domain sign-off Condition D
+      Berlin headline-scale framing, and the OA-D1b domain sign-off forward
+      condition 1 Hamburg headline-scale reasoning (argued independently on
+      Hamburg's own resolution-vs-stability terms) these discharge.
 
       Grain: one row per (city_code, snapshot_year, area_level, area_code,
       area_vintage, poi_domain_h, poi_category_h, poi_type_h, weight_variant,
@@ -1739,7 +1744,7 @@ models:
             where: "area_code is not null"
     columns:
       - name: city_code
-        description: City identifier (ADR-0005). Berlin-only ('BER') today.
+        description: City identifier (ADR-0005). 'BER' (Berlin) or 'HH' (Hamburg, OA-D8, #240).
         data_tests:
 
           - not_null
@@ -1750,31 +1755,36 @@ models:
           - not_null
       - name: area_level
         description: >
-          Spatial roll-up level. 'plr' is the finest, pass-through grain;
-          'bzr'/'pgr'/'bezirk' are prefix-sum roll-ups (OA-D2).
+          Spatial roll-up level. Each city's own leaf level is the finest,
+          pass-through grain; 'bzr'/'pgr'/'bezirk' (Berlin) and
+          'subarea_l1'/'district' (Hamburg, OA-D8) are roll-ups (OA-D2/D8).
         data_tests:
 
           - not_null
           - accepted_values:
               arguments:
-                values: ["plr", "bzr", "pgr", "bezirk"]
+                values:
+                  ["plr", "bzr", "pgr", "bezirk", "subarea_l2", "subarea_l1", "district"]
               config:
                 where: "area_code is not null"
       - name: area_code
         description: >
           Area code at this row's area_level (8-digit PLR, 6-digit BZR,
-          4-digit PGR, or 2-digit Bezirk prefix). Vintage-specific.
+          4-digit PGR, or 2-digit Bezirk prefix for Berlin; native Gebiet/
+          Stadtteil/Bezirk id for Hamburg). Vintage-specific.
         data_tests:
 
           - not_null
       - name: area_vintage
-        description: Spatial-join vintage ('lor_pre2021'/'lor_2021').
+        description: >
+          Spatial-join vintage. 'lor_pre2021'/'lor_2021' for Berlin;
+          'current' for Hamburg (OA-D8).
         data_tests:
 
           - not_null
           - accepted_values:
               arguments:
-                values: ["lor_pre2021", "lor_2021"]
+                values: ["lor_pre2021", "lor_2021", "current"]
       - name: poi_domain_h
         description: Harmonized POI domain.
         data_tests:
@@ -1826,22 +1836,31 @@ models:
           - not_null
       - name: maup_caveat_required
         description: >
-          OA-D5 (#240) forward-binding condition, BLOCKING: TRUE for every
-          'bzr'/'pgr'/'bezirk' row -- nested_lq's PLR-vs-BZR rank correlation
-          is empirically MAUP-fragile (docs/methodology/OA-D5-mode-comparison-
+          OA-D5 (#240) forward-binding condition, generalized per-city by
+          OA-D8 (#240): TRUE for every row coarser than THIS CITY's own OA
+          leaf level (dim_city.oa_leaf_area_level) -- Berlin's bzr/pgr/bezirk
+          relative to plr (nested_lq's PLR-vs-BZR rank correlation is
+          empirically MAUP-fragile, docs/methodology/OA-D5-mode-comparison-
           findings.md, pooled rho=0.662 < spatial-methods.md §7's r>0.7
-          threshold). Any consumer displaying a row where this is TRUE
-          alongside/against PLR-grain figures MUST carry the §7
-          MAUP-fragility disclosure prominently.
+          threshold), and Hamburg's subarea_l1/district relative to
+          subarea_l2 (a conservative disclosure default -- Hamburg's own
+          MAUP rank-correlation has not yet been empirically re-run, see
+          model SQL header). Any consumer displaying a row where this is
+          TRUE alongside/against that city's leaf-grain figures MUST carry
+          the §7 MAUP-fragility disclosure prominently.
         data_tests:
 
           - not_null
       - name: area_level_publish_tier
         description: >
-          'primary' (plr), 'headline' (bzr -- the maintainer's confirmed
-          OA-D0 recommended public scale for coarser-than-PLR figures), or
-          'context_only' (pgr, bezirk -- ecological-fallacy caveat, OA-D0
-          domain sign-off Condition D).
+          'primary' (each city's own leaf level), 'headline' (Berlin: bzr --
+          maintainer-confirmed OA-D0 recommended scale; Hamburg: subarea_l1
+          -- OA-D8, argued independently on Hamburg's own resolution/
+          stability terms per the OA-D1b domain sign-off forward condition
+          1, see model SQL header), or 'context_only' (Berlin: pgr, bezirk;
+          Hamburg: district -- ecological-fallacy caveat, OA-D0 domain
+          sign-off Condition D). Looked up from seed_dim_area_level.
+          publish_tier.
         data_tests:
 
           - not_null

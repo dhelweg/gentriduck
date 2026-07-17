@@ -63,12 +63,32 @@ seeds:
         data_tests:
 
           - not_null
+      - name: oa_leaf_area_level
+        description: >
+          OA-D8 (#240, ADR-0024): the area_level string that
+          int_poi_offering_advantage's own area_code grain represents for
+          this city -- 'plr' for Berlin, 'subarea_l2' for Hamburg (Hamburg's
+          finest published statistical subdivision, the OA-A.2/H1 spatial
+          join grain, see int_osm_poi_hamburg.sql). This is the per-city
+          config the ADR-0005 seam requires (planning doc
+          docs/planning/oa-modes-hierarchy-dominance.md "per-city config in
+          a seed, not a var") so int_poi_offering_advantage_arealevel.sql
+          can identify each city's own leaf level generically instead of a
+          `where city_code = 'BER'` literal. A future third city adds one
+          seed row here, no model change.
+        data_tests:
+
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('seed_dim_area_level')
+                field: level_code
 
   - name: seed_dim_area_level
     description: >
       Area level taxonomy seed (ADR-0005 city-agnostic seam). Maps Berlin's
-      administrative area codes (bzr, plr) to human-readable level names.
-      'bezirk' level is deferred until Epic C adds the district-level breakdown.
+      and Hamburg's administrative area codes to human-readable level names
+      and an OA-D8 (#240) publish_tier recommendation.
     meta:
       dbt_meta_owner: data-engineer
     columns:
@@ -85,6 +105,31 @@ seeds:
           - not_null
       - name: description
         description: Brief description of the administrative level.
+      - name: publish_tier
+        description: >
+          OA-D8 (#240, ADR-0024): per-level recommended public display tier
+          -- 'primary' (the city's own OA leaf level), 'headline' (the
+          maintainer/domain-expert-recommended default coarser scale for
+          public display), or 'context_only' (ecological-fallacy-caveated,
+          borough/policy-scale context). NULL for 'ortsteil' -- Ortsteil is
+          not part of the OA area_level roll-up chain (it does not nest
+          into PLR, see int_berlin_plr_ortsteil_overlap.sql; the
+          arealevel/OA-D2 model never emits an 'ortsteil' row), so no
+          publish_tier applies. See
+          int_poi_offering_advantage_arealevel.sql and
+          mart_poi_oa_arealevel.sql headers for the Berlin (BZR headline,
+          OA-D0 domain sign-off Condition D) and Hamburg (Stadtteil/
+          subarea_l1 headline, OA-D8) reasoning -- the Hamburg call is
+          argued independently on Hamburg's own resolution-vs-stability
+          terms, not copied from Berlin (OA-D1b domain sign-off forward
+          condition 1).
+        data_tests:
+
+          - accepted_values:
+              arguments:
+                values: ["primary", "headline", "context_only"]
+              config:
+                where: "publish_tier is not null"
 
   - name: seed_ewr_indicator_meta
     description: >
