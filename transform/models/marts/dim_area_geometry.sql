@@ -24,11 +24,34 @@
 -- current vintage; area_vintage set to the literal 'current' since this
 -- source has no pre2021/2021 split). Added #269 (I-ortsteile) so Ortsteil
 -- profile pages can render a choropleth polygon, same as PGR/BZR/PLR.
+-- 6. berlin_bezirk (DERIVED, not a new source) -- OA-D6 (#240, ADR-0024):
+-- Bezirk (12 districts) has no WFS geometry source of its own. Per the
+-- maintainer's OA-D0 confirmed scope knob #3 ("Geometry = reuse + dissolve
+-- ... derived by ST_Union dissolve of child PLR polygons -- no new
+-- source"), this CTE dissolves stg_berlin_lor's own PLR polygons, grouped
+-- by their 2-digit Bezirk code prefix (substr(area_code, 1, 2), the same
+-- LOR RAUMID nesting fact int_poi_offering_advantage_arealevel.sql/OA-D2
+-- and dim_area_hierarchy.sql already rely on -- see those models' headers),
+-- one dissolve per area_vintage (a PLR belongs to exactly one Bezirk within
+-- a given vintage; the 2021 reform is Bezirk-stable across vintages per
+-- test_dim_area_hierarchy_bezirk_vintage_stable.sql, but the dissolve is
+-- still run per-vintage rather than assumed identical, so this model does
+-- not silently depend on that separate test staying green). ST_Union is a
+-- pure geometric aggregation (no new spatial statistic, no weighting, no
+-- index/methodology decision) -- still non-methodology-bearing, same
+-- framing as the rest of this model. area_name is NOT resolved for Bezirk
+-- rows (NULL) -- no Bezirk-name seed/source exists anywhere in this
+-- warehouse today (checked; only PLR/BZR/PGR/Ortsteil names come from
+-- their own WFS sources) -- minting one is out of this ticket's narrow
+-- "mart + geometry plumbing" scope.
 --
 -- Reprojection: native CRS per dim_city.native_crs_epsg (BER=EPSG:25833,
 -- HH=EPSG:25832) -> EPSG:4326 (WGS84 lon/lat), matching the st_transform(...,
 -- always_xy=true) convention already established in int_osm_poi_plr.sql /
--- int_osm_poi_hamburg.sql for the same native-CRS-to-WGS84 direction.
+-- int_osm_poi_hamburg.sql for the same native-CRS-to-WGS84 direction. The
+-- Bezirk dissolve itself runs in the NATIVE CRS (before reprojection, same as
+-- every other row here) -- ST_Union on already-metric EPSG:25833 geometry,
+-- never on WGS84 degrees (spatial-methods.md §3 CRS discipline).
 -- geometry_geojson is the GeoJSON `geometry` object only (not a full Feature);
 -- consumers (e.g. a GeoJSON-export step for Evidence's AreaMap component)
 -- wrap it with per-area `properties` (area_code/area_name/...).
@@ -86,6 +109,25 @@ with
         where lor.area_code is not null
     ),
 
+    -- OA-D6 (#240): dissolved Bezirk geometry, one row per
+    -- (city_code, area_vintage, bezirk_code) -- ST_Union of that vintage's
+    -- child PLR polygons in their native (metric) CRS. See header for the
+    -- full rationale.
+    berlin_bezirk as (
+        select
+            lor.city_code,
+            'bezirk' as area_level,
+            substr(lor.area_code, 1, 2) as area_code,
+            cast(null as varchar) as area_name,
+            lor.area_vintage,
+            st_aswkb(st_union_agg(st_geomfromwkb(lor.geometry_wkb))) as geometry_wkb,
+            any_value(city.native_crs_epsg) as native_crs_epsg
+        from {{ ref("stg_berlin_lor") }} as lor
+        left join {{ ref("dim_city") }} as city on lor.city_code = city.city_code
+        where lor.area_code is not null
+        group by lor.city_code, lor.area_vintage, substr(lor.area_code, 1, 2)
+    ),
+
     hamburg as (
         select
             geo.city_code,
@@ -126,6 +168,9 @@ with
         union all
         select *
         from berlin_pgr
+        union all
+        select *
+        from berlin_bezirk
         union all
         select *
         from hamburg

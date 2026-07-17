@@ -950,7 +950,10 @@ models:
       Grain: one row per (city_code, area_level, area_code, area_vintage).
       Sources: stg_berlin_lor (plr), stg_berlin_lor_bzr (bzr), stg_berlin_lor_pgr
       (pgr, added #242 I18), stg_hamburg_geo (district/subarea_l1/subarea_l2),
-      stg_berlin_ortsteil (ortsteil, added #269 I-ortsteile, area_vintage='current').
+      stg_berlin_ortsteil (ortsteil, added #269 I-ortsteile, area_vintage='current'),
+      berlin_bezirk (bezirk, added OA-D6 #240 -- DERIVED via ST_Union dissolve
+      of stg_berlin_lor's own PLR polygons, not a new WFS source; area_name is
+      NULL for these rows, no Bezirk-name seed/source exists yet).
     meta:
       dbt_meta_owner: data-engineer
     data_tests:
@@ -1697,3 +1700,267 @@ models:
           The single scalar value for this (taxonomy_level, oa_method) pair
           -- unit depends on oa_method (see seed_oa_calculation_methods.csv
           `unit` column); never a blend of two or more methods.
+
+  - name: mart_poi_oa_arealevel
+    description: >
+      OA-D6 (#240, ADR-0024): serving mart for OA-D2's area_level roll-up
+      (int_poi_offering_advantage_arealevel) -- nested-LQ Offering Advantage
+      at plr/bzr/pgr/bezirk grain. Not methodology-bearing beyond what
+      OA-D0/OA-D2 already signed off; adds two derived disclosure columns,
+      maup_caveat_required and area_level_publish_tier (see model SQL header
+      for the OA-D5 forward-binding condition and OA-D0 domain sign-off
+      Condition D headline-scale framing these discharge).
+
+      Grain: one row per (city_code, snapshot_year, area_level, area_code,
+      area_vintage, poi_domain_h, poi_category_h, poi_type_h, weight_variant,
+      methodology_variant) -- identical to
+      int_poi_offering_advantage_arealevel's own grain.
+    meta:
+      dbt_meta_owner: data-engineer
+    data_tests:
+
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns:
+              - city_code
+              - snapshot_year
+              - area_level
+              - area_code
+              - area_vintage
+              - poi_domain_h
+              - poi_category_h
+              - poi_type_h
+              - weight_variant
+              - methodology_variant
+          config:
+            where: "area_code is not null"
+    columns:
+      - name: city_code
+        description: City identifier (ADR-0005). Berlin-only ('BER') today.
+        data_tests:
+
+          - not_null
+      - name: snapshot_year
+        description: Calendar year of the OSM snapshot.
+        data_tests:
+
+          - not_null
+      - name: area_level
+        description: >
+          Spatial roll-up level. 'plr' is the finest, pass-through grain;
+          'bzr'/'pgr'/'bezirk' are prefix-sum roll-ups (OA-D2).
+        data_tests:
+
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ["plr", "bzr", "pgr", "bezirk"]
+              config:
+                where: "area_code is not null"
+      - name: area_code
+        description: >
+          Area code at this row's area_level (8-digit PLR, 6-digit BZR,
+          4-digit PGR, or 2-digit Bezirk prefix). Vintage-specific.
+        data_tests:
+
+          - not_null
+      - name: area_vintage
+        description: Spatial-join vintage ('lor_pre2021'/'lor_2021').
+        data_tests:
+
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ["lor_pre2021", "lor_2021"]
+      - name: poi_domain_h
+        description: Harmonized POI domain.
+        data_tests:
+
+          - not_null
+      - name: poi_category_h
+        description: Harmonized POI category.
+        data_tests:
+
+          - not_null
+      - name: poi_type_h
+        description: Harmonized POI type.
+        data_tests:
+
+          - not_null
+      - name: weight_variant
+        description: "'standard' or a Gaussian-weighted kernel variant."
+        data_tests:
+
+          - not_null
+      - name: methodology_variant
+        description: ADR-0017 D4 structural invariant.
+        data_tests:
+
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ["faithful", "improved"]
+      - name: oa_domain
+        description: Domain-level LQ at this area_level (ADR-0017 D1 formula, see int_poi_offering_advantage_arealevel).
+      - name: oa_category
+        description: Category-level LQ at this area_level, parent-relative to domain.
+      - name: oa_type
+        description: Type-level LQ at this area_level, parent-relative to domain.
+      - name: oa_domain_min_base_flag
+        description: True when this row's area_level-local all-domains base is below oa_min_poi_base_n.
+        data_tests:
+
+          - not_null
+      - name: oa_category_min_base_flag
+        description: True when this row's area_level-local domain base is below oa_min_poi_base_n.
+        data_tests:
+
+          - not_null
+      - name: oa_type_min_base_flag
+        description: True when this row's area_level-local domain base is below oa_min_poi_base_n.
+        data_tests:
+
+          - not_null
+      - name: maup_caveat_required
+        description: >
+          OA-D5 (#240) forward-binding condition, BLOCKING: TRUE for every
+          'bzr'/'pgr'/'bezirk' row -- nested_lq's PLR-vs-BZR rank correlation
+          is empirically MAUP-fragile (docs/methodology/OA-D5-mode-comparison-
+          findings.md, pooled rho=0.662 < spatial-methods.md §7's r>0.7
+          threshold). Any consumer displaying a row where this is TRUE
+          alongside/against PLR-grain figures MUST carry the §7
+          MAUP-fragility disclosure prominently.
+        data_tests:
+
+          - not_null
+      - name: area_level_publish_tier
+        description: >
+          'primary' (plr), 'headline' (bzr -- the maintainer's confirmed
+          OA-D0 recommended public scale for coarser-than-PLR figures), or
+          'context_only' (pgr, bezirk -- ecological-fallacy caveat, OA-D0
+          domain sign-off Condition D).
+        data_tests:
+
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ["primary", "headline", "context_only"]
+
+  - name: mart_poi_dominance
+    description: >
+      OA-D6 (#240, ADR-0024): serving mart for OA-D4's within-group
+      offering-dominance model (int_poi_within_group_dominance) -- pure
+      pass-through, not methodology-bearing beyond what OA-D0/OA-D4 already
+      signed off. Does NOT filter is_public_safe (see model SQL header) --
+      any future consumer publishing a dominance figure on a public,
+      displacement-adjacent surface MUST filter is_public_safe = true first
+      (OA-D4 domain sign-off forward-binding condition).
+
+      Grain: one row per (city_code, snapshot_year, area_code, area_vintage,
+      weight_variant, dominance_group) -- identical to
+      int_poi_within_group_dominance's own grain.
+    meta:
+      dbt_meta_owner: data-engineer
+    data_tests:
+
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns:
+              - city_code
+              - snapshot_year
+              - area_code
+              - area_vintage
+              - weight_variant
+              - dominance_group
+          config:
+            where: "area_code is not null"
+    columns:
+      - name: city_code
+        description: City identifier (ADR-0005).
+        data_tests:
+
+          - not_null
+      - name: snapshot_year
+        description: Calendar year of the OSM snapshot.
+        data_tests:
+
+          - not_null
+      - name: area_code
+        description: PLR area code (8-digit, zero-padded).
+        data_tests:
+
+          - not_null
+      - name: area_vintage
+        description: Spatial-join vintage, carried through from int_poi_within_group_dominance.
+        data_tests:
+
+          - accepted_values:
+              arguments:
+                values: ["lor_pre2021", "lor_2021", "current"]
+              config:
+                where: "area_code is not null"
+      - name: weight_variant
+        description: "'standard' or a Gaussian-weighted kernel variant, carried through unchanged."
+      - name: dominance_group
+        description: >
+          One of the five curated allow-list groups (OA-D0 domain sign-off
+          Condition A). Governed by seed_oa_dominance_groups.csv.
+        data_tests:
+
+          - accepted_values:
+              arguments:
+                values:
+                  [
+                    "gastronomy_category",
+                    "gastronomy_restaurant_cuisine",
+                    "retail_category",
+                    "entertainment_category",
+                    "wellness_curated",
+                  ]
+              config:
+                where: "area_code is not null"
+      - name: is_public_safe
+        description: >
+          FALSE only for gastronomy_restaurant_cuisine (anti-stigma clause).
+          NOT filtered by this mart -- any consumer rendering a dominance
+          figure on a public, displacement-adjacent surface MUST filter
+          is_public_safe = true first.
+      - name: group_stock_local
+        description: Sum of child_stock across all present (positive-stock) children in this group cell.
+      - name: n_children
+        description: Count of present (positive-stock) children contributing to this group cell.
+      - name: hhi
+        description: >
+          Herfindahl-Hirschman concentration index, sum(share_i^2), range
+          [1/n_children, 1]. Never publish without top_child/
+          top_child_offering_tier (sign-blindness clause).
+        data_tests:
+
+          - dbt_utils.accepted_range:
+              arguments: { min_value: 0, max_value: 1.0000001 }
+              config:
+                where: "area_code is not null"
+      - name: top_share
+        description: Largest single child's share of the group (max share_i).
+        data_tests:
+
+          - dbt_utils.accepted_range:
+              arguments: { min_value: 0, max_value: 1.0000001 }
+              config:
+                where: "area_code is not null"
+      - name: entropy
+        description: Shannon entropy of the within-group share distribution, range [0, ln(n_children)].
+      - name: evenness
+        description: Pielou evenness (entropy / ln(n_children)), range [0,1]. NULL when n_children <= 1.
+      - name: top_child
+        description: The child_label (category or type name) with the largest share in this group cell.
+      - name: top_child_level
+        description: "'category' or 'type' -- the taxonomy grain of top_child."
+      - name: top_child_offering_tier
+        description: top_child's offering_tier from seed_poi_offering_relevance.csv.
+      - name: top_child_offering_weight
+        description: top_child's offering_weight from seed_poi_offering_relevance.csv.
+      - name: is_thin_base
+        description: >
+          TRUE when group_stock_local < greatest(10, 5 * n_children) --
+          flags, never drops (anti-erasure).
