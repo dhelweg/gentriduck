@@ -1043,10 +1043,16 @@ models:
             where: "area_code is not null"
     columns:
       - name: city_code
-        description: City identifier (ADR-0005).
+        description: >
+          City identifier (ADR-0005). #281: canonicalized at this mart's own
+          `oa` CTE (QA-4 legacy-lowercase normalisation) -- output is
+          canonical-only.
         data_tests:
 
           - not_null
+          - accepted_values:
+              arguments:
+                values: ["BER", "HH"]
       - name: snapshot_year
         description: Calendar year of the OSM snapshot.
         data_tests:
@@ -1671,10 +1677,19 @@ models:
             where: "area_code is not null"
     columns:
       - name: city_code
-        description: City identifier (ADR-0005).
+        description: >
+          City identifier (ADR-0005). #281: canonicalized upstream in
+          int_poi_offering_advantage_methods (its own output boundary) --
+          this mart is a pure pass-through reshape, so it inherits the
+          canonical-only output.
         data_tests:
 
           - not_null:
+              config:
+                where: "area_code is not null"
+          - accepted_values:
+              arguments:
+                values: ["BER", "HH"]
               config:
                 where: "area_code is not null"
       - name: area_code
@@ -1744,10 +1759,18 @@ models:
             where: "area_code is not null"
     columns:
       - name: city_code
-        description: City identifier (ADR-0005). 'BER' (Berlin) or 'HH' (Hamburg, OA-D8, #240).
+        description: >
+          City identifier (ADR-0005). 'BER' (Berlin) or 'HH' (Hamburg,
+          OA-D8, #240). #281: already canonical-only -- upstream
+          int_poi_offering_advantage_arealevel INNER JOINs dim_city, which
+          defensively excludes any legacy lowercase 'berlin' rows as a side
+          effect (verified by query during the #281 fix).
         data_tests:
 
           - not_null
+          - accepted_values:
+              arguments:
+                values: ["BER", "HH"]
       - name: snapshot_year
         description: Calendar year of the OSM snapshot.
         data_tests:
@@ -1898,10 +1921,16 @@ models:
             where: "area_code is not null"
     columns:
       - name: city_code
-        description: City identifier (ADR-0005).
+        description: >
+          City identifier (ADR-0005). #281: canonicalized upstream in
+          int_poi_within_group_dominance (its own base CTE) -- this mart is
+          a pure pass-through, so it inherits the canonical-only output.
         data_tests:
 
           - not_null
+          - accepted_values:
+              arguments:
+                values: ["BER", "HH"]
       - name: snapshot_year
         description: Calendar year of the OSM snapshot.
         data_tests:
