@@ -434,3 +434,63 @@ Both must be cleared before the ingestion adapter / dbt models for this source a
 - Kauffälle 2025 WFS dataset page: <https://daten.berlin.de/datensaetze/kauffalle-2025-bebaute-unbebaute-grundstucke-wohnungs-und-teileigentum-wfs-55c18c0e>
 - Kauffälle 2024 WFS GetCapabilities: <https://gdi.berlin.de/services/wfs/kauffaelle_2024?request=GetCapabilities&service=WFS>
 - AKS-online (Blockkarte context): <https://www.berlin.de/gutachterausschuss/marktinformationen/aks-online/>
+
+---
+
+## Amendment G-Ortsteile — Berlin Ortsteile boundary layer (2026-07-17, #269)
+
+- **Status:** **Adopted** — housekeeping record; no new provider, no new gate. This layer falls
+  entirely within the existing *Options considered (geographies)* gate above (same Geoportal
+  Berlin / `daten.berlin.de` infrastructure, same open-licence family, anonymous HTTPS WFS).
+
+This amendment records the **Berlin Ortsteile** (Stadtteile / localities) boundary layer newly in
+scope for #269, alongside the LOR layers already covered by the *Geographies* decision. It is a
+source/licence record of the same class as the rest of this ADR and adds **no** new provider,
+credential path, or dependency.
+
+### What
+
+The **96 Berlin Ortsteile** (localities) — the sub-Bezirk administrative subdivision that nests
+under the 12 Bezirke and sits *parallel to*, not inside, the LOR hierarchy. Used by #269 as a
+named-locality boundary layer for the city-agnostic core. It maps onto the generic ADR-0005 model
+as a `dim_area` locality level under `district`; the Berlin-specific column names (`OTEIL`, `BEZ`,
+…) stay in the staging adapter, exactly as with `stg_berlin_lor`.
+
+### Source & endpoint
+
+Two open distributions publish the same underlying Ortsteil geometry; the decision is which channel
+to standardise on (mirroring the G-A vs G-B/G-C reasoning above):
+
+- **Preferred — ALKIS Berlin Ortsteile WFS** (`gdi.berlin.de/services/wfs/alkis_ortsteile`, via the
+  `daten.berlin.de` dataset page). **Licence: Datenlizenz Deutschland – Zero – 2.0
+  (dl-de-zero-2.0).** Anonymous HTTPS OGC WFS (GML/GeoJSON). **Preferred because** it matches the
+  established WFS ingestion pattern already used for LOR, Bodenrichtwerte, Wohnlagen, and Kauffälle
+  (`ingestion/berlin/…` → GeoParquet under `data/raw/berlin/`), keeps everything HTTP +
+  cross-platform, and carries the public-domain-equivalent dl-de-zero-2.0 licence (no attribution
+  legally required), consistent with the other Senate geometry layers here.
+- **Alternative (fallback / cross-check only) — RBS-Ortsteile** (`daten.berlin.de` dataset page,
+  authored by *Amt für Statistik Berlin-Brandenburg*), distributed as **SHAPE** under **CC BY**.
+  **Not preferred:** it is a flat Shapefile download (per-vintage slug must be discovered, not
+  guessed — the same drawback as Options G-B/G-C), needs an extra format-conversion step, and adds
+  a stricter mandatory-attribution obligation than the WFS path — with no offsetting benefit, since
+  it carries the same geometry. Acceptable only as a fallback / cross-check, never as the primary
+  path, exactly as community mirrors are treated under *Geographies* Decision point 3.
+
+### Attribution wall (G3)
+
+The ALKIS Ortsteile WFS is **dl-de-zero-2.0** (no attribution legally required); for G3 transparency
+we still credit the publisher. The attribution string for the G3 attribution wall is:
+
+- Ortsteile geometry: *Geoportal Berlin / ALKIS Berlin — Senatsverwaltung für Stadtentwicklung,
+  Bauen und Wohnen Berlin, dl-de-zero-2.0.*
+
+If the RBS-Ortsteile (CC BY) fallback is ever used instead, the required attribution becomes
+*© Amt für Statistik Berlin-Brandenburg, CC BY* — because CC BY, unlike dl-de-zero-2.0, makes
+attribution **mandatory**. The data adapter writes the source attribution per row so the wall stays
+data-driven (per the *Attribution wall* section above).
+
+### References (G-Ortsteile amendment)
+
+- ALKIS Berlin Ortsteile WFS dataset page (dl-de-zero-2.0): <https://daten.berlin.de/datensaetze/ortsteile-berlin-wfs>
+- ALKIS Ortsteile WFS endpoint: <https://gdi.berlin.de/services/wfs/alkis_ortsteile>
+- RBS-Ortsteile (CC BY, SHAPE — fallback / cross-check only): <https://daten.berlin.de/datensaetze/rbs-ortsteile>

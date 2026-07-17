@@ -153,9 +153,11 @@ models:
                 field: city_code
       - name: area_level
         description: >
-          Area level identifier. Berlin uses 'bezirk'/'pgr'/'bzr'/'plr' (pgr
-          added #242, I18); Hamburg (#40 H1, ADR-0014) uses the generic
-          'district'/'subarea_l1'/'subarea_l2' levels (see seed_dim_area_level).
+          Area level identifier. Berlin uses 'bezirk'/'pgr'/'bzr'/'plr'/'ortsteil'
+          (pgr added #242 I18; ortsteil added #269 I-ortsteile -- a non-LOR
+          geography, see dim_area_hierarchy.sql); Hamburg (#40 H1, ADR-0014)
+          uses the generic 'district'/'subarea_l1'/'subarea_l2' levels (see
+          seed_dim_area_level).
         data_tests:
 
           - not_null
@@ -167,6 +169,7 @@ models:
                     "pgr",
                     "bzr",
                     "plr",
+                    "ortsteil",
                     "district",
                     "subarea_l1",
                     "subarea_l2",
@@ -196,6 +199,13 @@ models:
       Ortsteil non-nesting case). NOT on the R-C1 methodology-bearing model
       list -- structural code-prefix / source-passthrough derivation only, no
       indicator weighting, normalization, or index computation.
+
+      #269 (I-ortsteile): adds Ortsteil -> Bezirk (source-provided parent
+      code, passed through -- Ortsteil nests into Bezirk exactly). Ortsteil <->
+      PLR does NOT nest and is deliberately NOT in this model -- that
+      relationship is a separate, gated area-overlap crosswalk,
+      int_berlin_plr_ortsteil_overlap.sql (methodology-bearing, geo-DS
+      sign-off required).
     meta:
       dbt_meta_owner: data-engineer
     # Grain: one row per (city_code, area_level, area_code) that has a
@@ -228,7 +238,7 @@ models:
           - not_null
           - accepted_values:
               arguments:
-                values: ["pgr", "bzr", "plr", "subarea_l1"]
+                values: ["pgr", "bzr", "plr", "subarea_l1", "ortsteil"]
       - name: area_code
         description: >
           Child area code. Every row here is itself sourced from a dim_area
@@ -239,11 +249,13 @@ models:
           - not_null
       - name: parent_area_level
         description: >
-          Parent area level ('bzr', 'pgr', 'bezirk' for Berlin; 'district' for
+          Parent area level ('bzr', 'pgr', 'bezirk' for Berlin -- 'bezirk' is
+          both PGR's and, since #269, Ortsteil's parent level; 'district' for
           Hamburg). 'bezirk' intentionally has no corresponding dim_area row
           yet (Epic C; see dim_area's own accepted_values test, which already
-          anticipates this level_code) -- PGR's parent_area_code is still a
-          real administrative fact, recorded here ahead of its own geometry.
+          anticipates this level_code) -- PGR's and Ortsteil's parent_area_code
+          are still real administrative facts, recorded here ahead of a
+          Bezirk geometry row.
         data_tests:
 
           - not_null
@@ -265,6 +277,118 @@ models:
                 field: area_code
               config:
                 where: "parent_area_level != 'bezirk'"
+
+  - name: int_berlin_plr_ortsteil_overlap
+    description: >
+      #269 (I-ortsteile): area-overlap crosswalk between Berlin PLR (lor_2021)
+      and Ortsteil geometries -- Ortsteile do not nest into PLR (see
+      dim_area_hierarchy.sql), so this is a genuine areal-interpolation join
+      (ST_Intersects + ST_Area overlap, DuckDB spatial extension, EPSG:25833),
+      same class of problem as int_berlin_brw_plr.sql. Exposes the FULL
+      overlap-weight table (one row per non-trivial PLR x Ortsteil pair,
+      weight = overlap_area_m2 / plr_area_m2) plus a per-PLR
+      is_dominant_ortsteil flag (the largest-overlap-share Ortsteil).
+      Downstream rollups (mart_area_demographics's ortsteil level,
+      mart_ortsteil_plr_stage_mix) use ONLY the dominant assignment -- each
+      PLR is counted as belonging wholly to one Ortsteil, not fractionally
+      split (see model header for the full rationale: whole-PLR-unit
+      bridging, not a splittable-substrate apportionment).
+      Sliver guard: overlap >= 0.5% of the PLR's own area (fraction-only --
+      see header for why an absolute-area floor, used by int_berlin_brw_plr,
+      is scale-inappropriate here).
+      Empirical (2026-07-17): 82 of 542 lor_2021 PLRs (15.1%) straddle a
+      non-trivial Ortsteil boundary; 631 total crosswalk rows; all 542 PLRs
+      and all 97 Ortsteile covered; per-PLR overlap fractions sum to
+      0.994-1.000 (tessellations agree almost exactly); dominant-row
+      confidence ranges 43.6%-100%, averaging 97.9%.
+      GATE: methodology-adjacent (area-overlap crosswalk + dominant-assignment
+      rule) -- geo-DS sign-off required before integration (#269 ticket gate).
+    meta:
+      dbt_meta_owner: data-engineer
+    data_tests:
+
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns:
+              - plr_area_code
+              - ortsteil_area_code
+      # Exactly one dominant Ortsteil per PLR -- see the standalone
+      # transform/tests/test_ortsteil_overlap_one_dominant_per_plr.sql (guards
+      # against a future regression in the ROW_NUMBER() tie-break logic
+      # silently producing 0 or 2+ dominant rows for the same PLR).
+    columns:
+      - name: city_code
+        description: City identifier; always 'BER'.
+        data_tests:
+
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ["BER"]
+      - name: plr_area_code
+        description: 8-digit lor_2021 PLR code.
+        data_tests:
+
+          - not_null
+          # dbt_utils.relationships_where (not the plain `relationships` test):
+          # the `where` config on a plain `relationships` test filters THIS
+          # model's rows, not the referenced dim_area rows -- dim_area's
+          # area_code namespace is only unique WITHIN a given area_level, so
+          # the referenced side must be scoped to area_level='plr' via
+          # to_condition.
+          - dbt_utils.relationships_where:
+              arguments:
+                to: ref('dim_area')
+                field: area_code
+                to_condition: "area_level = 'plr'"
+      - name: ortsteil_area_code
+        description: 4-digit Ortsteil code.
+        data_tests:
+
+          - not_null
+          - dbt_utils.relationships_where:
+              arguments:
+                to: ref('dim_area')
+                field: area_code
+                to_condition: "area_level = 'ortsteil'"
+      - name: ortsteil_area_name
+        description: Ortsteil name, denormalized for convenience.
+      - name: bezirk_code
+        description: 2-digit Bezirk code the Ortsteil belongs to, denormalized for convenience.
+      - name: plr_area_m2
+        description: PLR polygon area (m^2), EPSG:25833.
+        data_tests:
+
+          - not_null
+      - name: overlap_area_m2
+        description: Intersection area (m^2) between this PLR and this Ortsteil.
+        data_tests:
+
+          - not_null
+      - name: overlap_frac_of_plr
+        description: >
+          overlap_area_m2 / plr_area_m2 -- the crosswalk WEIGHT. Sums to
+          approximately 1.0 across all rows for a given plr_area_code
+          (verified 0.994-1.000 across all 542 PLRs).
+        data_tests:
+
+          - not_null
+      - name: is_dominant_ortsteil
+        description: >
+          TRUE for the single largest-overlap_frac_of_plr row per PLR (the
+          assignment downstream rollups use). Exactly one TRUE per
+          plr_area_code.
+        data_tests:
+
+          - not_null
+      - name: n_ortsteil_overlaps
+        description: >
+          Count of non-trivial (post-sliver-guard) Ortsteile this PLR overlaps.
+          1 = fully contained in its dominant Ortsteil; >1 = a straddling PLR
+          (82 of 542, 15.1%, per the empirical count above).
+        data_tests:
+
+          - not_null
 
   - name: int_berlin_ewr_plr2021
     description: >

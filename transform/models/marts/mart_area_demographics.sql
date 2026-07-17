@@ -47,8 +47,23 @@
 -- thesis-golden PLR codes drop the leading zero for Bezirk 1-9 -- same fix
 -- as I18's d39510fa).
 --
+-- ORTSTEIL ROLLUP (#269, I-ortsteile): unlike bzr/pgr/bezirk, Ortsteil is NOT
+-- code-prefix derivable (dim_area_hierarchy.sql documents why PLR<->Ortsteil
+-- does not nest). Its constituent-PLR membership instead comes from the
+-- DOMINANT area-overlap assignment in int_berlin_plr_ortsteil_overlap.sql
+-- (is_dominant_ortsteil = true) -- each PLR rolls into exactly the one
+-- Ortsteil containing the largest share of its own area (see that model's
+-- header for the full method + straddling-PLR count: 82 of 542 lor_2021 PLRs,
+-- 15.1%, straddle a non-trivial Ortsteil boundary). Restricted to
+-- area_vintage = 'lor_2021' (the crosswalk's own scope) -- lor_pre2021 rows
+-- are excluded from the ortsteil_agg CTE below (they simply do not join and
+-- are dropped, same graceful-degradation style as everywhere else in this
+-- model). SAME rollup rule as bzr/pgr/bezirk (extensive=sum, intensive=
+-- summed-numerator recompute) -- no new aggregation formula, just a
+-- different constituent-PLR lookup mechanism.
+--
 -- Grain: one row per (city_code, area_level, area_code, area_vintage,
--- reference_year). area_level in ('plr', 'bzr', 'pgr', 'bezirk').
+-- reference_year). area_level in ('plr', 'bzr', 'pgr', 'bezirk', 'ortsteil').
 -- Berlin only (city_code='BER') -- Hamburg parity is explicitly deferred to
 -- after H3 (#237) per the I19 ticket.
 --
@@ -240,6 +255,60 @@ with
             count(*) as n_plr
         from with_parents
         group by city_code, bezirk_code, area_vintage, reference_year
+    ),
+
+    -- Ortsteil rollup (#269): constituent PLRs come from the DOMINANT
+    -- area-overlap crosswalk, not a code-prefix substr() -- see header.
+    -- inner join intentionally: a PLR with no dominant Ortsteil assignment
+    -- (should not occur -- int_berlin_plr_ortsteil_overlap covers all 542
+    -- lor_2021 PLRs) is excluded rather than silently coalesced.
+    with_ortsteil as (
+        select wp.*, xw.ortsteil_area_code
+        from with_parents as wp
+        inner join
+            {{ ref("int_berlin_plr_ortsteil_overlap") }} as xw
+            on wp.area_code = xw.plr_area_code
+            and xw.is_dominant_ortsteil
+        where wp.area_vintage = 'lor_2021'
+    ),
+
+    ortsteil_agg as (
+        select
+            city_code,
+            'ortsteil' as area_level,
+            ortsteil_area_code as area_code,
+            area_vintage,
+            reference_year,
+            max(reference_date) as reference_date,
+            sum(residents_total) as residents_total,
+            sum(residents_male_share * residents_total)
+            / nullif(sum(residents_total), 0) as residents_male_share,
+            sum(residents_female_share * residents_total)
+            / nullif(sum(residents_total), 0) as residents_female_share,
+            sum(age_under18_share * residents_total)
+            / nullif(sum(residents_total), 0) as age_under18_share,
+            sum(age_18_27_share * residents_total)
+            / nullif(sum(residents_total), 0) as age_18_27_share,
+            sum(age_27_45_share * residents_total)
+            / nullif(sum(residents_total), 0) as age_27_45_share,
+            sum(age_45_65_share * residents_total)
+            / nullif(sum(residents_total), 0) as age_45_65_share,
+            sum(age_65plus_share * residents_total)
+            / nullif(sum(residents_total), 0) as age_65plus_share,
+            sum(mean_age_years * residents_total)
+            / nullif(sum(residents_total), 0) as mean_age_years,
+            sum(foreigners_share * residents_total)
+            / nullif(sum(residents_total), 0) as foreigners_share,
+            sum(migration_background_share * residents_total)
+            / nullif(sum(residents_total), 0) as migration_background_share,
+            sum(residence_duration_5y_share * residents_total)
+            / nullif(sum(residents_total), 0) as residence_duration_5y_share,
+            sum(residence_duration_10y_share * residents_total)
+            / nullif(sum(residents_total), 0) as residence_duration_10y_share,
+            bool_or(any_indicator_suppressed) as any_indicator_suppressed,
+            count(*) as n_plr
+        from with_ortsteil
+        group by city_code, ortsteil_area_code, area_vintage, reference_year
     )
 
 select *
@@ -253,3 +322,6 @@ from pgr_agg
 union all
 select *
 from bezirk_agg
+union all
+select *
+from ortsteil_agg

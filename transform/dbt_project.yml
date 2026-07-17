@@ -50,6 +50,12 @@ data_tests:
       +severity: warn
     test_c5_poi_count_drop:
       +severity: warn
+    # #269 (I-ortsteile): 2 real, small enclave Ortsteile (Schlachtensee,
+    # Malchow) never hold the dominant share of any PLR -- a disclosed
+    # geographic fact about the dominant-assignment crosswalk method, not a
+    # data-quality bug. See the test file's own header for the full note.
+    test_ortsteil_overlap_ortsteil_never_dominant:
+      +severity: warn
     test_mss_plr_row_count:
       +severity: error
 

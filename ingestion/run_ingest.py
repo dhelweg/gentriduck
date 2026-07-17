@@ -138,6 +138,21 @@ def build_steps(repo_root: Path) -> list[IngestStep]:
             source_id="berlin__lor_crosswalk",
             blocking=True,
         ),
+        # #269 (I-ortsteile): Ortsteil boundary geometry (ALKIS Berlin Ortsteile WFS,
+        # same gdi.berlin.de infrastructure as LOR). Non-blocking: Ortsteil is a
+        # leaf geography dimension (dim_area rows + its own crosswalk/rollup marts)
+        # that does not feed the core PLR-grain gentrification_index -- its absence
+        # degrades only the Ortsteil profile pages, not the index/build.
+        IngestStep(
+            "Berlin Ortsteile",
+            _py(
+                "ingestion/berlin/ortsteile/ingest_ortsteil_geometries.py",
+                "--out-dir",
+                "data/raw/berlin/ortsteile",
+            ),
+            source_id="berlin__ortsteile",
+            blocking=False,
+        ),
         # Berlin — MSS (Monitoring Soziale Stadtentwicklung) outcome + indicator layers
         IngestStep(
             "Berlin MSS",
