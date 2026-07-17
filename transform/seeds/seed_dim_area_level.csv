@@ -5,3 +5,4 @@ pgr,Prognoseraum,~58 mid-level LOR planning areas between Bezirk and Bezirksregi
 district,District,"Generic city-agnostic district level (e.g. Hamburg Bezirk, 7)"
 subarea_l1,Subarea (level 1),"Generic city-agnostic mid-level subarea (e.g. Hamburg Stadtteil, ~104)"
 subarea_l2,Subarea (level 2),"Generic city-agnostic finest subarea (e.g. Hamburg statistisches Gebiet, ~945)"
+ortsteil,Ortsteil,"96-97 Berlin Stadtteile (non-LOR administrative subdivision of a Bezirk; ALKIS WFS currently returns 97 -- #269). Nests cleanly into Bezirk; does NOT nest into PLR (resolved via area-overlap crosswalk, see int_berlin_plr_ortsteil_overlap)"

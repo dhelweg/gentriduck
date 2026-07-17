@@ -949,7 +949,8 @@ models:
 
       Grain: one row per (city_code, area_level, area_code, area_vintage).
       Sources: stg_berlin_lor (plr), stg_berlin_lor_bzr (bzr), stg_berlin_lor_pgr
-      (pgr, added #242 I18), stg_hamburg_geo (district/subarea_l1/subarea_l2).
+      (pgr, added #242 I18), stg_hamburg_geo (district/subarea_l1/subarea_l2),
+      stg_berlin_ortsteil (ortsteil, added #269 I-ortsteile, area_vintage='current').
     meta:
       dbt_meta_owner: data-engineer
     data_tests:
@@ -1272,6 +1273,13 @@ models:
       Rollup rule (extensive=sum, intensive=summed-numerator recompute)
       geo-DS approved (I19-geo-signoff.md, PASS), reusing int_mss_bzr_aggregate's
       precedent. Berlin only; Hamburg parity deferred to after H3 (#237).
+
+      #269 (I-ortsteile): extended with an 'ortsteil' level. Same rollup rule;
+      constituent-PLR membership comes from the DOMINANT PLR->Ortsteil
+      area-overlap crosswalk (int_berlin_plr_ortsteil_overlap.sql,
+      is_dominant_ortsteil), not a code-prefix substr() -- Ortsteil does not
+      nest into PLR (see dim_area_hierarchy.sql). 'ortsteil' rows are always
+      area_vintage='lor_2021' (the crosswalk's scope).
     meta:
       dbt_meta_owner: data-engineer
     data_tests:
@@ -1294,13 +1302,13 @@ models:
               arguments:
                 values: ["BER"]
       - name: area_level
-        description: Geo-hierarchy level (I18) -- plr, bzr, pgr, or bezirk.
+        description: Geo-hierarchy level (I18/I-ortsteile) -- plr, bzr, pgr, bezirk, or ortsteil.
         data_tests:
 
           - not_null
           - accepted_values:
               arguments:
-                values: ["plr", "bzr", "pgr", "bezirk"]
+                values: ["plr", "bzr", "pgr", "bezirk", "ortsteil"]
       - name: area_code
         description: LOR area code at this level's own grain (8/6/4/2-digit).
         data_tests:
@@ -1478,6 +1486,138 @@ models:
           MAUP diagnostic / directional display only.
       - name: n_plr
         description: Number of constituent PLRs contributing to this row.
+        data_tests:
+
+          - not_null
+
+  - name: mart_ortsteil_plr_crosswalk
+    description: >
+      #269 (I-ortsteile): thin display mart exposing
+      int_berlin_plr_ortsteil_overlap to the web layer -- pure pass-through,
+      no new computation (see model header for the full method). Lets an
+      Ortsteil profile page join gentrification_index PLR rows to their
+      dominant Ortsteil assignment (filter is_dominant_ortsteil) to build a
+      constituent-PLR ("children") table, the Ortsteil-grain equivalent of
+      the substr(area_code, 1, N) trick BZR/PGR/Bezirk pages use.
+      GATE: the underlying area-overlap crosswalk + dominant-assignment
+      method is methodology-adjacent (geo-DS sign-off required per the #269
+      ticket gate) -- gated at int_berlin_plr_ortsteil_overlap.sql, not
+      re-decided here.
+    meta:
+      dbt_meta_owner: data-engineer
+    data_tests:
+
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns:
+              - plr_area_code
+              - ortsteil_area_code
+    columns:
+      - name: city_code
+        description: City identifier; always 'BER'.
+        data_tests:
+
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ["BER"]
+      - name: plr_area_code
+        description: 8-digit lor_2021 PLR code.
+        data_tests:
+
+          - not_null
+      - name: ortsteil_area_code
+        description: 4-digit Ortsteil code.
+        data_tests:
+
+          - not_null
+      - name: ortsteil_area_name
+        description: Ortsteil name, denormalized for convenience.
+      - name: bezirk_code
+        description: 2-digit Bezirk code the Ortsteil belongs to, denormalized for convenience.
+      - name: plr_area_m2
+        description: PLR polygon area (m^2), EPSG:25833.
+      - name: overlap_area_m2
+        description: Intersection area (m^2) between this PLR and this Ortsteil.
+      - name: overlap_frac_of_plr
+        description: overlap_area_m2 / plr_area_m2 -- the crosswalk weight.
+      - name: is_dominant_ortsteil
+        description: >
+          TRUE for the single largest-overlap-share Ortsteil per PLR -- the
+          assignment used by mart_area_demographics's ortsteil level and
+          mart_ortsteil_plr_stage_mix.
+        data_tests:
+
+          - not_null
+      - name: n_ortsteil_overlaps
+        description: >
+          Count of non-trivial Ortsteile this PLR overlaps. >1 means a
+          straddling PLR (82 of 542 lor_2021 PLRs, 15.1%, per
+          int_berlin_plr_ortsteil_overlap.sql's empirical count).
+
+  - name: mart_ortsteil_plr_stage_mix
+    description: >
+      #269 (I-ortsteile): child-PLR typology-STAGE DISTRIBUTION per Ortsteil,
+      e.g. "6 of 9 PLRs in this Ortsteil are in stage X" -- a descriptive
+      rollup, deliberately NOT a re-scored index at Ortsteil grain (matching
+      I18's "no re-scored index at coarser-than-PLR grain" decision, #247;
+      reaffirmed for BZR/PGR/Bezirk by #267 declining a coarse-index ticket --
+      same reasoning applies here). Ortsteil-grain equivalent of the inline
+      stage_mix query every BZR/PGR/Bezirk profile page runs against
+      gentrification_index via substr(area_code, 1, N) -- Ortsteil cannot use
+      that trick (PLR codes do not encode Ortsteil membership), so this mart
+      joins through the DOMINANT PLR->Ortsteil assignment instead (see
+      int_berlin_plr_ortsteil_overlap.sql). Source: gentrification_index
+      (ADR-0004 governed mart), variant='live_data', area_level='plr',
+      city_code='BER' -- same scope every existing stage-mix chart uses.
+      'uninhabited / no data' is an explicit bucket (uninhabited PLRs'
+      status_class is NULL by design, index-definition.md §7.1) -- never
+      silently dropped.
+    meta:
+      dbt_meta_owner: data-engineer
+    data_tests:
+
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns:
+              - city_code
+              - ortsteil_area_code
+              - period_yyyymm
+              - typology_stage
+    columns:
+      - name: city_code
+        description: City identifier; always 'BER'.
+        data_tests:
+
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ["BER"]
+      - name: ortsteil_area_code
+        description: 4-digit Ortsteil code.
+        data_tests:
+
+          - not_null
+      - name: ortsteil_area_name
+        description: Ortsteil name, denormalized for convenience.
+      - name: period_yyyymm
+        description: Period key matching gentrification_index's own period_yyyymm (YYYY12 snapshot convention for live_data).
+        data_tests:
+
+          - not_null
+      - name: typology_stage
+        description: >
+          D1xD2 typology stage name (gentrification_index.status_class for
+          variant='live_data'), or the literal 'uninhabited / no data' for
+          PLRs with no MSS classification. (Named typology_stage, not `stage`,
+          to avoid a reserved-keyword-as-identifier lint (RF04).)
+        data_tests:
+
+          - not_null
+      - name: n_plr
+        description: >
+          Count of this Ortsteil's dominantly-assigned constituent PLRs
+          currently in this typology_stage, for this period.
         data_tests:
 
           - not_null

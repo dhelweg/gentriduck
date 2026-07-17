@@ -71,8 +71,34 @@
 -- flagged as an open question for geo-DS, same treatment the ticket already
 -- gives the Berlin Ortsteil non-nesting case. A follow-up ticket can add this
 -- edge once that method is chosen and gated.
--- Follow-up now tracked: #269 (see
--- docs/epic-i/tickets/I-ortsteile.md).
+--
+-- =============================================================================
+-- Berlin Ortsteil: TWO DIFFERENT mechanisms for TWO DIFFERENT relationships (#269)
+-- =============================================================================
+-- #269 (I-ortsteile) resolves the "Berlin Ortsteil non-nesting case" flagged
+-- above, and splits it explicitly into two relationships that do NOT share a
+-- mechanism:
+--
+-- 1. Ortsteil -> Bezirk: NESTS CLEANLY (added HERE, code-prefix derivation,
+-- same pattern as the LOR PLR->BZR->PGR->Bezirk edges above). Ortsteil is a
+-- legally-defined Bezirk subdivision (Berlin Bezirksverwaltungsgesetz Sec.2)
+-- -- unlike the LOR ladder, an Ortsteil's Bezirk parent is a SOURCE-PROVIDED
+-- fact (the WFS `sch` attribute's own 2-digit prefix; see
+-- ingest_ortsteil_geometries.py and stg_berlin_ortsteil.sql), so this edge
+-- is a straight pass-through of stg_berlin_ortsteil.parent_area_code, the
+-- same treatment as the Hamburg subarea_l1->district edge just above, not a
+-- substr() re-derivation.
+--
+-- 2. Ortsteil <-> PLR: DOES NOT NEST (deliberately NOT added here). A single
+-- PLR frequently spans more than one Ortsteil and vice versa -- there is no
+-- single resolvable parent, so adding it to THIS model would violate the
+-- model's own documented grain ("every child area has at most one parent by
+-- construction"). This relationship is a genuine area-overlap spatial join,
+-- built as its own gated intermediate model,
+-- int_berlin_plr_ortsteil_overlap.sql (methodology-bearing -- geo-DS
+-- sign-off required per the #269 ticket gate) -- see that model's header
+-- for the method, the straddling-PLR count, and the dominant-assignment
+-- rationale.
 {{
     config(
         materialized="view",
@@ -144,6 +170,23 @@ with
             and parent_area_code is not null
     ),
 
+    -- Berlin: Ortsteil -> Bezirk (#269, I-ortsteile). Source-provided parent
+    -- code (WFS `sch` prefix, passed through by stg_berlin_ortsteil), same
+    -- pass-through treatment as hh_l1_to_district above -- see header.
+    ber_ortsteil_to_bezirk as (
+        select distinct
+            city_code,
+            area_level,
+            area_code,
+            'bezirk' as parent_area_level,
+            parent_area_code
+        from {{ ref("stg_berlin_ortsteil") }}
+        where
+            city_code = 'BER'
+            and area_level = 'ortsteil'
+            and parent_area_code is not null
+    ),
+
     unioned as (
         select *
         from ber_plr_to_bzr
@@ -156,6 +199,9 @@ with
         union all
         select *
         from hh_l1_to_district
+        union all
+        select *
+        from ber_ortsteil_to_bezirk
     )
 
 select city_code, area_level, area_code, parent_area_level, parent_area_code

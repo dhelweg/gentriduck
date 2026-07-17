@@ -104,6 +104,16 @@ sources:
         meta:
           external_location: "{{ env_var('PWD', '.') }}/data/raw/berlin/lor/*_pgr.parquet"
 
+      - name: ortsteile
+        description: >
+          #269 (I-ortsteile): Berlin Ortsteil (Stadtteil) boundary geometries.
+          ALKIS Berlin Ortsteile WFS (gdi.berlin.de), dl-de-zero-2.0. A single
+          current snapshot (no vintage discriminator; Ortsteil boundaries are
+          not part of the LOR pre2021/2021 reform). Read by
+          stg_berlin_ortsteil.
+        meta:
+          external_location: "{{ env_var('PWD', '.') }}/data/raw/berlin/ortsteile/*.parquet"
+
       - name: mss
         description: >
           MSS (Monitoring Soziale Stadtentwicklung) biennial editions,

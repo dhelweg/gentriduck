@@ -1,0 +1,23 @@
+{
+  "source_id": "berlin__ortsteile",
+  "source_class": "pinned",
+  "city": "berlin",
+  "upstream": {
+    "url": "https://gdi.berlin.de/services/wfs/alkis_ortsteile (typeNames=alkis_ortsteile:ortsteile)",
+    "vintage": "ALKIS Berlin Ortsteile, current edition (no vintage discriminator published)",
+    "retrieved_at": "2026-07-17T00:54:03Z"
+  },
+  "outputs": [
+    {
+      "path": "data/raw/berlin/ortsteile/ortsteile.parquet",
+      "row_count": 97,
+      "schema_fingerprint": "sha256:60f58a0b50dccabca0b0b5801878588a3af2b54392724c67b6a21fb0a0ea6fd5",
+      "content_hash": "sha256:d5cae6f9926f5461d0dde053eefa824cb429fcafba118bb464b327a6df00243a"
+    }
+  ],
+  "ingest_script": {
+    "module": "ingestion.berlin.ortsteile.ingest_ortsteil_geometries",
+    "git_sha": "c5dee4a67f8b378dbd305e0f12a6583076aec900"
+  },
+  "manifest_schema_version": 1
+}
