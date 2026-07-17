@@ -271,6 +271,18 @@ We would rather state these plainly than have you discover them by surprise.
 - **Small samples and no multiple-comparison correction** in the directional statistical tests behind
   this model. Results should be read as directional indicators, consistent with a hypothesis, not as
   confirmatory proof.
+- **No re-scored index value at BZR/PGR/Bezirk grain — by design, not oversight.** The Bezirk/PGR/BZR
+  profile pages on this site show sums and **distributions** of child-PLR typology stages, never a
+  single re-scored gentrification-index number for the coarser area itself. This was considered
+  ([#267](https://github.com/dhelweg/gentriduck/issues/267)) and declined by both the geo-data-scientist
+  and the gentrification-domain-expert: averaging the ordinal Status/Dynamik class codes across PLRs
+  into one coarse-grain value would violate the same "don't average ordinal codes as if metric" rule
+  this page states in §4, and — separately — a single coarse number would erase exactly the kind of
+  intra-Bezirk heterogeneity (a district containing both actively-gentrifying and stable PLRs at once)
+  that is the actual analytic point of a PLR-grain, frontier-based index. See the
+  [geo-data-scientist decision](https://github.com/dhelweg/gentriduck/blob/main/docs/epic-i/I-coarse-index-geo-decision.md)
+  and the [domain-expert decision](https://github.com/dhelweg/gentriduck/blob/main/docs/epic-i/I-coarse-index-domain-decision.md)
+  for the full reasoning.
 
 ## 7. Faithful vs improved — a methodology comparison
 
@@ -478,6 +490,7 @@ project's public GitHub repository:
 - [ADR-0019 — Berlin Milieuschutz displacement source](https://github.com/dhelweg/gentriduck/blob/main/docs/adr/0019-berlin-milieuschutz-displacement-source.md)
 - [ADR-0018 — causal-tiered POI selection](https://github.com/dhelweg/gentriduck/blob/main/docs/adr/0018-causal-tiered-poi-selection.md) and [ADR-0017 — Offering Advantage revival](https://github.com/dhelweg/gentriduck/blob/main/docs/adr/0017-poi-offering-advantage-revival.md) — the faithful/improved comparison in §7
 - B1 displacement/affordability sign-offs (§2): [Milieuschutz geo](https://github.com/dhelweg/gentriduck/blob/main/docs/methodology/B1-milieuschutz-geo-signoff.md) / [domain](https://github.com/dhelweg/gentriduck/blob/main/docs/methodology/B1-milieuschutz-domain-signoff.md), [rent-pressure geo](https://github.com/dhelweg/gentriduck/blob/main/docs/methodology/B1-rent-pressure-geo-signoff.md) / [domain](https://github.com/dhelweg/gentriduck/blob/main/docs/methodology/B1-rent-pressure-domain-signoff.md), [turnover geo](https://github.com/dhelweg/gentriduck/blob/main/docs/methodology/B1-turnover-geo-signoff.md) / [domain](https://github.com/dhelweg/gentriduck/blob/main/docs/methodology/B1-turnover-domain-signoff.md)
+- Coarse-grain (BZR/PGR/Bezirk) index-value decline (§6): [geo-data-scientist decision](https://github.com/dhelweg/gentriduck/blob/main/docs/epic-i/I-coarse-index-geo-decision.md) / [domain-expert decision](https://github.com/dhelweg/gentriduck/blob/main/docs/epic-i/I-coarse-index-domain-decision.md)
 
 See also the [home page](/) for the current index, [time-series](/berlin/time-series) for per-area
 trajectories, [maps](/berlin/maps) for a citywide choropleth, [area detail](/berlin/area-detail) for
