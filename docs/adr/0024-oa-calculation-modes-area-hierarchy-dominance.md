@@ -74,8 +74,10 @@ This block is authoritative where it differs from the older D1/D2/D5/D7 prose be
 Geo sign-off flags that **Getis-Ord (Gi\*) likely cannot be computed in pure DuckDB** — it needs a
 spatial-weights library (e.g. `esda`/`libpysal`, Queen contiguity W), which would be a **new tool/library
 adoption** and therefore needs its **own architect ADR + maintainer OK**. This strains ADR-0024's
-"selects no new tool" claim. **Decision pending:** either (a) **drop Getis-Ord** from the confirmed
-"everything" set (keeps ADR-0024 tool-free), or (b) **greenlight a follow-on new-tool ADR** for `esda`,
+"selects no new tool" claim. **Decision (maintainer, 2026-07-17): option (b)** — the system-architect is
+drafting the follow-on new-tool ADR now; Getis-Ord stays **held out of the OA-D build until that ADR is
+accepted**, and the other nine methods proceed independently. Options weighed were (a) **drop Getis-Ord**
+from the confirmed "everything" set (keeps ADR-0024 tool-free), or (b) **greenlight a follow-on new-tool ADR** for `esda`,
 restricting Gi\* to PLR/BZR × domain grain (not full type leaf, not Bezirk). Until resolved, Getis-Ord is
 **held out of the build** and the rest of the "everything" set proceeds.
 
