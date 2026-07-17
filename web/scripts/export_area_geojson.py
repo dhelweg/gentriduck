@@ -34,6 +34,18 @@ Fix: export one geojson **per (area_level, variant)** we actually show on the ma
 using the geometry vintage matching *that variant's* latest available period, so every
 view's `geoJsonUrl` always matches the area codes its query data uses.
 
+OA-D7 pass 2 (#240, ADR-0024) addition: `export_oa_arealevel_geometry()` exports plain
+geometry-only FeatureCollections for BZR/PGR/Bezirk at the `lor_2021` vintage (no
+`gentrification_index` join -- that mart has no bzr/pgr/bezirk `live_data` rows yet, see
+the `VARIANTS_BY_AREA_LEVEL` comment below), for the live PGR/Bezirk Offering Advantage
+choropleth on `/methodology-oa-modes` (`mart_poi_oa_arealevel`, OA-D6). Named
+`<area_level>_lor2021.geojson` rather than reusing the `<area_level>_<variant>` scheme
+above, since OA's area-level mart has no `variant` dimension analogous to
+`gentrification_index.variant` (only a single `weight_variant='standard'` /
+`methodology_variant='faithful'` combination exists today) -- the vintage IS the only axis
+that varies. PLR at this vintage is already covered by `plr_live_data.geojson` (also
+`lor_2021`) and is not re-exported here.
+
 Usage (from repo root, after `uv run poe build && uv run poe export-serving`):
   uv run python web/scripts/export_area_geojson.py
 """
@@ -61,6 +73,26 @@ VARIANTS_BY_AREA_LEVEL = {
     "bzr": ("standard",),
 }
 
+# OA-D7 pass 2: fixed 12-entry Bezirk-code -> name lookup, the same one hardcoded across the
+# site's coarse-area pages (e.g. pages/berlin/area-detail.md's <Dropdown>,
+# pages/berlin/area/bezirk/[code].md's `bezirk_name` query) -- `dim_area_geometry` carries no
+# `area_name` for `area_level = 'bezirk'` rows (its dissolved-polygon derivation, OA-D6, never
+# populated one), so this is presentation-only, not a new source of truth.
+BEZIRK_NAMES = {
+    "01": "Mitte",
+    "02": "Friedrichshain-Kreuzberg",
+    "03": "Pankow",
+    "04": "Charlottenburg-Wilmersdorf",
+    "05": "Spandau",
+    "06": "Steglitz-Zehlendorf",
+    "07": "Tempelhof-Schöneberg",
+    "08": "Neukölln",
+    "09": "Treptow-Köpenick",
+    "10": "Marzahn-Hellersdorf",
+    "11": "Lichtenberg",
+    "12": "Reinickendorf",
+}
+
 
 # Mirrors stg_berlin_ewr.sql's documented period<->LOR-vintage convention: MSS/EWR editions
 # <=2020 report on the pre-2021 (447/448-PLR) scheme, >=2021 on the 2021+ (542-PLR) scheme.
@@ -69,18 +101,7 @@ def _vintage_for_period(period_yyyymm: str) -> str:
     return "lor_2021" if year >= 2021 else "lor_pre2021"
 
 
-def main() -> None:
-    geometry_path = SERVING_DIR / "dim_area_geometry.parquet"
-    index_path = SERVING_DIR / "gentrification_index.parquet"
-    for p in (geometry_path, index_path):
-        if not p.exists():
-            raise SystemExit(f"{p} not found -- run `uv run poe export-serving` first.")
-
-    OUT_DIR.mkdir(parents=True, exist_ok=True)
-    con = duckdb.connect(":memory:")
-    con.execute(f"create view dim_area_geometry as select * from read_parquet('{geometry_path}')")
-    con.execute(f"create view gentrification_index as select * from read_parquet('{index_path}')")
-
+def export_gentrification_index_geometry(con: duckdb.DuckDBPyConnection) -> None:
     for area_level, variants in VARIANTS_BY_AREA_LEVEL.items():
         for variant in variants:
             latest_period_row = con.execute(
@@ -174,6 +195,71 @@ def main() -> None:
                 latest_period,
                 out_path.relative_to(REPO_ROOT),
             )
+
+
+def export_oa_arealevel_geometry(con: duckdb.DuckDBPyConnection) -> None:
+    """OA-D7 pass 2 (#240): plain geometry FeatureCollections for BZR/PGR/Bezirk at
+    `lor_2021`, for the live PGR/Bezirk Offering Advantage choropleth on
+    `/methodology-oa-modes`. Geometry-only (city_code/area_code/area_name properties) --
+    the OA values themselves are joined client-side from `mart_poi_oa_arealevel` by the
+    Evidence page's own SQL query (`geoId`/`areaCol` = `area_code`), the same pattern
+    `/berlin/poi-map` already uses for its PLR choropleth. See this module's header
+    comment for why these are named `<area_level>_lor2021` rather than reusing the
+    `<area_level>_<variant>` scheme above.
+    """
+    for area_level in ("bzr", "pgr", "bezirk"):
+        rows = con.execute(
+            """
+            select city_code, area_code, area_name, geometry_geojson
+            from dim_area_geometry
+            where area_level = ? and area_vintage = 'lor_2021'
+            order by area_code
+            """,
+            [area_level],
+        ).fetchall()
+
+        features = []
+        for city_code, area_code, area_name, geometry_geojson in rows:
+            resolved_name = area_name
+            if area_level == "bezirk" and not resolved_name:
+                resolved_name = BEZIRK_NAMES.get(area_code, area_code)
+            features.append(
+                {
+                    "type": "Feature",
+                    "geometry": json.loads(geometry_geojson),
+                    "properties": {
+                        "city_code": city_code,
+                        "area_code": area_code,
+                        "area_name": resolved_name,
+                    },
+                }
+            )
+
+        feature_collection = {"type": "FeatureCollection", "features": features}
+        out_path = OUT_DIR / f"{area_level}_lor2021.geojson"
+        out_path.write_text(json.dumps(feature_collection))
+        logger.info(
+            "exported %s/lor2021 (%d features) -> %s",
+            area_level,
+            len(features),
+            out_path.relative_to(REPO_ROOT),
+        )
+
+
+def main() -> None:
+    geometry_path = SERVING_DIR / "dim_area_geometry.parquet"
+    index_path = SERVING_DIR / "gentrification_index.parquet"
+    for p in (geometry_path, index_path):
+        if not p.exists():
+            raise SystemExit(f"{p} not found -- run `uv run poe export-serving` first.")
+
+    OUT_DIR.mkdir(parents=True, exist_ok=True)
+    con = duckdb.connect(":memory:")
+    con.execute(f"create view dim_area_geometry as select * from read_parquet('{geometry_path}')")
+    con.execute(f"create view gentrification_index as select * from read_parquet('{index_path}')")
+
+    export_gentrification_index_geometry(con)
+    export_oa_arealevel_geometry(con)
 
     con.close()
 
