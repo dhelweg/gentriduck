@@ -4562,6 +4562,140 @@ models:
       - name: oa_type_zscore_slq
         description: Binomial-significance z-score of the type LQ (same construction as oa_domain_zscore_slq, type-relative base).
 
+  - name: int_poi_within_group_dominance
+    description: >
+      OA-D4 (#240, ADR-0024): within-group offering-dominance model -- HHI,
+      top-share, Shannon entropy, Pielou evenness, and a signed top_child +
+      offering_tier, computed ONLY over a curated five-group allow-list
+      (gastronomy_category, gastronomy_restaurant_cuisine, retail_category,
+      entertainment_category, wellness_curated) per OA-D0 domain sign-off
+      Condition A -- see seed_oa_dominance_groups.csv and the model SQL
+      header for the full allow-list rationale and confirmed exclusions
+      (Vacancy, infrastructure domains, Tourism, Hipster/Coworking).
+
+      Grain: one row per (city_code, snapshot_year, area_code, area_vintage,
+      weight_variant, dominance_group) -- a GROUP-level grain, distinct from
+      OA's taxonomy-leaf grain, since dominance is a property of the group.
+
+      Ethics gate (OA-D0 domain sign-off Condition B, mandatory, all four
+      clauses -- see model SQL header): (B.1) descriptive diversity index,
+      no antitrust/market-power reading; (B.2) sign-blind HHI/top_share must
+      always be read paired with top_child + top_child_offering_tier, never
+      bare; (B.3) is_public_safe = false for gastronomy_restaurant_cuisine --
+      cuisine-typed Restaurant dominance is an ethnic-stigma vector and MUST
+      be filtered out of any public, displacement-adjacent surface; (B.4)
+      is_thin_base flags (never drops) low-count cells -- descriptive-not-
+      causal, anti-erasure (Haklay 2010).
+
+      Graceful degradation: zero rows when int_poi_offering_advantage has no
+      rows.
+    meta:
+      dbt_meta_owner: data-engineer
+    data_tests:
+
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns:
+              - city_code
+              - snapshot_year
+              - area_code
+              - area_vintage
+              - weight_variant
+              - dominance_group
+          config:
+            where: "area_code is not null"
+    columns:
+      - name: city_code
+        description: City identifier (ADR-0005).
+      - name: snapshot_year
+        description: Calendar year of the OSM snapshot.
+      - name: area_code
+        description: PLR area code (8-digit, zero-padded). Vintage-specific.
+      - name: area_vintage
+        description: Spatial-join vintage, carried through from int_poi_offering_advantage.
+        data_tests:
+
+          - accepted_values:
+              arguments:
+                values: ["lor_pre2021", "lor_2021", "current"]
+              config:
+                where: "area_code is not null"
+      - name: weight_variant
+        description: "'standard' or a Gaussian-weighted kernel variant, carried through unchanged."
+      - name: dominance_group
+        description: >
+          One of the five curated allow-list groups (see model description).
+          NOT an open-ended domain/category label -- governed by
+          seed_oa_dominance_groups.csv.
+        data_tests:
+
+          - accepted_values:
+              arguments:
+                values:
+                  [
+                    "gastronomy_category",
+                    "gastronomy_restaurant_cuisine",
+                    "retail_category",
+                    "entertainment_category",
+                    "wellness_curated",
+                  ]
+              config:
+                where: "area_code is not null"
+      - name: is_public_safe
+        description: >
+          FALSE only for gastronomy_restaurant_cuisine (OA-D0 domain
+          sign-off Condition B.3 anti-stigma clause). Any consumer rendering
+          a dominance figure on a public, displacement-adjacent surface MUST
+          filter is_public_safe = true first.
+      - name: group_stock_local
+        description: Sum of child_stock across all present (positive-stock) children in this group cell.
+      - name: n_children
+        description: Count of present (positive-stock) children contributing to this group cell.
+      - name: hhi
+        description: >
+          Herfindahl-Hirschman concentration index, sum(share_i^2), range
+          [1/n_children, 1]. Descriptive diversity index only (Condition
+          B.1) -- never publish without top_child/top_child_offering_tier
+          (Condition B.2).
+        data_tests:
+
+          - dbt_utils.accepted_range:
+              arguments: { min_value: 0, max_value: 1.0000001 }
+              config:
+                where: "area_code is not null"
+      - name: top_share
+        description: Largest single child's share of the group (max share_i).
+        data_tests:
+
+          - dbt_utils.accepted_range:
+              arguments: { min_value: 0, max_value: 1.0000001 }
+              config:
+                where: "area_code is not null"
+      - name: entropy
+        description: Shannon entropy of the within-group share distribution, range [0, ln(n_children)].
+      - name: evenness
+        description: >
+          Pielou evenness (entropy / ln(n_children)), range [0,1]. NULL when
+          n_children <= 1 (undefined, not zero/error -- see model SQL
+          header).
+      - name: top_child
+        description: The child_label (category or type name) with the largest share in this group cell.
+      - name: top_child_level
+        description: "'category' or 'type' -- the taxonomy grain of top_child."
+      - name: top_child_offering_tier
+        description: >
+          top_child's offering_tier from seed_poi_offering_relevance.csv
+          (Condition B.2 mandatory signed pairing). May be NULL if the
+          taxonomy leaf has no matching relevance-seed row.
+      - name: top_child_offering_weight
+        description: top_child's offering_weight from seed_poi_offering_relevance.csv (same pairing as top_child_offering_tier).
+      - name: is_thin_base
+        description: >
+          TRUE when group_stock_local < greatest(10, 5 * n_children) --
+          dominance-specific min-parent-base gate (stricter than OA's flat
+          oa_min_poi_base_n floor). Flags, never drops (Condition B.4
+          anti-erasure).
+
   - name: int_poi_offering_advantage_arealevel
     description: >
       OA-D2 (#240, ADR-0024): area_level roll-up of int_poi_offering_advantage's

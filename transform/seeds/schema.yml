@@ -836,3 +836,58 @@ seeds:
         data_tests:
 
           - not_null
+
+  - name: seed_oa_dominance_groups
+    description: >
+      OA-D4 (#240, ADR-0024): the curated within-group dominance allow-list --
+      one row per (dominance_group, child) member. Governs
+      int_poi_within_group_dominance.sql -- ONLY these five groups
+      (gastronomy_category, gastronomy_restaurant_cuisine, retail_category,
+      entertainment_category, wellness_curated) are computed, per OA-D0
+      domain sign-off Condition A (docs/methodology/OA-D0-domain-signoff.md).
+      Vacancy, infrastructure domains (Mobility/Public Service/Religion/
+      Office/Public Space), Tourism, and Hipster/Coworking are deliberately
+      absent (Condition A confirmed exclusions).
+    meta:
+      dbt_meta_owner: data-engineer
+    columns:
+      - name: dominance_group
+        description: Group identifier -- see model description for the full allow-list.
+        data_tests:
+
+          - not_null
+      - name: group_description
+        description: Human-readable rationale, citing the OA-D0 domain sign-off condition that authorized this group.
+        data_tests:
+
+          - not_null
+      - name: child_grain
+        description: "'category' or 'type' -- the taxonomy level this member is drawn from."
+        data_tests:
+
+          - accepted_values:
+              arguments:
+                values: ["category", "type"]
+      - name: poi_domain_h
+        description: Harmonized POI domain this member belongs to.
+        data_tests:
+
+          - not_null
+      - name: poi_category_h
+        description: Harmonized POI category (NULL only never -- category is always populated for both grains here).
+      - name: poi_type_h
+        description: Harmonized POI type (populated only for child_grain='type' rows).
+      - name: child_label
+        description: The label int_poi_within_group_dominance groups by (the category or type name).
+        data_tests:
+
+          - not_null
+      - name: is_public_safe
+        description: >
+          FALSE only for gastronomy_restaurant_cuisine (OA-D0 domain
+          sign-off Condition B.3 anti-stigma clause -- cuisine-typed
+          Restaurant dominance is an ethnic-stigma vector barred from
+          public, displacement-adjacent surfaces).
+        data_tests:
+
+          - not_null
