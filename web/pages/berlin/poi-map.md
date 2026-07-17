@@ -505,8 +505,11 @@ See [ADR-0017](https://github.com/dhelweg/gentriduck/blob/main/docs/adr/0017-poi
 for how Offering Advantage is computed, the
 [bandwidth-sweep findings](https://github.com/dhelweg/gentriduck/blob/main/docs/epic-g/G2-oa-bandwidth-sweep-findings.md)
 for the C-4 discharge detail, the [area detail page](/berlin/area-detail) for a
-single-neighbourhood breakdown of these same signals alongside the governed index, or the
-[gentrification-pressure map](/berlin/maps) for the governed index itself.
+single-neighbourhood breakdown of these same signals alongside the governed index, the
+[gentrification-pressure map](/berlin/maps) for the governed index itself, or
+[Offering Advantage — modes, scales & dominance](/methodology-oa-modes) for the other eight
+calculation methods, the area-hierarchy scale switch, and the within-group dominance construct
+this map does not yet surface (this map shows only the canonical nested-LQ method at PLR grain).
 
 ---
 

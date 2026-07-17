@@ -489,13 +489,16 @@ project's public GitHub repository:
 - [OSM completeness-bias correction sign-off](https://github.com/dhelweg/gentriduck/blob/main/docs/epic-c/C5-geo-signoff.md)
 - [ADR-0019 — Berlin Milieuschutz displacement source](https://github.com/dhelweg/gentriduck/blob/main/docs/adr/0019-berlin-milieuschutz-displacement-source.md)
 - [ADR-0018 — causal-tiered POI selection](https://github.com/dhelweg/gentriduck/blob/main/docs/adr/0018-causal-tiered-poi-selection.md) and [ADR-0017 — Offering Advantage revival](https://github.com/dhelweg/gentriduck/blob/main/docs/adr/0017-poi-offering-advantage-revival.md) — the faithful/improved comparison in §7
+- [Offering Advantage — modes, scales & dominance](/methodology-oa-modes) — the dedicated page for OA's nine calculation methods, four spatial scales, and the within-group dominance construct (ADR-0024), extending the faithful/improved comparison in §7
 - B1 displacement/affordability sign-offs (§2): [Milieuschutz geo](https://github.com/dhelweg/gentriduck/blob/main/docs/methodology/B1-milieuschutz-geo-signoff.md) / [domain](https://github.com/dhelweg/gentriduck/blob/main/docs/methodology/B1-milieuschutz-domain-signoff.md), [rent-pressure geo](https://github.com/dhelweg/gentriduck/blob/main/docs/methodology/B1-rent-pressure-geo-signoff.md) / [domain](https://github.com/dhelweg/gentriduck/blob/main/docs/methodology/B1-rent-pressure-domain-signoff.md), [turnover geo](https://github.com/dhelweg/gentriduck/blob/main/docs/methodology/B1-turnover-geo-signoff.md) / [domain](https://github.com/dhelweg/gentriduck/blob/main/docs/methodology/B1-turnover-domain-signoff.md)
 - Coarse-grain (BZR/PGR/Bezirk) index-value decline (§6): [geo-data-scientist decision](https://github.com/dhelweg/gentriduck/blob/main/docs/epic-i/I-coarse-index-geo-decision.md) / [domain-expert decision](https://github.com/dhelweg/gentriduck/blob/main/docs/epic-i/I-coarse-index-domain-decision.md)
 
 See also the [home page](/) for the current index, [time-series](/berlin/time-series) for per-area
 trajectories, [maps](/berlin/maps) for a citywide choropleth, [area detail](/berlin/area-detail) for
-a full per-area breakdown, and the [POI & Offering Advantage map](/berlin/poi-map) (including its
-citywide-context section).
+a full per-area breakdown, the [POI & Offering Advantage map](/berlin/poi-map) (including its
+citywide-context section), and [Offering Advantage — modes, scales & dominance](/methodology-oa-modes)
+for the full method/scale/dominance vocabulary, with its own [POI taxonomy](/reference/poi-taxonomy)
+and [area hierarchy](/reference/area-hierarchy) reference pages.
 
 ---
 
