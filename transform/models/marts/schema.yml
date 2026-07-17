@@ -1621,3 +1621,79 @@ models:
         data_tests:
 
           - not_null
+
+  - name: mart_poi_oa_methods
+    description: >
+      OA-D3 (#240, ADR-0024): long-format serving view over
+      int_poi_offering_advantage_methods's six method columns per taxonomy
+      level (ADR-0024 "methods as columns + a long serving view"). Pure
+      UNPIVOT/reshape -- not itself a new methodology decision beyond what
+      int_poi_offering_advantage_methods computes.
+
+      Grain: one row per (city_code, snapshot_year, area_code, area_vintage,
+      poi_domain_h, poi_category_h, poi_type_h, weight_variant,
+      methodology_variant, taxonomy_level, oa_method). taxonomy_level in
+      ('domain', 'category', 'type') is separate from OA-D2's area_level
+      (spatial-scale) dimension -- this mart is PLR-grain only.
+
+      C7 (geo sign-off, BLOCKING, never-blend): oa_method is
+      accepted_values-tested against seed_oa_calculation_methods.csv;
+      oa_value is a single scalar of one method -- never a blend of two or
+      more.
+
+      Graceful degradation: zero rows when
+      int_poi_offering_advantage_methods has no rows.
+    meta:
+      dbt_meta_owner: data-engineer
+    data_tests:
+
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns:
+              - city_code
+              - snapshot_year
+              - area_code
+              - area_vintage
+              - poi_domain_h
+              - poi_category_h
+              - poi_type_h
+              - weight_variant
+              - methodology_variant
+              - taxonomy_level
+              - oa_method
+          config:
+            where: "area_code is not null"
+    columns:
+      - name: city_code
+        description: City identifier (ADR-0005).
+        data_tests:
+
+          - not_null:
+              config:
+                where: "area_code is not null"
+      - name: area_code
+        description: PLR area code (8-digit, zero-padded).
+      - name: taxonomy_level
+        description: Which POI taxonomy level this row's oa_value belongs to.
+        data_tests:
+
+          - accepted_values:
+              arguments:
+                values: ["domain", "category", "type"]
+              config:
+                where: "area_code is not null"
+      - name: oa_method
+        description: Calculation-method label, accepted-values-tested against seed_oa_calculation_methods.csv.
+        data_tests:
+
+          - relationships:
+              arguments:
+                to: ref('seed_oa_calculation_methods')
+                field: oa_method
+              config:
+                where: "area_code is not null"
+      - name: oa_value
+        description: >
+          The single scalar value for this (taxonomy_level, oa_method) pair
+          -- unit depends on oa_method (see seed_oa_calculation_methods.csv
+          `unit` column); never a blend of two or more methods.

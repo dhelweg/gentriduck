@@ -4418,6 +4418,139 @@ models:
               config:
                 where: "area_code is not null"
 
+  - name: int_poi_offering_advantage_methods
+    description: >
+      OA-D3 (#240, ADR-0024): calculation-method columns for Offering
+      Advantage -- CORE slice of the D3 "everything" method set (six
+      methods: nested_lq, global_lq, log_lq, share_diff, shrunk_lq,
+      raw_share x three taxonomy levels domain/category/type = 18 value
+      columns), all pure functions of int_poi_offering_advantage's
+      already-computed, already-tested stock columns -- no new join, no new
+      tool. The four PROMOTED modes (z-score/binomial-SLQ, Getis-Ord,
+      density, per-capita) are deliberately deferred to OA-D3b pending a
+      system-architect ruling on the Getis-Ord/esda tooling boundary (OA-D0
+      geo sign-off C9) -- see model SQL header for the split rationale.
+
+      Grain: identical to int_poi_offering_advantage (one row per taxonomy
+      leaf x weight_variant x methodology_variant) -- new columns only, no
+      new grain discriminator (ADR-0024 "methods as columns").
+
+      C7 (geo sign-off, BLOCKING, never-blend): every column is a function of
+      exactly one method against one stock pair; no combined/averaged score
+      is computed or exposed.
+
+      Graceful degradation: zero rows when int_poi_offering_advantage has no
+      rows.
+    meta:
+      dbt_meta_owner: data-engineer
+    data_tests:
+
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns:
+              - city_code
+              - snapshot_year
+              - area_code
+              - area_vintage
+              - poi_domain_h
+              - poi_category_h
+              - poi_type_h
+              - weight_variant
+              - methodology_variant
+          config:
+            where: "area_code is not null"
+    columns:
+      - name: city_code
+        description: City identifier (ADR-0005).
+        data_tests:
+
+          - not_null:
+              config:
+                where: "area_code is not null"
+      - name: snapshot_year
+        description: Calendar year of the OSM snapshot.
+        data_tests:
+
+          - not_null:
+              config:
+                where: "area_code is not null"
+      - name: area_code
+        description: PLR area code (8-digit, zero-padded). Vintage-specific.
+      - name: area_vintage
+        description: Spatial-join vintage, carried through from int_poi_offering_advantage.
+        data_tests:
+
+          - accepted_values:
+              arguments:
+                values: ["lor_pre2021", "lor_2021", "current"]
+              config:
+                where: "area_code is not null"
+      - name: poi_domain_h
+        description: Harmonized POI domain.
+      - name: poi_category_h
+        description: Harmonized POI category.
+      - name: poi_type_h
+        description: Harmonized POI type.
+      - name: weight_variant
+        description: >
+          'standard' or a Gaussian-weighted kernel variant, carried through
+          unchanged.
+      - name: methodology_variant
+        description: ADR-0017 D4 structural invariant ('faithful' today).
+        data_tests:
+
+          - accepted_values:
+              arguments:
+                values: ["faithful", "improved"]
+              config:
+                where: "area_code is not null"
+      - name: oa_domain_nested_lq
+        description: Domain-level nested (parent-relative) LQ -- identical to int_poi_offering_advantage.oa_domain.
+      - name: oa_category_nested_lq
+        description: Category-level nested LQ -- identical to int_poi_offering_advantage.oa_category.
+      - name: oa_type_nested_lq
+        description: Type-level nested LQ -- identical to int_poi_offering_advantage.oa_type.
+      - name: oa_domain_global_lq
+        description: >
+          Domain-level global (city-relative) LQ -- algebraically identical
+          to oa_domain_nested_lq by construction (a domain's own parent is
+          already the all-domains grand total); see model header note 2.
+      - name: oa_category_global_lq
+        description: Category-level LQ against the all-domains grand total (not the parent domain).
+      - name: oa_type_global_lq
+        description: Type-level LQ against the all-domains grand total (not the parent domain).
+      - name: oa_domain_log_lq
+        description: ln(oa_domain_nested_lq) -- log-centred at 0.
+      - name: oa_category_log_lq
+        description: ln(oa_category_nested_lq) -- log-centred at 0.
+      - name: oa_type_log_lq
+        description: ln(oa_type_nested_lq) -- log-centred at 0.
+      - name: oa_domain_share_diff
+        description: >
+          Domain local_share minus city_share (percentage-point difference,
+          NOT a ratio -- C7 never-blend with the LQ-family columns).
+      - name: oa_category_share_diff
+        description: Category local_share minus city_share (parent-relative bases, pp difference).
+      - name: oa_type_share_diff
+        description: Type local_share minus city_share (parent-relative bases, pp difference).
+      - name: oa_domain_shrunk_lq
+        description: >
+          Empirical-Bayes/Laplace-shrunk domain LQ (prior weight k =
+          oa_min_poi_base_n; Efron & Morris 1975; Agresti 2013 Sec 3.3).
+      - name: oa_category_shrunk_lq
+        description: Empirical-Bayes/Laplace-shrunk category LQ.
+      - name: oa_type_shrunk_lq
+        description: Empirical-Bayes/Laplace-shrunk type LQ.
+      - name: oa_domain_raw_share
+        description: >
+          Raw within-group domain share (proportion, no city normalization).
+          Expected to fail the D5 completeness-contamination gate (OA-D0 geo
+          sign-off C3) -- not temporally safe.
+      - name: oa_category_raw_share
+        description: Raw within-group category share (proportion, no city normalization).
+      - name: oa_type_raw_share
+        description: Raw within-group type share (proportion, no city normalization).
+
   - name: int_poi_offering_advantage_arealevel
     description: >
       OA-D2 (#240, ADR-0024): area_level roll-up of int_poi_offering_advantage's

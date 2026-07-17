@@ -778,3 +778,61 @@ seeds:
           (tier >= 1) node (non-circularity rule, ADR-0017 D3; ADR-0018 D1 Step 2/D2);
           see docs/epic-c/B2-offering-relevance-validation-findings.md for the full
           crosstab and flagged direction-mismatch findings.
+
+  - name: seed_oa_calculation_methods
+    description: >
+      OA-D3 (#240, ADR-0024): the OA calculation-method vocabulary --
+      one row per method (nested_lq, global_lq, log_lq, share_diff,
+      shrunk_lq, raw_share). mart_poi_oa_methods.oa_method is
+      accepted-values/relationship-tested against this seed (OA-D0 geo
+      sign-off C7, never-blend enforcement).
+    meta:
+      dbt_meta_owner: data-engineer
+    columns:
+      - name: oa_method
+        description: Method identifier, matches mart_poi_oa_methods.oa_method / int_poi_offering_advantage_methods column suffixes.
+        data_tests:
+
+          - not_null
+          - unique
+      - name: label
+        description: Human-readable method name.
+        data_tests:
+
+          - not_null
+      - name: formula_summary
+        description: Short formula description (R-C2 grounding companion to the model SQL header).
+        data_tests:
+
+          - not_null
+      - name: unit
+        description: The method's unit (ratio, log-ratio, pp-difference, proportion) -- C7 never-blend rationale.
+        data_tests:
+
+          - not_null
+      - name: reference_point
+        description: parent-relative or city-relative.
+        data_tests:
+
+          - accepted_values:
+              arguments:
+                values: ["parent-relative", "city-relative"]
+      - name: golden_anchored
+        description: Whether this method is validated against the 2018 thesis golden (only nested_lq is).
+        data_tests:
+
+          - not_null
+      - name: expected_temporal_safe
+        description: >
+          OA-D0 geo sign-off C3 directional expectation -- whether this
+          method is expected to clear the (D5-deliverable) completeness-
+          contamination Spearman gate. A directional expectation, not yet an
+          enforced test (D5 scope).
+        data_tests:
+
+          - not_null
+      - name: grounding
+        description: R-C2 citation(s) for this method.
+        data_tests:
+
+          - not_null
