@@ -161,9 +161,10 @@ currently roll up to a coarser scale the way Berlin's do.**
 - [POI taxonomy reference](/reference/poi-taxonomy) — the other hierarchy this site is built on, at
   the *business* rather than the *area* level.
 - [All neighbourhoods](/berlin/area) and [district & area profiles](/berlin/area) — the live,
-  queryable browse experience across this same hierarchy (population and typology-stage counts,
-  today; not yet a re-scored Offering Advantage figure at coarser grain — see the OA methodology
-  page's §4 for what pass 2 of that page will add).
+  queryable browse experience across this same hierarchy (population and typology-stage counts) —
+  and the [OA methodology page's §4](/methodology-oa-modes#4-the-area-hierarchy-plr--bzr--pgr--bezirk)
+  for the live BZR/PGR/Bezirk Offering Advantage choropleth (the canonical nested-LQ method summed
+  up the same code prefix this page describes — never a re-scored index).
 - [ADR-0003](https://github.com/dhelweg/gentriduck/blob/main/docs/adr/0003-berlin-geographies-and-open-price-rent-sources.md) — Berlin's official geographies.
 - [ADR-0024](https://github.com/dhelweg/gentriduck/blob/main/docs/adr/0024-oa-calculation-modes-area-hierarchy-dominance.md) — the roll-up rules this hierarchy is used for.
 - [`dim_area_hierarchy.sql`](https://github.com/dhelweg/gentriduck/blob/main/transform/models/intermediate/dim_area_hierarchy.sql) and [`seed_dim_area_level.csv`](https://github.com/dhelweg/gentriduck/blob/main/transform/seeds/seed_dim_area_level.csv) — the full, versioned derivation and level list, in the GitHub repository.

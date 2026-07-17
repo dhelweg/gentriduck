@@ -4,41 +4,81 @@ sidebar_position: 21
 ---
 
 <!--
-  OA-D7 (#240, ADR-0024), PASS 1 of 2 (web-only; data-backed pass 2 follows once the site is wired
-  to query mart_poi_oa_methods / mart_poi_oa_arealevel / mart_poi_dominance live). This page is the
-  "dedicated methodology page" the #240 epic scopes: it restates, in plain language, the already
-  gated OA-D0…D6 build (ADR-0024, both R-C1 sign-offs PASS WITH CONDITIONS) -- it introduces no new
-  indicator, weight, method, or data source of its own. Where this page states a methodology claim,
-  the source is cited inline (R-C2) -- primarily `docs/adr/0024-oa-calculation-modes-area-hierarchy-
-  dominance.md`, `docs/methodology/OA-D0-geo-signoff.md`, `docs/methodology/OA-D0-domain-signoff.md`,
-  `docs/methodology/OA-D4-domain-signoff.md`, `docs/methodology/OA-D5-mode-comparison-findings.md`,
-  and `docs/planning/oa-modes-hierarchy-dominance.md`.
+  OA-D7 (#240, ADR-0024), PASS 2 of 2 (data-backed). Pass 1 (web-only, merged to `develop`) built
+  this page's narrative/vocabulary/decoder content -- see git history for that pass's own header
+  comment. This pass wires live Evidence.dev queries + charts against the three OA-D7 marts
+  (`mart_poi_oa_methods` OA-D3/D3b, `mart_poi_oa_arealevel` OA-D2/D6, `mart_poi_dominance` OA-D4)
+  the pass-1 sign-offs explicitly deferred: docs/methodology/OA-D7-geo-signoff.md's "Carried-forward
+  conditions (bind pass 2, not this web-only pass)" and docs/methodology/OA-D7-domain-signoff.md's
+  discharge list. Every method/scale/dominance LABEL used below is copied verbatim from the
+  already-governed static tables in §2/§4/§5 above -- this pass surfaces already-approved figures
+  live; it introduces no new indicator, weight, normalization, or interpretive claim.
 
-  Binding forward conditions this page discharges (carried from earlier sign-offs, per each doc's own
-  "carried onto D7" language):
-  - OA-D0 domain sign-off Condition B.2/B.3/B.4 + OA-D4 domain sign-off's closing note: restate
-    dominance sign-blindness, the anti-stigma/cuisine-typed-dominance bar, and the Hipster/Vacancy
-    documented-absence in public copy (see "Within-group dominance" section below).
-  - OA-D0 domain sign-off Condition D + OA-D2 domain sign-off point 2: restate the
-    resolution-vs-stability / ecological-fallacy framing at coarse area levels (BZR = headline,
-    Bezirk = context-only) before any coarse-level figure is shown (see "The area hierarchy"
-    section).
-  - OA-D0 domain sign-off Condition C + OA-D3b domain sign-off: label density/per-capita/z-score by
-    the exact question they answer, never share an axis/legend with the LQ family, and never present
-    "significance" as a gentrification-importance claim (see "The nine calculation methods" and
-    "Which mode answers which question" sections).
-  - OA-D0 domain sign-off Guardrail E: state explicitly that nested-LQ alone is the 2018 thesis
-    construct; every other mode is a new instrument (see "Which mode answers which question").
+  The four carried-forward pass-2 conditions and how each is discharged (see the "Live:" subsections
+  under §2/§4/§5 below for the mechanism in each case):
+  1. Completeness-contamination badge on any live differenced-over-time density/per-capita figure:
+     NOT built -- discharged by avoidance, not by badge, because neither the mart nor the underlying
+     model exposes a per-cell completeness/temporal-safety flag today (only `seed_oa_calculation_
+     methods.csv`'s `expected_temporal_safe` is a per-METHOD, pre-registered, and -- for density/
+     per-capita specifically -- UNTESTED expectation; OA-D5's own empirical completeness-gate study
+     explicitly excluded density/per-capita, "added after the study ran" per this page's own §7). The
+     §2 "Live" table below therefore shows density/per-capita STOCK (point-in-time) values only, never
+     a year-over-year delta -- see that subsection's own caveat for the full reasoning. Building a
+     properly-badged temporal view is out of this pass's scope; a future ticket would need a new
+     per-cell completeness flag column upstream first (data-engineer + geo-DS work, not a display
+     decision this pass can make on its own).
+  2. `is_public_safe = true` as an ACTUAL query filter, not just documented: applied at the SOURCE
+     layer (`web/sources/gentriduck_marts/mart_poi_dominance.sql`), the strongest point available --
+     Evidence bundles a source's full result to the client for any page that queries it reactively, so
+     filtering there means the cuisine-typed internal-study-only group never reaches the browser at
+     all, not merely a page-level WHERE a future page could omit. This page's own dominance query
+     additionally restates the filter (defence in depth) and its dropdown never lists the cuisine
+     group as an option in the first place.
+  3. Coarse-level (BZR/PGR/Bezirk) choropleths must carry the ecological-fallacy + MAUP-instability
+     (PLR-vs-BZR rho~=0.66) caveat inline: the §4 "Live" map surfaces `maup_caveat_required` and
+     `area_level_publish_tier` (both already computed by the OA-D6 mart) as an always-visible Alert,
+     not a hover-only tooltip, and repeats the rho~=0.66 figure verbatim from §4's static text above.
+  4. Min-base suppression must render as "too thinly observed to characterize," never absence: the
+     §4 map nulls out `oa_domain` (unshaded gap, same convention `/berlin/poi-map` already uses) when
+     `oa_domain_min_base_flag` is set, and the §5 dominance table filters `not is_thin_base` while
+     disclosing the suppressed count rather than silently dropping rows.
 
-  Pass-1 scope (per the OA-D7 ticket description): page structure, narrative, the plain-language
-  method/scale/dominance vocabulary, and the interpretation-by-question guide -- grounded in the
-  already-signed-off docs and in the empirical OA-D5 comparison-study findings (which are themselves
-  a static, already-generated markdown report, not a live query -- restated here as text/tables, same
-  treatment /methodology §7 already gives other findings docs). NO live dbt/DuckDB query or chart is
-  wired on this page (that is explicitly deferred to pass 2, once a consumer is confirmed against the
-  is_public_safe / MAUP-disclosure / min-base-suppression conditions below). See "Honest caveats" and
-  the closing note under "Where next" for the full list of what pass 2 will add.
+  Client-bundle-size note (not methodology-bearing, a build-practicality fix): the raw
+  `mart_poi_oa_methods` (leaf-taxonomy grain x 9 methods) and `mart_poi_oa_arealevel` (leaf-taxonomy
+  grain x 4 area levels) marts are far too large to bundle whole to the client (`evidence sources`
+  OOM'd on the unfiltered `mart_poi_oa_arealevel` alone, 535,977 rows) -- the three source files under
+  `web/sources/gentriduck_marts/` therefore pre-filter to `taxonomy_level = 'domain'` / drop
+  `area_level = 'plr'` (already live elsewhere, at finer grain, via `mart_poi_offering_advantage_map`
+  on `/berlin/poi-map`) / restrict to `city_code = 'BER'` and `is_public_safe = true` respectively,
+  each with its own header comment explaining the specific cut. No value is altered, aggregated, or
+  re-derived by any of these filters -- see each source file for the exact rationale.
+
+  Geometry: `web/scripts/export_area_geojson.py` gained `export_oa_arealevel_geometry()`, exporting
+  plain (geometry-only, no gentrification_index join) FeatureCollections for BZR/PGR/Bezirk at the
+  `lor_2021` vintage -- `web/static/geo/{bzr,pgr,bezirk}_lor2021.geojson` -- since PGR/Bezirk had no
+  exported geojson at all before this pass, and the existing `bzr_standard.geojson` is pre-2021
+  vintage (would not match this mart's 2021+ area codes, the same #149-class mismatch the existing
+  script's own header already documents and guards against for PLR).
+
+  Explicitly scoped OUT of this pass (see each "Live" subsection's own note for why):
+  - A live PLR-grain choropleth for any of the nine methods: the canonical nested-LQ PLR map already
+    exists at /berlin/poi-map; re-deriving another PLR view here would duplicate a published figure
+    and was also the single biggest contributor to the client-bundle-size problem above.
+  - Category/type taxonomy-level drill-down for the nine-methods table (domain grain only) -- again a
+    bundle-size cut; the underlying mart supports it, a future pass can lift this restriction once a
+    narrower per-domain-drill-down page shape is designed.
+  - A live re-run of the OA-D5 cross-mode correlation study: §7's numbers remain the static,
+    already-generated findings-doc figures; this pass does not add a live statistics engine.
+  - Getis-Ord Gi* hotspot clustering: still gated behind ADR-0025 (proposed), unchanged from pass 1.
 -->
+
+<script>
+  // OA-D7 pass 2: basePath-aware asset/link URLs, same reason + mechanism as
+  // /berlin/poi-map's and /berlin/maps' own <script> header comments -- AreaMap's geoJsonUrl fetch
+  // and its raw `window.location.href` link click-through neither prepend SvelteKit's deployment
+  // basePath, so `${base}` must be interpolated directly into both.
+  import { base } from '$app/paths';
+</script>
 
 <Hero compact eyebrow="Chapter 3 — The Evidence · reference / rulebook" title="Offering Advantage — modes, scales & dominance" lede="Offering Advantage (OA) is not one number. It is a family of measurements along independent axes — which method, at which spatial scale — and the choice of axis changes what a figure means more than any parameter does. This page is the decoder for all of it." />
 
@@ -55,13 +95,17 @@ location quotient is, why it's the thesis's chosen predictor), start with the
 this page picks up from there.
 
 <Alert status="info">
-  <b>Pass 1 of 2.</b> This page is currently narrative and reference only — the plain-language
-  vocabulary, the interpretation guide, and the already-computed OA-D5 comparison-study findings,
-  restated as static text and tables. It does not yet carry a live, queryable chart of these nine
-  methods, four area levels, or the dominance mart — that data-backed second pass is tracked as
-  the remainder of OA-D7 and will only wire a consumer once each binding disclosure below (the
-  <code>is_public_safe</code> filter, the MAUP/ecological-fallacy caveats, the min-base
-  suppression) is actually applied at the point of publication, not just documented here.
+  <b>Pass 2 of 2 — live data is now wired.</b> Every "Live" subsection below queries the actual OA
+  marts (<code>mart_poi_oa_methods</code>, <code>mart_poi_oa_arealevel</code>,
+  <code>mart_poi_dominance</code>) rather than restating a static figure. What's <b>still not</b>
+  live here: a PLR-grain choropleth for the eight non-canonical methods (the canonical nested-LQ PLR
+  map already exists on the <a href="/berlin/poi-map">POI &amp; Offering Advantage map</a>), a
+  category/type drill-down for the nine-methods table (domain grain only), a live re-run of the
+  OA-D5 comparison study (§7 stays a static findings restatement), a year-over-year delta view for
+  density/per-capita (no per-cell completeness badge exists yet to gate it — see that subsection's
+  own caveat), and Getis-Ord Gi* hotspot clustering (still gated behind
+  <a href="https://github.com/dhelweg/gentriduck/blob/main/docs/adr/0025-getis-ord-gistar-esda-mart-handoff.md">ADR-0025</a>,
+  proposed).
 </Alert>
 
 ## 1. Why OA is a family, not a number
@@ -134,6 +178,166 @@ genuinely different question, never a redefinition of the thesis construct
   (<a href="https://github.com/dhelweg/gentriduck/blob/main/docs/methodology/OA-D3b-zscore-domain-signoff.md">OA-D3b domain sign-off</a>).
 </Alert>
 
+### Live: the nine methods, for one Kiez at a time
+
+Pick a district; this reads off the district's currently-highest-gentrification-pressure
+neighbourhood (same "spotlight" rule the [area detail page](/berlin/area-detail) uses) and shows
+every one of the nine calculation methods for the domain and year you choose — so you can see, for
+one real Kiez, exactly how differently the "same" underlying counts read depending which method you
+pick.
+
+<Dropdown name="methods_bezirk" title="District (Bezirk)" defaultValue="02">
+  <DropdownOption value="01" valueLabel="01 · Mitte"/>
+  <DropdownOption value="02" valueLabel="02 · Friedrichshain-Kreuzberg"/>
+  <DropdownOption value="03" valueLabel="03 · Pankow"/>
+  <DropdownOption value="04" valueLabel="04 · Charlottenburg-Wilmersdorf"/>
+  <DropdownOption value="05" valueLabel="05 · Spandau"/>
+  <DropdownOption value="06" valueLabel="06 · Steglitz-Zehlendorf"/>
+  <DropdownOption value="07" valueLabel="07 · Tempelhof-Schöneberg"/>
+  <DropdownOption value="08" valueLabel="08 · Neukölln"/>
+  <DropdownOption value="09" valueLabel="09 · Treptow-Köpenick"/>
+  <DropdownOption value="10" valueLabel="10 · Marzahn-Hellersdorf"/>
+  <DropdownOption value="11" valueLabel="11 · Lichtenberg"/>
+  <DropdownOption value="12" valueLabel="12 · Reinickendorf"/>
+</Dropdown>
+
+<Dropdown name="methods_domain" title="POI domain" defaultValue="Gastronomy">
+  <DropdownOption value="Entertainment" valueLabel="Entertainment"/>
+  <DropdownOption value="Gastronomy" valueLabel="Gastronomy"/>
+  <DropdownOption value="Mobility" valueLabel="Mobility"/>
+  <DropdownOption value="Office" valueLabel="Office"/>
+  <DropdownOption value="Other" valueLabel="Other"/>
+  <DropdownOption value="Public Service" valueLabel="Public Service"/>
+  <DropdownOption value="Public Space" valueLabel="Public Space"/>
+  <DropdownOption value="Religion" valueLabel="Religion"/>
+  <DropdownOption value="Retail" valueLabel="Retail"/>
+  <DropdownOption value="Services" valueLabel="Services"/>
+  <DropdownOption value="Sports and Recreation" valueLabel="Sports and Recreation"/>
+  <DropdownOption value="Tourism" valueLabel="Tourism"/>
+  <DropdownOption value="Vacancy" valueLabel="Vacancy"/>
+</Dropdown>
+
+<Dropdown name="methods_year" title="Year" defaultValue="2025">
+  <DropdownOption value="2008" valueLabel="2008"/>
+  <DropdownOption value="2009" valueLabel="2009"/>
+  <DropdownOption value="2010" valueLabel="2010"/>
+  <DropdownOption value="2011" valueLabel="2011"/>
+  <DropdownOption value="2012" valueLabel="2012"/>
+  <DropdownOption value="2013" valueLabel="2013"/>
+  <DropdownOption value="2014" valueLabel="2014"/>
+  <DropdownOption value="2015" valueLabel="2015"/>
+  <DropdownOption value="2016" valueLabel="2016"/>
+  <DropdownOption value="2017" valueLabel="2017"/>
+  <DropdownOption value="2018" valueLabel="2018"/>
+  <DropdownOption value="2019" valueLabel="2019"/>
+  <DropdownOption value="2020" valueLabel="2020"/>
+  <DropdownOption value="2021" valueLabel="2021"/>
+  <DropdownOption value="2022" valueLabel="2022"/>
+  <DropdownOption value="2023" valueLabel="2023"/>
+  <DropdownOption value="2024" valueLabel="2024"/>
+  <DropdownOption value="2025" valueLabel="2025"/>
+  <DropdownOption value="2026" valueLabel="2026"/>
+</Dropdown>
+
+```sql methods_chosen_area
+-- Same spotlight rule as /berlin/area-detail's own `chosen` query: the district's PLR currently
+-- showing the strongest gentrification-pressure signal (negative dynamism first, then highest
+-- dynamism_index) -- not a methods-mart concept of its own, borrowed verbatim from that page.
+select area_code, area_name
+from gentriduck_marts.gentrification_index
+where variant = 'live_data' and area_level = 'plr' and city_code = 'BER'
+  and period_yyyymm = (
+      select max(period_yyyymm) from gentriduck_marts.gentrification_index
+      where variant = 'live_data' and area_level = 'plr'
+  )
+  and substr(area_code, 1, 2) = '${inputs.methods_bezirk.value}'
+order by (dynamism_class_bi = 'negative') desc, dynamism_index desc
+limit 1
+```
+
+```sql methods_ratio_family
+-- Only the three methods genuinely sharing a unit ("ratio, centred on 1" per the §2 table above)
+-- share this chart's axis -- log_lq (log-ratio, centred on 0), share_diff (percentage points),
+-- raw_share (proportion), zscore_slq (standardized score), density and percapita (absolute,
+-- provision-not-representation) are deliberately excluded here (OA-D0 domain sign-off Condition C /
+-- OA-D0 geo sign-off C7 never-blend) -- they appear, correctly unit-labelled, in the table below
+-- instead, which is not a chart and therefore has no shared-axis risk.
+select oa_method, oa_value
+from gentriduck_marts.mart_poi_oa_methods
+where city_code = 'BER'
+  and area_code = '${methods_chosen_area[0].area_code}'
+  and poi_domain_h = '${inputs.methods_domain.value}'
+  and snapshot_year = ${inputs.methods_year.value}
+  and oa_method in ('nested_lq', 'global_lq', 'shrunk_lq')
+order by oa_method
+```
+
+<BarChart
+    data={methods_ratio_family}
+    x=oa_method
+    y=oa_value
+    title="{methods_chosen_area[0].area_name} — ratio-centred methods, {inputs.methods_domain.value}, {inputs.methods_year.value} (1.0 = citywide average)"
+    yAxisTitle="Ratio (1.0 = citywide average)"
+    emptySet="warn"
+    emptyMessage="No data for this district/domain/year combination."
+/>
+
+```sql methods_all
+-- Method label/unit/family below are copied VERBATIM from this page's own §2 table -- no new
+-- label, unit, or interpretive claim is introduced here (R-C2: this table restates, it does not
+-- decide). sort_order matches §2's own row order.
+select
+    meta.method_label,
+    meta.unit,
+    meta.family,
+    m.oa_value,
+    meta.golden_note
+from gentriduck_marts.mart_poi_oa_methods as m
+join (
+    values
+        ('nested_lq', 'Nested LQ (canonical)', 'ratio, centred on 1', 'Ratio family', 'Yes — the sole 2018-golden-anchored method', 1),
+        ('global_lq', 'Global (city-relative) LQ', 'ratio, centred on 1', 'Ratio family', 'No — new instrument', 2),
+        ('log_lq', 'Log-LQ', 'log-ratio, centred on 0', 'Ratio family (rescaled)', 'No — a rescaling of the nested LQ', 3),
+        ('shrunk_lq', 'Shrunk-LQ (empirical Bayes)', 'ratio, centred on 1 (shrunk)', 'Ratio family', 'No — a small-sample-corrected variant', 4),
+        ('share_diff', 'Share-diff (shift-share)', 'percentage points', 'Magnitude family', 'No — new instrument', 5),
+        ('raw_share', 'Raw within-group share', 'proportion 0–1', 'Composition family', 'No — pure local composition', 6),
+        ('zscore_slq', 'Binomial z-score (SLQ)', 'standardized score, centred on 0', 'Significance family', 'No — a significance reading of the same ratio', 7),
+        ('density', 'POI density', 'POIs per km²', 'Absolute family — NOT a location quotient', 'No — a different construct (provision/centrality)', 8),
+        ('percapita', 'POIs per 1,000 residents', 'POIs per 1,000 residents', 'Absolute family — NOT a location quotient', 'No — a different construct (provision/exposure)', 9)
+) as meta(oa_method, method_label, unit, family, golden_note, sort_order)
+    on meta.oa_method = m.oa_method
+where m.city_code = 'BER'
+  and m.area_code = '${methods_chosen_area[0].area_code}'
+  and m.poi_domain_h = '${inputs.methods_domain.value}'
+  and m.snapshot_year = ${inputs.methods_year.value}
+order by meta.sort_order
+```
+
+<DataTable data={methods_all} rows=9 emptySet="warn" emptyMessage="No data for this district/domain/year combination.">
+    <Column id=method_label title="Method"/>
+    <Column id=unit title="Unit"/>
+    <Column id=family title="Family (never mix across families on one axis)"/>
+    <Column id=oa_value title="Value" fmt="num2"/>
+    <Column id=golden_note title="Is this the 2018 thesis construct?"/>
+</DataTable>
+
+<Alert status="warning">
+  This table is deliberately a table, not a chart — a shared bar/line axis across families with
+  incompatible units (a ratio, a log-ratio, percentage points, a proportion, a standardized score,
+  and two absolute counts) would misrepresent every value's real magnitude relative to the others,
+  the exact hazard §2's warning above names. The bar chart further up only ever plots the three
+  methods that genuinely share a unit ("ratio, centred on 1"). <b>Density and per-capita above are
+  point-in-time ("stock") values only</b> — this table does not show a year-over-year change for
+  either, because neither the mart nor its upstream model yet carries a per-cell
+  completeness-contamination flag to gate a temporal delta safely (OA-D5's own study, §7 below,
+  explicitly excluded density/per-capita — they were added afterwards); showing an undisclosed
+  delta for either would violate the same completeness-contamination discipline this project applies
+  everywhere else. <b>This table also does not suppress a thin-data area</b> — unlike the PLR
+  Offering Advantage map's own domain-grain mart, `mart_poi_oa_methods` does not carry a min-base
+  flag; read a single PLR's figures cautiously, per §2's data-thinness note above, especially where
+  the spotlighted Kiez is itself a small area.
+</Alert>
+
 ## 3. Which mode answers which question
 
 This table is a navigation aid, not a menu to "pick the best one" — every row describes what a
@@ -195,13 +399,153 @@ Spearman ρ ≈ 0.66, below the project's own 0.7 stability threshold, in every 
 an area's *rank* can genuinely shift between the Kiez and district scale. That is disclosed here as
 a real finding about the spatial grain of gentrification signals, not swept under the rug: see §7.
 
-**What's built today, and what isn't yet:** PLR and BZR are fully queryable (counts, geometry, and
-choropleth-ready). PGR and Bezirk values roll up correctly from the same summed counts, and Bezirk
-now has a real dissolved polygon (built by combining its constituent PLR shapes, with no new data
-source). This page's second pass is what will actually surface a PGR/Bezirk Offering Advantage
-figure on a public map — see the
-[district & area profiles](/berlin/area) pages for what's already live at these coarser scales
-today (population and typology-stage counts, not yet a re-scored OA figure).
+**What's built today:** PLR and BZR are fully queryable (counts, geometry, and choropleth-ready) —
+PLR's canonical nested-LQ figure is live on the [POI & Offering Advantage map](/berlin/poi-map)
+today. PGR and Bezirk values roll up correctly from the same summed counts, and Bezirk has a real
+dissolved polygon (built by combining its constituent PLR shapes, with no new data source). The
+live map directly below is what actually surfaces a PGR/Bezirk (and BZR) Offering Advantage figure
+on a public map for the first time — see the
+[district & area profiles](/berlin/area) pages for the population and typology-stage counts already
+live at these coarser scales.
+
+### Live: Offering Advantage across area scales (BZR · PGR · Bezirk)
+
+<Dropdown name="scale_domain" title="POI domain" defaultValue="Gastronomy">
+  <DropdownOption value="Entertainment" valueLabel="Entertainment"/>
+  <DropdownOption value="Gastronomy" valueLabel="Gastronomy"/>
+  <DropdownOption value="Mobility" valueLabel="Mobility"/>
+  <DropdownOption value="Office" valueLabel="Office"/>
+  <DropdownOption value="Other" valueLabel="Other"/>
+  <DropdownOption value="Public Service" valueLabel="Public Service"/>
+  <DropdownOption value="Public Space" valueLabel="Public Space"/>
+  <DropdownOption value="Religion" valueLabel="Religion"/>
+  <DropdownOption value="Retail" valueLabel="Retail"/>
+  <DropdownOption value="Services" valueLabel="Services"/>
+  <DropdownOption value="Sports and Recreation" valueLabel="Sports and Recreation"/>
+  <DropdownOption value="Tourism" valueLabel="Tourism"/>
+  <DropdownOption value="Vacancy" valueLabel="Vacancy"/>
+</Dropdown>
+
+<Dropdown name="scale_year" title="Year" defaultValue="2025">
+  <DropdownOption value="2021" valueLabel="2021"/>
+  <DropdownOption value="2022" valueLabel="2022"/>
+  <DropdownOption value="2023" valueLabel="2023"/>
+  <DropdownOption value="2024" valueLabel="2024"/>
+  <DropdownOption value="2025" valueLabel="2025"/>
+  <DropdownOption value="2026" valueLabel="2026"/>
+</Dropdown>
+
+<!-- Year list starts at 2021, not 2008: the roll-up mart only carries `area_vintage = 'lor_2021'`
+     rows (the vintage matching the exported bzr/pgr/bezirk geometry below) -- pre-2021 years used
+     Berlin's old LOR boundaries, a different area-code scheme entirely (see the area-hierarchy
+     reference page's "Bezirk polygon is derived" caveat and #149's PLR precedent for the same
+     vintage-mismatch class of bug). -->
+
+<ButtonGroup name="scale_level" title="Area level" display="tabs" defaultValue="bzr">
+  <ButtonGroupItem value="bzr" valueLabel="Bezirksregion (BZR) — recommended headline scale"/>
+  <ButtonGroupItem value="pgr" valueLabel="Prognoseraum (PGR) — context only"/>
+  <ButtonGroupItem value="bezirk" valueLabel="Bezirk (borough) — context only, never a Kiez claim"/>
+</ButtonGroup>
+
+<Alert status="warning">
+  <b>Every level on this map is coarser than the Kiez (PLR) scale — read every figure below through
+  the "dial, not a ladder" framing above.</b> PLR-vs-BZR rankings for the canonical nested LQ
+  correlate only moderately (pooled Spearman ρ ≈ 0.66, below this project's own 0.7 stability
+  threshold, in every year 2009–2026) — an area's apparent rank can genuinely shift between the Kiez
+  and district scale (§7). <b>Bezirksregion (BZR) is this project's recommended public headline
+  scale</b> for anything coarser than a single neighbourhood. <b>Prognoseraum (PGR) and Bezirk are
+  context only, never a Kiez-level claim</b> — a Bezirk alone pools roughly 30–40 very different
+  neighbourhoods into one number. Blank areas below are <b>too thinly observed to compute a stable
+  ratio</b>, per the min-base rule already applied on the PLR map — never read a blank cell as
+  "commercially dead." In practice this rarely triggers at BZR/PGR/Bezirk grain (unlike PLR): these
+  coarser levels pool far more POIs per area, so the min-base threshold is seldom crossed here —
+  which is exactly the "coarser = more stable" trade-off §4 describes, not a sign the suppression
+  rule was skipped.
+</Alert>
+
+```sql scale_map_data
+with
+    base as (
+        select
+            area_code,
+            case when oa_domain_min_base_flag then null else oa_domain end as oa_domain,
+            oa_domain_min_base_flag,
+            area_level_publish_tier,
+            maup_caveat_required
+        from gentriduck_marts.mart_poi_oa_arealevel
+        where area_level = '${inputs.scale_level.value}'
+          and poi_domain_h = '${inputs.scale_domain.value}'
+          and snapshot_year = ${inputs.scale_year.value}
+    ),
+    bezirk_names as (
+        -- Fixed 12-entry Bezirk-code -> name lookup, the same one hardcoded across the site (e.g.
+        -- /berlin/area-detail's Dropdown, /berlin/area/bezirk/[code].md) -- dim_area_geometry
+        -- carries no area_name for area_level='bezirk' rows (its dissolved-polygon derivation never
+        -- populated one), so this is presentation-only, not a new source of truth.
+        select '01' as bezirk_code, 'Mitte' as bezirk_name
+        union all select '02', 'Friedrichshain-Kreuzberg'
+        union all select '03', 'Pankow'
+        union all select '04', 'Charlottenburg-Wilmersdorf'
+        union all select '05', 'Spandau'
+        union all select '06', 'Steglitz-Zehlendorf'
+        union all select '07', 'Tempelhof-Schöneberg'
+        union all select '08', 'Neukölln'
+        union all select '09', 'Treptow-Köpenick'
+        union all select '10', 'Marzahn-Hellersdorf'
+        union all select '11', 'Lichtenberg'
+        union all select '12', 'Reinickendorf'
+    ),
+    names as (
+        select
+            g.area_code,
+            coalesce(g.area_name, b.bezirk_name, g.area_code) as area_name
+        from gentriduck_marts.dim_area_geometry as g
+        left join bezirk_names as b on g.area_code = b.bezirk_code
+        where g.city_code = 'BER'
+          and g.area_level = '${inputs.scale_level.value}'
+          and g.area_vintage = 'lor_2021'
+    )
+select
+    base.area_code,
+    n.area_name,
+    base.oa_domain,
+    base.oa_domain_min_base_flag,
+    base.area_level_publish_tier,
+    base.maup_caveat_required,
+    -- basePath-aware click-through to the matching coarse-area profile page (already live, I18) --
+    -- same `${base}` interpolation /berlin/poi-map's own AreaMap link column uses.
+    '${base}/berlin/area/' || '${inputs.scale_level.value}' || '/' || base.area_code as link
+from base
+left join names as n on base.area_code = n.area_code
+```
+
+<AreaMap
+    data={scale_map_data}
+    geoJsonUrl={`${base}/geo/${inputs.scale_level.value}_lor2021.geojson`}
+    geoId="area_code"
+    areaCol="area_code"
+    value="oa_domain"
+    legendType="scalar"
+    title="Berlin {inputs.scale_level.value === 'bzr' ? 'Bezirksregion (BZR)' : inputs.scale_level.value === 'pgr' ? 'Prognoseraum (PGR)' : 'Bezirk'} — Offering Advantage (nested LQ), {inputs.scale_domain.value}, {inputs.scale_year.value}"
+    startingLat={52.52}
+    startingLong={13.405}
+    startingZoom={9}
+    link="link"
+    tooltip={[
+      { id: 'area_name', showColumnName: false, valueClass: 'font-bold text-sm', fmt: 'id' },
+      { id: 'oa_domain', title: 'Offering Advantage (1.0 = citywide average)', fmt: 'num2' },
+      { id: 'area_level_publish_tier', title: 'Publish tier' },
+      { id: 'area_code', title: 'Area code', valueClass: 'text-xs opacity-60', fmt: 'id' }
+    ]}
+    emptySet="warn"
+    emptyMessage="No data for this level/domain/year combination."
+/>
+
+Click an area on the map to open its district/PGR/Bezirk profile page (population and
+typology-stage counts). This choropleth shows only the canonical nested-LQ method — for the other
+eight calculation methods at this Kiez, use the single-area table above; a coarse-grain re-scoring
+of those eight is out of this pass's scope (§2's data-thinness caveat above still applies at PLR,
+even though it rarely applies at BZR/PGR/Bezirk).
 
 ## 5. Within-group dominance: monoculture, or a mix?
 
@@ -271,7 +615,10 @@ their math only, not their usual connotation (see the ethics note below):
   <a href="https://github.com/dhelweg/gentriduck/blob/main/docs/methodology/OA-D4-domain-signoff.md">OA-D4 domain sign-off</a>).
   These figures describe <b>form composition on a cultural/price ladder</b> (Imbiss/fast-food →
   sit-down → café/specialty-coffee) — never the cultural or national origin of proprietors,
-  cuisine, or clientele.
+  cuisine, or clientele. <b>The live table below enforces this the same way</b>: its group dropdown
+  only ever lists the four public-safe groups (never the cuisine-typed group), and its query filters
+  <code>is_public_safe = true</code> explicitly, on top of the source-layer filter described in the
+  note above the table.
 </Alert>
 
 <Alert status="info">
@@ -283,6 +630,129 @@ their math only, not their usual connotation (see the ethics note below):
   is — meaning "too thinly observed to characterize," never "commercially dead"
   (<a href="https://github.com/dhelweg/gentriduck/blob/main/docs/methodology/OA-D0-domain-signoff.md">OA-D0 domain sign-off, Condition B.4</a>).
 </Alert>
+
+### Live: within-group dominance — public-safe groups only
+
+<Dropdown name="dom_group" title="Business group" defaultValue="gastronomy_category">
+  <DropdownOption value="gastronomy_category" valueLabel="Gastronomy (Café / Restaurant / Fast Food)"/>
+  <DropdownOption value="retail_category" valueLabel="Retail (12 categories)"/>
+  <DropdownOption value="entertainment_category" valueLabel="Entertainment (Bar / Nightlife / Culture / Leisure)"/>
+  <DropdownOption value="wellness_curated" valueLabel="Wellness / fitness (curated cross-domain group)"/>
+</Dropdown>
+
+<!-- The cuisine-typed group (is_public_safe=false) is NEVER an option here, by construction, on top
+     of the source-layer + query-layer filters below -- see the "Cuisine-typed dominance" alert above. -->
+
+<Dropdown name="dom_year" title="Year" defaultValue="2025">
+  <DropdownOption value="2008" valueLabel="2008"/>
+  <DropdownOption value="2009" valueLabel="2009"/>
+  <DropdownOption value="2010" valueLabel="2010"/>
+  <DropdownOption value="2011" valueLabel="2011"/>
+  <DropdownOption value="2012" valueLabel="2012"/>
+  <DropdownOption value="2013" valueLabel="2013"/>
+  <DropdownOption value="2014" valueLabel="2014"/>
+  <DropdownOption value="2015" valueLabel="2015"/>
+  <DropdownOption value="2016" valueLabel="2016"/>
+  <DropdownOption value="2017" valueLabel="2017"/>
+  <DropdownOption value="2018" valueLabel="2018"/>
+  <DropdownOption value="2019" valueLabel="2019"/>
+  <DropdownOption value="2020" valueLabel="2020"/>
+  <DropdownOption value="2021" valueLabel="2021"/>
+  <DropdownOption value="2022" valueLabel="2022"/>
+  <DropdownOption value="2023" valueLabel="2023"/>
+  <DropdownOption value="2024" valueLabel="2024"/>
+  <DropdownOption value="2025" valueLabel="2025"/>
+  <DropdownOption value="2026" valueLabel="2026"/>
+</Dropdown>
+
+```sql dom_suppressed_count
+-- Disclosed, not silently dropped (OA-D0 domain sign-off Condition B.4): how many of this
+-- group/year's PLRs were suppressed as too thinly observed, alongside how many are shown below.
+select
+    count(*) filter (where is_thin_base) as n_suppressed,
+    count(*) filter (where not is_thin_base) as n_shown
+from gentriduck_marts.mart_poi_dominance
+where city_code = 'BER'
+  and is_public_safe = true
+  and dominance_group = '${inputs.dom_group.value}'
+  and snapshot_year = ${inputs.dom_year.value}
+```
+
+<Alert status="info">
+  <b>{dom_suppressed_count[0].n_suppressed} of {dom_suppressed_count[0].n_suppressed + dom_suppressed_count[0].n_shown} Planungsräume for this group/year are suppressed below as too thinly observed to characterize</b> (dominance's own stricter min-base rule, §5's info note above) — never read that as "commercially dead," only as "too few businesses in this group here to say anything about the mix." The table below shows only the top 15 non-suppressed areas, ranked by concentration (HHI).
+</Alert>
+
+```sql dominance_top
+with
+    base as (
+        select
+            area_code,
+            hhi,
+            top_share,
+            entropy,
+            evenness,
+            top_child,
+            top_child_offering_tier,
+            n_children,
+            group_stock_local
+        from gentriduck_marts.mart_poi_dominance
+        where city_code = 'BER'
+          -- Defence-in-depth restatement of the source-layer filter (see
+          -- web/sources/gentriduck_marts/mart_poi_dominance.sql's header) -- this is the
+          -- binding OA-D4 forward condition, applied a second time at the point of use.
+          and is_public_safe = true
+          and dominance_group = '${inputs.dom_group.value}'
+          and snapshot_year = ${inputs.dom_year.value}
+          and not is_thin_base
+    ),
+    names as (
+        select distinct area_code, area_name
+        from gentriduck_marts.gentrification_index
+        where variant = 'live_data' and area_level = 'plr' and city_code = 'BER'
+    )
+select
+    b.area_code,
+    n.area_name,
+    b.hhi,
+    b.top_share,
+    b.entropy,
+    b.evenness,
+    b.top_child,
+    -- Tier labels copied verbatim from ADR-0018 / seed_poi_offering_relevance.csv's own
+    -- offering_tier definition (0=drop/not causally plausible, 1=low weight/ambiguous,
+    -- 2=medium weight/plausible, 3=full weight/headline literature signature) -- no new
+    -- interpretive claim, a direct restatement of the already-governed tier vocabulary.
+    case b.top_child_offering_tier
+        when 3 then 'Tier 3 — headline literature signature'
+        when 2 then 'Tier 2 — plausible, medium weight'
+        when 1 then 'Tier 1 — ambiguous, low weight'
+        when 0 then 'Tier 0 — not a causally plausible signal'
+        else 'Not tiered'
+    end as top_child_tier_label,
+    b.n_children,
+    b.group_stock_local,
+    '${base}/berlin/area/' || b.area_code as link
+from base as b
+left join names as n on b.area_code = n.area_code
+order by b.hhi desc
+limit 15
+```
+
+<DataTable data={dominance_top} rows=15 rowShading=true link=link emptySet="warn" emptyMessage="No non-suppressed areas for this group/year.">
+    <Column id=area_name title="Neighbourhood (PLR)"/>
+    <Column id=hhi title="HHI (higher = more concentrated)" fmt="num2"/>
+    <Column id=top_share title="Top-share" fmt="pct1"/>
+    <Column id=top_child title="Leading type"/>
+    <Column id=top_child_tier_label title="Leading type's causal-relevance tier"/>
+    <Column id=n_children title="Types in this group here"/>
+    <Column id=group_stock_local title="Group's total POI count here" fmt="num0"/>
+</DataTable>
+
+A high HHI/top-share here says only that this group's mix is concentrated in the named leading
+type — never, by itself, whether that concentration is an up-market or down-market signal (the
+sign-blindness warning above). Compare the leading neighbourhoods against their own status/dynamism
+trajectory on the [maps page](/berlin/maps) or [area detail](/berlin/area-detail) before drawing
+any conclusion.
 
 ## 6. What this does NOT do
 
@@ -301,9 +771,14 @@ their math only, not their usual connotation (see the ethics note below):
   validated by internal consistency and robustness checks (§7), never by agreement with 2018 —
   implementing nine methods is not the same claim as nine methods confirming the thesis
   ([OA-D0 geo sign-off](https://github.com/dhelweg/gentriduck/blob/main/docs/methodology/OA-D0-geo-signoff.md), call-out 3).
-- **It does not currently offer a re-scored Offering Advantage choropleth at PGR/Bezirk grain on a
-  public map** — that wiring is explicitly pass 2 of this page, gated on the disclosures above
-  actually being applied at the point of publication, not just documented here.
+- **It does not re-score the governed index at PGR/Bezirk grain, even though a live choropleth now
+  exists at those scales.** The §4 map above surfaces the same already-signed-off nested-LQ
+  Offering Advantage figure, summed up the LOR code prefix — not a re-derived or re-weighted
+  statistic. See [methodology §6](/methodology) for why the governed index itself is never
+  recomputed at any coarser-than-PLR grain.
+- **It does not show a live temporal (year-over-year) view of density or per-capita.** Neither
+  method has a per-cell completeness-contamination safety check built yet (§2's "Live" note above)
+  — showing a delta without one would risk reading an OSM-coverage-growth artefact as a real change.
 
 ## 7. What the comparison study found (OA-D5)
 
@@ -320,14 +795,16 @@ restated here as static findings, not a live query:
   level, as expected of a monotonic transform) — a check on the arithmetic, not a separate finding.
 - **The completeness-contamination gate mostly passed.** Five of seven methods (including the
   canonical nested LQ) showed no meaningful correlation between their year-over-year change and
-  citywide OSM coverage growth (|ρ| < 0.06 in every case) — meaning a change in these figures over
+  citywide OSM coverage growth (|ρ| stayed under 0.06 in every case) — meaning a change in these figures over
   time is very unlikely to just be "OpenStreetMap got more complete." Two methods that were
   *expected* to fail this check (raw share, binomial z-score) did not fail it empirically either —
   disclosed here as a genuine, pre-registered prediction that the data did not confirm, not
   smoothed over.
 - **The area-hierarchy roll-up is only proven for the canonical nested LQ so far.** The other eight
   methods have never been rolled up through the PLR→BZR→PGR→Bezirk hierarchy — extending that
-  roll-up to every method is explicitly out of this study's scope, not a silent gap.
+  roll-up to every method is explicitly out of this study's scope, not a silent gap. (The §4 live
+  choropleth above surfaces exactly the one method this roll-up IS proven for — nested LQ — never
+  any of the other eight at coarse grain.)
 - **Only nested LQ is validated against the 2018 thesis's own results** (ρ = 0.148, p = 0.002,
   n = 435 — the same directional-but-modest result already reported on the
   [thesis re-check page](/thesis-recheck)). The other eight methods have no 2018 precedent to
@@ -336,11 +813,15 @@ restated here as static findings, not a live query:
 ## 8. Honest caveats
 
 - **This page is a decoder, not a new finding.** Every methodology claim above restates an
-  already-signed-off document (linked inline); nothing here is a new statistical result.
-- **Live data and charts are not yet wired to this page (pass 1 of 2).** The interpretation guide,
-  vocabulary, and OA-D5 findings above are accurate as of the linked sign-off documents' dates; a
-  future data-backed pass will surface a live, queryable version of the mode/scale/dominance figures
-  once every binding disclosure above is applied at the query layer, not just documented here.
+  already-signed-off document (linked inline); nothing here is a new statistical result — including
+  the live charts/tables, which surface already-governed values, not new computations.
+- **The live sections have their own, narrower scope than the full nine-method/four-scale/five-group
+  space this page describes.** Concretely: the methods table is domain-grain only (no category/type
+  drill-down); the area-scale map covers BZR/PGR/Bezirk only (PLR is already live on
+  [the POI map](/berlin/poi-map)) and only the canonical nested LQ (not the other eight methods);
+  the dominance table covers only the four public-safe groups, never the cuisine-typed group; and
+  density/per-capita are shown as point-in-time values only, never a year-over-year delta. Each
+  narrowing is explained at the point it applies, above.
 - **Nine methods does not mean nine confirmations.** Only the canonical nested location quotient is
   backtested against the 2018 thesis; treat every other method as a new, unvalidated-against-2018
   instrument (§2, §7).
@@ -355,7 +836,8 @@ restated here as static findings, not a live query:
   Offering Advantage (§2). Read their caveats above before drawing any conclusion from either.
 - **PLR-scale figures remain this project's most misuse-prone display**, for the same small-sample
   reason the base index already flags (see [methodology §6](/methodology)) — a single new or closed
-  business can swing a PLR's ratio disproportionately.
+  business can swing a PLR's ratio disproportionately. The live nine-methods table above does not
+  suppress a thin PLR (§2's own note) — read it alongside this caveat.
 
 ## 9. Further reading
 
@@ -367,7 +849,8 @@ restated here as static findings, not a live query:
 - [The area-hierarchy reference](/reference/area-hierarchy) and [the POI-taxonomy reference](/reference/poi-taxonomy) — full drill-downs on the two hierarchies this page's §4/§5 summarize.
 - [ADR-0017](https://github.com/dhelweg/gentriduck/blob/main/docs/adr/0017-poi-offering-advantage-revival.md) and [ADR-0018](https://github.com/dhelweg/gentriduck/blob/main/docs/adr/0018-causal-tiered-poi-selection.md) — the base Offering Advantage construct and its curated/faithful split, which this page extends rather than replaces.
 - [Methodology & data sources](/methodology) — the governed index this page's methods feed into (unchanged by anything here) and its own honest limitations.
-- [POI & Offering Advantage map](/berlin/poi-map) — the one method (canonical nested LQ, PLR grain) that is live on the site today.
+- [POI & Offering Advantage map](/berlin/poi-map) — the canonical nested-LQ method at PLR grain, live since before this page existed.
+- [Area detail](/berlin/area-detail) and [district & area profiles](/berlin/area) — where the "Live" sections' click-throughs above lead.
 
 ---
 
