@@ -4420,16 +4420,17 @@ models:
 
   - name: int_poi_offering_advantage_methods
     description: >
-      OA-D3 (#240, ADR-0024): calculation-method columns for Offering
-      Advantage -- CORE slice of the D3 "everything" method set (six
-      methods: nested_lq, global_lq, log_lq, share_diff, shrunk_lq,
-      raw_share x three taxonomy levels domain/category/type = 18 value
-      columns), all pure functions of int_poi_offering_advantage's
-      already-computed, already-tested stock columns -- no new join, no new
-      tool. The four PROMOTED modes (z-score/binomial-SLQ, Getis-Ord,
-      density, per-capita) are deliberately deferred to OA-D3b pending a
-      system-architect ruling on the Getis-Ord/esda tooling boundary (OA-D0
-      geo sign-off C9) -- see model SQL header for the split rationale.
+      OA-D3/OA-D3b (#240/#280, ADR-0024): calculation-method columns for
+      Offering Advantage -- seven methods (nested_lq, global_lq, log_lq,
+      share_diff, shrunk_lq, raw_share, zscore_slq) x three taxonomy levels
+      domain/category/type = 21 value columns, all pure functions of
+      int_poi_offering_advantage's already-computed, already-tested stock
+      columns -- no new join, no new tool. The three remaining PROMOTED
+      modes (Getis-Ord, density, per-capita) are deliberately deferred: Getis-
+      Ord pending a system-architect/ADR-0025 ruling on the esda tooling
+      boundary (OA-D0 geo sign-off C9); density/per-capita pending their
+      EWR-population/ST_Area-geometry joins -- see model SQL header for the
+      split rationale.
 
       Grain: identical to int_poi_offering_advantage (one row per taxonomy
       leaf x weight_variant x methodology_variant) -- new columns only, no
@@ -4550,6 +4551,16 @@ models:
         description: Raw within-group category share (proportion, no city normalization).
       - name: oa_type_raw_share
         description: Raw within-group type share (proportion, no city normalization).
+      - name: oa_domain_zscore_slq
+        description: >
+          OA-D3b (#280): binomial-significance z-score of the domain LQ
+          (Isserman 1977; Wilson 1927 normal approximation) -- expected =
+          local_base*city_share, variance = local_base*city_share*(1-city_share),
+          z = (observed-expected)/sqrt(variance). NULL when variance <= 0.
+      - name: oa_category_zscore_slq
+        description: Binomial-significance z-score of the category LQ (same construction as oa_domain_zscore_slq, category-relative base).
+      - name: oa_type_zscore_slq
+        description: Binomial-significance z-score of the type LQ (same construction as oa_domain_zscore_slq, type-relative base).
 
   - name: int_poi_offering_advantage_arealevel
     description: >
