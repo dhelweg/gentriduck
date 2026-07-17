@@ -1,8 +1,9 @@
 -- mart_poi_oa_methods.sql
 -- OA-D3 (#240, ADR-0024): long-format serving view over
--- int_poi_offering_advantage_methods's six wide method columns per taxonomy
+-- int_poi_offering_advantage_methods's wide method columns per taxonomy
 -- level (ADR-0024 "methods = columns + a long serving view, not a new grain
--- discriminator" -- see #240 issue body / OA-D0 geo sign-off C7). Not itself
+-- discriminator" -- see #240 issue body / OA-D0 geo sign-off C7). OA-D3b
+-- (#280) extended the seven-method surface with zscore_slq. Not itself
 -- methodology-bearing beyond what int_poi_offering_advantage_methods already
 -- computes -- this is a pure UNPIVOT/reshape for the site/analysis layer to
 -- query "give me every method's value for this taxonomy leaf" without
@@ -47,7 +48,8 @@ with
             oa_domain_log_lq as log_lq,
             oa_domain_share_diff as share_diff,
             oa_domain_shrunk_lq as shrunk_lq,
-            oa_domain_raw_share as raw_share
+            oa_domain_raw_share as raw_share,
+            oa_domain_zscore_slq as zscore_slq
         from {{ ref("int_poi_offering_advantage_methods") }}
     ),
 
@@ -68,7 +70,8 @@ with
             oa_category_log_lq as log_lq,
             oa_category_share_diff as share_diff,
             oa_category_shrunk_lq as shrunk_lq,
-            oa_category_raw_share as raw_share
+            oa_category_raw_share as raw_share,
+            oa_category_zscore_slq as zscore_slq
         from {{ ref("int_poi_offering_advantage_methods") }}
     ),
 
@@ -89,7 +92,8 @@ with
             oa_type_log_lq as log_lq,
             oa_type_share_diff as share_diff,
             oa_type_shrunk_lq as shrunk_lq,
-            oa_type_raw_share as raw_share
+            oa_type_raw_share as raw_share,
+            oa_type_zscore_slq as zscore_slq
         from {{ ref("int_poi_offering_advantage_methods") }}
     ),
 
@@ -110,7 +114,8 @@ with
     log_lq,
     share_diff,
     shrunk_lq,
-    raw_share
+    raw_share,
+    zscore_slq
     into
     name oa_method
     value oa_value
