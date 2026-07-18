@@ -1891,6 +1891,186 @@ models:
               arguments:
                 values: ["primary", "headline", "context_only"]
 
+  - name: mart_poi_oa_hotspots
+    description: >
+      OA-D3c (#280, ADR-0025): Getis-Ord Gi* hotspot/coldspot mart -- the
+      analysis->mart handoff ADR-0025 authorizes for the one OA method
+      (Getis-Ord) ADR-0024 held out (needs a spatial-weights matrix W, not a
+      SQL operation, OA-D0 geo sign-off C9). Pure join of
+      int_poi_offering_advantage_arealevel's domain-grain local stock to
+      stg_oa_getis_ord's precomputed Gi* statistic (analysis/
+      f_oa_getis_ord.py) by the ADR-0025 Decision 2 stable key -- no spatial
+      computation in this model.
+
+      GRAIN ASYMMETRY (ADR-0025 Decision 3, BINDING, state explicitly):
+      unlike every other OA mart (full type-leaf grain, up to four area
+      levels), this mart is PLR/BZR area levels ONLY (not pgr, not bezirk --
+      degenerate 12-unit contiguity) and DOMAIN taxonomy grain ONLY (not
+      category/type leaf -- too sparse for a meaningful Gi* surface).
+
+      PUBLIC LABELLING GUARDRAIL (binding): gi_star_cluster_label is the
+      INTERNAL statistic label ('hot'/'cold'/'ns') -- a bare "hotspot" is
+      prohibited on any public-facing surface; consumers MUST apply a
+      provision/stock-calibrated hedged qualifier ("amenity-provision
+      cluster" / "concentrated-provision area"), NOT a6_hotspots.py's own
+      hedge ("amenity-change hotspot" / "social-change-pressure cluster"),
+      which is calibrated for a change/dynamism input, not this column's
+      single-snapshot-year stock input (OA-D3c domain sign-off F1) -- plus
+      the ecological-inference disclaimer before publishing.
+
+      FDR DISCLOSURE (binding): gi_star_p is the RAW uncorrected permutation
+      p-value; gi_star_cluster_label is derived from gi_star_fdr_significant
+      (the Benjamini-Hochberg-adjusted flag), not the raw p, per OA-D0 geo
+      sign-off C9's multiple-comparison caveat ("Gi* over hundreds of PLRs x
+      domains inflates false hotspots").
+
+      weight_variant='standard' / methodology_variant='faithful' only (the
+      bandwidth-free hard-count construct) -- see model SQL header for why
+      the gaussian_* sweep is out of this ticket's scope.
+
+      Grain: one row per (city_code, area_vintage, area_level, area_code,
+      snapshot_year, poi_domain_h) -- ADR-0025 Decision 2's binding stable
+      key.
+
+      Graceful degradation: all-NULL Gi* columns (LEFT JOIN) when
+      analysis/f_oa_getis_ord.py has not yet been run; zero rows when
+      int_poi_offering_advantage_arealevel has no plr/bzr domain-grain rows.
+    meta:
+      dbt_meta_owner: data-engineer
+    data_tests:
+
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns:
+              - city_code
+              - area_vintage
+              - area_level
+              - area_code
+              - snapshot_year
+              - poi_domain_h
+          config:
+            where: "area_code is not null"
+    columns:
+      - name: city_code
+        description: City identifier (ADR-0005).
+        data_tests:
+
+          - not_null:
+              config:
+                where: "area_code is not null"
+          - accepted_values:
+              arguments:
+                values: ["BER", "HH"]
+              config:
+                where: "area_code is not null"
+      - name: area_level
+        description: >
+          ADR-0025 Decision 3 (BINDING): PLR and BZR only -- NOT Bezirk
+          (degenerate contiguity graph) and NOT PGR (not yet
+          R-C1-validated for Gi*).
+        data_tests:
+
+          - not_null:
+              config:
+                where: "area_code is not null"
+          - accepted_values:
+              arguments:
+                values: ["plr", "bzr"]
+              config:
+                where: "area_code is not null"
+      - name: area_code
+        description: Area code at this row's area_level. Vintage-specific.
+        data_tests:
+
+          - not_null:
+              config:
+                where: "area_code is not null"
+      - name: poi_domain_h
+        description: >
+          POI domain (ADR-0025 Decision 3: domain grain only, NOT
+          category/type leaf -- too sparse for a meaningful Gi* surface).
+        data_tests:
+
+          - not_null:
+              config:
+                where: "area_code is not null"
+      - name: domain_stock_local
+        description: >
+          The mass-conserved local POI stock Gi* was actually computed over
+          (int_poi_offering_advantage_arealevel's domain_stock_local, same
+          input the analysis script reads) -- carried through for context,
+          not re-derived here.
+      - name: gi_star_z
+        description: >
+          Getis-Ord Gi* z-score (esda.G_Local, star=True; Getis & Ord 1992;
+          Ord & Getis 1995). Signed -- positive = high-value cluster,
+          negative = low-value cluster. NULL where the analysis script has
+          not been run yet or this cell was excluded (see
+          analysis/f_oa_getis_ord.py).
+        data_tests:
+
+          - dbt_utils.expression_is_true:
+              arguments:
+                expression: "is not null"
+              config:
+                where: "area_code is not null and gi_star_z is not null"
+      - name: gi_star_p
+        description: >
+          RAW (uncorrected) two-sided permutation p-value -- see
+          gi_star_p_fdr for the multiple-comparison-corrected figure
+          (ADR-0025 Decision 4).
+        data_tests:
+
+          - dbt_utils.accepted_range:
+              arguments:
+                min_value: 0
+                max_value: 1
+                inclusive: true
+              config:
+                where: "area_code is not null and gi_star_p is not null"
+      - name: gi_star_p_fdr
+        description: >
+          Benjamini-Hochberg FDR-adjusted p-value, corrected jointly across
+          every (area_code, poi_domain_h) pair tested for the same
+          (city_code, area_vintage, area_level, snapshot_year) "map"
+          (ADR-0025 Decision 4).
+        data_tests:
+
+          - dbt_utils.accepted_range:
+              arguments:
+                min_value: 0
+                max_value: 1
+                inclusive: true
+              config:
+                where: "area_code is not null and gi_star_p_fdr is not null"
+      - name: gi_star_fdr_significant
+        description: >
+          gi_star_p_fdr < 0.05. gi_star_cluster_label is derived from this
+          flag, not the raw p-value.
+      - name: gi_star_cluster_label
+        description: >
+          INTERNAL statistic label only -- 'hot' / 'cold' / 'ns'. A bare
+          "hotspot" is PROHIBITED on any public-facing surface; apply a
+          provision/stock-calibrated hedged qualifier ("amenity-provision
+          cluster" / "concentrated-provision area"), NOT a6_hotspots.py's
+          own hedge ("amenity-change hotspot" / "social-change-pressure
+          cluster"), which is calibrated for a change/dynamism input, not
+          this column's single-snapshot-year stock input (OA-D3c domain
+          sign-off F1), plus the ecological-inference disclaimer before
+          publishing.
+        data_tests:
+
+          - accepted_values:
+              arguments:
+                values: ["hot", "cold", "ns"]
+              config:
+                where: "area_code is not null and gi_star_cluster_label is not null"
+      - name: gi_star_w_fallback
+        description: >
+          TRUE when this area_code had no Queen-contiguity neighbours and
+          received the k-NN (k=6) fallback weights instead (ADR-0025
+          Decision 4 / ADR-0010 Sec 5) -- audit column.
+
   - name: mart_poi_dominance
     description: >
       OA-D6 (#240, ADR-0024): serving mart for OA-D4's within-group

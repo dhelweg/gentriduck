@@ -1937,3 +1937,110 @@ models:
           - not_null:
               config:
                 where: "area_code is not null"
+
+  - name: stg_oa_getis_ord
+    description: >
+      OA-D3c (#280, ADR-0025): staging view over the precomputed Getis-Ord
+      Gi* results table produced by analysis/f_oa_getis_ord.py -- the
+      analysis-layer->mart handoff ADR-0025 mandates ("Gi* stays out of
+      dbt/DuckDB"). Pure read of a Python-computed parquet, no spatial
+      computation performed here (see analysis_path() macro / model header).
+      Storage: data/analysis/oa_getis_ord/*.parquet (gitignored,
+      deterministically rebuilt, seed=42 -- R-C3).
+      Returns zero rows (typed stub) when the analysis script has not yet
+      been run (see model header for the required build order).
+    meta:
+      dbt_meta_owner: data-engineer
+    data_tests:
+
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns:
+              - city_code
+              - area_vintage
+              - area_level
+              - area_code
+              - snapshot_year
+              - poi_domain_h
+          config:
+            where: "area_code is not null"
+    columns:
+      - name: area_level
+        description: >
+          ADR-0025 Decision 3 (BINDING scope restriction): PLR and BZR only
+          -- NOT Bezirk (degenerate 12-unit contiguity graph) and NOT PGR
+          (not yet R-C1-validated for Gi*).
+        data_tests:
+
+          - accepted_values:
+              arguments:
+                values: ["plr", "bzr"]
+              config:
+                where: "area_code is not null"
+      - name: gi_star_z
+        description: >
+          Getis-Ord Gi* z-score (esda.G_Local, star=True; Getis & Ord 1992;
+          Ord & Getis 1995). Signed -- positive = high-value cluster,
+          negative = low-value cluster. Row-standardized Queen-contiguity
+          weights, seed=42 permutation inference (R-C3).
+      - name: gi_star_p
+        description: >
+          RAW (uncorrected) two-sided permutation p-value. See
+          gi_star_p_fdr / gi_star_fdr_significant for the Benjamini-Hochberg-
+          adjusted figure this repo's cluster label is actually derived
+          from -- ADR-0025 Decision 4 multiple-comparison caveat.
+        data_tests:
+
+          - dbt_utils.accepted_range:
+              arguments:
+                min_value: 0
+                max_value: 1
+                inclusive: true
+              config:
+                where: "area_code is not null and gi_star_p is not null"
+      - name: gi_star_p_fdr
+        description: >
+          Benjamini-Hochberg FDR-adjusted p-value, corrected jointly across
+          every (area_code, poi_domain_h) pair tested for the same
+          (city_code, area_vintage, area_level, snapshot_year) "map" --
+          ADR-0025 Decision 4 (OA-D0 geo sign-off C9: "Gi* over hundreds of
+          PLRs x domains inflates false hotspots").
+        data_tests:
+
+          - dbt_utils.accepted_range:
+              arguments:
+                min_value: 0
+                max_value: 1
+                inclusive: true
+              config:
+                where: "area_code is not null and gi_star_p_fdr is not null"
+      - name: gi_star_fdr_significant
+        description: >
+          gi_star_p_fdr < 0.05. This, not the raw p-value, is what
+          gi_star_cluster_label is derived from.
+      - name: gi_star_cluster_label
+        description: >
+          INTERNAL statistic label only -- 'hot' / 'cold' / 'ns' (same short
+          codes as a6_hotspots.py's own cluster_label). A bare "hotspot" is
+          PROHIBITED on any public-facing surface; consumers MUST apply a
+          provision/stock-calibrated hedged qualifier ("amenity-provision
+          cluster" / "concentrated-provision area"), NOT a6_hotspots.py's
+          own hedge ("amenity-change hotspot" / "social-change-pressure
+          cluster"), which is calibrated for a change/dynamism input, not
+          this column's single-snapshot-year stock input (OA-D3c domain
+          sign-off F1), plus the ecological-inference disclaimer before
+          publishing.
+        data_tests:
+
+          - accepted_values:
+              arguments:
+                values: ["hot", "cold", "ns"]
+              config:
+                where: "area_code is not null and gi_star_cluster_label is not null"
+      - name: gi_star_w_fallback
+        description: >
+          TRUE when this area_code had no Queen-contiguity neighbours (water
+          body / airport perimeter / disconnected polygon) and received the
+          k-NN (k=6) fallback weights instead (ADR-0025 Decision 4 /
+          ADR-0010 Sec 5) -- audit column so the neighbour structure this
+          area's Gi* value was computed against is never silently opaque.
