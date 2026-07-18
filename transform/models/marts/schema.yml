@@ -1918,11 +1918,25 @@ models:
       single-snapshot-year stock input (OA-D3c domain sign-off F1) -- plus
       the ecological-inference disclaimer before publishing.
 
-      FDR DISCLOSURE (binding): gi_star_p is the RAW uncorrected permutation
-      p-value; gi_star_cluster_label is derived from gi_star_fdr_significant
-      (the Benjamini-Hochberg-adjusted flag), not the raw p, per OA-D0 geo
-      sign-off C9's multiple-comparison caveat ("Gi* over hundreds of PLRs x
-      domains inflates false hotspots").
+      FDR DISCLOSURE (binding, CC1 remediation #287): gi_star_p is the RAW
+      uncorrected permutation p-value. TWO labelled BH-adjusted variants are
+      carried: gi_star_p_fdr / gi_star_fdr_significant (PRIMARY, label
+      source -- per-domain-per-map family, the standard ESDA unit) and
+      gi_star_p_fdr_pooled_alldomains / gi_star_fdr_significant_pooled_alldomains
+      (SECONDARY, conservative, pooled across all ~13 domains -- the
+      original #280 design, per OA-D0 geo sign-off C9's multiple-comparison
+      framing). gi_star_cluster_label is derived from the PRIMARY flag only.
+
+      LOR_2021 SIGNIFICANCE DISCLOSURE (binding, CC2 #287): under the
+      pooled-secondary FDR variant, lor_2021 still yields zero significant
+      cells at any level -- suppression-by-conservatism (milder recent
+      permutation p-floor + pooled-across-13-domains denominator). Under
+      the PRIMARY per-domain FDR variant (CC1 remediation) lor_2021 DOES
+      surface real discoveries (108 cells at PLR, 376 at BZR), confirming
+      the pooled-only zero was conservatism, not an absence of amenity
+      clustering. Any consumer must disclose the FDR-variant-dependence of
+      this result and must not treat these Gi* results as temporal/change
+      claims under either variant (C3 caveat applies).
 
       weight_variant='standard' / methodology_variant='faithful' only (the
       bandwidth-free hard-count construct) -- see model SQL header for why
@@ -2030,10 +2044,12 @@ models:
                 where: "area_code is not null and gi_star_p is not null"
       - name: gi_star_p_fdr
         description: >
-          Benjamini-Hochberg FDR-adjusted p-value, corrected jointly across
-          every (area_code, poi_domain_h) pair tested for the same
-          (city_code, area_vintage, area_level, snapshot_year) "map"
-          (ADR-0025 Decision 4).
+          PRIMARY (label-source) Benjamini-Hochberg FDR-adjusted p-value
+          (CC1 remediation, #287) -- corrected PER-DOMAIN, PER-MAP: one BH
+          batch per (city_code, area_vintage, area_level, snapshot_year,
+          poi_domain_h). Standard ESDA "one map = one family" unit (Caldas
+          de Castro & Singer 2006). gi_star_cluster_label is derived from
+          THIS column's significance flag, not gi_star_p_fdr_pooled_alldomains.
         data_tests:
 
           - dbt_utils.accepted_range:
@@ -2045,19 +2061,62 @@ models:
                 where: "area_code is not null and gi_star_p_fdr is not null"
       - name: gi_star_fdr_significant
         description: >
-          gi_star_p_fdr < 0.05. gi_star_cluster_label is derived from this
-          flag, not the raw p-value.
+          gi_star_p_fdr < 0.05 (PRIMARY, per-domain-per-map family).
+          gi_star_cluster_label is derived from this flag, not the raw
+          p-value and not the pooled secondary variant.
+      - name: gi_star_p_fdr_pooled_alldomains
+        description: >
+          SECONDARY, labelled conservative variant (CC1, #287) -- the
+          original #280 design: Benjamini-Hochberg FDR-adjusted p-value,
+          corrected jointly across every (area_code, poi_domain_h) pair
+          tested for the same (city_code, area_vintage, area_level,
+          snapshot_year) "map" (~13 domains pooled). Wider/more conservative
+          than the primary per-domain family; NOT the label source for
+          gi_star_cluster_label. See analysis/f_oa_getis_ord.py Note 5 /
+          docs/methodology/OA-D3c-getis-ord-geo-signoff.md CC1.
+        data_tests:
+
+          - dbt_utils.accepted_range:
+              arguments:
+                min_value: 0
+                max_value: 1
+                inclusive: true
+              config:
+                where: >-
+                  area_code is not null and gi_star_p_fdr_pooled_alldomains
+                  is not null
+      - name: gi_star_fdr_significant_pooled_alldomains
+        description: >
+          gi_star_p_fdr_pooled_alldomains < 0.05 (SECONDARY, pooled-across-
+          domains family). NOT the flag gi_star_cluster_label is derived
+          from -- see gi_star_fdr_significant for the primary flag.
       - name: gi_star_cluster_label
         description: >
-          INTERNAL statistic label only -- 'hot' / 'cold' / 'ns'. A bare
-          "hotspot" is PROHIBITED on any public-facing surface; apply a
-          provision/stock-calibrated hedged qualifier ("amenity-provision
-          cluster" / "concentrated-provision area"), NOT a6_hotspots.py's
-          own hedge ("amenity-change hotspot" / "social-change-pressure
-          cluster"), which is calibrated for a change/dynamism input, not
-          this column's single-snapshot-year stock input (OA-D3c domain
-          sign-off F1), plus the ecological-inference disclaimer before
-          publishing.
+          INTERNAL statistic label only -- 'hot' / 'cold' / 'ns', derived
+          from the PRIMARY per-domain-per-map FDR flag (gi_star_fdr_significant,
+          CC1 remediation, #287). A bare "hotspot" is PROHIBITED on any
+          public-facing surface; apply a provision/stock-calibrated hedged
+          qualifier ("amenity-provision cluster" / "concentrated-provision
+          area"), NOT a6_hotspots.py's own hedge ("amenity-change hotspot" /
+          "social-change-pressure cluster"), which is calibrated for a
+          change/dynamism input, not this column's single-snapshot-year
+          stock input (OA-D3c domain sign-off F1), plus the
+          ecological-inference disclaimer before publishing.
+
+          `lor_2021` yields ZERO significant cells under the POOLED-secondary
+          FDR variant at any level -- CC2 (#287): suppression-by-conservatism
+          (a milder permutation p-floor for the more-recent, better-covered
+          period compounding with the pooled x13-domain denominator). Under
+          the PRIMARY per-domain FDR variant (this column's flag source,
+          CC1 remediation) lor_2021 DOES surface real discoveries (108 cells
+          at PLR, 376 at BZR) -- confirming the pooled-only zero was
+          conservatism, not an absence of amenity clustering. Any future
+          consumer (G2 methodology page, site content) MUST disclose the
+          FDR-variant-dependence of this result and MUST NOT present these
+          Gi* results as temporal/change claims under either variant (C3
+          completeness-contamination caveat). Full detail:
+          docs/methodology/OA-D3c-getis-ord-geo-signoff.md CC2 /
+          analysis/f_oa_getis_ord.py Note 7.
         data_tests:
 
           - accepted_values:

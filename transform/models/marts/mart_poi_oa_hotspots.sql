@@ -52,18 +52,45 @@
 -- not final prose, for the consuming layer to render).
 --
 -- =============================================================================
--- FDR / multiple-comparison disclosure (ADR-0025 Decision 4, BINDING)
+-- FDR / multiple-comparison disclosure (CC1 remediation, #287, of ADR-0025
+-- Decision 4, BINDING)
 -- =============================================================================
 -- `gi_star_p` is the RAW, uncorrected permutation p-value from a single
--- esda.G_Local call. `gi_star_p_fdr` is the Benjamini-Hochberg-adjusted
--- p-value and `gi_star_fdr_significant` is the flag `gi_star_cluster_label`
--- is actually DERIVED FROM (not the raw p) -- see analysis/f_oa_getis_ord.py
--- for the exact correction-group definition (pooled across every PLR/BZR x
--- domain p-value tested together for one city/area_vintage/area_level/
--- snapshot_year "map", per OA-D0 geo sign-off C9's own framing: "Gi* over
--- hundreds of PLRs x domains inflates false hotspots"). A consumer that
--- reads `gi_star_p` directly without the FDR flag is reading the
+-- esda.G_Local call. TWO labelled BH-adjusted variants are carried:
+-- - `gi_star_p_fdr` / `gi_star_fdr_significant` (PRIMARY, label source):
+-- corrected PER-DOMAIN, PER-MAP -- one BH batch per (city_code,
+-- area_vintage, area_level, snapshot_year, poi_domain_h). Standard ESDA
+-- "one map = one family" unit (Caldas de Castro & Singer 2006). THIS is
+-- the flag `gi_star_cluster_label` is derived from.
+-- - `gi_star_p_fdr_pooled_alldomains` / `gi_star_fdr_significant_pooled_alldomains`
+-- (SECONDARY, conservative variant, NOT the label source): the original
+-- #280 design -- corrected POOLED across every PLR/BZR x domain p-value
+-- tested together for one city/area_vintage/area_level/snapshot_year
+-- "map", per OA-D0 geo sign-off C9's original framing ("Gi* over hundreds
+-- of PLRs x domains inflates false hotspots") -- still valid and
+-- safe-direction, just wider than the primary family.
+-- See analysis/f_oa_getis_ord.py Note 5 for the full CC1 remediation
+-- rationale (docs/methodology/OA-D3c-getis-ord-geo-signoff.md). A consumer
+-- that reads `gi_star_p` directly without an FDR flag is reading the
 -- uncorrected, multiple-comparison-inflated number.
+--
+-- =============================================================================
+-- `lor_2021` zero-significant-cells disclosure (CC2, #287, BINDING for any
+-- future consumer)
+-- =============================================================================
+-- Under the POOLED-secondary FDR variant (gi_star_fdr_significant_pooled_alldomains),
+-- `lor_2021` still yields ZERO significant cells at any level -- a milder
+-- recent permutation p-floor compounding with the pooled x13-domain
+-- denominator, per geo sign-off CC2. Under the PRIMARY per-domain FDR
+-- variant (gi_star_fdr_significant, this ticket's CC1 remediation),
+-- `lor_2021` DOES surface real discoveries (108 cells at PLR, 376 at BZR),
+-- confirming the original pooled-only zero was suppression-by-conservatism,
+-- not an absence of amenity clustering. Any future G2 methodology page or
+-- site content MUST still disclose that (a) the pooled-secondary variant
+-- under-detects by design and (b) these Gi* results are NOT temporal/change
+-- claims regardless of FDR variant (C3 completeness-contamination caveat
+-- applies to both). Full empirical detail: analysis/f_oa_getis_ord.py
+-- Note 7 / docs/methodology/OA-D3c-getis-ord-geo-signoff.md CC2.
 --
 -- weight_variant / methodology_variant are constants here ('standard' /
 -- 'faithful') -- the analysis script deliberately restricts its input to
@@ -142,6 +169,8 @@ select
     gi.gi_star_p,
     gi.gi_star_p_fdr,
     gi.gi_star_fdr_significant,
+    gi.gi_star_p_fdr_pooled_alldomains,
+    gi.gi_star_fdr_significant_pooled_alldomains,
     gi.gi_star_cluster_label,
     gi.gi_star_w_fallback
 from domain_stock as stock

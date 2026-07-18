@@ -70,6 +70,8 @@
         gi_star_p,
         gi_star_p_fdr,
         gi_star_fdr_significant,
+        gi_star_p_fdr_pooled_alldomains,
+        gi_star_fdr_significant_pooled_alldomains,
         gi_star_cluster_label,
         gi_star_w_fallback
     from read_parquet({{ _src_oa_getis_ord }}, union_by_name = true)
@@ -92,6 +94,8 @@
         cast(null as double) as gi_star_p,
         cast(null as double) as gi_star_p_fdr,
         cast(null as boolean) as gi_star_fdr_significant,
+        cast(null as double) as gi_star_p_fdr_pooled_alldomains,
+        cast(null as boolean) as gi_star_fdr_significant_pooled_alldomains,
         cast(null as varchar) as gi_star_cluster_label,
         cast(null as boolean) as gi_star_w_fallback
     where false
