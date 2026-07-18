@@ -113,6 +113,15 @@ models:
         data_tests:
 
           - not_null
+      - name: oa_leaf_area_level
+        description: >
+          OA-D8 (#240): this city's OA leaf area_level ('plr' for Berlin,
+          'subarea_l2' for Hamburg) -- the per-city config
+          int_poi_offering_advantage_arealevel.sql joins against to identify
+          each city's own finest OA grain generically.
+        data_tests:
+
+          - not_null
 
   - name: dim_area
     description: >
@@ -191,14 +200,9 @@ models:
     description: >
       #242 (I18, geo-hierarchy pages): parent/child links for dim_area's area
       levels, city-agnostic per ADR-0005. Berlin: PLR -> BZR -> PGR -> Bezirk,
-      derived from LOR code-prefix nesting. Hamburg: Stadtteil (subarea_l1) ->
-      Bezirk (district), passed through from the WFS-provided parent code.
-      Hamburg subarea_l2 (Gebiet) -> subarea_l1 is intentionally NOT resolved
-      here (no source-provided or code-derivable parent exists -- see model
-      SQL header; open question for geo-DS, same treatment as the Berlin
-      Ortsteil non-nesting case). NOT on the R-C1 methodology-bearing model
-      list -- structural code-prefix / source-passthrough derivation only, no
-      indicator weighting, normalization, or index computation.
+      derived from LOR code-prefix nesting -- structural, non-methodology-
+      bearing. Hamburg: Stadtteil (subarea_l1) -> Bezirk (district), passed
+      through from the WFS-provided parent code -- also non-methodology-bearing.
 
       #269 (I-ortsteile): adds Ortsteil -> Bezirk (source-provided parent
       code, passed through -- Ortsteil nests into Bezirk exactly). Ortsteil <->
@@ -206,6 +210,20 @@ models:
       relationship is a separate, gated area-overlap crosswalk,
       int_berlin_plr_ortsteil_overlap.sql (methodology-bearing, geo-DS
       sign-off required).
+
+      OA-D1b (#240, ADR-0024 D4, 2026-07-17): adds Hamburg statistisches
+      Gebiet (subarea_l2) -> Stadtteil (subarea_l1). Confirmed (spike) that
+      Gebiet has neither a source-provided parent attribute nor a code-prefix-
+      derivable one (see model SQL header) -- resolved via a
+      ST_Within(centroid, parent_geom) spatial crosswalk instead, with a
+      nearest-Stadtteil fallback for the 2 of 943 Gebiete whose centroid falls
+      outside every Stadtteil polygon. THIS EDGE IS METHODOLOGY-BEARING
+      (new spatial method, per CLAUDE.md's R-C1 catch-all "any model that
+      changes ... spatial method") -- geo-DS + domain-expert dual sign-off
+      required before integration into develop, same requirement as
+      int_berlin_plr_ortsteil_overlap.sql. The REST of this model (Berlin
+      prefix-nesting, Hamburg L1->district and Ortsteil->Bezirk passthrough)
+      remains structural/non-methodology-bearing as before.
     meta:
       dbt_meta_owner: data-engineer
     # Grain: one row per (city_code, area_level, area_code) that has a
@@ -238,7 +256,8 @@ models:
           - not_null
           - accepted_values:
               arguments:
-                values: ["pgr", "bzr", "plr", "subarea_l1", "ortsteil"]
+                values:
+                  ["pgr", "bzr", "plr", "subarea_l1", "subarea_l2", "ortsteil"]
       - name: area_code
         description: >
           Child area code. Every row here is itself sourced from a dim_area
@@ -251,23 +270,26 @@ models:
         description: >
           Parent area level ('bzr', 'pgr', 'bezirk' for Berlin -- 'bezirk' is
           both PGR's and, since #269, Ortsteil's parent level; 'district' for
-          Hamburg). 'bezirk' intentionally has no corresponding dim_area row
-          yet (Epic C; see dim_area's own accepted_values test, which already
-          anticipates this level_code) -- PGR's and Ortsteil's parent_area_code
-          are still real administrative facts, recorded here ahead of a
-          Bezirk geometry row.
+          Hamburg subarea_l1; 'subarea_l1' for Hamburg subarea_l2, added
+          OA-D1b #240). 'bezirk' intentionally has no corresponding dim_area
+          row yet (Epic C; see dim_area's own accepted_values test, which
+          already anticipates this level_code) -- PGR's and Ortsteil's
+          parent_area_code are still real administrative facts, recorded here
+          ahead of a Bezirk geometry row.
         data_tests:
 
           - not_null
           - accepted_values:
               arguments:
-                values: ["bzr", "pgr", "bezirk", "district"]
+                values: ["bzr", "pgr", "bezirk", "district", "subarea_l1"]
       - name: parent_area_code
         description: >
-          Parent area code. Strictly FK-tested against dim_area for
-          parent_area_level in ('bzr', 'pgr', 'district') -- a real dim_area
-          row must exist one level up. NOT tested for parent_area_level =
-          'bezirk' (no dim_area row exists yet, by design -- see above).
+          Parent area code. Strictly FK-tested against dim_area for every
+          parent_area_level EXCEPT 'bezirk' (no dim_area row exists yet, by
+          design -- see above) -- a real dim_area row must exist one level up,
+          including for the OA-D1b Hamburg subarea_l2 -> subarea_l1 spatial-
+          crosswalk edge (every Stadtteil the crosswalk resolves to is itself
+          a populated dim_area row).
         data_tests:
 
           - not_null
@@ -4412,6 +4434,615 @@ models:
           domain, not category) is below `oa_min_poi_base_n` (default 10).
           Identical value to oa_category_min_base_flag on the same row by
           construction (both level's denominator is domain_stock_local).
+        data_tests:
+
+          - not_null:
+              config:
+                where: "area_code is not null"
+
+  - name: int_poi_offering_advantage_methods
+    description: >
+      OA-D3/OA-D3b (#240/#280, ADR-0024): calculation-method columns for
+      Offering Advantage -- nine methods (nested_lq, global_lq, log_lq,
+      share_diff, shrunk_lq, raw_share, zscore_slq, density, percapita) x
+      three taxonomy levels domain/category/type = 27 value columns.
+      Methods 1-7 are pure functions of int_poi_offering_advantage's
+      already-computed, already-tested stock columns -- no new join, no new
+      tool. Methods 8-9 (density, percapita, this slice) join a NEW
+      denominator (ST_Area-derived area_km2; EWR residents_total) and are
+      NOT location quotients -- an absolute provision/centrality reading,
+      never blended/legend-shared with the LQ family (OA-D0 domain sign-off
+      Condition C). **Getis-Ord Gi\* remains DEFERRED**, pending a
+      system-architect/ADR-0025 ruling on the esda tooling boundary (OA-D0
+      geo sign-off C9) -- see model SQL header for the full split rationale.
+
+      Grain: identical to int_poi_offering_advantage (one row per taxonomy
+      leaf x weight_variant x methodology_variant) -- new columns only, no
+      new grain discriminator (ADR-0024 "methods as columns"). density's
+      area_km2 and percapita's residents_total are joined at a coarser grain
+      (city_code/area_code/area_vintage[/snapshot_year]) and broadcast across
+      every leaf row for that area (C2 broadcast-once).
+
+      C7 (geo sign-off, BLOCKING, never-blend): every column is a function of
+      exactly one method against one stock pair; no combined/averaged score
+      is computed or exposed.
+
+      Graceful degradation: zero rows when int_poi_offering_advantage has no
+      rows.
+    meta:
+      dbt_meta_owner: data-engineer
+    data_tests:
+
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns:
+              - city_code
+              - snapshot_year
+              - area_code
+              - area_vintage
+              - poi_domain_h
+              - poi_category_h
+              - poi_type_h
+              - weight_variant
+              - methodology_variant
+          config:
+            where: "area_code is not null"
+    columns:
+      - name: city_code
+        description: >
+          City identifier (ADR-0005). #281: canonicalized at this model's own
+          output boundary (join_city_code reused as city_code) -- unlike its
+          upstream source int_poi_offering_advantage, which still carries
+          legacy lowercase 'berlin' rows by design, this model's output is
+          canonical-only.
+        data_tests:
+
+          - not_null:
+              config:
+                where: "area_code is not null"
+          - accepted_values:
+              arguments:
+                values: ["BER", "HH"]
+              config:
+                where: "area_code is not null"
+      - name: snapshot_year
+        description: Calendar year of the OSM snapshot.
+        data_tests:
+
+          - not_null:
+              config:
+                where: "area_code is not null"
+      - name: area_code
+        description: PLR area code (8-digit, zero-padded). Vintage-specific.
+      - name: area_vintage
+        description: Spatial-join vintage, carried through from int_poi_offering_advantage.
+        data_tests:
+
+          - accepted_values:
+              arguments:
+                values: ["lor_pre2021", "lor_2021", "current"]
+              config:
+                where: "area_code is not null"
+      - name: poi_domain_h
+        description: Harmonized POI domain.
+      - name: poi_category_h
+        description: Harmonized POI category.
+      - name: poi_type_h
+        description: Harmonized POI type.
+      - name: weight_variant
+        description: >
+          'standard' or a Gaussian-weighted kernel variant, carried through
+          unchanged.
+      - name: methodology_variant
+        description: ADR-0017 D4 structural invariant ('faithful' today).
+        data_tests:
+
+          - accepted_values:
+              arguments:
+                values: ["faithful", "improved"]
+              config:
+                where: "area_code is not null"
+      - name: oa_domain_nested_lq
+        description: Domain-level nested (parent-relative) LQ -- identical to int_poi_offering_advantage.oa_domain.
+      - name: oa_category_nested_lq
+        description: Category-level nested LQ -- identical to int_poi_offering_advantage.oa_category.
+      - name: oa_type_nested_lq
+        description: Type-level nested LQ -- identical to int_poi_offering_advantage.oa_type.
+      - name: oa_domain_global_lq
+        description: >
+          Domain-level global (city-relative) LQ -- algebraically identical
+          to oa_domain_nested_lq by construction (a domain's own parent is
+          already the all-domains grand total); see model header note 2.
+      - name: oa_category_global_lq
+        description: Category-level LQ against the all-domains grand total (not the parent domain).
+      - name: oa_type_global_lq
+        description: Type-level LQ against the all-domains grand total (not the parent domain).
+      - name: oa_domain_log_lq
+        description: ln(oa_domain_nested_lq) -- log-centred at 0.
+      - name: oa_category_log_lq
+        description: ln(oa_category_nested_lq) -- log-centred at 0.
+      - name: oa_type_log_lq
+        description: ln(oa_type_nested_lq) -- log-centred at 0.
+      - name: oa_domain_share_diff
+        description: >
+          Domain local_share minus city_share (percentage-point difference,
+          NOT a ratio -- C7 never-blend with the LQ-family columns).
+      - name: oa_category_share_diff
+        description: Category local_share minus city_share (parent-relative bases, pp difference).
+      - name: oa_type_share_diff
+        description: Type local_share minus city_share (parent-relative bases, pp difference).
+      - name: oa_domain_shrunk_lq
+        description: >
+          Empirical-Bayes/Laplace-shrunk domain LQ (prior weight k =
+          oa_min_poi_base_n; Efron & Morris 1975; Agresti 2013 Sec 3.3).
+      - name: oa_category_shrunk_lq
+        description: Empirical-Bayes/Laplace-shrunk category LQ.
+      - name: oa_type_shrunk_lq
+        description: Empirical-Bayes/Laplace-shrunk type LQ.
+      - name: oa_domain_raw_share
+        description: >
+          Raw within-group domain share (proportion, no city normalization).
+          Expected to fail the D5 completeness-contamination gate (OA-D0 geo
+          sign-off C3) -- not temporally safe.
+      - name: oa_category_raw_share
+        description: Raw within-group category share (proportion, no city normalization).
+      - name: oa_type_raw_share
+        description: Raw within-group type share (proportion, no city normalization).
+      - name: oa_domain_zscore_slq
+        description: >
+          OA-D3b (#280): binomial-significance z-score of the domain LQ
+          (Isserman 1977; Wilson 1927 normal approximation) -- expected =
+          local_base*city_share, variance = local_base*city_share*(1-city_share),
+          z = (observed-expected)/sqrt(variance). NULL when variance <= 0.
+      - name: oa_category_zscore_slq
+        description: Binomial-significance z-score of the category LQ (same construction as oa_domain_zscore_slq, category-relative base).
+      - name: oa_type_zscore_slq
+        description: Binomial-significance z-score of the type LQ (same construction as oa_domain_zscore_slq, type-relative base).
+      - name: oa_domain_density
+        description: >
+          OA-D3b (#280): domain_stock_local / area_km2 (ST_Area, native
+          metric CRS, PLR grain only) -- POIs per km2, an absolute
+          provision reading, NOT a location quotient (OA-D0 domain
+          sign-off Condition C). NULL where no area_km2 join match.
+          TEMPORAL-UNSAFE (expected_temporal_safe=false in
+          seed_oa_calculation_methods.csv): area_km2 is time-invariant, so
+          density inherits the same OSM completeness-growth contamination
+          as raw_share (OA-D0 geo sign-off C3; OA-D0 domain sign-off
+          Condition C.2 -- must not be time-differenced without a D6 PASS).
+        data_tests:
+
+          - dbt_utils.expression_is_true:
+              arguments:
+                expression: ">= 0"
+              config:
+                where: "area_code is not null and oa_domain_density is not null"
+      - name: oa_category_density
+        description: Category-level density (same construction as oa_domain_density, category stock numerator).
+        data_tests:
+
+          - dbt_utils.expression_is_true:
+              arguments:
+                expression: ">= 0"
+              config:
+                where: "area_code is not null and oa_category_density is not null"
+      - name: oa_type_density
+        description: Type-level density (same construction as oa_domain_density, type stock numerator).
+        data_tests:
+
+          - dbt_utils.expression_is_true:
+              arguments:
+                expression: ">= 0"
+              config:
+                where: "area_code is not null and oa_type_density is not null"
+      - name: oa_domain_percapita
+        description: >
+          OA-D3b (#280): domain_stock_local / EWR residents_total * 1000
+          (POIs per 1,000 residents), joined on an EXACT snapshot_year =
+          EWR reference_year match (OA-D0 geo sign-off C10 -- no
+          nearest-year fallback, no imputation) -- NULL where no exact-year
+          match exists. Absolute provision reading, NOT a location
+          quotient; population denominator is endogenous to displacement
+          (OA-D0 domain sign-off Condition C) -- caveat travels with every
+          downstream consumer.
+        data_tests:
+
+          - dbt_utils.expression_is_true:
+              arguments:
+                expression: ">= 0"
+              config:
+                where: "area_code is not null and oa_domain_percapita is not null"
+      - name: oa_category_percapita
+        description: Category-level per-capita (same construction as oa_domain_percapita, category stock numerator).
+        data_tests:
+
+          - dbt_utils.expression_is_true:
+              arguments:
+                expression: ">= 0"
+              config:
+                where: "area_code is not null and oa_category_percapita is not null"
+      - name: oa_type_percapita
+        description: Type-level per-capita (same construction as oa_domain_percapita, type stock numerator).
+        data_tests:
+
+          - dbt_utils.expression_is_true:
+              arguments:
+                expression: ">= 0"
+              config:
+                where: "area_code is not null and oa_type_percapita is not null"
+
+  - name: int_poi_within_group_dominance
+    description: >
+      OA-D4 (#240, ADR-0024): within-group offering-dominance model -- HHI,
+      top-share, Shannon entropy, Pielou evenness, and a signed top_child +
+      offering_tier, computed ONLY over a curated five-group allow-list
+      (gastronomy_category, gastronomy_restaurant_cuisine, retail_category,
+      entertainment_category, wellness_curated) per OA-D0 domain sign-off
+      Condition A -- see seed_oa_dominance_groups.csv and the model SQL
+      header for the full allow-list rationale and confirmed exclusions
+      (Vacancy, infrastructure domains, Tourism, Hipster/Coworking).
+
+      Grain: one row per (city_code, snapshot_year, area_code, area_vintage,
+      weight_variant, dominance_group) -- a GROUP-level grain, distinct from
+      OA's taxonomy-leaf grain, since dominance is a property of the group.
+
+      Ethics gate (OA-D0 domain sign-off Condition B, mandatory, all four
+      clauses -- see model SQL header): (B.1) descriptive diversity index,
+      no antitrust/market-power reading; (B.2) sign-blind HHI/top_share must
+      always be read paired with top_child + top_child_offering_tier, never
+      bare; (B.3) is_public_safe = false for gastronomy_restaurant_cuisine --
+      cuisine-typed Restaurant dominance is an ethnic-stigma vector and MUST
+      be filtered out of any public, displacement-adjacent surface; (B.4)
+      is_thin_base flags (never drops) low-count cells -- descriptive-not-
+      causal, anti-erasure (Haklay 2010).
+
+      Graceful degradation: zero rows when int_poi_offering_advantage has no
+      rows.
+    meta:
+      dbt_meta_owner: data-engineer
+    data_tests:
+
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns:
+              - city_code
+              - snapshot_year
+              - area_code
+              - area_vintage
+              - weight_variant
+              - dominance_group
+          config:
+            where: "area_code is not null"
+    columns:
+      - name: city_code
+        description: >
+          City identifier (ADR-0005). #281: canonicalized in the base CTE --
+          unlike its upstream source int_poi_offering_advantage, which still
+          carries legacy lowercase 'berlin' rows by design, this model's
+          output is canonical-only.
+        data_tests:
+
+          - not_null:
+              config:
+                where: "area_code is not null"
+          - accepted_values:
+              arguments:
+                values: ["BER", "HH"]
+              config:
+                where: "area_code is not null"
+      - name: snapshot_year
+        description: Calendar year of the OSM snapshot.
+      - name: area_code
+        description: PLR area code (8-digit, zero-padded). Vintage-specific.
+      - name: area_vintage
+        description: Spatial-join vintage, carried through from int_poi_offering_advantage.
+        data_tests:
+
+          - accepted_values:
+              arguments:
+                values: ["lor_pre2021", "lor_2021", "current"]
+              config:
+                where: "area_code is not null"
+      - name: weight_variant
+        description: "'standard' or a Gaussian-weighted kernel variant, carried through unchanged."
+      - name: dominance_group
+        description: >
+          One of the five curated allow-list groups (see model description).
+          NOT an open-ended domain/category label -- governed by
+          seed_oa_dominance_groups.csv.
+        data_tests:
+
+          - accepted_values:
+              arguments:
+                values:
+                  [
+                    "gastronomy_category",
+                    "gastronomy_restaurant_cuisine",
+                    "retail_category",
+                    "entertainment_category",
+                    "wellness_curated",
+                  ]
+              config:
+                where: "area_code is not null"
+      - name: is_public_safe
+        description: >
+          FALSE only for gastronomy_restaurant_cuisine (OA-D0 domain
+          sign-off Condition B.3 anti-stigma clause). Any consumer rendering
+          a dominance figure on a public, displacement-adjacent surface MUST
+          filter is_public_safe = true first.
+      - name: group_stock_local
+        description: Sum of child_stock across all present (positive-stock) children in this group cell.
+      - name: n_children
+        description: Count of present (positive-stock) children contributing to this group cell.
+      - name: hhi
+        description: >
+          Herfindahl-Hirschman concentration index, sum(share_i^2), range
+          [1/n_children, 1]. Descriptive diversity index only (Condition
+          B.1) -- never publish without top_child/top_child_offering_tier
+          (Condition B.2).
+        data_tests:
+
+          - dbt_utils.accepted_range:
+              arguments: { min_value: 0, max_value: 1.0000001 }
+              config:
+                where: "area_code is not null"
+      - name: top_share
+        description: Largest single child's share of the group (max share_i).
+        data_tests:
+
+          - dbt_utils.accepted_range:
+              arguments: { min_value: 0, max_value: 1.0000001 }
+              config:
+                where: "area_code is not null"
+      - name: entropy
+        description: Shannon entropy of the within-group share distribution, range [0, ln(n_children)].
+      - name: evenness
+        description: >
+          Pielou evenness (entropy / ln(n_children)), range [0,1]. NULL when
+          n_children <= 1 (undefined, not zero/error -- see model SQL
+          header).
+      - name: top_child
+        description: The child_label (category or type name) with the largest share in this group cell.
+      - name: top_child_level
+        description: "'category' or 'type' -- the taxonomy grain of top_child."
+      - name: top_child_offering_tier
+        description: >
+          top_child's offering_tier from seed_poi_offering_relevance.csv
+          (Condition B.2 mandatory signed pairing). May be NULL if the
+          taxonomy leaf has no matching relevance-seed row.
+      - name: top_child_offering_weight
+        description: top_child's offering_weight from seed_poi_offering_relevance.csv (same pairing as top_child_offering_tier).
+      - name: is_thin_base
+        description: >
+          TRUE when group_stock_local < greatest(10, 5 * n_children) --
+          dominance-specific min-parent-base gate (stricter than OA's flat
+          oa_min_poi_base_n floor). Flags, never drops (Condition B.4
+          anti-erasure).
+
+  - name: int_poi_offering_advantage_arealevel
+    description: >
+      OA-D2 (#240, ADR-0024): area_level roll-up of int_poi_offering_advantage's
+      faithful nested-LQ (domain/category/type). OA-D8 (#240) generalized
+      this model from Berlin-only to city-agnostic (ADR-0005) -- it now
+      rolls up Berlin (plr/bzr/pgr/bezirk) AND Hamburg (subarea_l2/
+      subarea_l1/district, via OA-D1b's resolved parent edges) through the
+      same code path -- see model SQL header for the full generalization
+      mechanism (dim_city.oa_leaf_area_level + dim_area_hierarchy edges,
+      no more `city_code = 'BER'`/substr() literal).
+
+      Rolls up each city's leaf-grain stock via dim_area_hierarchy's
+      resolved parent edges (Berlin: LOR RAUMID prefix nesting; Hamburg:
+      OA-D1b's Gebiet->Stadtteil spatial crosswalk + WFS Stadtteil->Bezirk)
+      per OA-D0 geo-DS sign-off Condition C1 (the only roll-up option that
+      provably preserves the C-1 mass-conservation invariant -- re-kernelling
+      per level would break it). City-wide totals are broadcast unchanged
+      from int_poi_offering_advantage rather than re-windowed over the
+      unioned multi-level rows (Condition C2 -- the specific guard against an
+      I15-class overcount at 4x scale).
+
+      Grain: one row per (city_code, snapshot_year, area_level, area_code,
+      area_vintage, poi_domain_h, poi_category_h, poi_type_h, weight_variant,
+      methodology_variant). area_level in ('plr', 'bzr', 'pgr', 'bezirk')
+      for Berlin, ('subarea_l2', 'subarea_l1', 'district') for Hamburg; each
+      city's leaf-level rows (dim_city.oa_leaf_area_level) are a 1:1
+      pass-through of int_poi_offering_advantage.
+
+      Bezirk rows are numeric-only in this model (Condition C8's ST_Union
+      dissolved geometry lives in dim_area_geometry.sql, D6); Hamburg's
+      levels already have their own WFS polygons (no dissolve needed).
+
+      C-1b invariance (geo sign-off Condition C6, BLOCKING): local stock
+      summed over all areas at a level must equal that level's city-wide
+      total, AND the city-wide total must be identical across every
+      area_level value FOR A GIVEN CITY -- enforced by
+      test_c1b_oa_arealevel_mass_conservation_invariance.sql, which groups
+      by city_code and so validates Berlin and Hamburg independently.
+
+      Deferred to later D-spine tickets (see model SQL header): D3
+      calculation-method columns, C3 completeness-contamination gate and C5
+      MAUP rank-stability check (D5 comparison study). Any consumer
+      publishing a coarse-level figure MUST carry the domain sign-off's
+      binding Condition D ecological-fallacy / headline-scale framing (Berlin:
+      BZR headline, Bezirk context-only; Hamburg, OA-D8: subarea_l1/Stadtteil
+      headline, district/Bezirk context-only, argued independently per the
+      OA-D1b domain sign-off forward condition 1) -- not enforced by this
+      model itself, see mart_poi_oa_arealevel.sql.
+
+      Graceful degradation: zero rows when int_poi_offering_advantage has no
+      rows.
+    meta:
+      dbt_meta_owner: data-engineer
+    data_tests:
+
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns:
+              - city_code
+              - snapshot_year
+              - area_level
+              - area_code
+              - area_vintage
+              - poi_domain_h
+              - poi_category_h
+              - poi_type_h
+              - weight_variant
+              - methodology_variant
+          config:
+            where: "area_code is not null"
+    columns:
+      - name: city_code
+        description: City identifier (ADR-0005). 'BER' (Berlin) or 'HH' (Hamburg, OA-D8, #240).
+        data_tests:
+
+          - accepted_values:
+              arguments:
+                values: ["BER", "HH"]
+              config:
+                where: "area_code is not null"
+      - name: snapshot_year
+        description: Calendar year of the OSM snapshot.
+        data_tests:
+
+          - not_null:
+              config:
+                where: "area_code is not null"
+      - name: area_level
+        description: >
+          Spatial roll-up level. Each city's own leaf level (dim_city.
+          oa_leaf_area_level: 'plr' for Berlin, 'subarea_l2' for Hamburg) is
+          the pass-through finest grain; 'bzr'/'pgr'/'bezirk' (Berlin) and
+          'subarea_l1'/'district' (Hamburg, OA-D8) are roll-ups via
+          dim_area_hierarchy's resolved parent edges (see model SQL header).
+        data_tests:
+
+          - accepted_values:
+              arguments:
+                values:
+                  ["plr", "bzr", "pgr", "bezirk", "subarea_l2", "subarea_l1", "district"]
+              config:
+                where: "area_code is not null"
+      - name: area_code
+        description: >
+          Area code at this row's area_level (8-digit PLR, 6-digit BZR,
+          4-digit PGR, or 2-digit Bezirk prefix for Berlin; native Gebiet/
+          Stadtteil/Bezirk id for Hamburg). Vintage-specific.
+        data_tests:
+
+          - not_null:
+              config:
+                where: "snapshot_year is not null"
+      - name: area_vintage
+        description: >
+          Spatial-join vintage. 'lor_pre2021'/'lor_2021' for Berlin;
+          'current' for Hamburg (OA-D8, single WFS edition, ADR-0014).
+        data_tests:
+
+          - accepted_values:
+              arguments:
+                values: ["lor_pre2021", "lor_2021", "current"]
+              config:
+                where: "area_code is not null"
+      - name: poi_domain_h
+        description: Harmonized POI domain.
+        data_tests:
+
+          - not_null:
+              config:
+                where: "area_code is not null"
+      - name: poi_category_h
+        description: Harmonized POI category.
+        data_tests:
+
+          - not_null:
+              config:
+                where: "area_code is not null"
+      - name: poi_type_h
+        description: Harmonized POI type.
+        data_tests:
+
+          - not_null:
+              config:
+                where: "area_code is not null"
+      - name: weight_variant
+        description: >
+          'standard' or a Gaussian-weighted kernel variant, carried through
+          from int_poi_offering_advantage.
+        data_tests:
+
+          - not_null:
+              config:
+                where: "area_code is not null"
+      - name: methodology_variant
+        description: ADR-0017 D4 structural invariant, carried through from int_poi_offering_advantage.
+        data_tests:
+
+          - accepted_values:
+              arguments:
+                values: ["faithful", "improved"]
+              config:
+                where: "area_code is not null"
+      - name: type_stock_local
+        description: Rolled-up (prefix-summed for bzr/pgr/bezirk; pass-through for plr) taxonomy-leaf stock within this area_level's area.
+      - name: type_stock_city
+        description: City-wide stock, broadcast unchanged from int_poi_offering_advantage (identical across every area_level -- C-1b assertion 2).
+      - name: category_stock_local
+        description: Rolled-up category total within this area_level's area.
+      - name: category_stock_city
+        description: City-wide category total, broadcast unchanged.
+      - name: domain_stock_local
+        description: Rolled-up domain total within this area_level's area.
+      - name: domain_stock_city
+        description: City-wide domain total, broadcast unchanged.
+      - name: all_domains_stock_local
+        description: Rolled-up all-domains grand total within this area_level's area.
+      - name: all_domains_stock_city
+        description: City-wide all-domains grand total, broadcast unchanged.
+      - name: oa_domain
+        description: Domain-level LQ at this area_level, same formula as int_poi_offering_advantage.oa_domain (ADR-0017 D1).
+        data_tests:
+
+          - dbt_utils.expression_is_true:
+              arguments:
+                expression: ">= 0"
+              config:
+                where: "area_code is not null and oa_domain is not null"
+      - name: oa_category
+        description: Category-level LQ at this area_level, same formula as int_poi_offering_advantage.oa_category.
+        data_tests:
+
+          - dbt_utils.expression_is_true:
+              arguments:
+                expression: ">= 0"
+              config:
+                where: "area_code is not null and oa_category is not null"
+      - name: oa_type
+        description: Type-level LQ at this area_level, same formula as int_poi_offering_advantage.oa_type.
+        data_tests:
+
+          - dbt_utils.expression_is_true:
+              arguments:
+                expression: ">= 0"
+              config:
+                where: "area_code is not null and oa_type is not null"
+      - name: oa_domain_min_base_flag
+        description: >
+          D-3 min-base flag (#274 discharge) re-evaluated against this
+          area_level's own rolled-up all_domains_stock_local -- see model SQL
+          header. Coarser levels naturally flag less often (OA-D0 geo
+          sign-off Condition C4, "resolution-vs-stability dial").
+        data_tests:
+
+          - not_null:
+              config:
+                where: "area_code is not null"
+      - name: oa_category_min_base_flag
+        description: D-3 min-base flag re-evaluated against this area_level's own rolled-up domain_stock_local.
+        data_tests:
+
+          - not_null:
+              config:
+                where: "area_code is not null"
+      - name: oa_type_min_base_flag
+        description: D-3 min-base flag re-evaluated against this area_level's own rolled-up domain_stock_local (identical to oa_category_min_base_flag by construction).
         data_tests:
 
           - not_null:

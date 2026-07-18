@@ -54,23 +54,80 @@
 -- ingest_hamburg_geo.py's WFS_LAYERS['stadtteil']['parent_prop']) -- this is
 -- source-provided, not a derivation, so it is simply passed through here.
 --
--- subarea_l2 (statistisches Gebiet) -> subarea_l1 (Stadtteil) is intentionally
--- NOT resolved in this model. Confirmed live 2026-07-12 (DescribeFeatureType +
--- direct WFS query against HH_WFS_Statistische_Gebiete): the Gebiet layer's
--- only properties are `statgebiet` (a bare sequential id, not a Stadtteil-
--- prefixed code) and `flaeche` -- there is no source-provided parent code, and
--- Gebiet ids do NOT nest by string prefix with Stadtteil codes (checked
--- directly against the ingested geometries). The only Gebiet->Stadtteil link
--- that exists anywhere in this warehouse is int_ewr_socioeco_hamburg_disagg's
--- name-matched crosswalk, which is itself a methodology decision scoped and
--- signed off for EWR disaggregation specifically (H1 geo-signoff), not a
--- general-purpose geographic crosswalk, and does not cover all ~943 Gebiete
--- (see that model's header for the documented coverage gaps). Minting a NEW
--- geometric (e.g. spatial-containment) crosswalk here would be a new spatial
--- method choice outside this ticket's data-engineer/reviewer scope (R-C1) --
--- flagged as an open question for geo-DS, same treatment the ticket already
--- gives the Berlin Ortsteil non-nesting case. A follow-up ticket can add this
--- edge once that method is chosen and gated.
+-- subarea_l2 (statistisches Gebiet) -> subarea_l1 (Stadtteil): RESOLVED
+-- 2026-07-17 (OA-D1b, #240, ADR-0024 D4) via a ST_Within(centroid,
+-- parent_geom) spatial crosswalk. Confirmed live 2026-07-12 (see the previous
+-- version of this comment, kept in git history) and RE-CONFIRMED against the
+-- currently-ingested data/raw/hamburg/geo/{statgebiet,stadtteil}.parquet
+-- (2026-07-17, OA-D1b spike): the Gebiet layer's only properties are
+-- `statgebiet` (a bare id, not a Stadtteil-prefixed code -- ingest_hamburg_geo
+-- .py's WFS_LAYERS['statgebiet']['parent_prop'] is None, and every one of the
+-- 943 distinct post-stg_hamburg_geo-dedup rows' parent_area_code is NULL in
+-- the raw parquet) and Gebiet ids do NOT nest by string prefix with Stadtteil
+-- codes (statgebiet area_code length varies 4/5/6 digits vs. Stadtteil's
+-- fixed 5-digit 'stadtteil_schluessel'; checked directly against the ingested
+-- geometries). So there is genuinely no attribute-based or prefix-derivable
+-- parent -- the "if no" branch of the OA-D1b ticket's spike-first sizing note.
+--
+-- The only Gebiet->Stadtteil link ELSEWHERE in this warehouse is
+-- int_ewr_socioeco_hamburg_disagg's name-matched crosswalk, which is a
+-- methodology decision scoped and signed off for EWR disaggregation
+-- specifically (H1 geo-signoff), not a general-purpose geographic crosswalk,
+-- and does not cover all ~943 Gebiete (see that model's header) -- not reused
+-- here; this edge needs a general (not disaggregation-specific) crosswalk
+-- covering every Gebiet.
+--
+-- METHOD (methodology-bearing, R-C1 -- new spatial method, same class of
+-- decision as int_berlin_plr_ortsteil_overlap.sql's area-overlap crosswalk
+-- for the analogous Berlin PLR<->Ortsteil non-nesting case): a Stadtteil
+-- polygon is large and simply-shaped relative to a statistisches Gebiet
+-- (Hamburg's finest published subdivision), so ST_Within(ST_Centroid(gebiet),
+-- stadtteil_geom) -- centroid-in-polygon containment, the DuckDB spatial
+-- primitive named in CLAUDE.md's spatial-work convention -- was chosen over a
+-- full ST_Intersects area-overlap join (int_berlin_plr_ortsteil_overlap.sql's
+-- heavier method): unlike PLR<->Ortsteil (two independently-drawn
+-- tessellations that routinely straddle each other, needing a dominant/
+-- fractional-overlap treatment), a Gebiet is Hamburg's OWN finer statistical
+-- subdivision and is expected to nest wholly inside a single Stadtteil by
+-- construction -- centroid containment is the simpler, sufficient test for a
+-- "which one parent" question, not a "how much does it straddle" question.
+-- Both layers share native CRS EPSG:25832 (ADR-0014) -- no reprojection.
+--
+-- Empirical result (2026-07-17 spike, re-derive by querying this model --
+-- do not treat this comment as a substitute going forward): of 943 distinct
+-- (post stg_hamburg_geo dedup) statgebiet codes x 104 Stadtteile, 941 (99.8%)
+-- have a centroid inside EXACTLY ONE Stadtteil polygon -- ZERO double-matches
+-- (the two layers never overlap ambiguously at any Gebiet centroid). The
+-- remaining 2 (0.2%: '90001', '106001') have a centroid inside NO Stadtteil
+-- polygon -- boundary/digitization-noise gaps between the two independently-
+-- drawn layers (same class of issue int_berlin_plr_ortsteil_overlap.sql
+-- documents for Berlin, and stg_hamburg_geo's own header documents for the
+-- '73002'/'105001' duplicate-geometry WFS artifact), not a genuine spatial
+-- outlier: '90001' centroid is 15.9m from Gut Moor's (02703) boundary (a
+-- >1.9 km^2 polygon) and 500m+ from any other Stadtteil centroid; '106001'
+-- centroid is 6.5km from its nearest Stadtteil (Schnelsen, 02307), a large
+-- (17.5 km^2), sparsely-built Gebiet whose polygon simply doesn't touch the
+-- Stadtteil layer, but still resolves to a SINGLE unambiguous nearest
+-- Stadtteil (next-nearest candidate 600m+ further for both). FALLBACK: these
+-- 2 are assigned their nearest Stadtteil by centroid-to-polygon ST_Distance
+-- (deterministic tie-break on stadtteil_code, though no real tie occurred).
+--
+-- Boundary spot-check (OA-D1b spike, 2026-07-17, per the ticket's explicit
+-- ask to check straddlers): the 15 closest-to-boundary PRIMARY matches have a
+-- centroid-to-assigned-polygon-boundary margin of 34m-75m -- e.g. statgebiet
+-- '88003' centroid is inside Harburg (02701, dist=0), 34m from Neuland's
+-- (02702) boundary, with the NEXT candidate (Wilstorf, 02704) 314m away;
+-- '28012' is inside Lurup (02208, dist=0), 36m from Bahrenfeld's (02205)
+-- boundary, next candidate 1.1km away. Every checked near-boundary case has
+-- the assigned parent as the CLEAR nearest match, not a close call between
+-- two plausible parents -- no evidence of an intuitively-wrong assignment
+-- from centroid-containment at this polygon scale (Stadtteil polygons are
+-- large administrative areas; a Gebiet centroid landing within ~35m of a
+-- Stadtteil boundary is still unambiguously on one side of it).
+--
+-- GATE: methodology-bearing (new spatial method) -- geo-DS + domain-expert
+-- R-C1 dual sign-off required before integration into develop (CLAUDE.md
+-- Methodology gate), same requirement as int_berlin_plr_ortsteil_overlap.sql.
 --
 -- =============================================================================
 -- Berlin Ortsteil: TWO DIFFERENT mechanisms for TWO DIFFERENT relationships (#269)
@@ -187,6 +244,93 @@ with
             and parent_area_code is not null
     ),
 
+    -- Hamburg: statistisches Gebiet (subarea_l2) -> Stadtteil (subarea_l1),
+    -- OA-D1b (#240, ADR-0024 D4). Spatial crosswalk (see header) -- unlike
+    -- every other CTE in this model, this one is a geometric derivation, not
+    -- a code-prefix substr() or an attribute pass-through.
+    --
+    -- Source geometries, deduped defensively (stg_hamburg_geo already dedups
+    -- to one row per (city_code, area_level, area_code, area_vintage); this
+    -- model has no vintage filter to apply since Hamburg carries a single
+    -- 'current' vintage, so DISTINCT on area_code is a no-op safety net,
+    -- matching hh_l1_to_district's own DISTINCT usage above).
+    hh_l2_geoms as (
+        select distinct area_code, geometry_wkb
+        from {{ ref("stg_hamburg_geo") }}
+        where
+            city_code = 'HH' and area_level = 'subarea_l2' and geometry_wkb is not null
+    ),
+
+    hh_l1_geoms as (
+        select distinct area_code as stadtteil_code, geometry_wkb
+        from {{ ref("stg_hamburg_geo") }}
+        where
+            city_code = 'HH' and area_level = 'subarea_l1' and geometry_wkb is not null
+    ),
+
+    hh_l2_centroids as (
+        select area_code, st_centroid(st_geomfromwkb(geometry_wkb)) as centroid
+        from hh_l2_geoms
+    ),
+
+    -- Primary: centroid strictly within a Stadtteil polygon. Empirically
+    -- (see header) every Gebiet centroid falls in AT MOST one Stadtteil --
+    -- no dominant/tie-break logic is needed here, unlike
+    -- int_berlin_plr_ortsteil_overlap.sql's straddling-PLR case.
+    hh_l2_primary as (
+        select sg.area_code, st.stadtteil_code
+        from hh_l2_centroids as sg
+        inner join
+            hh_l1_geoms as st on st_within(sg.centroid, st_geomfromwkb(st.geometry_wkb))
+    ),
+
+    -- Fallback: Gebiete whose centroid falls in NO Stadtteil polygon (2 of
+    -- 943 in the OA-D1b spike -- boundary/digitization-noise gaps between the
+    -- two independently-drawn layers, see header) get their nearest Stadtteil
+    -- by centroid-to-polygon ST_Distance. Deterministic tie-break on
+    -- stadtteil_code (defensive -- no real tie was found in the spike).
+    hh_l2_fallback as (
+        select area_code, stadtteil_code
+        from
+            (
+                select
+                    sg.area_code,
+                    st.stadtteil_code,
+                    row_number() over (
+                        partition by sg.area_code
+                        order by
+                            st_distance(
+                                sg.centroid, st_geomfromwkb(st.geometry_wkb)
+                            ) asc,
+                            st.stadtteil_code asc
+                    ) as rn
+                from hh_l2_centroids as sg
+                inner join hh_l1_geoms as st on true
+                where
+                    sg.area_code
+                    not in (select hh_l2_primary.area_code from hh_l2_primary)
+            ) as ranked
+        where rn = 1
+    ),
+
+    hh_l2_to_l1 as (
+        select
+            cast('HH' as varchar) as city_code,
+            cast('subarea_l2' as varchar) as area_level,
+            area_code,
+            cast('subarea_l1' as varchar) as parent_area_level,
+            stadtteil_code as parent_area_code
+        from hh_l2_primary
+        union all
+        select
+            cast('HH' as varchar) as city_code,
+            cast('subarea_l2' as varchar) as area_level,
+            area_code,
+            cast('subarea_l1' as varchar) as parent_area_level,
+            stadtteil_code as parent_area_code
+        from hh_l2_fallback
+    ),
+
     unioned as (
         select *
         from ber_plr_to_bzr
@@ -202,6 +346,9 @@ with
         union all
         select *
         from ber_ortsteil_to_bezirk
+        union all
+        select *
+        from hh_l2_to_l1
     )
 
 select city_code, area_level, area_code, parent_area_level, parent_area_code

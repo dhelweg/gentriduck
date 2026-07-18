@@ -157,6 +157,13 @@ backtest = "python analysis/backtest_index.py"
 # Run after `poe build`. Results written to data/analysis/oa_bandwidth_sweep.csv; findings
 # write-up in docs/epic-g/G2-oa-bandwidth-sweep-findings.md.
 oa-bandwidth-sweep = "python analysis/oa_bandwidth_sweep.py"
+# OA-D3c (#280, ADR-0025): Getis-Ord Gi* analysis->mart precompute. NOT part of the
+# `analysis` sequence above -- unlike its siblings this script's OUTPUT feeds a dbt mart
+# (mart_poi_oa_hotspots via stg_oa_getis_ord), so it needs a two-pass build: `poe build`
+# (populates int_poi_offering_advantage_arealevel) -> this task (writes the parquet) ->
+# `poe build` again (materializes the mart with the fresh precompute). See the script's
+# module docstring for the full build-order rationale.
+oa-getis-ord = "python analysis/f_oa_getis_ord.py"
 # Ingestion scripts — rebuild raw data from open sources (gitignored artefacts).
 # Run once before `poe build` on a fresh checkout. See ingestion/README.md for the full
 # module-by-module reference (inputs/outputs, licensing, cross-platform notes).

@@ -29,6 +29,11 @@ canonical_city_code = "{% macro canonical_city_code(column) %}case when {{ colum
 # call sites without a dbt-macro loader. Returns a syntactically-valid dummy
 # path string; the real value is only needed at dbt-execute time.
 raw_path = "{% macro raw_path(relative_path) %}/tmp/raw/{{ relative_path }}{% endmacro %}"
+# OA-D3c (#280, ADR-0025): stub for the project's analysis_path() macro
+# (transform/macros/analysis_path.sql) so sqlfluff's plain-jinja templater can
+# parse call sites without a dbt-macro loader. Returns a syntactically-valid
+# dummy path string; the real value is only needed at dbt-execute time.
+analysis_path = "{% macro analysis_path(relative_path) %}/tmp/analysis/{{ relative_path }}{% endmacro %}"
 # QA-4b (#202): stub for the project's published_cities_filter() macro
 # (transform/macros/published_cities_filter.sql) so sqlfluff's plain-jinja
 # templater can parse call sites without a dbt-macro loader. Returns a

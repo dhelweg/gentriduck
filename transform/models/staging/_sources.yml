@@ -242,6 +242,31 @@ sources:
         meta:
           external_location: "{{ env_var('PWD', '.') }}/data/raw/osm/hamburg/*.parquet"
 
+  - name: analysis_precompute
+    description: >
+      OA-D3c (#280, ADR-0025): precomputed analysis-layer results tables that
+      feed a mart via a stable-key join (the ADR-0009/ADR-0025 analysis->mart
+      handoff boundary -- the statistic itself never runs inside dbt/DuckDB).
+      Gitignored (ADR-0008-style rebuildable-artefact framing) and
+      deterministically rebuilt by the named `analysis/*.py` script
+      (seed=42 on every `esda` permutation call, R-C3), not by
+      `ingestion/*.py` -- see analysis_path() macro (transform/macros/
+      analysis_path.sql) for the path convention this source's
+      external_location mirrors.
+    meta:
+      source_type: parquet_glob
+
+    tables:
+      - name: oa_getis_ord
+        description: >
+          Getis-Ord Gi* hotspot statistic (esda.G_Local + libpysal Queen
+          contiguity weights) over Offering Advantage domain-grain local
+          stock, PLR/BZR area levels only (ADR-0025 Decision 3 scope
+          restriction). Read by stg_oa_getis_ord. Produced by
+          `uv run python analysis/f_oa_getis_ord.py`.
+        meta:
+          external_location: "{{ env_var('PWD', '.') }}/data/analysis/oa_getis_ord/*.parquet"
+
   - name: price_rent
     description: >
       D1 Berlin price and rent open data sources (reference year 2023/2024).
