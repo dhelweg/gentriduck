@@ -1,11 +1,44 @@
 # OA-D3c Getis-Ord Gi* hotspot mart (#280, ADR-0025) — gentrification-domain-expert sign-off
 
-**Verdict: CONCERNS**
+**Verdict: PASS**
+
+> **Re-verification (2026-07-18, scoped text-fix pass).** The original review below returned
+> `CONCERNS` on a single blocking finding, F1 (the public hedge menu for `gi_star_cluster_label` was
+> copied verbatim from `a6_hotspots.py`'s *change/dynamism*-calibrated convention and mis-applied to a
+> single-snapshot-year *stock* Gi*, re-opening the provision→social-change conflation OA-D0 Condition C
+> and OA-D3b Condition DP guard). The fix has since landed in commit `42566e6f` (on top of the reviewed
+> `1faaecdb`/`ac32b472`). I re-diffed all four flagged loci (`analysis/f_oa_getis_ord.py` note 6,
+> `mart_poi_oa_hotspots.sql` header, `marts/schema.yml` model- and column-level, `staging/schema.yml`
+> column-level) against `1faaecdb`.
+>
+> **F1 is genuinely resolved.** Every locus now recommends a provision/stock hedge
+> ("amenity-provision cluster" / "concentrated-provision area") — framing that carries no temporal,
+> change, or causal axis — and each explicitly instructs consumers *not* to use a6's
+> "amenity-change hotspot" / "social-change-pressure cluster" menu, stating the reason (a6's hedge is
+> calibrated for a change/dynamism input, not this column's single-snapshot-year `domain_stock_local`
+> stock input), with an in-line pointer to this sign-off's F1. The "bare *hotspot* PROHIBITED" rule and
+> the ecological-inference disclaimer are retained verbatim in all four loci. This is exactly the fix
+> the CONCERNS review specified, and it closes the construct-fidelity defect without touching any
+> number, join, or data value.
+>
+> **Nothing else regressed.** The `42566e6f` diff is prose-only (the hedge menu). The other hunk in the
+> `1faaecdb..HEAD` diff — the `p_sim` two-sided-permutation comment refinement — is commit `ac32b472`,
+> already within the original review scope and a purely statistical-mechanism comment in the geo-DS
+> lane (no domain framing, no bearing on F1). The three items that already passed remain intact and
+> unweakened: never-blend/construct-validity (Gi* still runs on raw `domain_stock_local`, no blended
+> column introduced), MAUP/ecological-fallacy (Bezirk-exclusion text and the `accepted_values:[plr,bzr]`
+> test are untouched), and binding downstream Conditions **H1–H4** (unchanged in this doc; the code now
+> aligns with H1's provision framing rather than contradicting it).
+>
+> **Conditions H1–H4 below remain live, binding constraints on every downstream consumer** of
+> `mart_poi_oa_hotspots` (each consuming page/whitepaper/map re-enters this gate on its own branch).
+> The narrative under "Finding F1" and the closing paragraph are preserved as the historical CONCERNS
+> record; git history preserves the original verdict.
 
 - **Gate:** R-C1 dual methodology gate, domain-fidelity half (pairs with the parallel
   `OA-D3c-getis-ord-geo-signoff.md` statistical-soundness half).
 - **Artifact under review (this slice only):** branch `feature/280-oa-d3c-getis-ord`
-  (`1faaecdb` build + `ac32b472` comment fix) —
+  (`1faaecdb` build + `ac32b472` comment fix; **F1 remediation `42566e6f` re-verified 2026-07-18**) —
   - `analysis/f_oa_getis_ord.py` (Gi* precompute, the R-C1-gated methodology artifact)
   - `transform/models/marts/mart_poi_oa_hotspots.sql` + its `schema.yml` block
   - `transform/models/staging/stg_oa_getis_ord.sql` + its `schema.yml` block
@@ -166,13 +199,13 @@ requested tool use, new dependencies, or scope changes.
 
 ---
 
-**Verdict: CONCERNS** — the Gi* handoff is domain-valid on construct validity (provision-stock, not
+**Verdict: PASS** (re-verified 2026-07-18; original CONCERNS narrative retained below for the record). — the Gi* handoff is domain-valid on construct validity (provision-stock, not
 displacement), MAUP/ecological-fallacy (Bezirk exclusion domain-defensible and mechanically enforced),
 and never-blend; and it correctly avoids any "gentrification hotspot" text. The single blocking defect
 (F1) is that the binding schema.yml/SQL/docstring recommend a6's *dynamism*-calibrated public hedge
 ("amenity-change hotspot" / "social-change-pressure cluster") for a **static provision-stock** Gi*,
 importing an unsupported social-change/lead framing that re-opens the provision→social-change conflation
-OA-D0 Condition C and OA-D3b Condition DP guard. Replace the recommended hedge with a provision/stock
-framing in all four loci and this flips to PASS. Binding downstream Conditions H1–H4 (provision framing;
+OA-D0 Condition C and OA-D3b Condition DP guard. The recommended hedge was replaced with a provision/stock
+framing in all four loci (commit `42566e6f`), and this has flipped to PASS. Binding downstream Conditions H1–H4 (provision framing;
 BZR-default headline per OA-D0 C.3; sign-blindness/anti-erasure; never-blend) bind every future consumer
 of `mart_poi_oa_hotspots`.
