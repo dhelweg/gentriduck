@@ -190,6 +190,26 @@ fresh restart just re-reconciles and resumes — losing a wedged session costs n
 The script also **preflights** (needs `claude`/`git`/`gh` + a real gentriduck checkout) and **refuses
 to start a second instance** of the same Remote Control session, so two PMs can't race the board.
 
+### Cross-channel claim check (`check-ticket-claim.sh`, #286)
+
+The single-instance guard above only stops two **local** tmux loops on the same machine from
+racing the board — it can't see a **cloud/remote** Claude Code session (claude.ai/code web/mobile)
+working the same board concurrently. That gap caused a real incident (2026-07-18): a local devmode
+session and a separate cloud session both independently implemented the same three tickets before
+either pushed, requiring a manual merge and de-duplicated methodology sign-offs (see
+[`../docs/lessons/concurrent-session-git-divergence.md`](../docs/lessons/concurrent-session-git-divergence.md)).
+
+`ops/check-ticket-claim.sh <issue-number> [claim]` gives **any** session (local devmode, headless
+overnight, or cloud/remote) a cheap `gh`-only pre-pickup check, run automatically as devmode step 4:
+
+- checks for an existing `feature/<n>-*`/`fix/<n>-*` remote branch (someone's mid-implementation);
+- checks for a recent (<6h, `CLAIM_STALE_HOURS`) `Claimed by <session> at <timestamp>` issue comment
+  from a *different* `GENTRIDUCK_SESSION_ID`;
+- exits `1` (treat like `blocked` — skip to the next unblocked ticket) if either hits, `0` if free;
+- with the `claim` argument, posts its own claim comment once a session actually starts the ticket.
+
+No new tool/service — it's `git ls-remote` + `gh issue comment`, so no ADR is needed.
+
 ### Tuning
 
 - Edit the `PROMPT` in the script to change what "next-best task" and the human-gate rules

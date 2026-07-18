@@ -72,10 +72,19 @@ When run continuously (`ops/gentriduck-devmode.sh`), don't grind a fixed queue �
 2. **Re-scan all open issues** and re-prioritize against `docs/PROJECT_PLAN.md` + dependencies;
    tickets you filed last cycle get ranked in.
 3. **Triage blocked vs unblocked** and act (see *Blocked-on-maintainer handling* below).
-4. Advance the **top unblocked** ticket through implement → review → (methodology sign-off) →
+4. **Cross-channel claim check (#286) before starting any ticket:** run
+   `ops/check-ticket-claim.sh <n>` (add `claim` to post the marker once you actually start). It
+   checks for (a) an existing `feature/<n>-*`/`fix/<n>-*` remote branch and (b) a recent (<6h)
+   `Claimed by <session> at <timestamp>` issue comment from a *different* session — either means a
+   local devmode loop **or** a cloud/remote Claude Code session is already on it. Treat a hit like
+   `blocked`: skip to the next unblocked ticket rather than duplicating work (see
+   `docs/lessons/concurrent-session-git-divergence.md` for the incident this guards against). Also
+   `git fetch`/pull `origin/develop` at the **start** of every cycle (not only before pushing) so
+   divergence is caught early enough to skip/rebase rather than duplicate.
+5. Advance the **top unblocked** ticket through implement → review → (methodology sign-off) →
    **integrate into `develop`** (see **Branch & merge model** above).
-5. **Refresh the weekly `develop → main` PR** when due (or when the maintainer asks) and ping them to merge it.
-6. **Never idle waiting on the maintainer.** One PM works sequentially: if the top item is blocked on
+6. **Refresh the weekly `develop → main` PR** when due (or when the maintainer asks) and ping them to merge it.
+7. **Never idle waiting on the maintainer.** One PM works sequentially: if the top item is blocked on
    a human decision, park it and pull the next unblocked ticket — "in the meantime" means *next
    unblocked task*, not parallel work.
 
