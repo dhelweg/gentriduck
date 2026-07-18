@@ -56,6 +56,12 @@ data_tests:
     # data-quality bug. See the test file's own header for the full note.
     test_ortsteil_overlap_ortsteil_never_dominant:
       +severity: warn
+    # #282: distance-cap/count-guard on dim_area_hierarchy's Hamburg subarea_l2
+    # -> subarea_l1 nearest-Stadtteil fallback path. WARN, not ERROR -- a small
+    # amount of fallback growth may be legitimate WFS-edition noise; see the
+    # test file's own header for the threshold rationale.
+    test_dim_area_hierarchy_hh_l2_fallback_guard:
+      +severity: warn
     test_mss_plr_row_count:
       +severity: error
 
