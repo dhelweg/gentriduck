@@ -316,6 +316,84 @@ question. I *did* run `npm ci` inside `web/` (841 packages, clean) specifically 
 real, installed Evidence.dev source rather than reason from repo comments alone — that succeeded
 and is what grounds §§1–3 above. I made no commits and moved no pages.
 
+## Addendum — direct answers to the analyst's §9 (this scoping doc landed mid-pass)
+
+`docs/epic-i/I21-ia-restructure-scoping.md` (data-analyst's plan) appeared in the working tree
+partway through this pass — I'm evidently running on the same branch it was authored from
+(`claude/open-issues-blockers-nhgckv`, currently 51 commits ahead of `develop`, unmerged), which
+also means the OA-D marts/pages it references (`mart_poi_oa_arealevel`, `mart_poi_oa_methods`,
+`mart_poi_dominance`, `/methodology-oa-modes`, `/reference/area-hierarchy`, `/reference/poi-taxonomy`)
+were already sitting in `web/pages/`/`web/sources/` and I read them for this addendum. I did not
+edit that file. Its §9 poses five pointed web-engineer questions; direct answers, grounded in the
+same source-reading as above:
+
+**§9-Q1 (one shared `AreaPage` template over `{city, level, code}` + variable-depth breadcrumb, or
+forced per-level duplication?)** Not forced into duplication by routing — confirmed in §1/§2 above,
+route nesting depth is unbounded and these are all non-sidebar leaf pages (zero sidebar cost either
+way). The variable-depth breadcrumb specifically has a clean answer: `dim_area_hierarchy.sql`
+already produces a generic **self-referential edge table** — one row per
+`(city_code, area_level, area_code)` with `parent_area_level`/`parent_area_code` columns, covering
+Berlin's 4-rung LOR ladder *and* Hamburg's 2-resolved-rung chain via the same shape (I read the
+model directly: it's a single `UNION ALL` of per-edge CTEs, not two separate schemas). A breadcrumb
+component can walk this with one recursive CTE (DuckDB supports `WITH RECURSIVE`) keyed on
+`(city_code, area_level, area_code)` and render however many rows come back via a plain
+`{#each}` loop — **the variable depth lives in the data, not in per-city template branches**. This
+is a clean, buildable, city-agnostic pattern; whether it's *one* markdown file or several sharing
+this one breadcrumb query/component is the same medium-cost judgment call as §1's bezirk/bzr/pgr
+question — my answer doesn't collapse to a single yes/no on file count, but the breadcrumb/hierarchy
+problem specifically has a genuinely clean, low-cost solution.
+
+**§9-Q2 (relocating `/methodology-oa-modes`'s live §2/§4/§5 widgets onto area pages — mechanical
+copy-and-reparametrize, or real rework?)** **Real rework, not mechanical** — I read the actual
+widgets. They are driven by Evidence's `<Dropdown>`/`inputs` mechanism
+(`${inputs.methods_bezirk.value}`, `${inputs.scale_domain.value}`, `${inputs.dom_group.value}`,
+etc.) — a **client-side reactive re-query**: one static page, DuckDB-WASM re-runs the SQL in-browser
+whenever the visitor changes a dropdown, no rebuild/new route involved. The templated area pages use
+an entirely different mechanism — `${params.code}`, a **build-time route parameter**: one
+prerendered static page per crawled value, resolved once at build time, no client-side re-query.
+Relocating a widget from one mechanism to the other means rewriting its parametrization, not copying
+its SQL block: e.g. `where area_level = '${inputs.scale_level.value}'` (visitor-chosen, any value,
+one page) becomes `where area_level = '${params.level}' and area_code = '${params.code}'`
+(build-time-fixed per page, many pages) — same underlying mart, genuinely different wiring, plus the
+chart/table markup around it typically assumes a user-adjustable dropdown context (e.g. captions
+like "for the district selected above") that needs rewriting for a fixed-area page. Budget this as a
+real (if bounded, one-widget-at-a-time) engineering task, not a copy-paste.
+
+**§9-Q3 (is a `/berlin/area-detail` + `/berlin/area` → `/berlin/areas` rename safe under the
+static-build link-crawl discipline, or does it need a redirect-stub strategy at 542+97+~150+58+12-page
+scale?)** Safe, and already precedented at comparable-or-larger scale: I2's own migration (documented
+in `docs/epic-i/I2-route-map.md`) moved eight pages including the exact same 542-page PLR tree and
+verified **zero broken internal links** post-move, because Evidence's `adapter-static` build
+**fails hard** on any internal `<a href>` (or `DataTable`/`AreaMap` `link` column) that doesn't
+resolve during prerender — that's not a manual check, it's the build's own safety net, and I
+confirmed the underlying mechanism (`adapter-static`, `strict: false`, crawl-based discovery) is
+unchanged since I2. A rename needs every internal link/DataTable `link` column search-and-replaced
+(mechanical, and the build will *catch* any miss, not silently ship it) — that's real but bounded
+work, not a structural risk. **Redirect stubs are a separate, lower-priority concern**: the site is
+still `noindex` today (confirmed in `web/scripts/postbuild-noindex.mjs` and the README's own status
+line — "soft-launched (noindex)... Cloudflare Pages primary host is finalised"), so there are no
+externally-indexed inbound links yet to preserve. The existing redirect-stub pattern
+(`poi-price-overview.md`, `methodology-comparison.md`) is a nice-to-have for any URL that may have
+been shared manually, not a hard requirement the way it would be post-launch.
+
+**§9-Q4 (can the breadcrumb/hierarchy-nav render "no parent link yet" cleanly without per-city
+special-casing, given the PGR asymmetry and Hamburg's missing edge?)** Yes, for the same reason as
+Q1: since the breadcrumb is data-driven off `dim_area_hierarchy`'s edge rows, a missing edge (e.g.
+Hamburg's unresolved `subarea_l1 ← subarea_l2`) is simply an **absent row** — the recursive walk
+stops one rung short and the component's own "no further parent" case (which it needs anyway, for
+the top of *any* hierarchy, Bezirk/district) renders once, with an honest label sourced from
+`reference/area-hierarchy.md`'s own disclosed framing ("this edge isn't resolved yet"), not a
+per-city `if (city === 'hamburg')` branch. This is a case where the ADR-0005 self-referential
+`parent_area_id`/generic-`level` design is doing real work — the web layer doesn't need to know
+*why* a parent is missing, only that it is.
+
+**§9-Q5 (are `mart_poi_oa_arealevel`/`mart_poi_oa_methods`/`mart_poi_dominance` already
+source-registered for Evidence?)** **Confirmed yes** — `web/sources/gentriduck_marts/mart_poi_oa_arealevel.sql`,
+`mart_poi_oa_methods.sql`, and `mart_poi_dominance.sql` all exist in this checkout already (same
+branch). I did not verify their query correctness or that a `poe export-serving` run would actually
+populate them (no live warehouse in this sandbox — see "What I did not attempt" above), only that
+the Evidence-side source-registration plumbing is in place.
+
 ## Files read/consulted (for the reviewer's convenience)
 
 - `docs/epic-i/I2-route-map.md` (frozen route shape, sidebar_position scheme, link-crawl mechanism)
@@ -334,4 +412,10 @@ and is what grounds §§1–3 above. I made no commits and moved no pages.
   `.../unsorted/ui/index.js` (confirming `Accordion`/`Details`/`Tabs` are genuinely exported)
 - `web/node_modules/@evidence-dev/evidence/template/svelte.config.js` (adapter-static config,
   prerender flag, no `entries`/static-paths mechanism)
-- `web/evidence.config.yaml`, `web/sources/gentriduck_marts/*.sql` (bundled-marts shape)
+- `web/evidence.config.yaml`, `web/sources/gentriduck_marts/*.sql` (bundled-marts shape,
+  including the addendum's confirmation that the three OA-D marts are already source-registered)
+- `docs/epic-i/I21-ia-restructure-scoping.md` (data-analyst's plan — landed mid-pass; addendum only)
+- `web/pages/methodology-oa-modes.md`, `web/pages/reference/area-hierarchy.md` (the `<Dropdown>`/
+  `inputs`-driven live widgets referenced in the addendum's §9-Q2 answer)
+- `transform/models/intermediate/dim_area_hierarchy.sql` (the self-referential
+  `parent_area_level`/`parent_area_code` edge table underlying the addendum's §9-Q1/Q4 answers)
