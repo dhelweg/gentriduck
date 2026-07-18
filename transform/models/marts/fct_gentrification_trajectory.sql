@@ -108,9 +108,9 @@
 -- input to snapshot_year >= 2019, i.e. ~7 of the 13 annual editions (2019-2025,
 -- a 6-year span) -- Berlin-comparable, though Hamburg rows are already excluded
 -- before this window logic even runs: `ts_with_vintage_max`'s WHERE clause
--- applies published_cities_filter (#125) upstream of the `ts` window-trim CTE,
--- so under the current default (published_cities: ["BER"]) Hamburg rows never
--- reach this window filter in a normal build.
+-- filters to city_code='BER' (H3 #237 update below) upstream of the `ts`
+-- window-trim CTE, so Hamburg rows never reach this window filter in a
+-- normal build, regardless of the `published_cities` var's contents.
 -- Left out of scope (spike R2, Berlin-affecting): endpoint-only status_delta
 -- (first vs last edition only, ignoring interior years) is fragile --
 -- ~19-25% of Hamburg's full-panel trend calls flip under 3-edition-smoothed
@@ -122,6 +122,17 @@
 -- decision; publishing Hamburg trajectories needs a separate fresh geo-DS +
 -- domain-expert dual sign-off referencing this spike, per the #125/#158
 -- precedent.
+--
+-- H3 (#237) scope guard update: the H3 dual sign-off (docs/epic-h/
+-- H3-geo-signoff.md, H3-domain-signoff.md) admitted Hamburg into
+-- gentrification_index ONLY, and widened the global `published_cities` var to
+-- ["BER","HH"] to do so (see dbt_project.yml). H3 condition 4 requires this
+-- trajectory mart remain city_code='BER' -- the Berlin-calibrated trajectory
+-- thresholds (status_delta >= 1, status_range <= 1) have not been reviewed
+-- against Hamburg's annual cadence (this file's own H-C2/#159 note above), so
+-- the `ts_with_vintage_max` CTE below now filters on a literal city_code='BER'
+-- instead of published_cities_filter, decoupling this mart's scope from the
+-- publication-readiness var that gentrification_index now shares with Hamburg.
 --
 -- dbt_meta_owner: data-engineer
 -- geo-ds-sign-off: docs/methodology/R-B2-geo-signoff.md (R-B2 #71 PASS used as basis)
@@ -164,8 +175,12 @@ with
                 partition by city_code, area_vintage
             ) as vintage_max_year
         from {{ ref("int_gentrification_ts") }}
-        -- Berlin-only staging filter (#125) -- see header note.
-        where is_uninhabited = false and {{ published_cities_filter('city_code') }}
+        -- Berlin-only staging filter (#125; H3 #237 scope guard -- see header
+        -- note). Literal 'BER' filter, NOT published_cities_filter: the global
+        -- published_cities var now includes 'HH' (widened for
+        -- gentrification_index's H3 admission), and the var-driven macro would
+        -- silently admit Hamburg into this Berlin-calibrated trajectory mart.
+        where is_uninhabited = false and city_code = 'BER'
     ),
 
     -- H-C2 (#159): restrict the classification input to each

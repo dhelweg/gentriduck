@@ -37,12 +37,19 @@
 --
 -- BERLIN-ONLY SCOPE (#125, staging decision -- not a methodology change): as of the
 -- H1 (#40) integration, int_gentrification_ts also carries Hamburg rows
--- (city_code='HH', ADR-0014). This mart stays Berlin-only for now, consistent with
--- gentrification_index and fct_gentrification_trajectory (#125) -- the H1 sign-offs
--- (docs/epic-h/H1-geo-signoff.md, H1-domain-signoff.md) scoped their PASS to
--- int_gentrification_ts pipeline wiring only ("no dashboard/report is published
--- from it yet"). METHODOLOGY QUESTION flagged for the gate (#125): should Hamburg
--- be admitted to this per-year change mart now? Not decided here.
+-- (city_code='HH', ADR-0014). This mart stays Berlin-only: the D4-EWR-composite
+-- (ewr_composite) and trajectory-adjacent columns it publishes are exactly what
+-- the H3 (#237) dual sign-off (docs/epic-h/H3-geo-signoff.md,
+-- H3-domain-signoff.md) ruled must NOT be admitted alongside gentrification_index
+-- -- Hamburg's D4 crosswalk-match-rate condition and the D4-clustering/
+-- effective-N condition (#265) bind here, not on gentrification_index. H3
+-- condition 4 (scope guard) requires this mart remain city_code='BER' even
+-- though #237 widens the global `published_cities` var to ["BER","HH"] for
+-- gentrification_index's admission -- so this mart deliberately does NOT use
+-- published_cities_filter (which would silently admit Hamburg via that var
+-- widening); it filters on a literal city_code='BER' instead, decoupled from
+-- the publication-readiness var. Admitting Hamburg here needs its own fresh
+-- geo-DS + domain-expert dual sign-off (not this ticket).
 --
 -- dbt_meta_owner: data-engineer
 -- depends_on: {{ ref('int_gentrification_ts') }}
@@ -54,11 +61,16 @@
 }}
 
 with
-    -- Berlin-only staging filter (#125) -- see header note.
+    -- Berlin-only staging filter (#125; H3 #237 scope guard -- see header note).
+    -- Deliberately a literal 'BER' filter, NOT published_cities_filter: the
+    -- global published_cities var now includes 'HH' (widened for
+    -- gentrification_index's H3 admission) and using the var-driven macro here
+    -- would silently admit Hamburg into this D4-bearing mart, which the H3
+    -- sign-offs explicitly ruled out of scope (condition 4).
     ts as (
         select *
         from {{ ref("int_gentrification_ts") }}
-        where {{ published_cities_filter("city_code") }}
+        where city_code = 'BER'
     ),
 
     with_rank as (
