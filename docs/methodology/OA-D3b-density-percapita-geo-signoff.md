@@ -2,7 +2,7 @@
 
 - **Reviewer:** geo-data-scientist (spatial/statistical methodology gate)
 - **Gate:** R-C1 dual methodology gate, geo/spatial-statistics half.
-- **Date:** 2026-07-18
+- **Date:** 2026-07-18 (initial review) · re-reviewed 2026-07-18 after F1 fix.
 - **Scope (ONLY the density + per-capita slice of OA-D3b, #280):**
   - `transform/models/intermediate/int_poi_offering_advantage_methods.sql` — the
     `oa_{domain,category,type}_density` and `oa_{domain,category,type}_percapita` columns
@@ -20,20 +20,37 @@
 
 ---
 
-## Verdict: CONCERNS
+## Verdict: PASS WITH CONDITIONS (C-2 residual)
 
-The spatial construction is, in the main, **correct and well-grounded**: the density denominator is a
+**Re-review update (2026-07-18).** The data-engineer applied the F1 fix and it is **verified resolved**
+(see "Re-review of the F1 fix" below). The one blocking methodology defect is gone: the density
+`expected_temporal_safe` flag now reads `false` (matching `raw_share`/`percapita`), and the C3
+temporal-unsafe caveat is planted in *both* the seed grounding and the model's note 8 / inline comment,
+at parity with `raw_share`'s note 6. F2 (non-negativity value tests) was also applied. With F1 closed,
+the verdict lifts from CONCERNS to **PASS WITH CONDITIONS**, carrying a single **residual, non-blocking**
+condition **C-2**: a green spatial-enabled `dbt build` still cannot be reproduced in this sandbox (the
+DuckDB `spatial` extension host is org-egress-blocked, 403) and must be confirmed on a spatial-enabled
+machine (DE / PM / CI). Per the coordinator, C-2 is tracked as a residual to clear elsewhere, not a block.
+
+The spatial construction is otherwise **correct and well-grounded**: the density denominator is a
 native-metric-CRS `ST_Area` (not degrees), restricted to the grain where area is meaningful; the
 per-capita join is an exact-year EWR match with no fan-out and correct null/zero guards; and both
-methods are typed as `reference_point='absolute'` so they are structurally barred from being blended
-or legend-shared with the LQ family (C7 / domain Condition C). **However**, one methodology-bearing
-metadata value contradicts its own cited grounding and is a `high`-severity finding that blocks a clean
-PASS: the `density` row is flagged **temporally safe when the geo sign-off it cites (C3) explicitly says
-it must fail the completeness-contamination gate**. Because the gate is enforced-not-advisory and this
-defect is in already-integrated methodology-bearing code, the honest verdict is CONCERNS until F1 is
-fixed. A secondary environment limitation (F3) means I could not independently reproduce a green build
-in this sandbox; that must be discharged by the DE/PM/CI where the DuckDB `spatial` extension is
-available.
+methods are typed as `reference_point='absolute'` so they are structurally barred from being blended or
+legend-shared with the LQ family (C7 / domain Condition C).
+
+### Re-review of the F1 fix (evidence)
+
+- `transform/seeds/seed_oa_calculation_methods.csv`, `density` row: `expected_temporal_safe` is now
+  **`false`** — consistent with siblings `raw_share` (row 7) and `percapita` (row 10), and with the
+  cited OA-D0 geo sign-off **C3** directional expectation. **Resolved.**
+- `transform/models/intermediate/int_poi_offering_advantage_methods.sql` note 8 (lines 151–154) and the
+  inline density column comment now carry the **TEMPORAL-UNSAFE** caveat: `area_km2` is a time-invariant
+  denominator, so density is proportional to the raw `local_stock` numerator and inherits the same OSM
+  completeness-growth contamination as `raw_share` (note 6), citing C3 / domain Condition C.2. Seed flag
+  and SQL prose now **agree** on the correct (temporal-unsafe) reading. **Resolved.**
+- `schema.yml`: non-negativity tests added on the six density/percapita columns (F2). **Applied.**
+
+F1 (high, blocking) is **CLOSED**. F2 (low) is **APPLIED**. F3 remains as the residual C-2.
 
 ---
 
@@ -54,6 +71,8 @@ available.
 - **Never-blend (C7 / domain Condition C): correct.** `seed_oa_calculation_methods.csv` density row is
   `reference_point='absolute'`; the mart header and schema.yml both restate the "not an LQ, absolute
   provision reading, never legend-share with the LQ family" rule. PASS.
+- **Temporal-safety label (C3): correct after F1 fix.** density `expected_temporal_safe=false`; SQL
+  note 8 carries the completeness-contamination caveat at parity with `raw_share`. PASS.
 - **Null/zero guard: correct.** `nullif(ak.area_km2, 0)`, LEFT JOIN → density is NULL on no-geometry
   match, not a build error. PASS.
 
@@ -77,18 +96,17 @@ available.
   mart header, and the `oa_domain_percapita` schema.yml description all carry the "population denominator
   is endogenous to displacement — caveat travels with every downstream consumer" language. PASS.
 
-### 3. Tests / contracts actually constraining the new columns (PARTIAL — see F2)
+### 3. Tests / contracts actually constraining the new columns (PASS after F2)
 
 - `int_poi_offering_advantage_methods` has a `unique_combination_of_columns` grain test — a real
   fan-out guard over both new joins. Present and correct.
 - `mart_poi_oa_methods.oa_method` is `relationships`-tested against `seed_oa_calculation_methods.csv`,
   which contains the `density`/`percapita` rows, and the seed `reference_point` is
   `accepted_values`-tested to include `'absolute'`. So the *labels and grain* are constrained.
-- **Gap (F2, low):** the density/percapita **value** columns carry no column-level data test
-  (e.g. non-negativity). Consistent with the rest of the method family (log_lq, zscore_slq are also
-  value-untested), so not a regression — but "constrained" here means grain + label, not value range.
+- **F2 applied:** non-negativity value tests now exist on the six density/percapita columns, so the
+  constraint set is grain + label **+ value range**. Resolved.
 
-### 4. Build (NOT independently verified in this sandbox — see F3)
+### 4. Build (NOT independently verified in this sandbox — residual C-2)
 
 - `dbt parse` → **clean** (project parses; Jinja, refs, all schema.yml valid).
 - `dbt build` / `dbt compile` → **could not execute**: opening the DuckDB connection force-installs the
@@ -96,71 +114,59 @@ available.
   and not cached locally. `ST_Area`/`ST_GeomFromWKB` cannot run without it. (Also: `uv sync` fails
   building `quarto-cli` — worked around with `--no-install-package quarto-cli`; and `dbt deps` is
   blocked on `hub.getdbt.com` 403 — worked around by vendoring `dbt_utils` via git.) I therefore did
-  **not** observe pass/warn/error counts; the self-signoff's "green build" claim is **not independently
-  reproducible here**.
+  **not** observe pass/warn/error counts. Per the coordinator, this remains as **residual condition C-2**
+  to be cleared on a spatial-enabled machine, not a blocker.
 
 ---
 
 ## Findings
 
-### F1 (high, BLOCKING) — `density.expected_temporal_safe` is `true`, contradicting its own grounding (C3)
+### F1 (high) — `density.expected_temporal_safe` contradicted its grounding (C3) — **RESOLVED**
 
-`seed_oa_calculation_methods.csv`, row `density`:
-`density,POI density,...,POIs per km2,absolute,false,true,"Openshaw (1984) MAUP; OA-D0 geo sign-off C5/C8; ..."`
-— i.e. `expected_temporal_safe = true`.
+At initial review, `seed_oa_calculation_methods.csv` density row had `expected_temporal_safe = true`.
+This was wrong: density = `local_stock / area_km2` with a **time-invariant** denominator, so it is
+proportional to the raw POI count and inherits the *full* OSM mapping-completeness growth of that count.
+OA-D0 geo sign-off **C3 names density explicitly** among the modes that **SHOULD FAIL** the
+completeness-contamination gate ("raw within-group share, **density**, and per-capita SHOULD fail —
+|ρ|≥0.3"); domain Condition C.2 says density "directly tracks OSM completeness growth over time … never
+be differenced over time on a public surface unless the completeness test shows PASS." The value also
+diverged from its siblings (`raw_share`, `percapita` both `false`) and from the model note 8, which
+omitted the caveat — a coherent-but-wrong "temporal-safe" reading that would license exactly the
+completeness-biased temporal read the C3/C5 apparatus exists to prevent.
 
-This is wrong. Density = `local_stock / area_km2`; the denominator (polygon area) is **time-invariant**,
-so density is directly proportional to the raw POI count and inherits the *full* OSM
-mapping-completeness growth of that count. OA-D0 geo sign-off **C3 names density explicitly** among the
-modes that **SHOULD FAIL** the completeness-contamination gate ("raw within-group share, **density**,
-and per-capita SHOULD fail — |ρ|≥0.3"), and the domain sign-off Condition C.2 says density "directly
-tracks OSM completeness growth over time … never be differenced over time on a public surface unless the
-completeness test shows PASS." The seed's own grounding cite for the row (Openshaw 1984, area-dependence)
-argues *for* `false`, not `true`.
+**Fix applied and verified (2026-07-18):**
+1. `seed_oa_calculation_methods.csv` density row `expected_temporal_safe` → **`false`**. ✔
+2. `int_poi_offering_advantage_methods.sql` note 8 + inline density comment now carry the C3
+   completeness-contamination / temporal-unsafe caveat, at parity with note 6 (`raw_share`). ✔
 
-Internally inconsistent too: density's siblings `raw_share` (row 7) and `percapita` (row 10) are both
-correctly `expected_temporal_safe = false`; only density diverges. And unlike `raw_share` (SQL note 6:
-"any consumer must carry the C3 temporal-unsafe caveat"), density's SQL note 8 **omits** the C3
-temporal-unsafe caveat — so the mislabel is coherent across the seed flag *and* the model comment: this
-slice treated density as temporal-safe, which it is not. Downstream, the `expected_temporal_safe` column
-is what a consumer/G2 page reads to decide whether change-over-time claims are permitted; a wrong `true`
-would license exactly the completeness-biased temporal read the whole C3/C5 apparatus exists to prevent —
-the displacement-misuse surface the domain expert flagged.
+Seed flag and SQL prose now agree; R-C2 grounding complete. **CLOSED.**
 
-**Fix (data-engineer — reviewer does not edit code):**
-1. `seed_oa_calculation_methods.csv` — density row: `expected_temporal_safe` `true` → **`false`**
-   (matching `raw_share` and `percapita`; grounding OA-D0 geo sign-off C3).
-2. `int_poi_offering_advantage_methods.sql` note 8 — add the C3 completeness-contamination /
-   temporal-unsafe caveat, at parity with note 6 (raw_share), so the SQL comment and the seed agree
-   and the R-C2 grounding is complete.
+### F2 (low) — no value-level test on density/per-capita — **APPLIED**
 
-### F2 (low, recommendation) — no value-level test on density/per-capita
+Recommendation to add non-negativity assertions was taken up: `schema.yml` now carries non-negativity
+tests on the six `oa_*_density` / `oa_*_percapita` columns. Both are non-negative by construction
+(non-negative stock / positive area or population), so this guards a future sign/units regression.
 
-Both are non-negative by construction (non-negative stock / positive area or population). A cheap
-`dbt_utils.expression_is_true` non-negativity assertion (`oa_*_density >= 0`, `oa_*_percapita >= 0`,
-`where ... is not null`) would turn "constrained grain+label" into "constrained values" and guard against
-a future sign/units regression. Not blocking; consistent-with-family if deferred.
-
-### F3 (medium, condition) — build not independently verifiable in this sandbox
+### F3 (medium) — build not independently verifiable in this sandbox — **RESIDUAL (C-2)**
 
 The DuckDB `spatial` extension host is org-policy-blocked (403) and uncached, so `dbt build`/`test`
 cannot run here (parse is clean). A green `uv run poe build` on the affected selector, with observed
 pass/warn/error counts, must be confirmed by the data-engineer / PM / CI in an environment where the
-`spatial` extension is available, before this slice is treated as build-verified.
+`spatial` extension is available. Tracked as residual condition C-2 (non-blocking, per coordinator).
 
 ---
 
-## Conditions to clear to PASS
+## Conditions
 
-- **C-1 (blocking):** apply F1 fix (1) and (2). This is the one substantive methodology defect.
-- **C-2 (blocking-lite):** discharge F3 — attach an actual green `dbt build --select
+- **C-1 (was blocking): CLEARED** — F1 fix applied and verified.
+- **C-2 (residual, non-blocking):** attach an actual green `dbt build --select
   int_poi_offering_advantage_methods+ seed_oa_calculation_methods` result (pass/warn/error counts) from
-  a spatial-enabled environment.
-- **C-3 (recommended, non-blocking):** add F2 non-negativity value tests.
+  a spatial-enabled environment. To be cleared off-sandbox; does not block this sign-off.
+- **C-3 (recommended): DONE** — F2 non-negativity value tests added.
 
-On evidence of C-1 + C-2, this slice flips to PASS: the density (C5/C8) and per-capita (C10) *spatial*
-construction is otherwise sound and the never-blend discipline (C7 / domain Condition C) is correctly
-enforced.
+With C-1 cleared and C-3 done, the density (C5/C8) and per-capita (C10) *spatial* construction is sound
+and the never-blend discipline (C7 / domain Condition C) is correctly enforced. C-2 is the only open,
+non-blocking item.
 
 ---
 
@@ -168,19 +174,18 @@ enforced.
 
 ```json
 {
-  "verdict": "concerns",
-  "rationale": "Density/per-capita spatial construction is sound (native-CRS ST_Area, PLR/subarea_l2-only grain, exact-year EWR join with no fan-out, correct null/zero guards, absolute reference_point barring LQ-blend). But seed_oa_calculation_methods.csv marks density expected_temporal_safe=true, directly contradicting OA-D0 geo sign-off C3 (which names density among the modes that MUST fail the completeness-contamination gate) and its own siblings raw_share/percapita (both false). This is a high-severity, methodology-bearing grounding defect that must be fixed before a PASS.",
+  "verdict": "pass_with_conditions",
+  "rationale": "After the data-engineer's F1 fix (verified): density expected_temporal_safe is now false (matching raw_share/percapita and OA-D0 geo sign-off C3), and the C3 temporal-unsafe caveat is planted in both the seed and int_poi_offering_advantage_methods.sql note 8 at parity with raw_share note 6. F2 non-negativity tests applied. The density (native-CRS ST_Area, PLR/subarea_l2-only grain) and per-capita (exact-year EWR join, no fan-out, correct null/zero guards, endogeneity caveat) spatial construction is sound, and absolute reference_point bars any LQ-blend (C7 / domain Condition C). The one blocking defect (F1) is closed; a single non-blocking residual remains.",
   "risks": [
-    "density expected_temporal_safe=true could license a completeness-biased change-over-time reading of a raw-count-driven measure on a displacement-adjacent surface (C3/C5/domain Condition C.2 violation)",
-    "density SQL note 8 omits the C3 temporal-unsafe caveat that its sibling raw_share note 6 carries, so seed and comment agree on the wrong reading",
-    "build could not be independently reproduced (DuckDB spatial extension host org-blocked); self-signoff's green-build claim unverified here",
-    "density/per-capita value columns have no non-negativity/bound test (grain+label constrained, values not)"
+    "C-2 residual: a green spatial-enabled dbt build was not reproducible in this sandbox (DuckDB spatial extension host org-egress-blocked, 403); pass/warn/error counts must still be confirmed on a spatial-enabled machine before build-verified status"
   ],
   "recommendations": [
-    "DE: set density.expected_temporal_safe = false in seed_oa_calculation_methods.csv (match raw_share/percapita; ground on OA-D0 geo C3)",
-    "DE: add the C3 completeness-contamination temporal-unsafe caveat to int_poi_offering_advantage_methods.sql note 8, at parity with note 6",
-    "DE/PM/CI: attach a green `dbt build --select int_poi_offering_advantage_methods+ seed_oa_calculation_methods` (pass/warn/error counts) from a spatial-enabled environment",
-    "DE: add dbt_utils.expression_is_true non-negativity tests on oa_*_density and oa_*_percapita"
+    "DE/PM/CI: run `dbt build --select int_poi_offering_advantage_methods+ seed_oa_calculation_methods` on a spatial-enabled environment and record pass/warn/error counts to clear residual C-2",
+    "Consider adding the C3 completeness-contamination Spearman gate as an enforced test (not just an expected_temporal_safe expectation) when the D5 deliverable lands"
+  ],
+  "resolved_findings": [
+    "F1 (high, blocking): density.expected_temporal_safe true->false + C3 caveat added to note 8 — verified CLOSED",
+    "F2 (low): non-negativity value tests added on the six density/percapita columns — APPLIED"
   ]
 }
 ```
