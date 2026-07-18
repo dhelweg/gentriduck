@@ -148,7 +148,17 @@
 -- density is an ecological-fallacy magnet") -- rolling density up to
 -- coarser area_levels (with the required ecological-fallacy disclaimer)
 -- is deliberately left to a follow-on ticket, not built here. NULL where
--- area_km2 is unavailable (no geometry join match) or zero.
+-- area_km2 is unavailable (no geometry join match) or zero. TEMPORAL-UNSAFE
+-- (#280 F1 fix): area_km2 is a time-invariant denominator, so density is
+-- directly proportional to the raw local_stock numerator and inherits the
+-- SAME OSM completeness-growth contamination raw_share does (note 6 above)
+-- -- OA-D0 geo sign-off C3 expects density to FAIL the completeness-
+-- contamination gate, and OA-D0 domain sign-off Condition C.2 bars
+-- time-differencing it without a D6 PASS; seed_oa_calculation_methods.csv's
+-- density row therefore carries expected_temporal_safe=false, matching
+-- raw_share and percapita. Exposed here for orthogonality/robustness
+-- comparison (D5), not as a temporally-safe reading; any consumer must
+-- carry this caveat.
 -- 9. percapita (OA-D3b remainder, #280) -- local stock divided by the
 -- area's EWR resident population (`residents_total`, per 1,000 residents),
 -- joined on an EXACT (city_code, area_code, area_vintage, reference_year =
@@ -447,7 +457,12 @@ select
 
     -- 8. density (OA-D3b remainder, #280) -- local stock / area_km2, PLR
     -- grain only (header note 8). NULL where area_km2 has no join match or
-    -- is zero.
+    -- is zero. TEMPORAL-UNSAFE: area_km2 is time-invariant, so density is
+    -- proportional to local_stock and inherits the same OSM
+    -- completeness-growth bias as raw_share -- expected to FAIL the
+    -- completeness-contamination gate (OA-D0 geo sign-off C3) and must not
+    -- be time-differenced without a D6 PASS (OA-D0 domain sign-off
+    -- Condition C.2).
     base.domain_stock_local / nullif(ak.area_km2, 0) as oa_domain_density,
     base.category_stock_local / nullif(ak.area_km2, 0) as oa_category_density,
     base.type_stock_local / nullif(ak.area_km2, 0) as oa_type_density,

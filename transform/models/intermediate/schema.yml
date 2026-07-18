@@ -4604,10 +4604,36 @@ models:
           metric CRS, PLR grain only) -- POIs per km2, an absolute
           provision reading, NOT a location quotient (OA-D0 domain
           sign-off Condition C). NULL where no area_km2 join match.
+          TEMPORAL-UNSAFE (expected_temporal_safe=false in
+          seed_oa_calculation_methods.csv): area_km2 is time-invariant, so
+          density inherits the same OSM completeness-growth contamination
+          as raw_share (OA-D0 geo sign-off C3; OA-D0 domain sign-off
+          Condition C.2 -- must not be time-differenced without a D6 PASS).
+        data_tests:
+
+          - dbt_utils.expression_is_true:
+              arguments:
+                expression: ">= 0"
+              config:
+                where: "area_code is not null and oa_domain_density is not null"
       - name: oa_category_density
         description: Category-level density (same construction as oa_domain_density, category stock numerator).
+        data_tests:
+
+          - dbt_utils.expression_is_true:
+              arguments:
+                expression: ">= 0"
+              config:
+                where: "area_code is not null and oa_category_density is not null"
       - name: oa_type_density
         description: Type-level density (same construction as oa_domain_density, type stock numerator).
+        data_tests:
+
+          - dbt_utils.expression_is_true:
+              arguments:
+                expression: ">= 0"
+              config:
+                where: "area_code is not null and oa_type_density is not null"
       - name: oa_domain_percapita
         description: >
           OA-D3b (#280): domain_stock_local / EWR residents_total * 1000
@@ -4618,10 +4644,31 @@ models:
           quotient; population denominator is endogenous to displacement
           (OA-D0 domain sign-off Condition C) -- caveat travels with every
           downstream consumer.
+        data_tests:
+
+          - dbt_utils.expression_is_true:
+              arguments:
+                expression: ">= 0"
+              config:
+                where: "area_code is not null and oa_domain_percapita is not null"
       - name: oa_category_percapita
         description: Category-level per-capita (same construction as oa_domain_percapita, category stock numerator).
+        data_tests:
+
+          - dbt_utils.expression_is_true:
+              arguments:
+                expression: ">= 0"
+              config:
+                where: "area_code is not null and oa_category_percapita is not null"
       - name: oa_type_percapita
         description: Type-level per-capita (same construction as oa_domain_percapita, type stock numerator).
+        data_tests:
+
+          - dbt_utils.expression_is_true:
+              arguments:
+                expression: ">= 0"
+              config:
+                where: "area_code is not null and oa_type_percapita is not null"
 
   - name: int_poi_within_group_dominance
     description: >
