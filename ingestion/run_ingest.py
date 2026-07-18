@@ -350,12 +350,18 @@ def run_step(step: IngestStep, repo_root: Path, force: bool) -> StepResult:
 
 
 def render_summary(results: list[StepResult]) -> str:
+    # #248: surface each source's elapsed_s (already captured in run_step, previously
+    # unused) so a slow/wasted run is self-diagnosing from `poe ingest` output alone,
+    # without the manual session-log reconstruction #248's timing breakdown required.
     label_width = max(len(r.step.label) for r in results) + 2
-    lines = [f"{'source':<{label_width}}{'blocking':<10}{'outcome':<10}detail"]
-    lines.append("-" * (label_width + 10 + 10 + 6))
+    lines = [f"{'source':<{label_width}}{'blocking':<10}{'outcome':<10}{'elapsed':<10}detail"]
+    lines.append("-" * (label_width + 10 + 10 + 10 + 6))
     for r in results:
         blocking = "yes" if r.step.blocking else "no"
-        lines.append(f"{r.step.label:<{label_width}}{blocking:<10}{r.outcome:<10}{r.detail}")
+        elapsed = f"{r.elapsed_s:.1f}s"
+        lines.append(
+            f"{r.step.label:<{label_width}}{blocking:<10}{r.outcome:<10}{elapsed:<10}{r.detail}"
+        )
     return "\n".join(lines)
 
 
