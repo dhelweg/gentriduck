@@ -1910,10 +1910,13 @@ models:
 
       PUBLIC LABELLING GUARDRAIL (binding): gi_star_cluster_label is the
       INTERNAL statistic label ('hot'/'cold'/'ns') -- a bare "hotspot" is
-      prohibited on any public-facing surface; consumers MUST apply this
-      repo's hedged qualifier ("amenity-change hotspot" /
-      "social-change-pressure cluster", a6_hotspots.py convention) plus the
-      ecological-inference disclaimer before publishing.
+      prohibited on any public-facing surface; consumers MUST apply a
+      provision/stock-calibrated hedged qualifier ("amenity-provision
+      cluster" / "concentrated-provision area"), NOT a6_hotspots.py's own
+      hedge ("amenity-change hotspot" / "social-change-pressure cluster"),
+      which is calibrated for a change/dynamism input, not this column's
+      single-snapshot-year stock input (OA-D3c domain sign-off F1) -- plus
+      the ecological-inference disclaimer before publishing.
 
       FDR DISCLOSURE (binding): gi_star_p is the RAW uncorrected permutation
       p-value; gi_star_cluster_label is derived from gi_star_fdr_significant
@@ -2047,10 +2050,14 @@ models:
       - name: gi_star_cluster_label
         description: >
           INTERNAL statistic label only -- 'hot' / 'cold' / 'ns'. A bare
-          "hotspot" is PROHIBITED on any public-facing surface; apply this
-          repo's hedged qualifier ("amenity-change hotspot" /
-          "social-change-pressure cluster") plus the ecological-inference
-          disclaimer before publishing (a6_hotspots.py convention).
+          "hotspot" is PROHIBITED on any public-facing surface; apply a
+          provision/stock-calibrated hedged qualifier ("amenity-provision
+          cluster" / "concentrated-provision area"), NOT a6_hotspots.py's
+          own hedge ("amenity-change hotspot" / "social-change-pressure
+          cluster"), which is calibrated for a change/dynamism input, not
+          this column's single-snapshot-year stock input (OA-D3c domain
+          sign-off F1), plus the ecological-inference disclaimer before
+          publishing.
         data_tests:
 
           - accepted_values:

@@ -103,11 +103,14 @@ gate" -- documented here for that gate's review, not self-certified):
 
 6. PUBLIC LABELLING GUARDRAIL (ADR-0025 Decision 3 item 7 / OA-D0 geo
    sign-off C9): `gi_star_cluster_label` uses the SAME internal short codes
-   as a6_hotspots.py ('hot'/'cold'/'ns') -- consumers MUST apply this
-   repo's already-established hedged qualifier ("amenity-change hotspot" /
-   "social-change-pressure cluster") plus the ecological-inference
-   disclaimer before any public surface. This script never emits the raw
-   phrase "gentrification hotspot".
+   as a6_hotspots.py ('hot'/'cold'/'ns') -- consumers MUST apply a
+   provision/stock-calibrated hedged qualifier ("amenity-provision cluster"
+   / "concentrated-provision area"), NOT a6_hotspots.py's own hedge
+   ("amenity-change hotspot" / "social-change-pressure cluster"), which is
+   calibrated for a change/dynamism input, not this column's single-
+   snapshot-year stock input (domain_stock_local) -- OA-D3c domain sign-off
+   F1. Also apply the ecological-inference disclaimer before any public
+   surface. This script never emits the raw phrase "gentrification hotspot".
 
 OUTPUT: data/analysis/oa_getis_ord/oa_getis_ord_{city_code}_{area_vintage}_
 {area_level}.parquet (gitignored, deterministically rebuilt). Read by

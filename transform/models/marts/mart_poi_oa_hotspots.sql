@@ -40,10 +40,13 @@
 -- ('hot' / 'cold' / 'ns'), identical convention to a6_hotspots.py's own
 -- cluster_label. A bare "gentrification hotspot" (or even "hotspot" without
 -- qualification) is PROHIBITED on any public-facing surface consuming this
--- column -- consumers (site pages, map legends) MUST apply the hedged
--- qualifier already established in this repo ("amenity-change hotspot" /
--- "social-change-pressure cluster", a6_hotspots.py header) plus the
--- ecological-inference disclaimer, before this column reaches a reader.
+-- column -- consumers (site pages, map legends) MUST apply a
+-- provision/stock-calibrated hedged qualifier ("amenity-provision cluster" /
+-- "concentrated-provision area"), NOT a6_hotspots.py's own hedge
+-- ("amenity-change hotspot" / "social-change-pressure cluster"), which is
+-- calibrated for a change/dynamism input, not this mart's single-snapshot-
+-- year stock input (OA-D3c domain sign-off F1) -- plus the ecological-
+-- inference disclaimer, before this column reaches a reader.
 -- This mart does not relabel to the hedged phrasing itself (matching
 -- mart_poi_oa_arealevel's own pattern of carrying machine-readable flags,
 -- not final prose, for the consuming layer to render).

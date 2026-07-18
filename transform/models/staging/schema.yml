@@ -2022,10 +2022,14 @@ models:
         description: >
           INTERNAL statistic label only -- 'hot' / 'cold' / 'ns' (same short
           codes as a6_hotspots.py's own cluster_label). A bare "hotspot" is
-          PROHIBITED on any public-facing surface; consumers MUST apply this
-          repo's hedged qualifier ("amenity-change hotspot" /
-          "social-change-pressure cluster", a6_hotspots.py convention) plus
-          the ecological-inference disclaimer before publishing.
+          PROHIBITED on any public-facing surface; consumers MUST apply a
+          provision/stock-calibrated hedged qualifier ("amenity-provision
+          cluster" / "concentrated-provision area"), NOT a6_hotspots.py's
+          own hedge ("amenity-change hotspot" / "social-change-pressure
+          cluster"), which is calibrated for a change/dynamism input, not
+          this column's single-snapshot-year stock input (OA-D3c domain
+          sign-off F1), plus the ecological-inference disclaimer before
+          publishing.
         data_tests:
 
           - accepted_values:
