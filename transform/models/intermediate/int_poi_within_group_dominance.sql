@@ -140,9 +140,16 @@
 {{ config(materialized="table", meta={"dbt_meta_owner": "data-engineer"}) }}
 
 with
+    -- #281: QA-4 (#179) legacy-lowercase normalisation -- int_poi_offering_
+    -- advantage's gaussian_* rows still carry lowercase 'berlin' city_code
+    -- (inherited from int_osm_poi_plr_weighted, predating ADR-0005
+    -- canonicalization). This model read city_code straight through
+    -- un-normalised, leaking non-canonical values into mart_poi_dominance;
+    -- fixed the same way mart_poi_offering_advantage.sql already normalises
+    -- at its own output boundary.
     base as (
         select
-            city_code,
+            {{ canonical_city_code("city_code") }} as city_code,
             snapshot_year,
             area_code,
             area_vintage,

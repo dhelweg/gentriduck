@@ -4489,10 +4489,20 @@ models:
             where: "area_code is not null"
     columns:
       - name: city_code
-        description: City identifier (ADR-0005).
+        description: >
+          City identifier (ADR-0005). #281: canonicalized at this model's own
+          output boundary (join_city_code reused as city_code) -- unlike its
+          upstream source int_poi_offering_advantage, which still carries
+          legacy lowercase 'berlin' rows by design, this model's output is
+          canonical-only.
         data_tests:
 
           - not_null:
+              config:
+                where: "area_code is not null"
+          - accepted_values:
+              arguments:
+                values: ["BER", "HH"]
               config:
                 where: "area_code is not null"
       - name: snapshot_year
@@ -4657,7 +4667,21 @@ models:
             where: "area_code is not null"
     columns:
       - name: city_code
-        description: City identifier (ADR-0005).
+        description: >
+          City identifier (ADR-0005). #281: canonicalized in the base CTE --
+          unlike its upstream source int_poi_offering_advantage, which still
+          carries legacy lowercase 'berlin' rows by design, this model's
+          output is canonical-only.
+        data_tests:
+
+          - not_null:
+              config:
+                where: "area_code is not null"
+          - accepted_values:
+              arguments:
+                values: ["BER", "HH"]
+              config:
+                where: "area_code is not null"
       - name: snapshot_year
         description: Calendar year of the OSM snapshot.
       - name: area_code

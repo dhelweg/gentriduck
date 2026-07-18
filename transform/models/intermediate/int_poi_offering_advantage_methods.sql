@@ -213,7 +213,6 @@
 with
     base as (
         select
-            city_code,
             snapshot_year,
             area_code,
             area_vintage,
@@ -237,10 +236,16 @@ with
             -- mart_poi_offering_advantage.sql already applies at this exact
             -- boundary -- int_poi_offering_advantage's gaussian_* rows still
             -- carry lowercase 'berlin' (inherited from int_osm_poi_plr_weighted,
-            -- predating ADR-0005 canonicalization). Used ONLY as the join key
-            -- for the new area_km2/population CTEs below; the output city_code
-            -- column is left untouched (unchanged from OA-D3/D3b) to avoid
-            -- widening this slice's scope beyond density/per-capita.
+            -- predating ADR-0005 canonicalization). #281: this single
+            -- canonicalized value now serves BOTH as the join key for the
+            -- area_km2/population CTEs below AND as the model's output
+            -- city_code column (final select at the bottom of this file) --
+            -- OA-D3/D3b's original scope-limiting decision (canonicalize only
+            -- the internal join key, leave the output untouched) let
+            -- non-canonical lowercase 'berlin' rows leak into
+            -- mart_poi_oa_methods; #281 closes that gap the same way
+            -- mart_poi_offering_advantage.sql already does at its own output
+            -- boundary.
             {{ canonical_city_code("city_code") }} as join_city_code
         from {{ ref("int_poi_offering_advantage") }}
     ),
@@ -293,7 +298,9 @@ with
     )
 
 select
-    base.city_code,
+    -- #281: canonicalized in the base CTE above (join_city_code) and reused
+    -- here as the output city_code -- see base CTE comment.
+    base.join_city_code as city_code,
     base.snapshot_year,
     base.area_code,
     base.area_vintage,
