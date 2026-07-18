@@ -483,14 +483,18 @@ def run_gi_star_for_scope(
                 continue
 
             for i, area_code in enumerate(ordered_codes):
-                # esda's two-sided permutation p-value doubles the smaller
-                # one-sided tail (G_Local docstring: "p_sim ... one-sided ...
-                # for two-sided tests, this value should be multiplied by
-                # 2"); near-symmetric tail counts can push the doubled value
-                # fractionally above 1.0 (observed up to ~1.10 empirically
-                # for this dataset). A p-value cannot exceed 1 by definition
-                # -- clip at the source, per the standard convention for
-                # doubled-tail two-sided permutation p-values.
+                # esda's two-sided p_sim (alternative="two-sided") is computed by
+                # esda.significance._permutation_significance's symmetric
+                # percentile-tail-count formula, (n_outside + 1) / (permutations + 1)
+                # -- not by doubling a one-sided value (the G_Local attribute
+                # docstring's "multiplied by 2" wording is stale relative to the
+                # installed esda version's actual implementation). Under ties in
+                # the permutation reference distribution -- common with sparse,
+                # zero-heavy domain_stock_local -- this count-based formula can
+                # push n_outside above the permutation count, yielding p_sim > 1.0
+                # (observed up to ~1.10 empirically for this dataset, reproduced
+                # directly against esda.G_Local on real data during code review).
+                # A p-value cannot exceed 1 by definition -- clip at the source.
                 p_sim = min(float(gi.p_sim[i]), 1.0)
                 year_rows.append(
                     {
