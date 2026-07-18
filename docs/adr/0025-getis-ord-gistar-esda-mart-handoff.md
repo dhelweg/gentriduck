@@ -1,9 +1,12 @@
 # ADR-0025: Getis-Ord Gi* via PySAL (`esda`/`libpysal`) — analysis→mart handoff
 
-- **Status:** Proposed — **awaiting maintainer acceptance.** The maintainer greenlit *drafting* this
-  ADR (2026-07-17); nothing is wired until they accept it. This is a **new-tool-adoption** record under
-  CLAUDE.md golden rule 2.
-- **Date:** 2026-07-17
+- **Status:** **Accepted (2026-07-18).** The maintainer accepted this ADR, explicitly confirming the
+  binding constraint in Decision §2: the Gi\* statistic runs in a **forked subprocess (`analysis/*.py`)
+  outside the database** and feeds the mart via a precomputed results table — it never runs inside the
+  dbt/DuckDB build path. This is a **new-tool-adoption** record under CLAUDE.md golden rule 2; per the
+  maintainer's earlier greenlight it was drafted first (2026-07-17), then accepted. Wiring may now
+  proceed, but the Gi\* **methodology** still passes the R-C1 dual gate separately (see §2, Deciders).
+- **Date:** 2026-07-17 (drafted); 2026-07-18 (accepted)
 - **Deciders:** system-architect (author); maintainer (accepts/rejects). The Gi\* *methodology* itself
   (weights parameters, cut-points, disclosure) re-enters the **R-C1 dual gate** (geo-data-scientist +
   gentrification-domain-expert) separately when the analysis script is built — the architect authors
@@ -175,7 +178,8 @@ other nine confirmed OA methods, and it does not change ADR-0024's other knobs. 
 
 ---
 
-**Awaiting maintainer acceptance.** On accept, this discharges ADR-0024's ⚠ open item via option (b):
+**Accepted 2026-07-18.** This discharges ADR-0024's ⚠ open item via option (b):
 `esda`/`libpysal` (already adopted, BSD-3) may feed a Gi\* results table into the mart via an
-`analysis/*.py` handoff, restricted to PLR/BZR × domain(/category) grain. Nothing is wired until then,
-and the Gi\* methodology still passes the R-C1 dual gate separately.
+`analysis/*.py` handoff **run in a forked subprocess outside the database**, restricted to
+PLR/BZR × domain(/category) grain. Wiring may now proceed; the Gi\* methodology still passes the
+R-C1 dual gate separately when the analysis script is built.
