@@ -243,6 +243,24 @@ Evidence build gets a cheap local signal before it reaches the release routine a
 after `poe refresh` any time a model or schema touching a published mart changes, not just at
 weekly release time.
 
+**Resync a second/stale machine (#292):** `data/` is gitignored, so nothing about the ingested
+warehouse syncs via `git` — a second machine (or a first machine whose `data/gentriduck.duckdb`
+predates a seed schema change, e.g. #240's `oa_leaf_area_level` column) needs its own full
+pipeline run. Use `resync` instead of `refresh` there:
+
+```bash
+uv run poe resync       # same pipeline as `refresh`, but --full-refresh + the OA two-pass
+```
+
+`resync` differs from `refresh` in two ways: (1) its first `dbt build` passes `--full-refresh`,
+which recreates relations instead of patching them — plain `build`'s seed truncate+copy can't
+absorb a new seed column under duckdb ≥1.5 ("CSV sniffing" error) on a stale warehouse, and per
+#248 `dbt build` isn't the release-time bottleneck (~5 min vs. ingest's much longer run) so the
+extra cost is cheap; and (2) both tasks now correctly run the `oa-getis-ord` (#280, ADR-0025)
+analysis→mart two-pass — `poe build` alone previously left `mart_poi_oa_hotspots` empty. Use
+plain `refresh` on the primary, regularly-refreshed machine; reach for `resync` only when
+bringing a second machine current or recovering from a schema-drift build failure.
+
 **Build-time trend (#248 item 3):** `poe web-build`'s final step now runs through
 `ops/time_web_build.py` instead of a bare `npm run build` — a stdlib-only timer that appends one
 line (timestamp, elapsed seconds, status) to the committed `ops/web-build-timings.log` per run, so
