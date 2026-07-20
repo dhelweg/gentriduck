@@ -94,6 +94,14 @@ exclude = ["transform/target/**", "transform/dbt_packages/**"]
 debug = "dbt debug --project-dir transform --profiles-dir transform"
 deps  = "dbt deps --project-dir transform"
 build = "dbt build --project-dir transform --profiles-dir transform"
+# #292: full-refresh counterpart to `build`, for a warehouse whose seed schema predates a
+# later column add (e.g. #240's `oa_leaf_area_level` in seed_dim_city.csv) -- a plain `dbt
+# build`'s seed truncate+copy can't absorb the new column under duckdb >=1.5 ("CSV sniffing"
+# error); `--full-refresh` fixes it by recreating relations instead of incrementally patching
+# them. Per #248, `dbt build` is NOT the release bottleneck (~5 min vs. ingest's much longer
+# run), so paying this cost is cheap -- reserved for `resync` (below), not the everyday
+# `refresh` path, since a primary machine that refreshes regularly shouldn't need it.
+build-full-refresh = "dbt build --project-dir transform --profiles-dir transform --full-refresh"
 test  = "dbt test --project-dir transform --profiles-dir transform"
 # QA-1 (#176): pytest for ingestion/analysis pure functions (crosswalk math,
 # ADR-0016 drift-guard severity classification, PDF-parser regexes). No dbt/DB
@@ -164,6 +172,13 @@ oa-bandwidth-sweep = "python analysis/oa_bandwidth_sweep.py"
 # `poe build` again (materializes the mart with the fresh precompute). See the script's
 # module docstring for the full build-order rationale.
 oa-getis-ord = "python analysis/f_oa_getis_ord.py"
+# #292: the re-materialize half of `oa-getis-ord`'s two-pass build (see stg_oa_getis_ord.sql's
+# BUILD-ORDER NOTE) -- scoped `dbt build --select stg_oa_getis_ord+` rather than a second full
+# `poe build`, since only that staging model and its downstream mart (mart_poi_oa_hotspots)
+# depend on the freshly-written oa_getis_ord parquet; nothing else in the DAG changed. Named
+# and run standalone-able (not an inline cmd in the `refresh`/`resync` sequences below) so it
+# shows up in `poe --help` and can be re-run on its own after re-running `oa-getis-ord` alone.
+materialize-oa-getis-ord = "dbt build --project-dir transform --profiles-dir transform --select stg_oa_getis_ord+"
 # Ingestion scripts — rebuild raw data from open sources (gitignored artefacts).
 # Run once before `poe build` on a fresh checkout. See ingestion/README.md for the full
 # module-by-module reference (inputs/outputs, licensing, cross-platform notes).
@@ -198,7 +213,29 @@ ingest-osm-hamburg = "python ingestion/hamburg/osm/ingest_hamburg_osm.py --osh-p
 # a drift summary; always exits 0) — never a hard gate on refresh, preserving
 # ADR-0015's graceful degradation. Run `poe verify-data --strict` separately for a
 # gating check.
-refresh = { sequence = ["verify-data", "deps", "ingest", "build", "export-serving", "export-area-geojson"], default_item_type = "ref" }
+#
+# #292: `refresh` previously stopped at `build`, so `mart_poi_oa_hotspots` shipped EMPTY on
+# every run (including the weekly deploy, ops/README.md's Deploy section) -- OA-D3c (#280,
+# ADR-0025) made that mart depend on an analysis->mart handoff (`oa-getis-ord` writes a
+# parquet `build` alone can't produce) needing the two-pass build documented in
+# stg_oa_getis_ord.sql's BUILD-ORDER NOTE. The gap dates to after #248's refresh audit (which
+# predates #280) and stayed unnoticed since a partial/empty mart doesn't fail the build. Fixed
+# order: ingest -> build -> oa-getis-ord -> materialize-oa-getis-ord (re-materialize) ->
+# export-serving -> export-area-geojson. `refresh` is the primary-machine task and stays on
+# the plain incremental `build` (no `--full-refresh`) -- see `resync` below for a
+# stale/second-machine warehouse. (#251: `ingest`'s own per-source isolation/skip behaviour is
+# unchanged by this fix.)
+refresh = { sequence = ["verify-data", "deps", "ingest", "build", "oa-getis-ord", "materialize-oa-getis-ord", "export-serving", "export-area-geojson"], default_item_type = "ref" }
+# #292: `resync` is the "bring a stale/second machine current" counterpart to `refresh` --
+# for a warehouse whose seed schema predates a later seed column add (see `build-full-refresh`
+# above for the concrete #240 example and the duckdb-CSV-sniffing failure mode it works around).
+# Same two-pass OA handoff and export tail as `refresh`, but the first build is
+# `build-full-refresh` instead of plain `build`; the second (scoped) pass doesn't need
+# `--full-refresh` itself since `stg_oa_getis_ord`/`mart_poi_oa_hotspots` are views/a table
+# recreated fresh on every build regardless (the seed-drift failure mode is specific to dbt's
+# seed truncate+copy, not view/table materialization). Not part of `refresh` itself so the
+# primary machine's day-to-day refresh stays on the cheaper incremental build.
+resync = { sequence = ["verify-data", "deps", "ingest", "build-full-refresh", "oa-getis-ord", "materialize-oa-getis-ord", "export-serving", "export-area-geojson"], default_item_type = "ref" }
 # QA-9 (#184): cheap smoke check that mart/schema changes haven't silently broken the Evidence
 # build -- today the weekly release routine's `cd web && npm ci && npm run sources && npm run
 # build` (see ops/README.md Deploy section) is the only place this is exercised, and only after
