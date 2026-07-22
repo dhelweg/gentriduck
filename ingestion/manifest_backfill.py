@@ -184,7 +184,7 @@ SOURCE_DEFS: list[SourceDef] = [
         source_class="pinned",
         city="berlin",
         out_dir="data/raw/berlin/price_rent",
-        patterns=["wohnlage_*.parquet"],
+        patterns=["wohnlage_[0-9][0-9][0-9][0-9].parquet"],
         ingest_script_module="ingestion.berlin.price_rent.ingest_wohnlage",
         upstream_url="https://gdi.berlin.de/services/wfs/wohnlagenadr{year}",
     ),
