@@ -162,6 +162,26 @@ gate" -- documented here for that gate's review, not self-certified):
    `docs/methodology/OA-D3c-getis-ord-geo-signoff.md` CC2 for the original
    empirical diagnosis this note extends.
 
+8. NaN-z / FLOOR-p GUARD (NZ1, #290, docs/methodology/OA-D3c-followup-geo-
+   signoff.md): degenerate all-zero-stock domain-years (confirmed:
+   `poi_domain_h` in Vacancy/Office/Services, `snapshot_year` 2008-2013,
+   `lor_pre2021`, both PLR and BZR) have no variance for Gi* to compute a
+   statistic from, so esda's `G_Local` returns `z = NaN` for every cell --
+   but esda still emits a floor `p_sim = 0.001` rather than `NaN` alongside
+   it. `benjamini_hochberg()` only excludes NaN *p*, not NaN *z*, so this
+   bogus non-NaN p was leaking degenerate cells into the BH FDR pool and
+   could surface `gi_star_fdr_significant = TRUE` for a cell with no valid
+   statistic (never reaching the published mart -- the sparse-stock join
+   drops these rows first -- but visible to any direct `stg_oa_getis_ord`
+   consumer). Fixed at the source in `run_gi_star_for_scope`: when
+   `gi.Zs[i]` is NaN, `gi_star_p` is forced to NaN too, before either FDR
+   family runs, so these cells are excluded from both the primary
+   per-domain and the pooled-secondary correction exactly like any other
+   NaN-p unit in this pipeline (`gi_star_p_fdr` stays NaN,
+   `*_fdr_significant` naturally evaluates False). See the geo-DS
+   re-review's NZ1 finding for the empirical diagnosis this note
+   operationalizes.
+
 OUTPUT: data/analysis/oa_getis_ord/oa_getis_ord_{city_code}_{area_vintage}_
 {area_level}.parquet (gitignored, deterministically rebuilt). Read by
 transform/models/staging/stg_oa_getis_ord.sql via a glob
@@ -536,19 +556,36 @@ def run_gi_star_for_scope(
                 continue
 
             for i, area_code in enumerate(ordered_codes):
-                # esda's two-sided p_sim (alternative="two-sided") is computed by
-                # esda.significance._permutation_significance's symmetric
-                # percentile-tail-count formula, (n_outside + 1) / (permutations + 1)
-                # -- not by doubling a one-sided value (the G_Local attribute
-                # docstring's "multiplied by 2" wording is stale relative to the
-                # installed esda version's actual implementation). Under ties in
-                # the permutation reference distribution -- common with sparse,
-                # zero-heavy domain_stock_local -- this count-based formula can
-                # push n_outside above the permutation count, yielding p_sim > 1.0
-                # (observed up to ~1.10 empirically for this dataset, reproduced
-                # directly against esda.G_Local on real data during code review).
-                # A p-value cannot exceed 1 by definition -- clip at the source.
-                p_sim = min(float(gi.p_sim[i]), 1.0)
+                z_val = float(gi.Zs[i])
+                if np.isnan(z_val):
+                    # NZ1 (#290, docs/methodology/OA-D3c-followup-geo-signoff.md): for
+                    # degenerate all-zero-stock domain-years (e.g. Vacancy/Office/Services
+                    # 2008-2013 at lor_pre2021, both PLR and BZR -- no variance for Gi* to
+                    # compute a statistic from), esda's G_Local returns z=NaN but still
+                    # emits a floor p_sim=0.001 rather than NaN. benjamini_hochberg() only
+                    # drops NaN *p*, so this bogus non-NaN p was leaking a degenerate cell
+                    # into the BH FDR pool and could surface gi_star_fdr_significant=TRUE
+                    # for a cell with no valid statistic. Per the geo-DS re-review's NZ1
+                    # recommendation: when z is NaN, force p to NaN too, so it is excluded
+                    # from the FDR pool (both the primary per-domain and the pooled
+                    # secondary correction) exactly like any other NaN-p unit elsewhere in
+                    # this pipeline -- p_fdr stays NaN and *_significant naturally
+                    # evaluates False (NaN comparisons are always False), never TRUE.
+                    p_sim = float("nan")
+                else:
+                    # esda's two-sided p_sim (alternative="two-sided") is computed by
+                    # esda.significance._permutation_significance's symmetric
+                    # percentile-tail-count formula, (n_outside + 1) / (permutations + 1)
+                    # -- not by doubling a one-sided value (the G_Local attribute
+                    # docstring's "multiplied by 2" wording is stale relative to the
+                    # installed esda version's actual implementation). Under ties in
+                    # the permutation reference distribution -- common with sparse,
+                    # zero-heavy domain_stock_local -- this count-based formula can
+                    # push n_outside above the permutation count, yielding p_sim > 1.0
+                    # (observed up to ~1.10 empirically for this dataset, reproduced
+                    # directly against esda.G_Local on real data during code review).
+                    # A p-value cannot exceed 1 by definition -- clip at the source.
+                    p_sim = min(float(gi.p_sim[i]), 1.0)
                 year_rows.append(
                     {
                         "city_code": city_code,
@@ -558,7 +595,7 @@ def run_gi_star_for_scope(
                         "snapshot_year": int(year),
                         "poi_domain_h": domain,
                         "domain_stock_local": float(y_values[i]),
-                        "gi_star_z": float(gi.Zs[i]),
+                        "gi_star_z": z_val,
                         "gi_star_p": p_sim,
                         "gi_star_w_fallback": area_code in fallback_codes,
                     }
