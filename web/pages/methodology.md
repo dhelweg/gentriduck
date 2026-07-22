@@ -242,7 +242,14 @@ We would rather state these plainly than have you discover them by surprise.
   dynamism values from a tiny denominator (a single new business changing their share disproportionately);
   since 2026-07 these are winsorized at ±3 standard deviations before they reach any map, chart, or
   composite score, so one thin-data area cannot visually dominate the rest of the city (the raw,
-  unclipped value remains available for diagnostics).
+  unclipped value remains available for diagnostics). A sharper form of the same effect is that three
+  point-of-interest domains have *no* mapped OSM presence anywhere in Berlin before their tagging
+  onset — Services before 2009, Vacancy before 2012, and Office before 2014 — so their pre-onset
+  years are a left-censoring of the predictor series (the community had not yet begun tagging them),
+  not a real absence of offices, service businesses, or vacant units; these all-zero domain-years are
+  excluded from the hotspot significance testing
+  ([#290](https://github.com/dhelweg/gentriduck/issues/290)) so a coverage gap cannot masquerade as a
+  finding.
 - **Ecological fallacy — aggregate, not individual, statistics.** Every number on this site describes
   a small-area aggregate of thousands of residents. It is not, and cannot be, a statement about any
   specific person, household, or building. Inferring an individual's situation from an area-level
