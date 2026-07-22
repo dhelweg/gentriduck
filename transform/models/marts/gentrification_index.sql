@@ -31,20 +31,27 @@
 -- individual's situation from a PLR stage is an ecological fallacy (G-2 guardrail;
 -- index-definition.md §1.2).
 --
--- BERLIN-ONLY SCOPE (#125, staging decision -- not a methodology change): as of the
--- H1 (#40) integration, int_gentrification_ts also carries Hamburg rows
--- (city_code='HH', ADR-0014). This governed, contract-enforced public mart
--- (city_code accepted_values=["BER"] below) stays Berlin-only for now: the H1
--- geo-DS/domain-expert sign-offs (docs/epic-h/H1-geo-signoff.md,
--- H1-domain-signoff.md) explicitly scoped their PASS to int_gentrification_ts
--- pipeline wiring, stating "no dashboard/report is published from it yet."
--- METHODOLOGY QUESTION flagged for the gate (#125): should Hamburg now be admitted
--- to this published index (widening city_code to ["BER","HH"] and area_level to
--- include Hamburg's dim_area levels), or should it remain staged until the
--- conditions in those sign-offs (crosswalk match-rate test, G2 disclosures) are
--- satisfied? Not decided here -- the explicit filter below preserves Berlin's
--- existing rows/values exactly and keeps Hamburg out of the public mart pending
--- that decision.
+-- HAMBURG ADMISSION (H3, #237): the #125 METHODOLOGY QUESTION is resolved. A fresh,
+-- independent dual sign-off (docs/epic-h/H3-geo-signoff.md, H3-domain-signoff.md;
+-- both Verdict: PASS WITH CONDITIONS) admitted Hamburg into this mart: city_code
+-- accepted_values widened to ["BER","HH"] (schema.yml) and area_level widened to add
+-- "subarea_l2" (Hamburg's Gebiet grain, the finest level int_gentrification_ts emits
+-- for Hamburg). The admission is deliberately narrow: Hamburg only ever reaches this
+-- mart via the 'live_data' branch below ('improved' stays Berlin-only by
+-- construction), and that branch hard-NULLs own_idx_class/own_idx_class_bi (see the
+-- 'live_data' select block) -- so the D4-EWR composite (the thing the H1 sign-offs
+-- were most concerned about: migration-background/residence-duration omission,
+-- Stadtteil->Gebiet grain-ceiling) does NOT enter this mart. What Hamburg publishes
+-- here is the D1/D2 Sozialmonitoring OUTCOME (status/dynamism ordinals, typology
+-- stage from the reused D1xD2 matrix) at full Gebiet resolution -- Hamburg's own
+-- official Sozialmonitoring classification, re-labelled through the same matrix
+-- Berlin's MSS uses. The D4-bearing marts (fct_gentrification_change,
+-- fct_gentrification_trajectory, mart_area_demographics) are explicitly NOT admitted
+-- by this change and remain city_code=["BER"]-only (H3 sign-off condition 4; see
+-- their own model headers). Cross-city comparability caveats (Dynamik cadence:
+-- Berlin biennial vs Hamburg annual/3yr window; same-named typology stage is not an
+-- identical threshold) are disclosure-level, carried on web/pages/methodology.md §6
+-- (H3 scope (c), separate ticket slice) -- not resolved by this SQL.
 {{
     config(
         materialized="table",

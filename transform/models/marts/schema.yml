@@ -20,10 +20,14 @@ models:
 
       Index definition reference: docs/adr/0004-data-governance-and-index-definition.md
 
-      Berlin-only scope (#125): city_code accepted_values is ["BER"] -- Hamburg rows
-      exist upstream in int_gentrification_ts (H1 #40, ADR-0014) but are explicitly
-      filtered out of this published mart pending the gate decision described in the
-      SQL header (H1 sign-offs scoped their PASS to pipeline wiring only).
+      H3 admission (#237): city_code accepted_values widened to ["BER","HH"] and
+      area_level to add Hamburg's subarea_l2 (Gebiet) grain. Hamburg only ever
+      publishes through the live_data variant, which carries the D1/D2
+      Sozialmonitoring outcome (status/dynamism ordinals, typology_stage) --
+      own_idx_class/own_idx_class_bi are hard-NULL for live_data, so the D4-EWR
+      composite does not enter this mart. Dual sign-off: PASS WITH CONDITIONS
+      (docs/epic-h/H3-geo-signoff.md, docs/epic-h/H3-domain-signoff.md); see the
+      SQL header for the full admission rationale and citations.
     meta:
       dbt_meta_owner: data-engineer
       governed_definition: ADR-0004
@@ -39,7 +43,7 @@ models:
           - not_null
           - accepted_values:
               arguments:
-                values: ["BER"]
+                values: ["BER", "HH"]
           - relationships:
               arguments:
                 to: ref('dim_city')
@@ -52,7 +56,7 @@ models:
           - not_null
           - accepted_values:
               arguments:
-                values: ["bezirk", "bzr", "plr"]
+                values: ["bezirk", "bzr", "plr", "subarea_l2"]
       - name: area_code
         description: Area code. Part of the natural key.
         data_type: varchar

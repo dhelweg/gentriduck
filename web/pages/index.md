@@ -88,12 +88,22 @@ of what the thesis claimed, what it found, and what our rebuild finds today.
 </Dropdown>
 
 <!-- live_data only has PLR-grain rows (no Bezirksregion aggregate); standard/distance_weighted
-     carry both. Pick the matching area_level in SQL rather than in JS templating (#138 G4). -->
+     carry both. Pick the matching area_level in SQL rather than in JS templating (#138 G4).
+
+     H3 (#237) audit: city_code = 'BER' added here explicitly. This section is Berlin-only ("Berlin
+     right now" / area_level = 'plr' below already excludes Hamburg's 'subarea_l2' rows in
+     practice), but this query itself had no city_code filter and would silently pool Berlin's and
+     Hamburg's live_data max(period_yyyymm) once gentrification_index carried both (H3 widened its
+     city_code accepted_values to ["BER","HH"]). Today both happen to share the same latest period
+     (202512), so this was not yet visibly wrong, but the two cities' editions are NOT guaranteed to
+     stay in lockstep (Berlin biennial vs. Hamburg annual cadence, methodology §6) -- an unfiltered
+     max() here would otherwise silently apply the WRONG period to the Berlin-only headline query
+     below once they diverge. Explicit city_code scoping, not a cross-city comparison. -->
 
 ```sql latest_period
 select max(period_yyyymm) as period
 from gentriduck_marts.gentrification_index
-where variant = '${inputs.variant.value}'
+where variant = '${inputs.variant.value}' and city_code = 'BER'
 ```
 
 ```sql headline
@@ -103,6 +113,7 @@ select
     count(*) filter (where dynamism_class_bi = 'positive') as low_pressure_areas
 from gentriduck_marts.gentrification_index
 where variant = '${inputs.variant.value}'
+  and city_code = 'BER'
   and area_level = case when '${inputs.variant.value}' = 'live_data' then 'plr' else 'bzr' end
   and period_yyyymm = '${latest_period[0].period}'
 ```
@@ -116,6 +127,13 @@ Figures reflect the most recent available reporting period: **{latest_period[0].
 plain-language decoder on the [methodology page](/methodology). For the full Berlin deep-dive —
 maps, per-neighbourhood profiles, time series, and the commercial-mix data — start at the
 **[Berlin data hub](/berlin)**.
+
+<!-- H3 (#237): the section above is Berlin-only by design (its queries are scoped to
+     city_code='BER'). Hamburg is a real second city on this site, not folded into the figures
+     above — see its own data hub, never a pooled/merged headline (methodology §6's structural
+     rule against pooled cross-city comparison). -->
+Gentriduck now also tracks **Hamburg**, admitted 2026-07-18 after its own methodology gate — a
+narrower dataset than Berlin's, honestly scoped on its own page: the **[Hamburg data hub](/hamburg)**.
 
 ### Where each neighbourhood sits in the gentrification cycle
 
@@ -132,6 +150,7 @@ select
     count(*) as area_count
 from gentriduck_marts.gentrification_index
 where variant = '${inputs.variant.value}'
+  and city_code = 'BER'
   and area_level = case when '${inputs.variant.value}' = 'live_data' then 'plr' else 'bzr' end
   and period_yyyymm = '${latest_period[0].period}'
   and status_class is not null
@@ -169,6 +188,7 @@ select
     dynamism_class
 from gentriduck_marts.gentrification_index
 where variant = '${inputs.variant.value}'
+  and city_code = 'BER'
   and area_level = case when '${inputs.variant.value}' = 'live_data' then 'plr' else 'bzr' end
   and period_yyyymm = '${latest_period[0].period}'
   and dynamism_class_bi = 'negative'

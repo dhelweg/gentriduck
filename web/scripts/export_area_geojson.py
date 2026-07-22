@@ -48,6 +48,18 @@ that varies. PLR at this vintage is already covered by `plr_live_data.geojson` (
 
 Usage (from repo root, after `uv run poe build && uv run poe export-serving`):
   uv run python web/scripts/export_area_geojson.py
+
+H3 (#237) addition: `export_hamburg_geometry()` exports a Hamburg `subarea_l2` (statistisches
+Gebiet) FeatureCollection, joined against `gentrification_index`'s newly-admitted `city_code='HH'`
+rows, for the new `/hamburg/maps` and `/hamburg/poi-map` pages (docs/epic-h/H3-domain-signoff.md
+condition 1, docs/epic-h/H3-geo-signoff.md). This is a SEPARATE, simpler function rather than an
+extension of `export_gentrification_index_geometry()`/`VARIANTS_BY_AREA_LEVEL` above, because
+Hamburg does not share that function's Berlin-specific assumptions: it has a single
+`area_vintage='current'` (no pre-2021/2021+ boundary split, so no `_vintage_for_period()` lookup
+is needed) and a single `variant='live_data'` (no `standard`/`improved`/`distance_weighted`
+Hamburg rows exist). Non-methodology-bearing, same class of change as the rest of this script
+(presentation plumbing reading already-published, already-signed-off `gentrification_index`
+values -- no new indicator/weight/aggregation).
 """
 
 from __future__ import annotations
@@ -246,6 +258,103 @@ def export_oa_arealevel_geometry(con: duckdb.DuckDBPyConnection) -> None:
         )
 
 
+def export_hamburg_geometry(con: duckdb.DuckDBPyConnection) -> None:
+    """Hamburg `subarea_l2` (statistisches Gebiet) FeatureCollection, joined against
+    `gentrification_index`'s `city_code='HH'` rows at their latest `period_yyyymm`. See this
+    module's header comment (H3, #237) for why this is a dedicated function rather than an entry
+    in `VARIANTS_BY_AREA_LEVEL` above.
+
+    NB (H3-domain-signoff.md condition 3 / H1-domain-signoff.md §3): `area_name` is genuinely
+    blank for every Hamburg `subarea_l2` row in the source data (only Hamburg's coarser
+    `subarea_l1`/Stadtteil and `district` levels carry names) -- this is passed through as-is
+    (empty string), not backfilled, so the map/tooltip honestly shows only the numeric Gebiet
+    code where no name exists, rather than inventing one.
+    """
+    latest_period_row = con.execute(
+        """
+        select max(period_yyyymm) as period
+        from gentrification_index
+        where city_code = 'HH' and area_level = 'subarea_l2' and variant = 'live_data'
+        """
+    ).fetchone()
+    latest_period = latest_period_row[0] if latest_period_row else None
+    if latest_period is None:
+        logger.warning("skipping hamburg subarea_l2 -- no gentrification_index HH rows found")
+        return
+
+    rows = con.execute(
+        """
+        select
+            geo.city_code,
+            geo.area_code,
+            geo.area_name,
+            g.status_index,
+            g.status_class,
+            g.status_class_bi,
+            g.dynamism_index,
+            g.dynamism_class,
+            g.dynamism_class_bi,
+            g.period_yyyymm,
+            geo.geometry_geojson
+        from dim_area_geometry as geo
+        left join gentrification_index as g
+            on g.city_code = geo.city_code
+            and g.area_code = geo.area_code
+            and g.area_level = 'subarea_l2'
+            and g.variant = 'live_data'
+            and g.period_yyyymm = ?
+        where geo.city_code = 'HH'
+          and geo.area_level = 'subarea_l2'
+          and geo.area_vintage = 'current'
+        order by geo.area_code
+        """,
+        [latest_period],
+    ).fetchall()
+
+    features = []
+    for (
+        city_code,
+        area_code,
+        area_name,
+        status_index,
+        status_class,
+        status_class_bi,
+        dynamism_index,
+        dynamism_class,
+        dynamism_class_bi,
+        period_yyyymm,
+        geometry_geojson,
+    ) in rows:
+        features.append(
+            {
+                "type": "Feature",
+                "geometry": json.loads(geometry_geojson),
+                "properties": {
+                    "city_code": city_code,
+                    "area_code": area_code,
+                    "area_name": area_name,
+                    "status_index": status_index,
+                    "status_class": status_class,
+                    "status_class_bi": status_class_bi,
+                    "dynamism_index": dynamism_index,
+                    "dynamism_class": dynamism_class,
+                    "dynamism_class_bi": dynamism_class_bi,
+                    "period_yyyymm": period_yyyymm,
+                },
+            }
+        )
+
+    feature_collection = {"type": "FeatureCollection", "features": features}
+    out_path = OUT_DIR / "subarea_l2_live_data.geojson"
+    out_path.write_text(json.dumps(feature_collection))
+    logger.info(
+        "exported hamburg subarea_l2/live_data (%d features, period=%s) -> %s",
+        len(features),
+        latest_period,
+        out_path.relative_to(REPO_ROOT),
+    )
+
+
 def main() -> None:
     geometry_path = SERVING_DIR / "dim_area_geometry.parquet"
     index_path = SERVING_DIR / "gentrification_index.parquet"
@@ -260,6 +369,7 @@ def main() -> None:
 
     export_gentrification_index_geometry(con)
     export_oa_arealevel_geometry(con)
+    export_hamburg_geometry(con)
 
     con.close()
 
