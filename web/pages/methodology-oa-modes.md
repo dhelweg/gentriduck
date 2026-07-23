@@ -830,10 +830,15 @@ live query:
   year-over-year density figure on this page**: OA-D0 domain sign-off Condition C.2 requires the gate
   to PASS *for that cell* (per-area, per-year), a stricter bar than the citywide aggregate #285 tested
   — see §6's "does not" list above.
-- **Per-capita's gate result is indeterminate, not failing — a genuine data-coverage gap.** Berlin's
-  exact-year population join currently has only one usable year-over-year transition (2024→2025), so
-  the correlation this test needs is mathematically undefined, not merely untested. A future EWR
-  ingestion covering the 2021–2023 reference-year gap would let this run properly.
+- **Per-capita's gate result is indeterminate, not failing — too little data to test yet, not a
+  finding either way.** Berlin's exact-year population join currently has only one usable
+  year-over-year transition (2024→2025), so the correlation this test needs is mathematically
+  undefined, not merely untested. A future EWR ingestion covering the 2021–2023 reference-year gap
+  would let this run properly. **This data-coverage gap is a separate barrier from, and does not
+  resolve, the denominator-endogeneity caveat in §2 above** — even with more years of data, a
+  per-capita change over time would still conflate "commerce changed" with "who lives here changed,"
+  which is why per-capita would need both an eventual gate PASS *and* that caveat addressed before
+  any live delta view.
 - **The area-hierarchy roll-up is only proven for the canonical nested LQ so far.** The other eight
   methods — including density/per-capita — have never been rolled up through the PLR→BZR→PGR→Bezirk
   hierarchy — extending that roll-up to every method is explicitly out of this study's scope, not a
