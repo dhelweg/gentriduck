@@ -17,16 +17,22 @@ sidebar_position: 21
   The four carried-forward pass-2 conditions and how each is discharged (see the "Live:" subsections
   under §2/§4/§5 below for the mechanism in each case):
   1. Completeness-contamination badge on any live differenced-over-time density/per-capita figure:
-     NOT built -- discharged by avoidance, not by badge, because neither the mart nor the underlying
-     model exposes a per-cell completeness/temporal-safety flag today (only `seed_oa_calculation_
-     methods.csv`'s `expected_temporal_safe` is a per-METHOD, pre-registered, and -- for density/
-     per-capita specifically -- UNTESTED expectation; OA-D5's own empirical completeness-gate study
-     explicitly excluded density/per-capita, "added after the study ran" per this page's own §7). The
-     §2 "Live" table below therefore shows density/per-capita STOCK (point-in-time) values only, never
-     a year-over-year delta -- see that subsection's own caveat for the full reasoning. Building a
-     properly-badged temporal view is out of this pass's scope; a future ticket would need a new
-     per-cell completeness flag column upstream first (data-engineer + geo-DS work, not a display
-     decision this pass can make on its own).
+     NOT built -- discharged by avoidance, not by badge. #285 extended OA-D5's completeness-
+     contamination gate to empirically test density/per-capita too (previously they were absent
+     because they were added to the pipeline after OA-D5 first ran) -- see
+     `docs/methodology/OA-D5-mode-comparison-findings.md` §4: density empirically PASSES the
+     citywide, per-method version of that test; per-capita is INDETERMINATE (Berlin's exact-year
+     EWR-to-POI join currently has only one usable year-over-year transition, 2024->2025 -- a
+     genuine data-coverage gap, not a design flaw). Neither result satisfies OA-D0 domain sign-off
+     Condition C.2, though: that condition requires the completeness-contamination test to PASS
+     **"for that cell"** (per-area, per-year), and the test #285 ran is a citywide, per-method
+     aggregate -- a materially weaker bar than the per-cell one the condition actually sets. The
+     §2 "Live" table below therefore still shows density/per-capita STOCK (point-in-time) values
+     only, never a year-over-year delta -- see that subsection's own caveat for the full reasoning.
+     Building a properly per-cell-badged temporal view remains out of this pass's scope; a future
+     ticket would need a new per-cell completeness flag column upstream first (data-engineer + geo-DS
+     work, not a display decision this pass can make on its own) -- #285's citywide result is
+     supportive evidence for density that such a future ticket can cite, not a substitute for it.
   2. `is_public_safe = true` as an ACTUAL query filter, not just documented: applied at the SOURCE
      layer (`web/sources/gentriduck_marts/mart_poi_dominance.sql`), the strongest point available --
      Evidence bundles a source's full result to the client for any page that queries it reactively, so
@@ -101,9 +107,11 @@ this page picks up from there.
   live here: a PLR-grain choropleth for the eight non-canonical methods (the canonical nested-LQ PLR
   map already exists on the <a href="/berlin/poi-map">POI &amp; Offering Advantage map</a>), a
   category/type drill-down for the nine-methods table (domain grain only), a live re-run of the
-  OA-D5 comparison study (§7 stays a static findings restatement), a year-over-year delta view for
-  density/per-capita (no per-cell completeness badge exists yet to gate it — see that subsection's
-  own caveat), and Getis-Ord Gi* hotspot clustering (still gated behind
+  OA-D5 comparison study (§7 stays a static findings restatement, now covering the full nine-method
+  family per #285), a year-over-year delta view for density/per-capita (§7's extended completeness
+  gate tested this citywide and density passes it, but no <b>per-cell</b> completeness badge exists
+  yet to gate an individual figure — see that subsection's own caveat), and Getis-Ord Gi* hotspot
+  clustering (still gated behind
   <a href="https://github.com/dhelweg/gentriduck/blob/main/docs/adr/0025-getis-ord-gistar-esda-mart-handoff.md">ADR-0025</a>,
   proposed).
 </Alert>
@@ -328,9 +336,11 @@ order by meta.sort_order
   the exact hazard §2's warning above names. The bar chart further up only ever plots the three
   methods that genuinely share a unit ("ratio, centred on 1"). <b>Density and per-capita above are
   point-in-time ("stock") values only</b> — this table does not show a year-over-year change for
-  either, because neither the mart nor its upstream model yet carries a per-cell
-  completeness-contamination flag to gate a temporal delta safely (OA-D5's own study, §7 below,
-  explicitly excluded density/per-capita — they were added afterwards); showing an undisclosed
+  either. OA-D5's study now tests both empirically (§7 below, extended by #285): density passes the
+  completeness-contamination gate at the citywide, per-method level; per-capita's result is
+  indeterminate (too few years of exact-matched population data to test at all yet). Neither is the
+  <b>per-cell</b> completeness-contamination PASS this project's own binding condition (OA-D0 domain
+  sign-off Condition C.2) requires before differencing an individual figure — showing an undisclosed
   delta for either would violate the same completeness-contamination discipline this project applies
   everywhere else. <b>This table also does not suppress a thin-data area</b> — unlike the PLR
   Offering Advantage map's own domain-grain mart, `mart_poi_oa_methods` does not carry a min-base
@@ -779,36 +789,71 @@ any conclusion.
 - **It does not show a live temporal (year-over-year) view of density or per-capita.** Neither
   method has a per-cell completeness-contamination safety check built yet (§2's "Live" note above)
   — showing a delta without one would risk reading an OSM-coverage-growth artefact as a real change.
+  #285 extended OA-D5's gate to test both methods at the citywide, per-method level (§7): density
+  passes it, per-capita's result is indeterminate for now (a data-coverage gap, not a failure) — a
+  supportive signal for a future per-cell-badged view, not a substitute for one.
 
-## 7. What the comparison study found (OA-D5)
+## 7. What the comparison study found (OA-D5, extended by #285)
 
 A dedicated comparison study
 ([full findings](https://github.com/dhelweg/gentriduck/blob/main/docs/methodology/OA-D5-mode-comparison-findings.md))
-already ran the seven core calculation methods (excluding density/per-capita, which were added
-after the study ran) against each other and against known robustness checks. The headline results,
-restated here as static findings, not a live query:
+originally ran the seven relative-family calculation methods against each other and against known
+robustness checks; a 2026-07 extension (#285) added `density` and `per-capita` to the cross-mode
+correlation and completeness-contamination deliverables — the two remaining methods added to the
+mart after the original study ran. The headline results, restated here as static findings, not a
+live query:
 
-- **The methods genuinely diverge, and that divergence is informative, not noise.** At the
-  category level, nested LQ and raw within-group share correlate at only ρ ≈ 0.35 (Spearman) — they
-  really do answer different questions about the same underlying data, exactly as intended.
+- **The seven relative-family methods genuinely diverge, and that divergence is informative, not
+  noise.** At the category level, nested LQ and raw within-group share correlate at only ρ ≈ 0.35
+  (Spearman) — they really do answer different questions about the same underlying data, exactly as
+  intended.
 - **Log-LQ is a perfect rank-preserving rescaling of nested LQ** (ρ = 1.000 at every taxonomy
   level, as expected of a monotonic transform) — a check on the arithmetic, not a separate finding.
-- **The completeness-contamination gate mostly passed.** Five of seven methods (including the
-  canonical nested LQ) showed no meaningful correlation between their year-over-year change and
-  citywide OSM coverage growth (|ρ| stayed under 0.06 in every case) — meaning a change in these figures over
-  time is very unlikely to just be "OpenStreetMap got more complete." Two methods that were
-  *expected* to fail this check (raw share, binomial z-score) did not fail it empirically either —
-  disclosed here as a genuine, pre-registered prediction that the data did not confirm, not
-  smoothed over.
+- **Density and per-capita correlate weakly-to-moderately with the relative-LQ family — for
+  information only, never as a shared-scale claim.** Pooled Spearman rho between density/per-capita
+  and the seven relative methods ranges from near-zero to ≈0.3 depending on taxonomy level, and
+  density and per-capita correlate with *each other* at ρ ≈ 0.7–0.8 (unsurprising — both are driven
+  by the same local POI count numerator). None of this is a validation of one construct against the
+  other: a dense, populous area can simply happen to also have a typical location quotient, a
+  coincidence of geography, not agreement between "how over-represented" and "how much commerce."
+  This is exactly why §2's warning above bars ever plotting them on a shared axis or colour scale —
+  a weak correlation here would otherwise tempt a reader to assume the two questions overlap more
+  than they do.
+- **The completeness-contamination gate mostly passed, including — surprisingly — density.** Six of
+  the seven relative-family methods (including the canonical nested LQ) plus density showed no
+  meaningful correlation between their year-over-year change and citywide OSM coverage growth (|ρ|
+  stayed well under the 0.3 gate threshold in every tested case) — meaning a change in these figures
+  over time is unlikely to just be "OpenStreetMap got more complete." Density's pass **contradicts**
+  its own pre-registered "expected to fail" prediction, the same class of surprise raw share and
+  the binomial z-score already produced in the original run — disclosed here as a genuine result the
+  data did not confirm, not smoothed over. **This citywide pass does not, by itself, authorize a live
+  year-over-year density figure on this page**: OA-D0 domain sign-off Condition C.2 requires the gate
+  to PASS *for that cell* (per-area, per-year), a stricter bar than the citywide aggregate #285 tested
+  — see §6's "does not" list above.
+- **Per-capita's gate result is indeterminate, not failing — too little data to test yet, not a
+  finding either way.** Berlin's exact-year population join currently has only one usable
+  year-over-year transition (2024→2025), so the correlation this test needs is mathematically
+  undefined, not merely untested. A future EWR ingestion covering the 2021–2023 reference-year gap
+  would let this run properly. **This data-coverage gap is a separate barrier from, and does not
+  resolve, the denominator-endogeneity caveat in §2 above** — even with more years of data, a
+  per-capita change over time would still conflate "commerce changed" with "who lives here changed,"
+  which is why per-capita would need both an eventual gate PASS *and* that caveat addressed before
+  any live delta view.
 - **The area-hierarchy roll-up is only proven for the canonical nested LQ so far.** The other eight
-  methods have never been rolled up through the PLR→BZR→PGR→Bezirk hierarchy — extending that
-  roll-up to every method is explicitly out of this study's scope, not a silent gap. (The §4 live
-  choropleth above surfaces exactly the one method this roll-up IS proven for — nested LQ — never
-  any of the other eight at coarse grain.)
+  methods — including density/per-capita — have never been rolled up through the PLR→BZR→PGR→Bezirk
+  hierarchy — extending that roll-up to every method is explicitly out of this study's scope, not a
+  silent gap. (The §4 live choropleth above surfaces exactly the one method this roll-up IS proven
+  for — nested LQ — never any of the other eight at coarse grain.)
 - **Only nested LQ is validated against the 2018 thesis's own results** (ρ = 0.148, p = 0.002,
   n = 435 — the same directional-but-modest result already reported on the
-  [thesis re-check page](/thesis-recheck)). The other eight methods have no 2018 precedent to
-  validate against by design — see §2 above.
+  [thesis re-check page](/thesis-recheck)). The other eight methods, including density/per-capita,
+  have no 2018 precedent to validate against by design — see §2 above.
+- **Getis-Ord Gi\* remains unavailable, verified directly against the seed registry.**
+  `seed_oa_calculation_methods.csv` has no `getis_ord` row yet — #285 checked this directly rather
+  than assuming it, per the maintainer's own "gated on that slice existing" framing. Its ADR
+  ([ADR-0025](https://github.com/dhelweg/gentriduck/blob/main/docs/adr/0025-getis-ord-gistar-esda-mart-handoff.md))
+  remains status Proposed; adding a Getis-Ord comparison here is left to a future
+  method-registration ticket once that ADR is accepted and the underlying mart exists.
 
 ## 8. Honest caveats
 
@@ -830,10 +875,15 @@ restated here as static findings, not a live query:
   tooling adoption this project hasn't yet accepted
   ([ADR-0025](https://github.com/dhelweg/gentriduck/blob/main/docs/adr/0025-getis-ord-gistar-esda-mart-handoff.md),
   status: proposed) — it is held out of the build, and therefore out of this page, until that ADR is
-  accepted and its own methodology re-clears the R-C1 gate.
+  accepted and its own methodology re-clears the R-C1 gate. #285 re-verified this directly against
+  `seed_oa_calculation_methods.csv` (no `getis_ord` row exists) rather than assuming the gap.
 - **Density and per-capita are the highest-risk figures on this page**, precisely because they
   look the most like ordinary statistics to a lay reader while answering a different question than
-  Offering Advantage (§2). Read their caveats above before drawing any conclusion from either.
+  Offering Advantage (§2). Read their caveats above before drawing any conclusion from either. #285
+  rank-correlated both against the relative-LQ family for information (§7) — that correlation is
+  never a licence to plot them on the same axis or colour scale (§2's warning), and a passing
+  completeness-contamination result for density (§7) is a citywide signal, not a per-cell PASS —
+  it does not, on its own, authorize a live delta view.
 - **PLR-scale figures remain this project's most misuse-prone display**, for the same small-sample
   reason the base index already flags (see [methodology §6](/methodology)) — a single new or closed
   business can swing a PLR's ratio disproportionately. The live nine-methods table above does not
