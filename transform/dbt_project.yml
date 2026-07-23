@@ -72,10 +72,15 @@ data_tests:
 vars:
   project_root: "{{ env_var('PWD', '.') }}"
   # QA-4b (#202): single source of truth for which dim_city.city_code values are
-  # publication-ready (exposed downstream / on the site). Berlin is the only
-  # published city today; Hamburg (ADR-0014) is ingested but not yet published.
-  # Override via --vars 'published_cities: [BER, HH]' when a second city ships.
-  published_cities: ["BER"]
+  # publication-ready (exposed downstream / on the site). H3 (#237): Hamburg is
+  # admitted alongside Berlin -- dual sign-off PASS WITH CONDITIONS
+  # (docs/epic-h/H3-geo-signoff.md, docs/epic-h/H3-domain-signoff.md). Note this
+  # var gates every consumer of published_cities_filter, but only
+  # gentrification_index's contract (schema.yml) has been widened to accept HH
+  # rows in this ticket -- fct_gentrification_change, fct_gentrification_trajectory,
+  # and mart_area_demographics remain city_code=["BER"]-only by contract, so their
+  # own accepted_values tests still filter/reject any HH rows regardless of this var.
+  published_cities: ["BER", "HH"]
   # H-C2 (#159, docs/epic-h/159-hc2-geo-spike.md): fct_gentrification_trajectory's
   # `ts` CTE restricts its classification input to a matched year-span window --
   # each (city_code, area_vintage)'s most recent `trajectory_window_years` years

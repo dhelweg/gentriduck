@@ -80,24 +80,49 @@ gate" -- documented here for that gate's review, not self-certified):
    dynamic.py -- every area receiving the fallback is logged AND flagged in
    the output (gi_star_w_fallback column) for auditability (ADR-0025
    Decision 4 "log/annotate any unit that received the fallback").
+   SELF-WEIGHT CONVENTION (CC3, #287): with `transform='r'` set before
+   `G_Local(star=True)`, esda emits a UserWarning and infers the Gi*
+   self-weight as the row-maximum weight -- esda's documented default,
+   matching a6_hotspots.py's own convention, not an explicit override by
+   this script. The Zs/p_sim values below depend on that inferred
+   self-weight; recorded here so the neighbour structure is fully
+   auditable (OA-D3c geo sign-off CC3).
 
-5. FDR CORRECTION -- CORRECTION-GROUP CHOICE (ADR-0025 Decision 4, the one
-   genuinely open design call this script makes): Benjamini-Hochberg (1995)
-   step-up, applied POOLED across every (area_code, poi_domain_h) p-value
-   tested for the SAME (city_code, area_vintage, area_level, snapshot_year)
-   -- i.e. one correction batch per published "map" (~hundreds of PLRs x 13
-   domains at once), not per-domain-only. This directly matches OA-D0 geo
-   sign-off C9's own framing of the risk ("Gi* over hundreds of PLRs x
-   domains inflates false hotspots") -- a narrower per-domain-only
-   correction would under-correct relative to that stated risk, since a
-   reader scanning across domain maps for one year faces the WIDER combined
-   family of tests, not just one domain's. `gi_star_cluster_label` (the
-   published hot/cold/ns label) is derived from the FDR-adjusted
-   significance flag, NOT the raw p-value -- the raw p is still carried
-   through (gi_star_p) for a reader who wants the uncorrected number, per
+5. FDR CORRECTION -- CORRECTION-GROUP CHOICE (OA-D3c-followup, #287, CC1
+   REMEDIATION of ADR-0025 Decision 4): Benjamini-Hochberg (1995) step-up,
+   applied as TWO labelled variants, not one:
+
+   - PRIMARY (`gi_star_p_fdr` / `gi_star_fdr_significant`, published label
+     source): corrected PER-DOMAIN, PER-MAP -- i.e. one BH batch per
+     (city_code, area_vintage, area_level, snapshot_year, poi_domain_h),
+     ~hundreds of PLR/BZR p-values per batch. This is the standard ESDA
+     "one map = one family" unit (Caldas de Castro & Singer 2006) -- a
+     reader consumes one domain's choropleth at a time (e.g. "Gastronomy
+     hotspots, 2024"), so the natural inferential family is that map's
+     areas, not all ~13 domains at once. `gi_star_cluster_label` (the
+     published hot/cold/ns label) is derived from THIS flag.
+   - SECONDARY, labelled conservative variant (`gi_star_p_fdr_pooled_alldomains`
+     / `gi_star_fdr_significant_pooled_alldomains`): the ORIGINAL #280
+     design -- corrected POOLED across every (area_code, poi_domain_h)
+     p-value tested for the SAME (city_code, area_vintage, area_level,
+     snapshot_year) "map" (~hundreds of PLRs x 13 domains at once). Kept
+     as a wider, more conservative cross-domain-scan variant for a reader
+     who wants the stricter bound (OA-D0 geo sign-off C9's original framing:
+     "Gi* over hundreds of PLRs x domains inflates false hotspots" -- still
+     a valid, safe-direction reading, just not the primary one). NOT the
+     label source.
+
+   CC1 (docs/methodology/OA-D3c-getis-ord-geo-signoff.md): the geo-DS
+   sign-off found pooling-as-primary was not a BH-validity defect (BH does
+   not require exchangeability across the family, and pooling is strictly
+   MORE conservative, i.e. safe-direction) but recommended per-domain as
+   the standard-practice primary, with pooled retained as a labelled
+   secondary column rather than the only correction. Both raw p
+   (`gi_star_p`) and both FDR-adjusted variants are carried through, so a
+   reader always has the uncorrected number and both correction scopes --
    OA-D0 geo sign-off C9's "apply BH correction OR AT MINIMUM disclose the
-   uncorrected-p caveat" (this script does the stronger of the two: both
-   correct AND disclose). No new dependency: BH is implemented directly
+   uncorrected-p caveat" is satisfied at the stronger level (correct AND
+   disclose, in two scopes). No new dependency: BH is implemented directly
    (statsmodels is not a project dependency; the step-up procedure is ~10
    lines, Benjamini & Hochberg 1995 Eq. 1-2).
 
@@ -111,6 +136,51 @@ gate" -- documented here for that gate's review, not self-certified):
    snapshot-year stock input (domain_stock_local) -- OA-D3c domain sign-off
    F1. Also apply the ecological-inference disclaimer before any public
    surface. This script never emits the raw phrase "gentrification hotspot".
+
+7. `lor_2021` SIGNIFICANCE DISCLOSURE (CC2, #287, binding for any future
+   consumer): under the #280-original POOLED-secondary FDR
+   (`gi_star_fdr_significant_pooled_alldomains`), `lor_2021` still yields
+   ZERO significant cells at any level, in contrast to `lor_pre2021`'s
+   ~340-347 hot / ~186-230 cold cells under that same pooled family --
+   confirming geo sign-off CC2's diagnosis was correct (milder recent
+   permutation p-floor, 0.003 vs 0.001, compounding with the x13-domain
+   pooled denominator). Under the PRIMARY per-domain family (this ticket's
+   CC1 remediation) `lor_2021` now DOES surface real discoveries -- 108
+   significant cells at PLR (72 hot/36 cold), 376 at BZR (261 hot/115 cold),
+   empirically confirming CC1's own prediction ("CC1's per-domain family
+   would likely surface a small number of lor_2021 discoveries"). This is
+   itself evidence the original pooled-only zero was suppression-by-
+   conservatism, not an absence of amenity clustering, exactly as geo
+   sign-off CC2 argued. ANY future G2 methodology page or site content
+   consuming `mart_poi_oa_hotspots` MUST still disclose that (a) the
+   pooled-secondary variant under-detects by design (wider family, more
+   conservative) and (b) these Gi* results are NOT temporal/change claims
+   regardless of FDR variant (they inherit the C3 completeness-
+   contamination caveat -- the 2008-2020 vs 2021-2026 asymmetry is itself
+   partly an OSM-coverage-maturation artifact, not purely neighbourhood
+   change) -- mirrors the H1 domain condition already on record. See
+   `docs/methodology/OA-D3c-getis-ord-geo-signoff.md` CC2 for the original
+   empirical diagnosis this note extends.
+
+8. NaN-z / FLOOR-p GUARD (NZ1, #290, docs/methodology/OA-D3c-followup-geo-
+   signoff.md): degenerate all-zero-stock domain-years (confirmed:
+   `poi_domain_h` in Vacancy/Office/Services, `snapshot_year` 2008-2013,
+   `lor_pre2021`, both PLR and BZR) have no variance for Gi* to compute a
+   statistic from, so esda's `G_Local` returns `z = NaN` for every cell --
+   but esda still emits a floor `p_sim = 0.001` rather than `NaN` alongside
+   it. `benjamini_hochberg()` only excludes NaN *p*, not NaN *z*, so this
+   bogus non-NaN p was leaking degenerate cells into the BH FDR pool and
+   could surface `gi_star_fdr_significant = TRUE` for a cell with no valid
+   statistic (never reaching the published mart -- the sparse-stock join
+   drops these rows first -- but visible to any direct `stg_oa_getis_ord`
+   consumer). Fixed at the source in `run_gi_star_for_scope`: when
+   `gi.Zs[i]` is NaN, `gi_star_p` is forced to NaN too, before either FDR
+   family runs, so these cells are excluded from both the primary
+   per-domain and the pooled-secondary correction exactly like any other
+   NaN-p unit in this pipeline (`gi_star_p_fdr` stays NaN,
+   `*_fdr_significant` naturally evaluates False). See the geo-DS
+   re-review's NZ1 finding for the empirical diagnosis this note
+   operationalizes.
 
 OUTPUT: data/analysis/oa_getis_ord/oa_getis_ord_{city_code}_{area_vintage}_
 {area_level}.parquet (gitignored, deterministically rebuilt). Read by
@@ -486,19 +556,36 @@ def run_gi_star_for_scope(
                 continue
 
             for i, area_code in enumerate(ordered_codes):
-                # esda's two-sided p_sim (alternative="two-sided") is computed by
-                # esda.significance._permutation_significance's symmetric
-                # percentile-tail-count formula, (n_outside + 1) / (permutations + 1)
-                # -- not by doubling a one-sided value (the G_Local attribute
-                # docstring's "multiplied by 2" wording is stale relative to the
-                # installed esda version's actual implementation). Under ties in
-                # the permutation reference distribution -- common with sparse,
-                # zero-heavy domain_stock_local -- this count-based formula can
-                # push n_outside above the permutation count, yielding p_sim > 1.0
-                # (observed up to ~1.10 empirically for this dataset, reproduced
-                # directly against esda.G_Local on real data during code review).
-                # A p-value cannot exceed 1 by definition -- clip at the source.
-                p_sim = min(float(gi.p_sim[i]), 1.0)
+                z_val = float(gi.Zs[i])
+                if np.isnan(z_val):
+                    # NZ1 (#290, docs/methodology/OA-D3c-followup-geo-signoff.md): for
+                    # degenerate all-zero-stock domain-years (e.g. Vacancy/Office/Services
+                    # 2008-2013 at lor_pre2021, both PLR and BZR -- no variance for Gi* to
+                    # compute a statistic from), esda's G_Local returns z=NaN but still
+                    # emits a floor p_sim=0.001 rather than NaN. benjamini_hochberg() only
+                    # drops NaN *p*, so this bogus non-NaN p was leaking a degenerate cell
+                    # into the BH FDR pool and could surface gi_star_fdr_significant=TRUE
+                    # for a cell with no valid statistic. Per the geo-DS re-review's NZ1
+                    # recommendation: when z is NaN, force p to NaN too, so it is excluded
+                    # from the FDR pool (both the primary per-domain and the pooled
+                    # secondary correction) exactly like any other NaN-p unit elsewhere in
+                    # this pipeline -- p_fdr stays NaN and *_significant naturally
+                    # evaluates False (NaN comparisons are always False), never TRUE.
+                    p_sim = float("nan")
+                else:
+                    # esda's two-sided p_sim (alternative="two-sided") is computed by
+                    # esda.significance._permutation_significance's symmetric
+                    # percentile-tail-count formula, (n_outside + 1) / (permutations + 1)
+                    # -- not by doubling a one-sided value (the G_Local attribute
+                    # docstring's "multiplied by 2" wording is stale relative to the
+                    # installed esda version's actual implementation). Under ties in
+                    # the permutation reference distribution -- common with sparse,
+                    # zero-heavy domain_stock_local -- this count-based formula can
+                    # push n_outside above the permutation count, yielding p_sim > 1.0
+                    # (observed up to ~1.10 empirically for this dataset, reproduced
+                    # directly against esda.G_Local on real data during code review).
+                    # A p-value cannot exceed 1 by definition -- clip at the source.
+                    p_sim = min(float(gi.p_sim[i]), 1.0)
                 year_rows.append(
                     {
                         "city_code": city_code,
@@ -508,7 +595,7 @@ def run_gi_star_for_scope(
                         "snapshot_year": int(year),
                         "poi_domain_h": domain,
                         "domain_stock_local": float(y_values[i]),
-                        "gi_star_z": float(gi.Zs[i]),
+                        "gi_star_z": z_val,
                         "gi_star_p": p_sim,
                         "gi_star_w_fallback": area_code in fallback_codes,
                     }
@@ -517,13 +604,33 @@ def run_gi_star_for_scope(
         if not year_rows:
             continue
 
-        # Note 5: BH correction pooled across every (area_code, poi_domain_h)
-        # p-value tested for THIS year (the "one published map" batch).
         year_block = pd.DataFrame(year_rows)
-        year_block["gi_star_p_fdr"] = benjamini_hochberg(year_block["gi_star_p"].values, np)
+
+        # Note 5 (CC1 remediation, #287): PRIMARY FDR family is per-domain,
+        # per-map -- one BH batch per poi_domain_h within this year (the
+        # standard ESDA "one map = one family" unit, Caldas de Castro &
+        # Singer 2006). gi_star_cluster_label is derived from THIS flag.
+        year_block["gi_star_p_fdr"] = np.nan
+        for domain, domain_idx in year_block.groupby("poi_domain_h").groups.items():
+            year_block.loc[domain_idx, "gi_star_p_fdr"] = benjamini_hochberg(
+                year_block.loc[domain_idx, "gi_star_p"].values, np
+            )
         year_block["gi_star_fdr_significant"] = year_block["gi_star_p_fdr"] < ALPHA
 
-        # Note 6: cluster label derived from the FDR-adjusted flag, not raw p.
+        # SECONDARY, labelled conservative variant: BH pooled across every
+        # (area_code, poi_domain_h) p-value tested for THIS year (the
+        # original #280 "one published map across all domains" batch) --
+        # kept as an explicitly-labelled wider/more-conservative column,
+        # NOT the label source (CC1).
+        year_block["gi_star_p_fdr_pooled_alldomains"] = benjamini_hochberg(
+            year_block["gi_star_p"].values, np
+        )
+        year_block["gi_star_fdr_significant_pooled_alldomains"] = (
+            year_block["gi_star_p_fdr_pooled_alldomains"] < ALPHA
+        )
+
+        # Note 6: cluster label derived from the PRIMARY (per-domain) FDR
+        # flag, not raw p and not the pooled secondary variant.
         year_block["gi_star_cluster_label"] = "ns"
         year_block.loc[
             year_block["gi_star_fdr_significant"] & (year_block["gi_star_z"] > 0),

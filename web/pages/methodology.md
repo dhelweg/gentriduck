@@ -242,7 +242,14 @@ We would rather state these plainly than have you discover them by surprise.
   dynamism values from a tiny denominator (a single new business changing their share disproportionately);
   since 2026-07 these are winsorized at ±3 standard deviations before they reach any map, chart, or
   composite score, so one thin-data area cannot visually dominate the rest of the city (the raw,
-  unclipped value remains available for diagnostics).
+  unclipped value remains available for diagnostics). A sharper form of the same effect is that three
+  point-of-interest domains have *no* mapped OSM presence anywhere in Berlin before their tagging
+  onset — Services before 2009, Vacancy before 2012, and Office before 2014 — so their pre-onset
+  years are a left-censoring of the predictor series (the community had not yet begun tagging them),
+  not a real absence of offices, service businesses, or vacant units; these all-zero domain-years are
+  excluded from the hotspot significance testing
+  ([#290](https://github.com/dhelweg/gentriduck/issues/290)) so a coverage gap cannot masquerade as a
+  finding.
 - **Ecological fallacy — aggregate, not individual, statistics.** Every number on this site describes
   a small-area aggregate of thousands of residents. It is not, and cannot be, a statement about any
   specific person, household, or building. Inferring an individual's situation from an area-level
@@ -264,10 +271,74 @@ We would rather state these plainly than have you discover them by surprise.
   and its commercial/demographic correlates; it does not yet measure the land-value/capital mechanism
   (Smith 1979) that economic theories of gentrification put at the centre of the story.
   Bodenrichtwert/Mietspiegel data (§2) is a step toward this, but only as descriptive context so far.
-- **Berlin and Hamburg are not directly comparable.** Both cities are tracked with the same model
-  structure, but their official social-monitoring editions use different observation windows and
-  Hamburg's demographic baseline is thinner (fewer indicators, coarser geography) than Berlin's. A
-  same-named typology stage in the two cities does not represent an identical underlying threshold.
+- **Berlin and Hamburg are not directly comparable — four specific reasons, not a generic caveat.**
+  [H3 (#237)](https://github.com/dhelweg/gentriduck/issues/237) admitted Hamburg's own official
+  Sozialmonitoring Status/Dynamik outcome into the governed index, at Hamburg's Gebiet
+  (`subarea_l2`) grain. Both cities are tracked with the same D1×D2 typology matrix and the same
+  theoretical model (Dangschat 1988), but four concrete differences mean a same-named result in the
+  two cities is not the same underlying measurement:
+  1. **Different observation windows, and a different meaning of "active."** Berlin's official
+     Dynamik-Index is built over a **2-year** window; Hamburg's over a **3-year** window. This is
+     not just a numeric-scale difference — it changes *what counts as* "active-gentrification" in
+     each city's own source methodology: a Hamburg Gebiet coded "improving" over 3 years captures
+     slower-moving change than a Berlin PLR coded "improving" over 2 years, so the same typology
+     label encodes a different underlying velocity threshold in each city's own classification.
+  2. **Hamburg's demographic (D4/EWR) composite is thinner, and misses migration-driven signal.**
+     Where Berlin's composite uses 5 indicators, Hamburg's uses only 3, substituting
+     `unemployment_share` for two indicators Hamburg's ingested source does not carry:
+     **`migration_background_share`** and **`residence_duration_5y_share`**. This is a real
+     sensitivity loss, not just "thinner data" — migration background and length of residence are
+     the closest available proxies for the "who is moving in/out" dynamic Dangschat's succession
+     model is partly about, so a Hamburg "vulnerable" classification under this composite is
+     systematically **less able to detect migration-driven succession** than Berlin's. (This
+     composite does not itself appear in the governed `gentrification_index` mart admitted by H3 —
+     `own_idx_class`/`own_idx_class_bi` are hard-`NULL` for every Hamburg row there — but it is
+     disclosed here because it is the D4 covariate referenced by the Hamburg C-series validation
+     below and elsewhere on this site.)
+  3. **Hamburg's D4 covariate is coarser-grained than its own D1/D2/D3 data.** Hamburg's
+     demographic composite is only published at **Stadtteil** grain (~104–105 areas) and is
+     uniformly inherited down to Hamburg's ~941–945 finer **statistisches Gebiete** (`subarea_l2`)
+     — every Gebiet within one Stadtteil shares an identical D4 value. Berlin has no such ceiling:
+     its D1 (status), D2 (dynamism), and D3 (POI/commercial) dimensions all retain full
+     Gebiet-equivalent (PLR) resolution — and so do Hamburg's own D1/D2/D3; only Hamburg's D4
+     demographic covariate is coarsened this way. A uniform shading across several neighbouring
+     Hamburg Gebiete on any demographic view is a resolution artefact of this inheritance, not
+     measured sub-Stadtteil homogeneity.
+  4. **A same-named typology stage is not directly equivalent across the two cities.** Any
+     narrative, chart, or headline that names a Hamburg-coded typology stage (e.g.
+     "active-gentrification") alongside a Berlin-coded one must carry a one-line disclosure —
+     **"not directly equivalent — see methodology"** — rather than presenting the two as the same
+     measurement. This applies to any future public write-up, not only to this page.
+
+  **Substantive basis for admitting Hamburg at all.** These four points are disclosed limitations,
+  not reasons to withhold Hamburg — the admission rests on a re-verified, Hamburg-specific
+  validation series, not mere structural parallelism with Berlin:
+  [C1/#158](https://github.com/dhelweg/gentriduck/issues/158) (OSM completeness-bias correction
+  re-fit on Hamburg's own 2008–2026 coverage curve), [C2/#159](https://github.com/dhelweg/gentriduck/issues/159)
+  (trajectory-window thresholds re-derived for Hamburg's annual cadence, holding panel span
+  constant so the ordinal step means the same *rate* in both cities), [C3/#160](https://github.com/dhelweg/gentriduck/issues/160)
+  (an independent re-run of the lead-lag hypotheses on Hamburg's own annual panel — an honest,
+  correctly-signed-but-under-powered partial null, not a confirmation or refutation),
+  [C4/#161](https://github.com/dhelweg/gentriduck/issues/161) (the Gebiet↔Stadtteil crosswalk
+  match-rate guard behind point 3 above, closed at 98.6%), [C5/#203](https://github.com/dhelweg/gentriduck/issues/203)
+  (Wohnlage/Mietenspiegel-input and displacement-zone integration, confirming Hamburg's *soziale
+  Erhaltungsverordnung* is the same §172 BauGB instrument as Berlin's Milieuschutz), and
+  [C6/#215](https://github.com/dhelweg/gentriduck/issues/215) (confirming the Hamburger
+  Mietenspiegel is the same §558 BGB *ortsübliche-Vergleichsmiete* instrument as Berlin's, with the
+  same Holm-2010 Bestandsmiete-lagging bias). See
+  [H1-domain-signoff.md](https://github.com/dhelweg/gentriduck/blob/main/docs/epic-h/H1-domain-signoff.md),
+  [H3-geo-signoff.md](https://github.com/dhelweg/gentriduck/blob/main/docs/epic-h/H3-geo-signoff.md),
+  and [H3-domain-signoff.md](https://github.com/dhelweg/gentriduck/blob/main/docs/epic-h/H3-domain-signoff.md)
+  for the full reasoning behind each of the four points above.
+- **No pooled Berlin↔Hamburg ranking or numeric differencing, anywhere on this site — a structural
+  rule, not a footnote.** Following the same principle already applied to the Bezirk/PGR/BZR
+  coarse-index question above ([#267](https://github.com/dhelweg/gentriduck/issues/267)): this site
+  never offers a shared leaderboard, a shared numeric colour scale, or a "which city is more
+  gentrified" comparison across Berlin and Hamburg. Each city's `status_index`/`dynamism_index` is
+  read only within its own official Sozialmonitoring/MSS classification — point 1 above is exactly
+  why averaging or subtracting them across cities would be misleading, not merely inconvenient.
+  Hamburg's data pages live on their own separate routes ([`/hamburg/…`](/hamburg)) with their own
+  maps and colour scales, never merged into a Berlin view or a shared cross-city component.
 - **Small samples and no multiple-comparison correction** in the directional statistical tests behind
   this model. Results should be read as directional indicators, consistent with a hypothesis, not as
   confirmatory proof.
@@ -492,6 +563,7 @@ project's public GitHub repository:
 - [Offering Advantage — modes, scales & dominance](/methodology-oa-modes) — the dedicated page for OA's nine calculation methods, four spatial scales, and the within-group dominance construct (ADR-0024), extending the faithful/improved comparison in §7
 - B1 displacement/affordability sign-offs (§2): [Milieuschutz geo](https://github.com/dhelweg/gentriduck/blob/main/docs/methodology/B1-milieuschutz-geo-signoff.md) / [domain](https://github.com/dhelweg/gentriduck/blob/main/docs/methodology/B1-milieuschutz-domain-signoff.md), [rent-pressure geo](https://github.com/dhelweg/gentriduck/blob/main/docs/methodology/B1-rent-pressure-geo-signoff.md) / [domain](https://github.com/dhelweg/gentriduck/blob/main/docs/methodology/B1-rent-pressure-domain-signoff.md), [turnover geo](https://github.com/dhelweg/gentriduck/blob/main/docs/methodology/B1-turnover-geo-signoff.md) / [domain](https://github.com/dhelweg/gentriduck/blob/main/docs/methodology/B1-turnover-domain-signoff.md)
 - Coarse-grain (BZR/PGR/Bezirk) index-value decline (§6): [geo-data-scientist decision](https://github.com/dhelweg/gentriduck/blob/main/docs/epic-i/I-coarse-index-geo-decision.md) / [domain-expert decision](https://github.com/dhelweg/gentriduck/blob/main/docs/epic-i/I-coarse-index-domain-decision.md)
+- Hamburg admission (§6): [H1 geo](https://github.com/dhelweg/gentriduck/blob/main/docs/epic-h/H1-geo-signoff.md) / [H1 domain](https://github.com/dhelweg/gentriduck/blob/main/docs/epic-h/H1-domain-signoff.md) sign-offs (pipeline wiring, the four publication conditions restated in §6 above), [H3 geo](https://github.com/dhelweg/gentriduck/blob/main/docs/epic-h/H3-geo-signoff.md) / [H3 domain](https://github.com/dhelweg/gentriduck/blob/main/docs/epic-h/H3-domain-signoff.md) sign-offs (the #237 admission decision itself), and the Hamburg C-series validation re-fits: [C1/#158 geo](https://github.com/dhelweg/gentriduck/blob/main/docs/epic-h/158-hc1-geo-signoff.md) / [domain](https://github.com/dhelweg/gentriduck/blob/main/docs/epic-h/158-hc1-domain-signoff.md), [C2/#159 geo](https://github.com/dhelweg/gentriduck/blob/main/docs/epic-h/159-hc2-geo-signoff.md) / [domain](https://github.com/dhelweg/gentriduck/blob/main/docs/epic-h/159-hc2-domain-signoff.md), [C3/#160 geo](https://github.com/dhelweg/gentriduck/blob/main/docs/epic-h/160-hc3-geo-signoff.md) / [domain](https://github.com/dhelweg/gentriduck/blob/main/docs/epic-h/160-hc3-domain-signoff.md), [C5/#203 geo](https://github.com/dhelweg/gentriduck/blob/main/docs/epic-h/203-hc5-geo-signoff.md) / [domain](https://github.com/dhelweg/gentriduck/blob/main/docs/epic-h/203-hc5-domain-signoff.md), [C6/#215 geo](https://github.com/dhelweg/gentriduck/blob/main/docs/epic-h/215-hc6-geo-signoff.md) / [domain](https://github.com/dhelweg/gentriduck/blob/main/docs/epic-h/215-hc6-domain-signoff.md)
 
 See also the [home page](/) for the current index, [time-series](/berlin/time-series) for per-area
 trajectories, [maps](/berlin/maps) for a citywide choropleth, [area detail](/berlin/area-detail) for

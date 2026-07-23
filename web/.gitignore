@@ -9,3 +9,6 @@ static/data/*
 .vscode/settings.json
 .env
 .evidence/meta
+# #292: Evidence auto-generates local telemetry/profile state here on every `npm run`
+# (e.g. .evidence/customization/.profile.json) -- not a build artefact worth committing.
+.evidence/customization

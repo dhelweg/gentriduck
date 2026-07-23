@@ -650,7 +650,7 @@ def main(argv: Optional[list[str]] = None) -> int:
 
 def _write_manifest(out_dir: Path) -> None:
     """ADR-0016: record this source's current on-disk outputs in the committed manifest."""
-    found = existing_outputs(out_dir, ["wohnlage_*.parquet"])
+    found = existing_outputs(out_dir, ["wohnlage_[0-9][0-9][0-9][0-9].parquet"])
     if not found:
         return
     write_manifest_entry(

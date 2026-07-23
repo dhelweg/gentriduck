@@ -64,8 +64,11 @@
 --
 -- Grain: one row per (city_code, area_level, area_code, area_vintage,
 -- reference_year). area_level in ('plr', 'bzr', 'pgr', 'bezirk', 'ortsteil').
--- Berlin only (city_code='BER') -- Hamburg parity is explicitly deferred to
--- after H3 (#237) per the I19 ticket.
+-- Berlin only (city_code='BER') -- H3 (#237) admitted Hamburg into
+-- gentrification_index only (docs/epic-h/H3-geo-signoff.md,
+-- H3-domain-signoff.md); this display mart of EWR/D4 descriptive indicators
+-- remains out of scope for that admission (H3 condition 4) and Hamburg parity
+-- here is still deferred to a future ticket per the I19 ticket.
 --
 -- Graceful degradation: returns zero rows when int_ewr_demographics_wide has
 -- no rows.

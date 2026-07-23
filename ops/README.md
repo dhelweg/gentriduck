@@ -190,6 +190,26 @@ fresh restart just re-reconciles and resumes — losing a wedged session costs n
 The script also **preflights** (needs `claude`/`git`/`gh` + a real gentriduck checkout) and **refuses
 to start a second instance** of the same Remote Control session, so two PMs can't race the board.
 
+### Cross-channel claim check (`check-ticket-claim.sh`, #286)
+
+The single-instance guard above only stops two **local** tmux loops on the same machine from
+racing the board — it can't see a **cloud/remote** Claude Code session (claude.ai/code web/mobile)
+working the same board concurrently. That gap caused a real incident (2026-07-18): a local devmode
+session and a separate cloud session both independently implemented the same three tickets before
+either pushed, requiring a manual merge and de-duplicated methodology sign-offs (see
+[`../docs/lessons/concurrent-session-git-divergence.md`](../docs/lessons/concurrent-session-git-divergence.md)).
+
+`ops/check-ticket-claim.sh <issue-number> [claim]` gives **any** session (local devmode, headless
+overnight, or cloud/remote) a cheap `gh`-only pre-pickup check, run automatically as devmode step 4:
+
+- checks for an existing `feature/<n>-*`/`fix/<n>-*` remote branch (someone's mid-implementation);
+- checks for a recent (<6h, `CLAIM_STALE_HOURS`) `Claimed by <session> at <timestamp>` issue comment
+  from a *different* `GENTRIDUCK_SESSION_ID`;
+- exits `1` (treat like `blocked` — skip to the next unblocked ticket) if either hits, `0` if free;
+- with the `claim` argument, posts its own claim comment once a session actually starts the ticket.
+
+No new tool/service — it's `git ls-remote` + `gh issue comment`, so no ADR is needed.
+
 ### Tuning
 
 - Edit the `PROMPT` in the script to change what "next-best task" and the human-gate rules
@@ -222,6 +242,24 @@ same three Node steps as a reusable poe task, so a mart/schema change that silen
 Evidence build gets a cheap local signal before it reaches the release routine above — run it
 after `poe refresh` any time a model or schema touching a published mart changes, not just at
 weekly release time.
+
+**Resync a second/stale machine (#292):** `data/` is gitignored, so nothing about the ingested
+warehouse syncs via `git` — a second machine (or a first machine whose `data/gentriduck.duckdb`
+predates a seed schema change, e.g. #240's `oa_leaf_area_level` column) needs its own full
+pipeline run. Use `resync` instead of `refresh` there:
+
+```bash
+uv run poe resync       # same pipeline as `refresh`, but --full-refresh + the OA two-pass
+```
+
+`resync` differs from `refresh` in two ways: (1) its first `dbt build` passes `--full-refresh`,
+which recreates relations instead of patching them — plain `build`'s seed truncate+copy can't
+absorb a new seed column under duckdb ≥1.5 ("CSV sniffing" error) on a stale warehouse, and per
+#248 `dbt build` isn't the release-time bottleneck (~5 min vs. ingest's much longer run) so the
+extra cost is cheap; and (2) both tasks now correctly run the `oa-getis-ord` (#280, ADR-0025)
+analysis→mart two-pass — `poe build` alone previously left `mart_poi_oa_hotspots` empty. Use
+plain `refresh` on the primary, regularly-refreshed machine; reach for `resync` only when
+bringing a second machine current or recovering from a schema-drift build failure.
 
 **Build-time trend (#248 item 3):** `poe web-build`'s final step now runs through
 `ops/time_web_build.py` instead of a bare `npm run build` — a stdlib-only timer that appends one

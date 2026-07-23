@@ -41,7 +41,7 @@
     )
 }}
 
-{% set wohnlage_glob = raw_path("berlin/price_rent/wohnlage_*.parquet") %}
+{% set wohnlage_glob = raw_path("berlin/price_rent/wohnlage_[0-9][0-9][0-9][0-9].parquet") %}
 {%- set _src_raw_berlin_wohnlage = source("raw_berlin", "wohnlage") -%}
 
 {% if execute %}
