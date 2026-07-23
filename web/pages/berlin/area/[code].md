@@ -952,6 +952,94 @@ group by poi_domain_h
 </Alert>
 {/if}
 
+## Within-group dominance
+
+<!--
+  #298 (I21-d): relocates the "Live: within-group dominance" widget from /methodology-oa-modes §5
+  onto this page -- display-only, per docs/epic-i/I21-ia-restructure-scoping.md §5.3 (already-decided,
+  ADR-0024 D3). mart_poi_dominance is PLR-grain (this page's own grain), so this is the one area
+  page where the mart's own row(s) -- not a children-listing workaround -- are the direct relocation
+  target (contrast pages/berlin/area/bezirk|bzr|pgr|ortsteil/[code].md, which have no PLR-grain
+  `${params.code}` and therefore list constituent PLRs instead). `is_public_safe = true` is restated
+  here (defence in depth -- already filtered at the source layer,
+  web/sources/gentriduck_marts/mart_poi_dominance.sql) so the cuisine-typed internal-study-only
+  group is never an option; `is_thin_base` rows are flagged, never dropped (anti-erasure, OA-D0
+  domain sign-off Condition B.4).
+-->
+
+**Within-group dominance** asks a different question from Offering Advantage: within a curated
+group of businesses, is one type dominating, or is the mix diverse? ("Are fast-food places crowding
+out sit-down restaurants within gastronomy?") The figures below are **sign-blind** — a high
+concentration reading says only that this area's mix is concentrated in the named leading type,
+never whether that is an up-market or down-market shift; read it alongside the status/trajectory
+section above, never in isolation. See the [Offering Advantage decoder](/methodology-oa-modes) §5
+for the full methodology, ethics note, and why cuisine-typed dominance never appears on any public
+page (this table included).
+
+```sql dominance_area
+select
+    dominance_group,
+    case dominance_group
+        when 'gastronomy_category' then 'Gastronomy (Café / Restaurant / Fast Food)'
+        when 'retail_category' then 'Retail (12 categories)'
+        when 'entertainment_category' then 'Entertainment (Bar / Nightlife / Culture / Leisure)'
+        when 'wellness_curated' then 'Wellness / fitness (curated cross-domain group)'
+        else dominance_group
+    end as group_label,
+    hhi,
+    top_share,
+    top_child,
+    top_child_offering_tier,
+    n_children,
+    group_stock_local,
+    is_thin_base
+from gentriduck_marts.mart_poi_dominance
+where
+    city_code = 'BER'
+    -- Defence-in-depth restatement of the source-layer filter (mart_poi_dominance.sql already
+    -- filters is_public_safe = true and city_code = 'BER') -- same pattern as the
+    -- /methodology-oa-modes original this section relocates from.
+    and is_public_safe = true
+    -- area_vintage/weight_variant pinned to avoid returning up to 4 rows per business group
+    -- (mart_poi_dominance's own grain includes both) -- same current-boundary, unweighted
+    -- convention used everywhere else on this site; see pages/berlin/area/bezirk/[code].md's
+    -- header comment for the #298 finding this fixes (the pre-relocation /methodology-oa-modes
+    -- widget did not filter either, and silently mixed vintages/weightings into one ranking).
+    and area_vintage = 'lor_2021'
+    and weight_variant = 'standard'
+    and area_code = '${params.code}'
+    and snapshot_year = (
+        select max(snapshot_year)
+        from gentriduck_marts.mart_poi_dominance
+        where
+            city_code = 'BER' and is_public_safe = true and area_code = '${params.code}'
+            and area_vintage = 'lor_2021' and weight_variant = 'standard'
+    )
+order by hhi desc
+```
+
+{#if dominance_area.filter((r) => !r.is_thin_base).length > 0}
+<DataTable data={dominance_area.filter((r) => !r.is_thin_base)} rows=4 emptySet="warn" emptyMessage="No within-group dominance data for this area.">
+    <Column id=group_label title="Business group"/>
+    <Column id=hhi title="HHI (higher = more concentrated)" fmt="num2"/>
+    <Column id=top_share title="Top-share" fmt="pct1"/>
+    <Column id=top_child title="Leading type"/>
+    <Column id=n_children title="Types in this group here"/>
+    <Column id=group_stock_local title="Group's total POI count here" fmt="num0"/>
+</DataTable>
+{:else}
+<Alert status="warning">No within-group dominance data for this area (e.g. an uninhabited planning
+area, or too few mapped places in every curated group here).</Alert>
+{/if}
+
+{#if dominance_area.some((r) => r.is_thin_base)}
+<Alert status="info">
+  {dominance_area.filter((r) => r.is_thin_base).length} of {dominance_area.length} business group(s)
+  here are too thinly observed to characterize their mix confidently (fewer mapped places than this
+  group's own minimum-base rule) — omitted from the table above, never shown as "commercially dead."
+</Alert>
+{/if}
+
 ## Land value & estimated rent
 
 <Alert status="info">
