@@ -57,6 +57,22 @@ breadcrumb: "select area_name as breadcrumb from gentriduck_marts.dim_area_geome
   same dominant-overlap crosswalk (mart_ortsteil_plr_crosswalk.is_dominant_ortsteil) the poi_mix/
   children queries above already use, not a code-prefix substr() -- and the section is gated behind
   the same `hasChildren` enclave guard as every other PLR-rollup section on this page.
+
+  I21-f (#300): template-consolidation pass -- reorders this page's sections into the canonical
+  per-level order (docs/epic-i/I21-ia-restructure-scoping.md §2.2): "Neighbourhood stage mix" (now
+  "## Social status & trajectory", row 2) moves up to sit right after the Hero/breadcrumb/enclave
+  guard, gains a modal/heterogeneity-flag takeaway sentence (same pattern as the Bezirk/BZR/PGR
+  pages, see pages/berlin/area/bezirk/[code].md's header comment), and becomes this page's single
+  above-the-fold visual. "Mapped places" is wrapped under a "## Commercial mix & Offering Advantage"
+  umbrella heading (no OA subsection, per this file's own note above on why OA-arealevel doesn't
+  cover Ortsteil). "Within-group dominance across neighbourhoods here" is renamed "## Within-group
+  dominance" and "Population & composition" is renamed "## People & structure" (canonical naming, no
+  content change) -- both relocated to rows 4/5. The children table is wrapped under a new "## Where
+  this area sits" heading (row 8), and new "## Honest caveats" / "## Further reading" sections (rows
+  9/10) are added -- this page previously had neither, unlike the PLR template. No Amenities section
+  exists at Ortsteil grain (row 6) -- flagged as a follow-up gap in this ticket's final report, not
+  built here (out of this ticket's "reorder, not new content" scope). Gate: web-engineer-reviewer
+  only (structure/order + one small modal-flag sentence, no methodology).
 -->
 
 ```sql ortsteil_name
@@ -257,6 +273,23 @@ limit 15
   $: hasChildren = child_count?.[0] && Number(child_count[0].n) > 0;
   $: childrenRows = Array.isArray(children) ? children : Array.from(children ?? []);
   $: anyLowConfidence = childrenRows.some((r) => Number(r.overlap_frac_of_plr) < 0.8);
+
+  // I21-f (#300): "Social status & trajectory" row-2 takeaway -- same modal/heterogeneity-flag
+  // pattern as pages/berlin/area/bezirk/[code].md's own script (see that file's header comment for
+  // the full rationale). Gated on hasChildren -- the two never-dominant enclaves have zero rows in
+  // stage_mix_summary too, same as every other PLR-rollup section on this page.
+  $: mssMix = stage_mix_summary?.[0];
+  $: mssTakeaway = (!hasChildren || !mssMix || mssMix.n_total == null || Number(mssMix.n_total) === 0)
+    ? null
+    : (() => {
+        const nTotal = Number(mssMix.n_total);
+        const nAdvanced = Number(mssMix.n_advanced || 0);
+        const topShare = mssMix.top_stage_share != null ? Number(mssMix.top_stage_share) : null;
+        const majorityClause = (topShare != null && topShare > 0.5)
+          ? `<b>${mssMix.top_stage}</b> is the only stage holding a majority (${Math.round(topShare * 100)}%)`
+          : 'no single stage holds a majority';
+        return `<b>${nAdvanced}</b> of <b>${nTotal}</b> neighbourhoods (Planungsräume) here are classified <b>active-gentrification</b> or <b>pioneer-signal</b>; ${majorityClause} — a distribution across this Ortsteil's own (dominantly-assigned) neighbourhoods, never a single re-scored gentrification-index value for the Ortsteil itself.`;
+      })();
 </script>
 
 <Hero compact eyebrow="Chapter 3 — The Evidence" title="{ortsteil_name[0] ? ortsteil_name[0].area_name : 'Ortsteil'} — Ortsteil profile" lede="Population, composition, and neighbourhood-stage mix for this Ortsteil (Stadtteil), rolled up from its dominantly-assigned constituent Planungsräume — never a re-scored index at this grain." />
@@ -289,38 +322,66 @@ limit 15
 </Alert>
 {/if}
 
-## Population & composition
 
-{#if hasChildren}
-<BigValue data={demographics} value=residents_total title="Residents (latest EWR year)" fmt="num0" emptySet="warn"/>
-<BigValue data={demographics} value=n_plr title="Constituent neighbourhoods (dominant PLR assignment)" emptySet="warn"/>
-<BigValue data={demographics} value=mean_age_years title="Mean age (years)" fmt="num1" emptySet="warn"/>
-
-{#if demographics && demographics[0] && demographics[0].any_indicator_suppressed}
-<Alert status="warning">
-  At least one constituent neighbourhood had a suppressed EWR cell (small-count privacy rule) —
-  this Ortsteil's figures may understate the true total.
-</Alert>
-{/if}
-
-<BarChart data={age_mix} x=age_band y=share title="Age structure, {ortsteil_name[0] ? ortsteil_name[0].area_name : 'this Ortsteil'}" yFmt="pct0"/>
-{:else}
-<Alert status="info">No population/composition figures for this enclave — see the note above.</Alert>
-{/if}
-
-## Neighbourhood stage mix
+## Social status & trajectory
 
 Every neighbourhood (Planungsraum) dominantly assigned to this Ortsteil, grouped by its current
 gentrification stage — a **count**, not a re-scored Ortsteil-level index. See the
-[methodology page](/methodology) for what each stage means.
+[methodology page](/methodology) for what each stage means; see
+`docs/epic-i/I-coarse-index-geo-decision.md` / `docs/epic-i/I-coarse-index-domain-decision.md` for
+why this project reports a distribution here, never a single re-scored index value, at any grain
+coarser than a single Planungsraum.
+
+<!-- `stage_mix` itself is already declared in this page's upfront query block above (not
+     re-declared here -- Evidence sql-fence names must be unique per page); only the new
+     `stage_mix_summary` rollup is added here, reusing the same mart/filter. -->
+
+```sql stage_mix_summary
+-- Modal stage + heterogeneity flag, computed from the SAME stage_mix rows above (no new query
+-- logic) -- see pages/berlin/area/bezirk/[code].md's matching query for the full rationale. Runs
+-- unconditionally (#255 precedent); returns zero rows for the two never-dominant enclaves, gated at
+-- display time only (hasChildren, in this page's <script> block).
+with
+    mix as (
+        select
+            typology_stage as stage,
+            n_plr as n_areas
+        from gentriduck_marts.mart_ortsteil_plr_stage_mix
+        where city_code = 'BER' and ortsteil_area_code = '${params.code}'
+          and period_yyyymm = (
+              select max(period_yyyymm) from gentriduck_marts.mart_ortsteil_plr_stage_mix
+              where city_code = 'BER'
+          )
+    ),
+    totals as (select sum(n_areas) as n_total from mix),
+    top as (select stage, n_areas from mix order by n_areas desc limit 1),
+    advanced as (
+        select coalesce(sum(n_areas), 0) as n_advanced
+        from mix
+        where stage in ('active-gentrification', 'pioneer-signal')
+    )
+select
+    t.n_total,
+    top.stage as top_stage,
+    top.n_areas as top_stage_n,
+    (top.n_areas::double / nullif(t.n_total, 0)) as top_stage_share,
+    a.n_advanced,
+    (a.n_advanced::double / nullif(t.n_total, 0)) as advanced_share
+from totals as t cross join top cross join advanced as a
+```
 
 {#if hasChildren}
+{#if mssTakeaway}
+<p>{@html mssTakeaway}</p>
+{/if}
 <BarChart data={stage_mix} x=stage y=n_areas title="Neighbourhoods by stage, {ortsteil_name[0] ? ortsteil_name[0].area_name : 'this Ortsteil'}" swapXY=true/>
 {:else}
 <Alert status="info">No neighbourhood-stage mix for this enclave — see the note above.</Alert>
 {/if}
 
-## Mapped places
+## Commercial mix & Offering Advantage
+
+### Mapped places
 
 {#if hasChildren}
 <BarChart data={poi_mix} x=poi_category_h y=poi_count title="Mapped places by category (latest snapshot), {ortsteil_name[0] ? ortsteil_name[0].area_name : 'this Ortsteil'}" swapXY=true/>
@@ -328,7 +389,8 @@ gentrification stage — a **count**, not a re-scored Ortsteil-level index. See 
 <Alert status="info">No mapped-place breakdown for this enclave — see the note above.</Alert>
 {/if}
 
-## Within-group dominance across neighbourhoods here
+
+## Within-group dominance
 
 {#if hasChildren}
 <Alert status="info">
@@ -383,7 +445,30 @@ type — never, by itself, whether that concentration is an up-market or down-ma
 against each neighbourhood's own status/dynamism trajectory before drawing any conclusion. See the
 [Offering Advantage decoder](/methodology-oa-modes) for the full dominance methodology.
 
-## Neighbourhoods (Planungsräume) dominantly assigned to this Ortsteil
+
+## People & structure
+
+{#if hasChildren}
+<BigValue data={demographics} value=residents_total title="Residents (latest EWR year)" fmt="num0" emptySet="warn"/>
+<BigValue data={demographics} value=n_plr title="Constituent neighbourhoods (dominant PLR assignment)" emptySet="warn"/>
+<BigValue data={demographics} value=mean_age_years title="Mean age (years)" fmt="num1" emptySet="warn"/>
+
+{#if demographics && demographics[0] && demographics[0].any_indicator_suppressed}
+<Alert status="warning">
+  At least one constituent neighbourhood had a suppressed EWR cell (small-count privacy rule) —
+  this Ortsteil's figures may understate the true total.
+</Alert>
+{/if}
+
+<BarChart data={age_mix} x=age_band y=share title="Age structure, {ortsteil_name[0] ? ortsteil_name[0].area_name : 'this Ortsteil'}" yFmt="pct0"/>
+{:else}
+<Alert status="info">No population/composition figures for this enclave — see the note above.</Alert>
+{/if}
+
+
+## Where this area sits
+
+### Neighbourhoods (Planungsräume) dominantly assigned to this Ortsteil
 
 {#if hasChildren}
 <DataTable data={children} rows=20 link=area_link>
@@ -405,6 +490,36 @@ against each neighbourhood's own status/dynamism trajectory before drawing any c
 {:else}
 <Alert status="info">No constituent neighbourhoods for this enclave — see the note above.</Alert>
 {/if}
+
+## Honest caveats
+
+- **This page never shows a single re-scored gentrification-index value for this Ortsteil** — only
+  the distribution of its dominantly-assigned constituent neighbourhoods' (Planungsräume) own
+  stages. A population-weighted average of ordinal stage/Dynamik classes would violate this
+  project's own "never average ordinal class codes" rule and would describe no actual neighbourhood
+  while masking exactly the frontier heterogeneity gentrification tracking depends on (see
+  `docs/epic-i/I-coarse-index-geo-decision.md` / `docs/epic-i/I-coarse-index-domain-decision.md`,
+  both **decline** the coarse-grain point value).
+- **Ortsteil rollups use a dominant area-overlap assignment, not a code-prefix match** — a
+  Planungsraum rolls entirely into the one Ortsteil holding the largest share of its area, so a
+  neighbourhood only partially within this Ortsteil's boundary can still appear here in full (see
+  the confidence disclosure above whenever it renders).
+- **No Offering Advantage or MSS status/Dynamik estimate is published at Ortsteil grain** —
+  `mart_poi_oa_arealevel`/`mart_mss_area_aggregate` do not cover this non-LOR geography (see this
+  page's own header comment). See any constituent neighbourhood's own page for those figures.
+- Figures on this page are **sums and population-weighted averages** under the dominant-overlap
+  assignment, never observed at the Ortsteil level itself. Land value and estimated rent are only
+  published at the individual-neighbourhood grain.
+- See [methodology & data sources §6](/methodology) for the full list of project-wide limitations
+  (ecological fallacy, no displacement measurement, OSM completeness bias, and more).
+
+## Further reading
+
+See [methodology & data sources](/methodology) for what the index means and why coarser grains are
+reported as distributions rather than a re-scored value, [the full Ortsteil list](/berlin/area/ortsteil)
+for other Ortsteile, or drill into any of this Ortsteil's own neighbourhoods above for the full
+profile, index, and trajectory.
+
 
 ---
 

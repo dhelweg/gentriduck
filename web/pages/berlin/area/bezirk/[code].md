@@ -96,92 +96,44 @@ where bezirk_code = '${params.code}'
   index and trajectory.
 </Alert>
 
-## Population & composition
+<!--
+  I21-f (#300): "Social status & trajectory" section, canonical §2.2 row 2. Reuses the existing
+  stage_mix query verbatim (moved up from further down the page, not re-derived) and adds a
+  `stage_mix_summary` query + a one-line distributional takeaway sentence, computed the same way as
+  the PLR page's portrait sentences (a <script> reactive built from already-published mart columns,
+  no new indicator/weight/normalization). This is the page's single above-the-fold visual + takeaway
+  (§2.2's above-the-fold spec: headline + one-line takeaway + one visual, never a re-scored district
+  claim stacked alongside it).
 
-```sql demographics
-select
-    reference_year,
-    residents_total,
-    age_under18_share,
-    age_18_27_share,
-    age_27_45_share,
-    age_45_65_share,
-    age_65plus_share,
-    mean_age_years,
-    any_indicator_suppressed,
-    n_plr
-from gentriduck_marts.mart_area_demographics
-where city_code = 'BER' and area_level = 'bezirk' and area_code = '${params.code}'
-order by reference_year desc
-limit 1
-```
+  REMOVED here (not just reworded): the previous "Approximate status & change (district-level
+  estimate)" section, which rendered `mart_mss_area_aggregate`'s population-weighted-mean-of-ordinals
+  `typology_stage`/`status_index`/`dynamik_index` as three single BigValues for this district. That
+  section was domain-approved on its own narrow display-fitness question five days *before* this
+  project's own I-coarse-index ticket (#267) directly examined "is a single coarse-grain
+  gentrification-index VALUE defensible at Bezirk/PGR/BZR grain at all" and answered DECLINE on both
+  the geo-DS lane (docs/epic-i/I-coarse-index-geo-decision.md: "must stay an internal MAUP diagnostic
+  only... must NOT be surfaced as a headline value") and the domain lane
+  (docs/epic-i/I-coarse-index-domain-decision.md: "not domain-defensible... erases the invasion-
+  succession frontier heterogeneity that is the entire analytic payload"). That later, more specific
+  ruling directly supersedes the section's earlier approval -- a population-weighted mean of ordinal
+  stage codes rendered as "Estimated stage (district-level)" is precisely the point-value construct
+  both lanes declined, regardless of the "estimated"/"approximate" hedging it carried. Per §5.1 of
+  docs/epic-i/I21-ia-restructure-scoping.md (already-decided, do-not-relitigate): coarse-grain pages
+  show a distribution + modal/heterogeneity flag, never a single re-scored stage/status claim for the
+  area itself. `mart_mss_area_aggregate`/`int_mss_bzr_aggregate` are untouched by this change (still
+  valid as an internal MAUP diagnostic per B10/#120) -- only this page's public rendering of them is
+  removed. Flagged for a domain-expert spot-check before merge given this reverses a previously-
+  shipped, previously-approved section (see this ticket's own final report).
+-->
 
-<BigValue data={demographics} value=residents_total title="Residents (latest EWR year)" fmt="num0" emptySet="warn"/>
-<BigValue data={demographics} value=n_plr title="Constituent neighbourhoods (Planungsräume)" emptySet="warn"/>
-<BigValue data={demographics} value=mean_age_years title="Mean age (years)" fmt="num1" emptySet="warn"/>
+## Social status & trajectory
 
-{#if demographics && demographics[0] && demographics[0].any_indicator_suppressed}
-<Alert status="warning">
-  At least one constituent neighbourhood had a suppressed EWR cell (small-count privacy rule) —
-  this district's figures may understate the true total.
-</Alert>
-{/if}
-
-```sql age_mix
-with latest as (
-    select age_under18_share, age_18_27_share, age_27_45_share, age_45_65_share, age_65plus_share
-    from gentriduck_marts.mart_area_demographics
-    where city_code = 'BER' and area_level = 'bezirk' and area_code = '${params.code}'
-    order by reference_year desc
-    limit 1
-)
-select 'Under 18' as age_band, age_under18_share as share, 1 as sort_order from latest
-union all
-select '18–27', age_18_27_share, 2 from latest
-union all
-select '27–45', age_27_45_share, 3 from latest
-union all
-select '45–65', age_45_65_share, 4 from latest
-union all
-select '65+', age_65plus_share, 5 from latest
-order by sort_order
-```
-
-<BarChart data={age_mix} x=age_band y=share title="Age structure, {bezirk_name[0].bezirk_name}" yFmt="pct0"/>
-
-## Approximate status & change (district-level estimate)
-
-<Alert status="info">
-  This is an <b>approximation</b>, not the Senate's own district classification. It is a
-  population-weighted average of this district's neighbourhood-level status/Dynamik ordinals,
-  rounded — the Senate's own Bezirk figures are computed by re-combining and re-classifying the
-  underlying raw indicators at district grain, which can shift borderline districts into a
-  different class than this estimate shows. Treat this as directional, not authoritative; see the
-  <a href="/methodology">methodology page</a> for the full caveat.
-</Alert>
-
-```sql mss
-select status_index, dynamik_index, typology_stage, n_plr, reference_year
-from gentriduck_marts.mart_mss_area_aggregate
-where city_code = 'BER' and area_level = 'bezirk' and area_vintage = 'lor_2021'
-  and area_code = '${params.code}'
-order by reference_year desc
-limit 1
-```
-
-{#if mss && mss[0]}
-<BigValue data={mss} value=typology_stage title="Estimated stage (district-level)"/>
-<BigValue data={mss} value=status_index title="Estimated status index (1=lower, 4=higher)"/>
-<BigValue data={mss} value=dynamik_index title="Estimated Dynamik index (1=rising pressure, 3=stable)"/>
-{:else}
-<Alert status="warning">No district-level status/Dynamik estimate available for this district.</Alert>
-{/if}
-
-## Neighbourhood stage mix
-
-Every neighbourhood (Planungsraum) in this district, grouped by its current gentrification stage
-— a **count**, not a re-scored district-level index. See the
-[methodology page](/methodology) for what each stage means.
+Every neighbourhood (Planungsraum) in this district is individually classified into one of six
+gentrification stages (see [methodology](/methodology)). This district's own page reports the
+**distribution** of those neighbourhood-level stages — never a single re-scored index value for the
+district itself, since averaging ordinal stage codes across such different neighbourhoods would
+mask exactly the neighbourhood-to-neighbourhood heterogeneity gentrification tracking depends on
+(see "Honest caveats" below).
 
 ```sql stage_mix
 select
@@ -198,9 +150,67 @@ group by all
 order by n_areas desc
 ```
 
+```sql stage_mix_summary
+-- Modal stage + heterogeneity flag, computed from the SAME stage_mix rows above (no new query
+-- logic) -- the "N of M ... no single stage holds a majority" distributional headline §2.2 row 2
+-- requires at context_only grain, in place of a re-scored point value (see header comment).
+with
+    mix as (
+        select
+            coalesce(status_class, 'uninhabited / no data') as stage,
+            count(*) as n_areas
+        from gentriduck_marts.gentrification_index
+        where variant = 'live_data' and area_level = 'plr' and city_code = 'BER'
+          and substr(area_code, 1, 2) = '${params.code}'
+          and period_yyyymm = (
+              select max(period_yyyymm) from gentriduck_marts.gentrification_index
+              where variant = 'live_data' and area_level = 'plr'
+          )
+        group by all
+    ),
+    totals as (select sum(n_areas) as n_total from mix),
+    top as (select stage, n_areas from mix order by n_areas desc limit 1),
+    advanced as (
+        select coalesce(sum(n_areas), 0) as n_advanced
+        from mix
+        where stage in ('active-gentrification', 'pioneer-signal')
+    )
+select
+    t.n_total,
+    top.stage as top_stage,
+    top.n_areas as top_stage_n,
+    (top.n_areas::double / nullif(t.n_total, 0)) as top_stage_share,
+    a.n_advanced,
+    (a.n_advanced::double / nullif(t.n_total, 0)) as advanced_share
+from totals as t cross join top cross join advanced as a
+```
+
+<script>
+  $: mssMix = stage_mix_summary?.[0];
+  $: mssTakeaway = (!mssMix || mssMix.n_total == null || Number(mssMix.n_total) === 0)
+    ? null
+    : (() => {
+        const nTotal = Number(mssMix.n_total);
+        const nAdvanced = Number(mssMix.n_advanced || 0);
+        const topShare = mssMix.top_stage_share != null ? Number(mssMix.top_stage_share) : null;
+        const majorityClause = (topShare != null && topShare > 0.5)
+          ? `<b>${mssMix.top_stage}</b> is the only stage holding a majority (${Math.round(topShare * 100)}%)`
+          : 'no single stage holds a majority';
+        return `<b>${nAdvanced}</b> of <b>${nTotal}</b> neighbourhoods (Planungsräume) here are classified <b>active-gentrification</b> or <b>pioneer-signal</b>; ${majorityClause} — a distribution across this district's own neighbourhoods, never a single re-scored gentrification-index value for the district itself.`;
+      })();
+</script>
+
+{#if mssTakeaway}
+<p>{@html mssTakeaway}</p>
+{:else}
+<Alert status="warning">No neighbourhood-stage data available for this district.</Alert>
+{/if}
+
 <BarChart data={stage_mix} x=stage y=n_areas title="Neighbourhoods by stage, {bezirk_name[0].bezirk_name}" swapXY=true/>
 
-## Mapped places
+## Commercial mix & Offering Advantage
+
+### Mapped places
 
 ```sql poi_mix
 select
@@ -219,7 +229,8 @@ order by poi_count desc
 
 <BarChart data={poi_mix} x=poi_category_h y=poi_count title="Mapped places by category (latest snapshot), {bezirk_name[0].bezirk_name}" swapXY=true/>
 
-## Offering Advantage across the area hierarchy
+
+### Offering Advantage across the area hierarchy
 
 <Alert status="warning">
   <b>Context only — never a Kiez-level claim.</b> A district pools roughly 30–40 very different
@@ -289,7 +300,8 @@ already-published figure this project publishes, not a new statistic. See the
 full roll-up rule, or [this district's neighbourhoods](/berlin/area) for the canonical PLR-grain
 figure.
 
-## Within-group dominance across neighbourhoods here
+
+## Within-group dominance
 
 <Alert status="info">
   <b>Dominance is sign-blind</b> — a high concentration figure says only that a group's mix is
@@ -393,7 +405,63 @@ type — never, by itself, whether that concentration is an up-market or down-ma
 against each neighbourhood's own status/dynamism trajectory before drawing any conclusion. See the
 [Offering Advantage decoder](/methodology-oa-modes) for the full dominance methodology.
 
-## Prognoseräume in this district
+
+## People & structure
+
+```sql demographics
+select
+    reference_year,
+    residents_total,
+    age_under18_share,
+    age_18_27_share,
+    age_27_45_share,
+    age_45_65_share,
+    age_65plus_share,
+    mean_age_years,
+    any_indicator_suppressed,
+    n_plr
+from gentriduck_marts.mart_area_demographics
+where city_code = 'BER' and area_level = 'bezirk' and area_code = '${params.code}'
+order by reference_year desc
+limit 1
+```
+
+<BigValue data={demographics} value=residents_total title="Residents (latest EWR year)" fmt="num0" emptySet="warn"/>
+<BigValue data={demographics} value=n_plr title="Constituent neighbourhoods (Planungsräume)" emptySet="warn"/>
+<BigValue data={demographics} value=mean_age_years title="Mean age (years)" fmt="num1" emptySet="warn"/>
+
+{#if demographics && demographics[0] && demographics[0].any_indicator_suppressed}
+<Alert status="warning">
+  At least one constituent neighbourhood had a suppressed EWR cell (small-count privacy rule) —
+  this district's figures may understate the true total.
+</Alert>
+{/if}
+
+```sql age_mix
+with latest as (
+    select age_under18_share, age_18_27_share, age_27_45_share, age_45_65_share, age_65plus_share
+    from gentriduck_marts.mart_area_demographics
+    where city_code = 'BER' and area_level = 'bezirk' and area_code = '${params.code}'
+    order by reference_year desc
+    limit 1
+)
+select 'Under 18' as age_band, age_under18_share as share, 1 as sort_order from latest
+union all
+select '18–27', age_18_27_share, 2 from latest
+union all
+select '27–45', age_27_45_share, 3 from latest
+union all
+select '45–65', age_45_65_share, 4 from latest
+union all
+select '65+', age_65plus_share, 5 from latest
+order by sort_order
+```
+
+<BarChart data={age_mix} x=age_band y=share title="Age structure, {bezirk_name[0].bezirk_name}" yFmt="pct0"/>
+
+## Where this area sits
+
+### Prognoseräume in this district
 
 ```sql children
 select
@@ -422,7 +490,8 @@ order by d.residents_total desc nulls last
     <Column id=residents_total title="Residents" fmt="num0"/>
 </DataTable>
 
-## Ortsteile in this district
+
+### Ortsteile in this district
 
 Ortsteil (Stadtteil) is a different, non-LOR district subdivision (it does not nest into the
 Prognoseraum/Bezirksregion/Planungsraum ladder above) — see the
@@ -444,6 +513,33 @@ order by area_name
 <DataTable data={ortsteile} rows=20 link=ortsteil_link>
     <Column id=area_name title="Ortsteil"/>
 </DataTable>
+
+## Honest caveats
+
+- **This page never shows a single re-scored gentrification-index value for this district** — only
+  the distribution of its constituent neighbourhoods' (Planungsräume) own stages. A population-
+  weighted average of ordinal stage/Dynamik classes would violate this project's own "never average
+  ordinal class codes" rule and would describe no actual neighbourhood while masking exactly the
+  frontier heterogeneity gentrification tracking depends on (see
+  `docs/epic-i/I-coarse-index-geo-decision.md` / `docs/epic-i/I-coarse-index-domain-decision.md`,
+  both **decline** the coarse-grain point value).
+- **Offering Advantage and within-group dominance figures on this page describe the whole pooled
+  district, not any one neighbourhood inside it** — see the MAUP fragility disclosure above, and the
+  [Offering Advantage decoder](/methodology-oa-modes) before comparing districts.
+- Figures on this page are **sums and population-weighted averages** of this district's
+  neighbourhoods, never observed at the district level itself. Land value and estimated rent are
+  only published at the individual-neighbourhood grain — see any neighbourhood's own page (linked
+  above) for those figures.
+- See [methodology & data sources §6](/methodology) for the full list of project-wide limitations
+  (ecological fallacy, no displacement measurement, OSM completeness bias, and more).
+
+## Further reading
+
+See [methodology & data sources](/methodology) for what the index means and why coarser grains are
+reported as distributions rather than a re-scored value, [browse by district](/berlin/area-detail)
+for other districts, or drill into any of this district's own neighbourhoods above for the full
+profile, index, and trajectory.
+
 
 ---
 
