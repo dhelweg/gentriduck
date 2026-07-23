@@ -158,6 +158,7 @@ where g.variant = 'live_data' and g.area_level = 'plr' and g.city_code = 'BER'
 <BigValue data={spotlight} value=stage title="Current stage" emptySet="warn"/>
 <BigValue data={spotlight} value=pressure_trend title="Pressure trend" emptySet="warn"/>
 <BigValue data={spotlight} value=trajectory_type title="Overall trajectory" emptySet="warn"/>
+<BigValue data={spotlight} value=trajectory_confidence title="Confidence" emptySet="warn"/>
 
 <p>
 {chosen[0].area_name} is currently the highest gentrification-pressure neighbourhood in the
