@@ -14,8 +14,20 @@ sidebar_position: 21
   already-governed static tables in §2/§4/§5 above -- this pass surfaces already-approved figures
   live; it introduces no new indicator, weight, normalization, or interpretive claim.
 
+  #298 (I21-d, 2026-07): per docs/epic-i/I21-ia-restructure-scoping.md §3/§5.2/§5.3 and
+  docs/epic-i/I21-a-route-ruling.md, the two LIVE widgets this page originally hosted for §4
+  ("OA across area scales") and §5 ("within-group dominance") have been RELOCATED onto each area's
+  own canonical /berlin/area/{level}/{code} page -- this page keeps the explainer prose, decoder
+  tables, and the §2 nine-methods-for-one-Kiez live widget (unchanged, still live here), but no
+  longer hosts a second, competing live widget for a figure now shown on the area page itself
+  (scoping §3's "link don't re-paste" principle). §4/§5 below now point to the area pages instead of
+  re-deriving the mechanism note; see pages/berlin/area/bezirk/[code].md's header comment for the
+  full relocation rationale (mechanism change: build-time ${params.code}-scoped read, not a citywide
+  dropdown-driven client re-query -- same underlying marts, same binding conditions, same filters).
+
   The four carried-forward pass-2 conditions and how each is discharged (see the "Live:" subsections
-  under §2/§4/§5 below for the mechanism in each case):
+  under §2/§4/§5 below for the mechanism in each case; §4/§5's mechanism is now on the area pages,
+  per the #298 note above, not on this page):
   1. Completeness-contamination badge on any live differenced-over-time density/per-capita figure:
      NOT built -- discharged by avoidance, not by badge. #285 extended OA-D5's completeness-
      contamination gate to empirically test density/per-capita too (previously they were absent
@@ -37,17 +49,21 @@ sidebar_position: 21
      layer (`web/sources/gentriduck_marts/mart_poi_dominance.sql`), the strongest point available --
      Evidence bundles a source's full result to the client for any page that queries it reactively, so
      filtering there means the cuisine-typed internal-study-only group never reaches the browser at
-     all, not merely a page-level WHERE a future page could omit. This page's own dominance query
-     additionally restates the filter (defence in depth) and its dropdown never lists the cuisine
-     group as an option in the first place.
+     all, not merely a page-level WHERE a future page could omit. #298 (I21-d) relocated the page
+     that first wired this filter's query-layer restatement + dropdown-exclusion from this page onto
+     each area's own canonical page -- see pages/berlin/area/bezirk/[code].md's header comment; the
+     source-layer filter this condition is actually anchored to is unchanged and unaffected.
   3. Coarse-level (BZR/PGR/Bezirk) choropleths must carry the ecological-fallacy + MAUP-instability
-     (PLR-vs-BZR rho~=0.66) caveat inline: the §4 "Live" map surfaces `maup_caveat_required` and
-     `area_level_publish_tier` (both already computed by the OA-D6 mart) as an always-visible Alert,
-     not a hover-only tooltip, and repeats the rho~=0.66 figure verbatim from §4's static text above.
-  4. Min-base suppression must render as "too thinly observed to characterize," never absence: the
-     §4 map nulls out `oa_domain` (unshaded gap, same convention `/berlin/poi-map` already uses) when
-     `oa_domain_min_base_flag` is set, and the §5 dominance table filters `not is_thin_base` while
-     disclosing the suppressed count rather than silently dropping rows.
+     (PLR-vs-BZR rho~=0.66) caveat inline: this was originally discharged by a §4 "Live" map on this
+     page; #298 (I21-d) relocated that map's query to each Bezirk/BZR/PGR page's own
+     "Offering Advantage across the area hierarchy" section, which surfaces `maup_caveat_required`
+     and `area_level_publish_tier` (both already computed by the OA-D6 mart) as an always-visible
+     Alert, not a hover-only tooltip, repeating the rho~=0.66 figure verbatim from §4's static text
+     above -- same discharge mechanism, now on the area page instead of this one.
+  4. Min-base suppression must render as "too thinly observed to characterize," never absence: this
+     was originally discharged by the §4 map (oa_domain nulled when `oa_domain_min_base_flag` is set)
+     and the §5 table (`not is_thin_base` filter with a disclosed suppressed count) on this page;
+     #298 (I21-d) relocated both mechanisms onto each area's own canonical page, unchanged.
 
   Client-bundle-size note (not methodology-bearing, a build-practicality fix): the raw
   `mart_poi_oa_methods` (leaf-taxonomy grain x 9 methods) and `mart_poi_oa_arealevel` (leaf-taxonomy
@@ -64,7 +80,12 @@ sidebar_position: 21
   `lor_2021` vintage -- `web/static/geo/{bzr,pgr,bezirk}_lor2021.geojson` -- since PGR/Bezirk had no
   exported geojson at all before this pass, and the existing `bzr_standard.geojson` is pre-2021
   vintage (would not match this mart's 2021+ area codes, the same #149-class mismatch the existing
-  script's own header already documents and guards against for PLR).
+  script's own header already documents and guards against for PLR). #298 (I21-d) note: these three
+  static geojson files are no longer read by ANY page after this page's own choropleth widget was
+  relocated (the relocated per-area pages show a single area's own figure via `<BarChart>`, not a
+  map across areas, so they need no geometry file) -- left in place as a harmless, unreferenced
+  static asset rather than deleted, since a future ticket may still want a BZR/PGR/Bezirk choropleth
+  somewhere and re-exporting is not free. Flagged here, not silently orphaned.
 
   Explicitly scoped OUT of this pass (see each "Live" subsection's own note for why):
   - A live PLR-grain choropleth for any of the nine methods: the canonical nested-LQ PLR map already
@@ -78,12 +99,16 @@ sidebar_position: 21
   - Getis-Ord Gi* hotspot clustering: still gated behind ADR-0025 (proposed), unchanged from pass 1.
 -->
 
+<!--
+  #298 (I21-d): the `<script>import { base } from '$app/paths';</script>` block this page carried
+  since OA-D7 pass 2 is REMOVED here -- it existed solely for the two now-relocated live widgets'
+  basePath-aware `AreaMap` geoJsonUrl and `${base}`-prefixed link columns (§4/§5's original SQL).
+  Neither remains on this page (see the "See this on your area's page" subsections below); the §2
+  nine-methods table (still live here) never needed `base`, since it uses `<BarChart>`/`<DataTable>`
+  only, which are already basePath-aware without manual interpolation.
+-->
+
 <script>
-  // OA-D7 pass 2: basePath-aware asset/link URLs, same reason + mechanism as
-  // /berlin/poi-map's and /berlin/maps' own <script> header comments -- AreaMap's geoJsonUrl fetch
-  // and its raw `window.location.href` link click-through neither prepend SvelteKit's deployment
-  // basePath, so `${base}` must be interpolated directly into both.
-  import { base } from '$app/paths';
 </script>
 
 <Hero compact eyebrow="Chapter 3 — The Evidence · reference / rulebook" title="Offering Advantage — modes, scales & dominance" lede="Offering Advantage (OA) is not one number. It is a family of measurements along independent axes — which method, at which spatial scale — and the choice of axis changes what a figure means more than any parameter does. This page is the decoder for all of it." />
@@ -101,10 +126,16 @@ location quotient is, why it's the thesis's chosen predictor), start with the
 this page picks up from there.
 
 <Alert status="info">
-  <b>Pass 2 of 2 — live data is now wired.</b> Every "Live" subsection below queries the actual OA
-  marts (<code>mart_poi_oa_methods</code>, <code>mart_poi_oa_arealevel</code>,
-  <code>mart_poi_dominance</code>) rather than restating a static figure. What's <b>still not</b>
-  live here: a PLR-grain choropleth for the eight non-canonical methods (the canonical nested-LQ PLR
+  <b>Pass 2 of 2 — live data is wired; §4/§5 now live on each area's own page (#298, I21-d).</b>
+  The §2 nine-methods table below still queries <code>mart_poi_oa_methods</code> live, for one Kiez
+  at a time. The OA-across-area-scales figure (formerly §4's live map) and the within-group
+  dominance table (formerly §5's live table) have moved to headline/context-only grain on each
+  area's own canonical page — <a href="/berlin/area/bezirk">district</a>,
+  <a href="/berlin/area/bzr">Bezirksregion</a>, <a href="/berlin/area/pgr">Prognoseraum</a>, and
+  (dominance only — see §4's own note below) <a href="/berlin/area/ortsteil">Ortsteil</a> — so the
+  figure lives where it's about one specific place, not duplicated here. §4/§5 below keep the
+  explainer prose and a link to "see this on your area's page." What's <b>still not</b> live
+  anywhere: a PLR-grain choropleth for the eight non-canonical methods (the canonical nested-LQ PLR
   map already exists on the <a href="/berlin/poi-map">POI &amp; Offering Advantage map</a>), a
   category/type drill-down for the nine-methods table (domain grain only), a live re-run of the
   OA-D5 comparison study (§7 stays a static findings restatement, now covering the full nine-method
@@ -418,144 +449,36 @@ on a public map for the first time — see the
 [district & area profiles](/berlin/area) pages for the population and typology-stage counts already
 live at these coarser scales.
 
-### Live: Offering Advantage across area scales (BZR · PGR · Bezirk)
+### See this on your area's page
 
-<Dropdown name="scale_domain" title="POI domain" defaultValue="Gastronomy">
-  <DropdownOption value="Entertainment" valueLabel="Entertainment"/>
-  <DropdownOption value="Gastronomy" valueLabel="Gastronomy"/>
-  <DropdownOption value="Mobility" valueLabel="Mobility"/>
-  <DropdownOption value="Office" valueLabel="Office"/>
-  <DropdownOption value="Other" valueLabel="Other"/>
-  <DropdownOption value="Public Service" valueLabel="Public Service"/>
-  <DropdownOption value="Public Space" valueLabel="Public Space"/>
-  <DropdownOption value="Religion" valueLabel="Religion"/>
-  <DropdownOption value="Retail" valueLabel="Retail"/>
-  <DropdownOption value="Services" valueLabel="Services"/>
-  <DropdownOption value="Sports and Recreation" valueLabel="Sports and Recreation"/>
-  <DropdownOption value="Tourism" valueLabel="Tourism"/>
-  <DropdownOption value="Vacancy" valueLabel="Vacancy"/>
-</Dropdown>
+<!--
+  #298 (I21-d): this subsection previously hosted a live, dropdown-driven choropleth
+  (Area level x POI domain x Year) across all of Berlin's BZR/PGR/Bezirk areas at once. That widget
+  has moved to each area's own canonical page, at headline/context-only grain, per
+  docs/epic-i/I21-ia-restructure-scoping.md §3/§5.2 -- see
+  pages/berlin/area/bezirk/[code].md's header comment for the full relocation rationale and the two
+  binding conditions (`maup_caveat_required`, ecological-fallacy/headline-scale framing) carried
+  through unchanged. This page keeps the explainer prose above (the roll-up rule, the "dial, not a
+  ladder" framing, the §7 rho~=0.66 finding) -- it no longer duplicates the live figure a citywide
+  map would show, since every area's own figure is now one click away on that area's own page.
+-->
 
-<Dropdown name="scale_year" title="Year" defaultValue="2025">
-  <DropdownOption value="2021" valueLabel="2021"/>
-  <DropdownOption value="2022" valueLabel="2022"/>
-  <DropdownOption value="2023" valueLabel="2023"/>
-  <DropdownOption value="2024" valueLabel="2024"/>
-  <DropdownOption value="2025" valueLabel="2025"/>
-  <DropdownOption value="2026" valueLabel="2026"/>
-</Dropdown>
+Rather than a second, citywide copy of this figure, **each area's own Offering Advantage roll-up now
+lives on that area's own canonical page** — where it belongs, next to that area's demographics,
+POI mix, and status trajectory. Every page carries the same `maup_caveat_required` disclosure and
+headline/context-only framing described above:
 
-<!-- Year list starts at 2021, not 2008: the roll-up mart only carries `area_vintage = 'lor_2021'`
-     rows (the vintage matching the exported bzr/pgr/bezirk geometry below) -- pre-2021 years used
-     Berlin's old LOR boundaries, a different area-code scheme entirely (see the area-hierarchy
-     reference page's "Bezirk polygon is derived" caveat and #149's PLR precedent for the same
-     vintage-mismatch class of bug). -->
+- [District (Bezirk) profiles](/berlin/area/bezirk) — context only, never a Kiez-level claim.
+- [Bezirksregion (BZR) profiles](/berlin/area/bzr) — this project's recommended public headline
+  scale for anything coarser than a single neighbourhood.
+- [Prognoseraum (PGR) profiles](/berlin/area/pgr) — context only, never a Kiez-level claim.
+- The canonical nested-LQ figure at Kiez (PLR) grain is already live on the
+  [POI & Offering Advantage map](/berlin/poi-map) and on
+  [every neighbourhood's own page](/berlin/area).
 
-<ButtonGroup name="scale_level" title="Area level" display="tabs" defaultValue="bzr">
-  <ButtonGroupItem value="bzr" valueLabel="Bezirksregion (BZR) — recommended headline scale"/>
-  <ButtonGroupItem value="pgr" valueLabel="Prognoseraum (PGR) — context only"/>
-  <ButtonGroupItem value="bezirk" valueLabel="Bezirk (borough) — context only, never a Kiez claim"/>
-</ButtonGroup>
-
-<Alert status="warning">
-  <b>Every level on this map is coarser than the Kiez (PLR) scale — read every figure below through
-  the "dial, not a ladder" framing above.</b> PLR-vs-BZR rankings for the canonical nested LQ
-  correlate only moderately (pooled Spearman ρ ≈ 0.66, below this project's own 0.7 stability
-  threshold, in every year 2009–2026) — an area's apparent rank can genuinely shift between the Kiez
-  and district scale (§7). <b>Bezirksregion (BZR) is this project's recommended public headline
-  scale</b> for anything coarser than a single neighbourhood. <b>Prognoseraum (PGR) and Bezirk are
-  context only, never a Kiez-level claim</b> — a Bezirk alone pools roughly 30–40 very different
-  neighbourhoods into one number. Blank areas below are <b>too thinly observed to compute a stable
-  ratio</b>, per the min-base rule already applied on the PLR map — never read a blank cell as
-  "commercially dead." In practice this rarely triggers at BZR/PGR/Bezirk grain (unlike PLR): these
-  coarser levels pool far more POIs per area, so the min-base threshold is seldom crossed here —
-  which is exactly the "coarser = more stable" trade-off §4 describes, not a sign the suppression
-  rule was skipped.
-</Alert>
-
-```sql scale_map_data
-with
-    base as (
-        select
-            area_code,
-            case when oa_domain_min_base_flag then null else oa_domain end as oa_domain,
-            oa_domain_min_base_flag,
-            area_level_publish_tier,
-            maup_caveat_required
-        from gentriduck_marts.mart_poi_oa_arealevel
-        where area_level = '${inputs.scale_level.value}'
-          and poi_domain_h = '${inputs.scale_domain.value}'
-          and snapshot_year = ${inputs.scale_year.value}
-    ),
-    bezirk_names as (
-        -- Fixed 12-entry Bezirk-code -> name lookup, the same one hardcoded across the site (e.g.
-        -- /berlin/area-detail's Dropdown, /berlin/area/bezirk/[code].md) -- dim_area_geometry
-        -- carries no area_name for area_level='bezirk' rows (its dissolved-polygon derivation never
-        -- populated one), so this is presentation-only, not a new source of truth.
-        select '01' as bezirk_code, 'Mitte' as bezirk_name
-        union all select '02', 'Friedrichshain-Kreuzberg'
-        union all select '03', 'Pankow'
-        union all select '04', 'Charlottenburg-Wilmersdorf'
-        union all select '05', 'Spandau'
-        union all select '06', 'Steglitz-Zehlendorf'
-        union all select '07', 'Tempelhof-Schöneberg'
-        union all select '08', 'Neukölln'
-        union all select '09', 'Treptow-Köpenick'
-        union all select '10', 'Marzahn-Hellersdorf'
-        union all select '11', 'Lichtenberg'
-        union all select '12', 'Reinickendorf'
-    ),
-    names as (
-        select
-            g.area_code,
-            coalesce(g.area_name, b.bezirk_name, g.area_code) as area_name
-        from gentriduck_marts.dim_area_geometry as g
-        left join bezirk_names as b on g.area_code = b.bezirk_code
-        where g.city_code = 'BER'
-          and g.area_level = '${inputs.scale_level.value}'
-          and g.area_vintage = 'lor_2021'
-    )
-select
-    base.area_code,
-    n.area_name,
-    base.oa_domain,
-    base.oa_domain_min_base_flag,
-    base.area_level_publish_tier,
-    base.maup_caveat_required,
-    -- basePath-aware click-through to the matching coarse-area profile page (already live, I18) --
-    -- same `${base}` interpolation /berlin/poi-map's own AreaMap link column uses.
-    '${base}/berlin/area/' || '${inputs.scale_level.value}' || '/' || base.area_code as link
-from base
-left join names as n on base.area_code = n.area_code
-```
-
-<AreaMap
-    data={scale_map_data}
-    geoJsonUrl={`${base}/geo/${inputs.scale_level.value}_lor2021.geojson`}
-    geoId="area_code"
-    areaCol="area_code"
-    value="oa_domain"
-    legendType="scalar"
-    title="Berlin {inputs.scale_level.value === 'bzr' ? 'Bezirksregion (BZR)' : inputs.scale_level.value === 'pgr' ? 'Prognoseraum (PGR)' : 'Bezirk'} — Offering Advantage (nested LQ), {inputs.scale_domain.value}, {inputs.scale_year.value}"
-    startingLat={52.52}
-    startingLong={13.405}
-    startingZoom={9}
-    link="link"
-    tooltip={[
-      { id: 'area_name', showColumnName: false, valueClass: 'font-bold text-sm', fmt: 'id' },
-      { id: 'oa_domain', title: 'Offering Advantage (1.0 = citywide average)', fmt: 'num2' },
-      { id: 'area_level_publish_tier', title: 'Publish tier' },
-      { id: 'area_code', title: 'Area code', valueClass: 'text-xs opacity-60', fmt: 'id' }
-    ]}
-    emptySet="warn"
-    emptyMessage="No data for this level/domain/year combination."
-/>
-
-Click an area on the map to open its district/PGR/Bezirk profile page (population and
-typology-stage counts). This choropleth shows only the canonical nested-LQ method — for the other
-eight calculation methods at this Kiez, use the single-area table above; a coarse-grain re-scoring
-of those eight is out of this pass's scope (§2's data-thinness caveat above still applies at PLR,
-even though it rarely applies at BZR/PGR/Bezirk).
+Pick a district, Bezirksregion, or Prognoseraum above to see its own "Offering Advantage across the
+area hierarchy" section — the same figure this page used to show on a single shared map, now shown
+one area at a time, in context.
 
 ## 5. Within-group dominance: monoculture, or a mix?
 
@@ -641,128 +564,42 @@ their math only, not their usual connotation (see the ethics note below):
   (<a href="https://github.com/dhelweg/gentriduck/blob/main/docs/methodology/OA-D0-domain-signoff.md">OA-D0 domain sign-off, Condition B.4</a>).
 </Alert>
 
-### Live: within-group dominance — public-safe groups only
+### See this on your area's page
 
-<Dropdown name="dom_group" title="Business group" defaultValue="gastronomy_category">
-  <DropdownOption value="gastronomy_category" valueLabel="Gastronomy (Café / Restaurant / Fast Food)"/>
-  <DropdownOption value="retail_category" valueLabel="Retail (12 categories)"/>
-  <DropdownOption value="entertainment_category" valueLabel="Entertainment (Bar / Nightlife / Culture / Leisure)"/>
-  <DropdownOption value="wellness_curated" valueLabel="Wellness / fitness (curated cross-domain group)"/>
-</Dropdown>
+<!--
+  #298 (I21-d): this subsection previously hosted a live, citywide top-15 dominance ranking
+  (Business group x Year, across all Berlin PLRs at once). That widget has moved to each area's own
+  canonical page (PLR, Bezirk, Bezirksregion, Prognoseraum, and Ortsteil), per
+  docs/epic-i/I21-ia-restructure-scoping.md §3/§5.3 -- see pages/berlin/area/bezirk/[code].md's
+  header comment for the full relocation rationale. mart_poi_dominance is PLR-grain only (no
+  district/BZR/PGR-level dominance figure exists), so the coarser-grain pages show a
+  "within-group dominance across neighbourhoods here" table (this area's own constituent PLRs'
+  already-computed rows, filtered -- not a new district-level statistic), while the PLR page shows
+  that one neighbourhood's own figures directly. The `is_public_safe = true` filter and the
+  is_thin_base suppression-with-disclosure discipline travel unchanged onto every relocated
+  instance -- this page's own defence-in-depth restatement is no longer needed here since the live
+  query itself has moved, but the SOURCE-layer filter
+  (web/sources/gentriduck_marts/mart_poi_dominance.sql) still guarantees the cuisine-typed group
+  never reaches any page's client bundle, this one included.
+-->
 
-<!-- The cuisine-typed group (is_public_safe=false) is NEVER an option here, by construction, on top
-     of the source-layer + query-layer filters below -- see the "Cuisine-typed dominance" alert above. -->
+Rather than a second, citywide copy of this ranking, **within-group dominance now lives on each
+area's own canonical page** — where it can be read alongside that area's own status/dynamism
+trajectory, per the sign-blindness warning above. Every relocated table keeps the same binding
+conditions: public-safe groups only (the cuisine-typed group is barred from every public page, this
+one included), sign-blind co-presentation of the leading type, and suppressed-but-disclosed thin
+cells:
 
-<Dropdown name="dom_year" title="Year" defaultValue="2025">
-  <DropdownOption value="2008" valueLabel="2008"/>
-  <DropdownOption value="2009" valueLabel="2009"/>
-  <DropdownOption value="2010" valueLabel="2010"/>
-  <DropdownOption value="2011" valueLabel="2011"/>
-  <DropdownOption value="2012" valueLabel="2012"/>
-  <DropdownOption value="2013" valueLabel="2013"/>
-  <DropdownOption value="2014" valueLabel="2014"/>
-  <DropdownOption value="2015" valueLabel="2015"/>
-  <DropdownOption value="2016" valueLabel="2016"/>
-  <DropdownOption value="2017" valueLabel="2017"/>
-  <DropdownOption value="2018" valueLabel="2018"/>
-  <DropdownOption value="2019" valueLabel="2019"/>
-  <DropdownOption value="2020" valueLabel="2020"/>
-  <DropdownOption value="2021" valueLabel="2021"/>
-  <DropdownOption value="2022" valueLabel="2022"/>
-  <DropdownOption value="2023" valueLabel="2023"/>
-  <DropdownOption value="2024" valueLabel="2024"/>
-  <DropdownOption value="2025" valueLabel="2025"/>
-  <DropdownOption value="2026" valueLabel="2026"/>
-</Dropdown>
+- [Neighbourhood (PLR) profiles](/berlin/area) — this area's own dominance figures, across all four
+  public-safe groups.
+- [District (Bezirk)](/berlin/area/bezirk), [Bezirksregion (BZR)](/berlin/area/bzr), and
+  [Prognoseraum (PGR)](/berlin/area/pgr) profiles — a ranked table of this area's own constituent
+  neighbourhoods (no district/BZR/PGR-level dominance figure exists to show instead — see the note
+  above).
+- [Ortsteil profiles](/berlin/area/ortsteil) — the same ranked table, joined through the
+  dominant-overlap crosswalk (see the [area-hierarchy reference](/reference/area-hierarchy)).
 
-```sql dom_suppressed_count
--- Disclosed, not silently dropped (OA-D0 domain sign-off Condition B.4): how many of this
--- group/year's PLRs were suppressed as too thinly observed, alongside how many are shown below.
-select
-    count(*) filter (where is_thin_base) as n_suppressed,
-    count(*) filter (where not is_thin_base) as n_shown
-from gentriduck_marts.mart_poi_dominance
-where city_code = 'BER'
-  and is_public_safe = true
-  and dominance_group = '${inputs.dom_group.value}'
-  and snapshot_year = ${inputs.dom_year.value}
-```
-
-<Alert status="info">
-  <b>{dom_suppressed_count[0].n_suppressed} of {dom_suppressed_count[0].n_suppressed + dom_suppressed_count[0].n_shown} Planungsräume for this group/year are suppressed below as too thinly observed to characterize</b> (dominance's own stricter min-base rule, §5's info note above) — never read that as "commercially dead," only as "too few businesses in this group here to say anything about the mix." The table below shows only the top 15 non-suppressed areas, ranked by concentration (HHI).
-</Alert>
-
-```sql dominance_top
-with
-    base as (
-        select
-            area_code,
-            hhi,
-            top_share,
-            entropy,
-            evenness,
-            top_child,
-            top_child_offering_tier,
-            n_children,
-            group_stock_local
-        from gentriduck_marts.mart_poi_dominance
-        where city_code = 'BER'
-          -- Defence-in-depth restatement of the source-layer filter (see
-          -- web/sources/gentriduck_marts/mart_poi_dominance.sql's header) -- this is the
-          -- binding OA-D4 forward condition, applied a second time at the point of use.
-          and is_public_safe = true
-          and dominance_group = '${inputs.dom_group.value}'
-          and snapshot_year = ${inputs.dom_year.value}
-          and not is_thin_base
-    ),
-    names as (
-        select distinct area_code, area_name
-        from gentriduck_marts.gentrification_index
-        where variant = 'live_data' and area_level = 'plr' and city_code = 'BER'
-    )
-select
-    b.area_code,
-    n.area_name,
-    b.hhi,
-    b.top_share,
-    b.entropy,
-    b.evenness,
-    b.top_child,
-    -- Tier labels copied verbatim from ADR-0018 / seed_poi_offering_relevance.csv's own
-    -- offering_tier definition (0=drop/not causally plausible, 1=low weight/ambiguous,
-    -- 2=medium weight/plausible, 3=full weight/headline literature signature) -- no new
-    -- interpretive claim, a direct restatement of the already-governed tier vocabulary.
-    case b.top_child_offering_tier
-        when 3 then 'Tier 3 — headline literature signature'
-        when 2 then 'Tier 2 — plausible, medium weight'
-        when 1 then 'Tier 1 — ambiguous, low weight'
-        when 0 then 'Tier 0 — not a causally plausible signal'
-        else 'Not tiered'
-    end as top_child_tier_label,
-    b.n_children,
-    b.group_stock_local,
-    '${base}/berlin/area/' || b.area_code as link
-from base as b
-left join names as n on b.area_code = n.area_code
-order by b.hhi desc
-limit 15
-```
-
-<DataTable data={dominance_top} rows=15 rowShading=true link=link emptySet="warn" emptyMessage="No non-suppressed areas for this group/year.">
-    <Column id=area_name title="Neighbourhood (PLR)"/>
-    <Column id=hhi title="HHI (higher = more concentrated)" fmt="num2"/>
-    <Column id=top_share title="Top-share" fmt="pct1"/>
-    <Column id=top_child title="Leading type"/>
-    <Column id=top_child_tier_label title="Leading type's causal-relevance tier"/>
-    <Column id=n_children title="Types in this group here"/>
-    <Column id=group_stock_local title="Group's total POI count here" fmt="num0"/>
-</DataTable>
-
-A high HHI/top-share here says only that this group's mix is concentrated in the named leading
-type — never, by itself, whether that concentration is an up-market or down-market signal (the
-sign-blindness warning above). Compare the leading neighbourhoods against their own status/dynamism
-trajectory on the [maps page](/berlin/maps) or [area detail](/berlin/area-detail) before drawing
-any conclusion.
+Pick any area above to see its own "Within-group dominance" section.
 
 ## 6. What this does NOT do
 
@@ -781,11 +618,11 @@ any conclusion.
   validated by internal consistency and robustness checks (§7), never by agreement with 2018 —
   implementing nine methods is not the same claim as nine methods confirming the thesis
   ([OA-D0 geo sign-off](https://github.com/dhelweg/gentriduck/blob/main/docs/methodology/OA-D0-geo-signoff.md), call-out 3).
-- **It does not re-score the governed index at PGR/Bezirk grain, even though a live choropleth now
-  exists at those scales.** The §4 map above surfaces the same already-signed-off nested-LQ
-  Offering Advantage figure, summed up the LOR code prefix — not a re-derived or re-weighted
-  statistic. See [methodology §6](/methodology) for why the governed index itself is never
-  recomputed at any coarser-than-PLR grain.
+- **It does not re-score the governed index at PGR/Bezirk grain, even though a live figure now
+  exists at those scales (on each area's own page, §4 above).** That figure surfaces the same
+  already-signed-off nested-LQ Offering Advantage figure, summed up the LOR code prefix — not a
+  re-derived or re-weighted statistic. See [methodology §6](/methodology) for why the governed index
+  itself is never recomputed at any coarser-than-PLR grain.
 - **It does not show a live temporal (year-over-year) view of density or per-capita.** Neither
   method has a per-cell completeness-contamination safety check built yet (§2's "Live" note above)
   — showing a delta without one would risk reading an OSM-coverage-growth artefact as a real change.
@@ -842,8 +679,8 @@ live query:
 - **The area-hierarchy roll-up is only proven for the canonical nested LQ so far.** The other eight
   methods — including density/per-capita — have never been rolled up through the PLR→BZR→PGR→Bezirk
   hierarchy — extending that roll-up to every method is explicitly out of this study's scope, not a
-  silent gap. (The §4 live choropleth above surfaces exactly the one method this roll-up IS proven
-  for — nested LQ — never any of the other eight at coarse grain.)
+  silent gap. (The live figure now on each Bezirk/BZR/PGR page, §4 above, surfaces exactly the one
+  method this roll-up IS proven for — nested LQ — never any of the other eight at coarse grain.)
 - **Only nested LQ is validated against the 2018 thesis's own results** (ρ = 0.148, p = 0.002,
   n = 435 — the same directional-but-modest result already reported on the
   [thesis re-check page](/thesis-recheck)). The other eight methods, including density/per-capita,
@@ -859,14 +696,18 @@ live query:
 
 - **This page is a decoder, not a new finding.** Every methodology claim above restates an
   already-signed-off document (linked inline); nothing here is a new statistical result — including
-  the live charts/tables, which surface already-governed values, not new computations.
-- **The live sections have their own, narrower scope than the full nine-method/four-scale/five-group
-  space this page describes.** Concretely: the methods table is domain-grain only (no category/type
-  drill-down); the area-scale map covers BZR/PGR/Bezirk only (PLR is already live on
-  [the POI map](/berlin/poi-map)) and only the canonical nested LQ (not the other eight methods);
-  the dominance table covers only the four public-safe groups, never the cuisine-typed group; and
-  density/per-capita are shown as point-in-time values only, never a year-over-year delta. Each
-  narrowing is explained at the point it applies, above.
+  the live nine-methods table, which surfaces already-governed values, not new computations, and the
+  OA-across-scales/within-group-dominance figures now relocated onto each area's own page (#298,
+  I21-d), which are the same relocation, not a new computation either.
+- **The live/relocated sections have their own, narrower scope than the full nine-method/four-scale/
+  five-group space this page describes.** Concretely: the §2 methods table (still live on this page)
+  is domain-grain only (no category/type drill-down); the OA-across-scales figure (now on each
+  Bezirk/BZR/PGR page) covers only the canonical nested LQ (not the other eight methods) — PLR's own
+  figure is already live on [the POI map](/berlin/poi-map) and on
+  [every neighbourhood's own page](/berlin/area); the dominance tables (now on each area's own page)
+  cover only the four public-safe groups, never the cuisine-typed group; and density/per-capita are
+  shown as point-in-time values only, never a year-over-year delta. Each narrowing is explained at
+  the point it applies, above.
 - **Nine methods does not mean nine confirmations.** Only the canonical nested location quotient is
   backtested against the 2018 thesis; treat every other method as a new, unvalidated-against-2018
   instrument (§2, §7).
@@ -900,7 +741,10 @@ live query:
 - [ADR-0017](https://github.com/dhelweg/gentriduck/blob/main/docs/adr/0017-poi-offering-advantage-revival.md) and [ADR-0018](https://github.com/dhelweg/gentriduck/blob/main/docs/adr/0018-causal-tiered-poi-selection.md) — the base Offering Advantage construct and its curated/faithful split, which this page extends rather than replaces.
 - [Methodology & data sources](/methodology) — the governed index this page's methods feed into (unchanged by anything here) and its own honest limitations.
 - [POI & Offering Advantage map](/berlin/poi-map) — the canonical nested-LQ method at PLR grain, live since before this page existed.
-- [Area detail](/berlin/area-detail) and [district & area profiles](/berlin/area) — where the "Live" sections' click-throughs above lead.
+- [District (Bezirk)](/berlin/area/bezirk), [Bezirksregion (BZR)](/berlin/area/bzr),
+  [Prognoseraum (PGR)](/berlin/area/pgr), [Ortsteil](/berlin/area/ortsteil), and
+  [neighbourhood (PLR)](/berlin/area) profiles — where the §4/§5 "see this on your area's page"
+  links above lead (#298, I21-d).
 
 ---
 
