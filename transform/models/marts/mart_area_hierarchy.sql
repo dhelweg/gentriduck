@@ -1,0 +1,46 @@
+-- mart_area_hierarchy.sql
+-- #302 (I21-h): thin display mart exposing dim_area_hierarchy to the web layer -- pure
+-- pass-through, no new computation (same "thin display mart" pattern as
+-- mart_ortsteil_plr_crosswalk.sql over int_berlin_plr_ortsteil_overlap, #269, and
+-- mart_mss_area_aggregate.sql over int_mss_bzr_aggregate, #249).
+--
+-- WHY THIS EXISTS: dim_area_hierarchy is an INTERMEDIATE model -- the web layer only
+-- reads
+-- gentriduck_marts.* (export_serving_parquet.py's MART_MODELS glob only picks up
+-- transform/models/marts/*.sql). #301 (I21-g) scaffolded Hamburg's area-hierarchy
+-- pages with
+-- an explicit "pending web-layer wiring" placeholder in their "Up:"/"Where this area
+-- sits"
+-- sections specifically because this export did not exist yet -- see
+-- web/pages/hamburg/area/[code].md, .../subarea_l1/[code].md,
+-- .../district/[code].md's header
+-- comments. This mart closes that gap.
+--
+-- METHODOLOGY NOTE (R-C2 grounding -- IMPORTANT): this commit is EXPORT/WIRING ONLY.
+-- It does
+-- not introduce, change, or re-derive any spatial method or hierarchy edge. Every
+-- edge exposed
+-- here (including Hamburg's subarea_l2 -> subarea_l1 ST_Within centroid-in-polygon
+-- crosswalk)
+-- was already resolved and dual-signed-off as OA-D1b (#240, ADR-0024 D4) -- see
+-- dim_area_hierarchy.sql's own header for the full method, grounding citations, and
+-- geo-DS +
+-- domain-expert PASS record. Publishing this already-approved edge as a web-facing
+-- mart for the
+-- first time is the only new surface this ticket adds (hence the gate on this commit
+-- per
+-- CLAUDE.md's methodology-bearing file list, even though the underlying method is
+-- unchanged).
+--
+-- Grain: one row per (city_code, area_level, area_code) resolved edge -- identical
+-- grain to
+-- dim_area_hierarchy (a set of resolved parent/child EDGES, not a full re-statement
+-- of dim_area;
+-- see that model's header for which rows are and are not present).
+--
+-- dbt_meta_owner: data-engineer
+-- depends_on: {{ ref('dim_area_hierarchy') }}
+{{ config(materialized="table", meta={"dbt_meta_owner": "data-engineer"}) }}
+
+select city_code, area_level, area_code, parent_area_level, parent_area_code
+from {{ ref("dim_area_hierarchy") }}
