@@ -192,6 +192,34 @@
 -- misread as "nothing happening here" and stigmatizing exactly the under-mapped
 -- lower-income/peripheral Kieze this project exists to protect.
 --
+-- Hamburg C5 re-fit (#312, docs/epic-h/312-oa-c5-geo-spike.md): the OA
+-- location-quotient construct above (oa_domain/oa_category/oa_type) is a
+-- SAME-YEAR ratio of (local_share / city_share) -- algebraically invariant to
+-- any area-uniform, per-year OSM completeness multiplier, because such a
+-- multiplier cancels identically in both the local-share numerator/
+-- denominator pair and the city-share numerator/denominator pair within that
+-- single year. This is a STRONGER invariance than the C5-approved
+-- dynamism_score construct (int_poi_status_dynamism.sql), which relies on
+-- cross-year comparability of a YoY delta of shares -- LQ needs no such
+-- cross-year assumption. #158 (docs/epic-h/158-hc1-geo-spike.md) already
+-- established the underlying area-uniform-within-year completeness premise
+-- holds for Hamburg's own 2008-2026 OSM coverage curve (same shape as
+-- Berlin's, stabilizing ~2014-2015); #312 independently re-confirmed that
+-- curve directly against THIS model's own source table
+-- (fct_poi_development, not merely by analogy to int_poi_status_dynamism's
+-- total_poi_count) and extended the OA-D0 geo sign-off Condition C3
+-- completeness-contamination gate (previously Berlin-only,
+-- docs/methodology/OA-D5-mode-comparison-findings.md) to Hamburg for the
+-- first time: nested_lq/global_lq/log_lq/share_diff/shrunk_lq all pass
+-- (|rho|<=0.06) for Hamburg, matching Berlin's own already-published result.
+-- No change to this model's math or normalization was required or made; the
+-- existing mart-level accepted_values=['BER','HH'] (mart_poi_offering_advantage
+-- and sibling marts) is retroactively validated by #312, not newly widened by
+-- it. See the spike doc for the D-3 min-base-flag finer-grain interaction
+-- (Hamburg's ~945-Gebiet grain trips the advisory flag more often than
+-- Berlin's ~542-PLR grain -- an expected, already-mechanism-covered
+-- consequence of grain, not a C5/completeness issue).
+--
 -- Graceful degradation: returns zero rows when fct_poi_development and/or
 -- int_osm_poi_plr_weighted have no rows (OSM/LOR ingestion not yet run).
 --

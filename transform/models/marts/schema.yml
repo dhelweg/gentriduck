@@ -1124,7 +1124,17 @@ models:
         description: >
           City identifier (ADR-0005). #281: canonicalized at this mart's own
           `oa` CTE (QA-4 legacy-lowercase normalisation) -- output is
-          canonical-only.
+          canonical-only. #312 (docs/epic-h/312-oa-c5-geo-spike.md):
+          `accepted_values=["BER","HH"]` is methodologically re-fit and
+          retroactively validated for Hamburg -- the OA location-quotient
+          columns (oa_domain/oa_category/oa_type) are same-year local/city
+          share ratios, invariant to an area-uniform per-year OSM
+          completeness multiplier by construction (stronger than the C5
+          dynamism_score precedent, #158); `poi_density_per_km2` was
+          additionally checked against the extended, Hamburg-scoped OA-D0 geo
+          sign-off Condition C3 completeness-contamination gate and passes
+          (see spike doc Sec 3) -- same standing caveats as Berlin's already-
+          published equivalent, not relaxed or tightened for Hamburg.
         data_tests:
 
           - not_null
@@ -1814,7 +1824,12 @@ models:
           City identifier (ADR-0005). #281: canonicalized upstream in
           int_poi_offering_advantage_methods (its own output boundary) --
           this mart is a pure pass-through reshape, so it inherits the
-          canonical-only output.
+          canonical-only output. #312 (docs/epic-h/312-oa-c5-geo-spike.md):
+          `accepted_values=["BER","HH"]` is retroactively validated for
+          Hamburg -- the C5 completeness-bias re-fit was verified at the
+          int_poi_offering_advantage_methods source, including the
+          density/percapita/raw_share columns this mart also carries; see
+          that model's header and the spike doc.
         data_tests:
 
           - not_null:

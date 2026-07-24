@@ -208,6 +208,28 @@
 -- weight_variant / methodology_variant row for a given area, same
 -- broadcast-once discipline as the *_stock_city columns (C2).
 --
+-- Hamburg C5 re-fit (#312, docs/epic-h/312-oa-c5-geo-spike.md): the OA-D0 geo
+-- sign-off Condition C3 completeness-contamination gate (deliverable 4 of
+-- analysis/d_oa_mode_comparison.py, previously run Berlin-only --
+-- docs/methodology/OA-D5-mode-comparison-findings.md Sec 4) was extended to
+-- Hamburg for the first time under #312. Result: all nine registered methods
+-- (seed_oa_calculation_methods.csv) pass for Hamburg, including raw_share,
+-- density, and percapita -- the three methods this file's notes 6/8/9 above
+-- document as expected_temporal_safe=false -- mirroring the same
+-- "prediction contradicted, gate empirically passes at the citywide level"
+-- surprise already documented for Berlin. This does NOT relax any of notes
+-- 6/8/9's standing caveats for either city: the citywide gate remains
+-- supportive evidence only, not itself an authorization for a live per-cell
+-- YoY delta absent the still-unbuilt per-cell completeness flag the OA-D7
+-- page's own carried-forward condition requires (unchanged). No change to
+-- this model's methods/formulas was made or required; the existing
+-- mart-level accepted_values=['BER','HH'] is retroactively validated, not
+-- newly authorized, by this re-fit. See the spike doc for the full
+-- per-method rho table (Hamburg vs re-verified Berlin) and for why
+-- percapita's Hamburg result is additionally determinate where Berlin's own
+-- run is indeterminate (Hamburg's EWR reference_year coverage is broader,
+-- a data-availability difference, not a methodological one).
+--
 -- Graceful degradation: returns zero rows when int_poi_offering_advantage has
 -- no rows; density/per-capita are individually NULL (not a build failure)
 -- when their respective join has no match.

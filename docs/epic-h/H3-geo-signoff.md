@@ -42,7 +42,13 @@ typology_stage, and population** — and `own_idx_class`/`own_idx_class_bi` are 
 - **The C5 OSM completeness-bias correction and the D3 POI predictor also do NOT enter
   `live_data` status.** `live_data.status_index` is the Sozialmonitoring/MSS *outcome* ordinal, not
   a POI score. The C1–C6 re-fits are real and gated but bind on the POI/change/OA marts, not on the
-  outcome ordinals admitted here.
+  outcome ordinals admitted here. **Update (#312, 2026-07-24):** the OA-mart-scoped C5 re-fit this
+  note flags as still-open has since been closed independently --
+  `docs/epic-h/312-oa-c5-geo-spike.md` re-fit the completeness-bias correction specifically for
+  `mart_poi_offering_advantage` (structural same-year-ratio argument plus an empirical extension of
+  the OA-D0 completeness-contamination gate to Hamburg) and confirmed the mart's existing
+  `accepted_values=["BER","HH"]` is methodologically sound. That closure does not retroactively
+  alter anything in *this* H3 sign-off, which never depended on it.
 
 What *does* enter, and is therefore what this gate genuinely turns on: the **D1/D2 Sozialmonitoring
 outcome ordinals and the reused Berlin D1×D2 typology matrix / Dynamik relabel**, applied to

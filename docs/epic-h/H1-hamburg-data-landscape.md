@@ -197,7 +197,14 @@ This is the adapter pattern ADR-0005 promised. Suggested order, lowest-risk firs
    per-city CRS parameter; transform to WGS84 for the ohsome join. Carry a `vintage` tag (943 vs 941).
 2. **OSM POI (Pillar 1).** Re-use the Epic-C ohsome ingestion *unchanged* except for the new
    polygons. Re-fit (do **not** copy) the C5 completeness-bias normalization for Hamburg's mapper
-   community. The C2 tag harmonization is reusable as-is.
+   community. The C2 tag harmonization is reusable as-is. **Status:** this re-fit is now closed for
+   both consumers of C5 -- the `int_poi_status_dynamism` (gentrification-index) path was re-fit and
+   dual-signed-off under H-C1 #158 (`docs/epic-h/158-hc1-geo-spike.md` + its sign-offs); the
+   `mart_poi_offering_advantage` (OA) path was independently re-fit under #312
+   (`docs/epic-h/312-oa-c5-geo-spike.md`), which found the OA location-quotient construct transfers
+   on an even stronger structural footing than dynamism_score's (a same-year ratio, not a YoY delta)
+   and empirically extended the OA-D0 completeness-contamination gate to Hamburg for the first time
+   (all nine registered OA methods pass).
 3. **Sozialmonitoring outcome (Pillar 2).** Build `ingestion/hamburg/sozialmonitoring/` analogous to
    `ingestion/berlin/mss/`. Prefer the **WFS/CSV** delivery; persist per-year Parquet under
    `data/raw/hamburg/sozialmonitoring/`. Stage to `stg_hamburg_sozialmonitoring` (one row per
