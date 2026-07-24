@@ -11,6 +11,47 @@
 -- the final published grain -- see those two models' headers for the merge methodology.
 --
 -- =============================================================================
+-- #303 [I21-i / H-price-rent]: Hamburg admission
+-- =============================================================================
+-- This mart is now published for BOTH city_code='BER' and city_code='HH'. Hamburg's
+-- rows come from int_price_rent_brw_wohnlage_combined_hamburg (UNIONed into the
+-- `combined` CTE below alongside Berlin's unchanged int_price_rent_brw_wohnlage_
+-- combined), which wires in ALREADY-SIGNED-OFF Hamburg data -- an admission step
+-- (mirrors #237's gentrification_index Hamburg admission), NOT new methodology:
+-- int_hamburg_wohnlage_mietenspiegel (#215 [H-C6], PASS: docs/epic-h/215-hc6-geo-
+-- signoff.md, 215-hc6-domain-signoff.md) and int_hamburg_wohnlage_stadtteil (#203
+-- [H-C5], PASS: docs/epic-h/203-hc5-geo-signoff.md, 203-hc5-domain-signoff.md).
+-- See int_price_rent_brw_wohnlage_combined_hamburg.sql's header for the full
+-- rationale; summarised here for R-C2:
+-- - NO BRW / land-value signal for Hamburg: brw_weighted_avg_eur_m2, n_brw_zones,
+-- brw_residential_coverage_frac, brw_zscore, brw_rank, brw_percentile are all NULL
+-- for city_code='HH' -- there is no Bodenrichtwert-equivalent source ingested.
+-- - Hamburg's Wohnlage is a TWO-tier scheme (Gute/Normale Wohnlage), NOT Berlin's
+-- THREE-tier (einfach/mittel/gut) -- the two vocabularies are NOT equivalent and
+-- are NEVER cross-mapped. Hamburg's tiers are carried in their OWN new columns
+-- (pct_gute_wohnlage, pct_normale_wohnlage), NULL for Berlin rows; Berlin's
+-- pct_einfach/pct_mittel/pct_gut are NULL for Hamburg rows. Any cross-city
+-- Wohnlage comparison must go through the G2 methodology page's non-equivalence
+-- disclosure (int_hamburg_wohnlage_stadtteil header).
+-- - wohnlage_score (Berlin's 3-tier ordinal mean) is NULL for Hamburg -- a 2-tier
+-- share-weighted ordinal mean would just be a linear rescale of
+-- pct_gute_wohnlage, not an independent signal (int_hamburg_wohnlage_mietenspiegel
+-- header). wohnlage_zscore is therefore also NULL for Hamburg.
+-- - Hamburg's Wohnlage/Mietenspiegel signal is CURRENT-STATE only -- no historical
+-- vintage series exists (unlike Berlin's 2017/2019/2021/2023/2026 Wohnlage
+-- vintages). snapshot_year for Hamburg rows is the Mietenspiegel edition_year
+-- actually used (the one real "vintage" signal Hamburg carries); area_vintage is
+-- 'current' (see stg_hamburg_geo). wohnlage_vintage_matched is NULL for Hamburg
+-- rows (no separate Wohnlage vintage exists to record).
+-- - Mechanical guard added alongside this admission (see brw_group_has_signal CTE):
+-- brw_rank/brw_percentile now explicitly NULL out an entire ALL-NULL-BRW
+-- (city_code, snapshot_year) group, rather than letting RANK()/PERCENT_RANK()
+-- degenerate to a misleading tied rank-1/percentile-0 for every row in that
+-- group. This is certain for every Hamburg group (no BRW signal exists) and was
+-- a latent pre-existing edge case for Berlin's Wohnlage-only 2026 vintage;
+-- individual NULL-BRW rows within an otherwise-populated group are unaffected.
+--
+-- =============================================================================
 -- R-C2 Methodology citations
 -- =============================================================================
 -- Smith (1979) rent gap: BRW LEVEL = capitalised ground-rent level (price-surface
@@ -63,6 +104,13 @@
 -- LABELLED AS ORDINAL-MEAN APPROXIMATION (tiers are ordered but not equidistant).
 -- NULL when wohnlage_low_n = TRUE (< 10 address points; unstable composition).
 -- wohnlage_low_n: TRUE when PLR-vintage has < 10 Wohnlage address points.
+-- Berlin-only (city_code='BER'); NULL for Hamburg rows (see #303 section above).
+--
+-- Signal 2 (Hamburg) — Wohnlage composition (from
+-- int_price_rent_brw_wohnlage_combined_hamburg): pct_gute_wohnlage,
+-- pct_normale_wohnlage — Hamburg's own 2-tier vocabulary, NOT cross-mapped to
+-- Berlin's 3-tier columns above (see #303 section above). Hamburg-only
+-- (city_code='HH'); NULL for Berlin rows. No wohnlage_score for Hamburg.
 --
 -- Signal 3 — Modelled Mietspiegel rent estimate (from
 -- int_price_rent_wohnlage_mietspiegel):
@@ -158,7 +206,80 @@ with
     -- QA-6b (#204): merge/alignment logic lives in int_price_rent_brw_wohnlage_combined
     -- (which in turn depends on int_price_rent_wohnlage_mietspiegel). This mart starts
     -- from that combined grain and owns only the normalization below.
-    combined as (select * from {{ ref("int_price_rent_brw_wohnlage_combined") }}),
+    --
+    -- #303: UNION ALL in Hamburg's combined grain (int_price_rent_brw_wohnlage_
+    -- combined_hamburg) alongside Berlin's, explicit-column + NULL-padded so each
+    -- side's city-specific columns (Berlin's pct_einfach/mittel/gut vs Hamburg's
+    -- pct_gute_wohnlage/pct_normale_wohnlage) are NULL on the other city's rows --
+    -- see #303 section above and that model's header for the non-equivalence
+    -- rationale. Berlin's own CTE/output is untouched (byte-identical).
+    combined as (
+        select
+            city_code,
+            snapshot_year,
+            area_code,
+            area_vintage,
+            brw_weighted_avg_eur_m2,
+            n_brw_zones,
+            brw_residential_coverage_frac,
+            pct_einfach,
+            pct_mittel,
+            pct_gut,
+            cast(null as double) as pct_gute_wohnlage,
+            cast(null as double) as pct_normale_wohnlage,
+            total_n_addresses,
+            wohnlage_low_n,
+            wohnlage_score,
+            est_rent_mid,
+            est_rent_low,
+            est_rent_high,
+            mietspiegel_vintage_used,
+            wohnlage_vintage_matched
+        from {{ ref("int_price_rent_brw_wohnlage_combined") }}
+
+        union all
+
+        select
+            city_code,
+            snapshot_year,
+            area_code,
+            area_vintage,
+            brw_weighted_avg_eur_m2,
+            n_brw_zones,
+            brw_residential_coverage_frac,
+            pct_einfach,
+            pct_mittel,
+            pct_gut,
+            pct_gute_wohnlage,
+            pct_normale_wohnlage,
+            total_n_addresses,
+            wohnlage_low_n,
+            wohnlage_score,
+            est_rent_mid,
+            est_rent_low,
+            est_rent_high,
+            mietspiegel_vintage_used,
+            wohnlage_vintage_matched
+        from {{ ref("int_price_rent_brw_wohnlage_combined_hamburg") }}
+    ),
+
+    -- #303: marks (city_code, snapshot_year) groups that have AT LEAST ONE non-NULL
+    -- brw_weighted_avg_eur_m2 -- used only to guard brw_rank/brw_percentile below
+    -- against a degenerate ALL-NULL partition (RANK()/PERCENT_RANK() would
+    -- otherwise tie every row in an all-NULL group to rank 1 / percentile 0,
+    -- misreading as "lowest land value" instead of "no BRW signal at all"). This
+    -- was already a latent risk for Berlin's Wohnlage-only 2026 vintage (no BRW
+    -- companion that year -- see int_price_rent_brw_wohnlage_combined header) and
+    -- is now a certainty for every Hamburg group (no BRW source exists at all).
+    -- Individual NULL-BRW rows WITHIN an otherwise-populated group (e.g. Berlin
+    -- park/water PLRs) are intentionally left unaffected -- this only guards
+    -- fully-degenerate groups, to avoid changing already-published Berlin output
+    -- for the common mixed-group case.
+    brw_group_has_signal as (
+        select distinct city_code, snapshot_year
+        from combined
+        where brw_weighted_avg_eur_m2 is not null
+    ),
 
     -- Normalization (geo condition 13):
     -- Winsorized (1%/99%) z-score per (city_code, snapshot_year) over inhabited
@@ -294,10 +415,16 @@ select
     -- Residential coverage fraction; NULL when no W% BRW zones overlap (not 0).
     c.brw_residential_coverage_frac,
 
-    -- Signal 2: Wohnlage composition
+    -- Signal 2: Wohnlage composition (Berlin, 3-tier; NULL for Hamburg rows)
     c.pct_einfach,
     c.pct_mittel,
     c.pct_gut,
+
+    -- Signal 2 (Hamburg, 2-tier; NULL for Berlin rows -- #303, non-equivalent
+    -- to the 3-tier columns above; never cross-mapped).
+    c.pct_gute_wohnlage,
+    c.pct_normale_wohnlage,
+
     c.total_n_addresses as wohnlage_n_addresses,
     c.wohnlage_low_n,
     -- wohnlage_score: ordinal mean (einfach=1, mittel=2, gut=3); ORDINAL-MEAN
@@ -346,15 +473,30 @@ select
     -- brw_rank: ascending (1 = lowest BRW in city-year; higher rank = higher land
     -- value).
     -- brw_percentile: PERCENT_RANK [0,1] (0 = lowest, 1 = highest).
-    rank() over (
-        partition by c.city_code, c.snapshot_year
-        order by c.brw_weighted_avg_eur_m2 asc nulls last
-    ) as brw_rank,
+    -- #303: guarded via brw_group_has_signal (see that CTE's comment) against a
+    -- degenerate ALL-NULL (city_code, snapshot_year) partition -- certain for every
+    -- Hamburg group (no BRW source exists), and a latent pre-existing edge case for
+    -- Berlin's Wohnlage-only 2026 vintage. Individual NULL-BRW rows within an
+    -- otherwise-populated group are unaffected (unchanged from prior behaviour).
+    case
+        when g.city_code is null
+        then null
+        else
+            rank() over (
+                partition by c.city_code, c.snapshot_year
+                order by c.brw_weighted_avg_eur_m2 asc nulls last
+            )
+    end as brw_rank,
 
-    percent_rank() over (
-        partition by c.city_code, c.snapshot_year
-        order by c.brw_weighted_avg_eur_m2 asc nulls last
-    ) as brw_percentile
+    case
+        when g.city_code is null
+        then null
+        else
+            percent_rank() over (
+                partition by c.city_code, c.snapshot_year
+                order by c.brw_weighted_avg_eur_m2 asc nulls last
+            )
+    end as brw_percentile
 
 from combined as c
 left join
@@ -369,3 +511,7 @@ left join
     er_moments as em
     on c.city_code = em.city_code
     and c.snapshot_year = em.snapshot_year
+left join
+    brw_group_has_signal as g
+    on c.city_code = g.city_code
+    and c.snapshot_year = g.snapshot_year

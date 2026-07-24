@@ -685,8 +685,10 @@ models:
     columns:
       - name: city_code
         description: >
-          City identifier (ADR-0005). Always 'BER' — normalised by int_berlin_brw_plr and
-          int_berlin_wohnlage_plr (staging layers emit 'berlin'; normalised for dim_city FK).
+          City identifier (ADR-0005). 'BER' (normalised by int_berlin_brw_plr and
+          int_berlin_wohnlage_plr; staging layers emit 'berlin', normalised for dim_city FK)
+          or 'HH' (Hamburg, admitted #303 -- see #303 section in the model header for the
+          BRW-absence / 2-tier-vs-3-tier-Wohnlage / current-state-only disclosures).
         data_tests:
 
           - not_null:
@@ -694,7 +696,7 @@ models:
                 where: "area_code is not null"
           - accepted_values:
               arguments:
-                values: ["BER"]
+                values: ["BER", "HH"]
               config:
                 where: "area_code is not null"
       - name: snapshot_year
@@ -702,13 +704,19 @@ models:
           Price/rent dimension vintage year (integer).
           For BRW-only rows: derived from YEAR(brw.reference_date), 2017–2024.
           For Wohnlage-only rows (e.g. 2026): Wohnlage WFS edition year.
+          For Hamburg rows (#303): the Mietenspiegel edition_year actually used
+          (mietenspiegel_edition_used) -- Hamburg's Wohnlage side is current-state (no
+          vintage series of its own), so the Mietenspiegel edition year is the only real
+          "vintage" signal it carries.
         data_tests:
 
           - not_null:
               config:
                 where: "area_code is not null"
       - name: area_code
-        description: PLR area code (8-digit, zero-padded). LOR 2021 scheme for BRW; vintage-specific for Wohnlage.
+        description: >
+          PLR area code (8-digit, zero-padded) for Berlin; Hamburg Stadtteil area_code for HH
+          (#303). LOR 2021 scheme for Berlin BRW; vintage-specific for Berlin Wohnlage.
         data_tests:
 
           - not_null
@@ -716,6 +724,9 @@ models:
         description: >
           LOR boundary vintage. 'lor_2021' for BRW rows (always lor_2021 in int_berlin_brw_plr).
           'lor_pre2021' or 'lor_2021' for Wohnlage rows (vintage-specific join).
+          'current' for Hamburg rows (#303) -- Hamburg's Wohnlagenverzeichnis is a
+          current-state crosswalk with no historical vintage dimension (see
+          int_hamburg_wohnlage_stadtteil header).
         data_tests:
 
           - not_null:
@@ -723,39 +734,70 @@ models:
                 where: "area_code is not null"
           - accepted_values:
               arguments:
-                values: ["lor_pre2021", "lor_2021"]
+                values: ["lor_pre2021", "lor_2021", "current"]
               config:
                 where: "area_code is not null"
       - name: brw_weighted_avg_eur_m2
         description: >
           Area-weighted mean Bodenrichtwert (EUR/m²) for residential BRW zones overlapping
           this PLR. NULL for non-residential/uninhabited PLRs (pure park/water/airport).
+          Berlin-only (city_code='BER'); ALWAYS NULL for Hamburg rows (#303) -- no
+          BRW-equivalent land-value source has been ingested for Hamburg.
           POLARITY: ambiguous context covariate (domain D2). High = price-surface/consolidation.
           Sign-flip required for vulnerability composite. NOT a vulnerability score.
           BRW LEVEL ≠ rent gap (Smith 1979) — the rent gap is a difference, not a level (domain D1).
       - name: n_brw_zones
-        description: Count of distinct residential BRW zones contributing to brw_weighted_avg_eur_m2.
+        description: >
+          Count of distinct residential BRW zones contributing to brw_weighted_avg_eur_m2.
+          Berlin-only; ALWAYS NULL for Hamburg rows (#303).
       - name: brw_residential_coverage_frac
         description: >
           Fraction of the PLR area covered by residential BRW zones (0–1).
           NULL when no W% BRW zones overlap this PLR. Use to identify thin-signal PLRs.
+          Berlin-only; ALWAYS NULL for Hamburg rows (#303).
       - name: pct_einfach
         description: >
           Share of Wohnlage-classified addresses in the 'einfach' (simple/basic) tier for
           this PLR-vintage. 0.0 if this tier is absent; NULL if no Wohnlage data available.
+          Berlin-only (3-tier scheme); ALWAYS NULL for Hamburg rows (#303) -- see
+          pct_gute_wohnlage/pct_normale_wohnlage for Hamburg's own 2-tier vocabulary
+          (NOT cross-mapped to this column; non-equivalent schemes).
           POLARITY: vulnerability-positive (high pct_einfach = more upgrading headroom;
           inner-city precondition for gentrification per Blasius & Dangschat 1990; domain D3).
       - name: pct_mittel
-        description: Share of addresses in the 'mittel' (medium) Wohnlage tier. 0.0 if absent.
+        description: >
+          Share of addresses in the 'mittel' (medium) Wohnlage tier. 0.0 if absent.
+          Berlin-only; ALWAYS NULL for Hamburg rows (#303).
       - name: pct_gut
-        description: Share of addresses in the 'gut' (good/desirable) Wohnlage tier. 0.0 if absent.
+        description: >
+          Share of addresses in the 'gut' (good/desirable) Wohnlage tier. 0.0 if absent.
+          Berlin-only; ALWAYS NULL for Hamburg rows (#303).
+      - name: pct_gute_wohnlage
+        description: >
+          Hamburg-only (#303): share of Wohnlage-classified addresses in the 'Gute Wohnlage'
+          (good location) tier for this Stadtteil. 0.0 if absent; NULL if no Wohnlage data
+          available. ALWAYS NULL for Berlin rows -- Hamburg's 2-tier vocabulary is NOT
+          equivalent to Berlin's 3-tier pct_einfach/pct_mittel/pct_gut and is never
+          cross-mapped onto those columns (int_hamburg_wohnlage_stadtteil header; any
+          cross-city Wohnlage comparison must go through the G2 non-equivalence disclosure).
+          POLARITY: analogous role to Berlin's pct_gut (desirable tier) but NOT numerically
+          comparable across cities (different tier count/definition).
+      - name: pct_normale_wohnlage
+        description: >
+          Hamburg-only (#303): share of addresses in the 'Normale Wohnlage' (normal location)
+          tier for this Stadtteil. 0.0 if absent; NULL if no Wohnlage data available. ALWAYS
+          NULL for Berlin rows. See pct_gute_wohnlage for the non-equivalence disclosure.
       - name: wohnlage_n_addresses
-        description: Total count of Wohnlage-classified address points in this PLR-vintage across all tiers.
+        description: >
+          Total count of Wohnlage-classified address points in this area-vintage across
+          all tiers. For Hamburg rows (#303), re-derived from int_hamburg_wohnlage_
+          stadtteil's own SUM(n_addresses) (identical computation, different grain).
       - name: wohnlage_low_n
         description: >
-          TRUE when this PLR-vintage has fewer than 10 total Wohnlage address points.
+          TRUE when this area-vintage has fewer than 10 total Wohnlage address points.
           When TRUE: wohnlage_score, est_rent_mid/low/high, wohnlage_zscore, est_rent_zscore
-          are all NULL (unstable composition; geo condition 7).
+          are all NULL (unstable composition; geo condition 7). Populated for both Berlin
+          and Hamburg rows.
       - name: wohnlage_score
         description: >
           Ordinal-mean approximation of Wohnlage quality per PLR:
@@ -763,14 +805,22 @@ models:
           Range: [1.0, 3.0]. LABELLED AS ORDINAL-MEAN APPROXIMATION — the three tiers are
           ordered but not equidistant; do not treat as interval-scaled in regression without noting.
           NULL when wohnlage_low_n = TRUE.
+          Berlin-only; ALWAYS NULL for Hamburg rows (#303) -- with only two tiers, a
+          share-weighted ordinal mean would just be a linear rescale of pct_gute_wohnlage,
+          adding no independent information (int_hamburg_wohnlage_mietenspiegel header).
           POLARITY: high score = more desirable = consolidated = LOW residual headroom.
           Sign-flip required for vulnerability composite (for vulnerability framing, use pct_einfach).
       - name: est_rent_mid
         description: >
-          Modelled/estimated net cold rent (EUR/m²/month) at the fixed reference dwelling profile:
-          size = 60–90 m², construction year = 1950–1964, standard equipment (mit SH/Bad/IWC).
-          Formula: pct_einfach * ms_einfach_mid + pct_mittel * ms_mittel_mid + pct_gut * ms_gut_mid
-          using the Mietspiegel rent_mid values for the nearest-<= vintage.
+          Modelled/estimated net cold rent (EUR/m²/month) at the fixed reference dwelling profile.
+          Berlin: size = 60–90 m², construction year = 1950–1964, standard equipment (mit
+          SH/Bad/IWC). Formula: pct_einfach * ms_einfach_mid + pct_mittel * ms_mittel_mid +
+          pct_gut * ms_gut_mid using the Mietspiegel rent_mid values for the nearest-<= vintage.
+          Hamburg (#303): size = '66m² bis unter 91m²', construction year = '1968 bis 1977',
+          ausstattung = 'mit Bad und Sammelheizung' (Hamburg's own representative-profile
+          analogue; see int_hamburg_wohnlage_mietenspiegel header). Formula: pct_gute_wohnlage
+          * ms_gute_mid + pct_normale_wohnlage * ms_normale_mid, using the single latest
+          ingested Mietenspiegel edition (no vintage matching -- current-state Wohnlage).
           "modelled/estimated net cold rent at a fixed reference dwelling profile — NOT observed
            rent paid." (domain D6; Mietspiegel ortsübliche Vergleichsmiete; Holm 2010.)
           Bestandsmiete/lagging bias: conservative, understates leading-edge rent pressure (domain D7).
@@ -778,31 +828,41 @@ models:
           POLARITY: affordability-negative (high = less affordable; Bestandsmiete-lagging).
       - name: est_rent_low
         description: >
-          Composition-weighted lower bound (3/4-Spanne) of Mietspiegel reference rent.
-          Same formula and fixed profile as est_rent_mid, using rent_low.
+          Composition-weighted lower bound (3/4-Spanne for Berlin; rent_low for Hamburg) of
+          Mietspiegel/Mietenspiegel reference rent. Same formula and fixed profile as
+          est_rent_mid (per city; see est_rent_mid for the Hamburg vs Berlin profile).
           NULL when wohnlage_low_n = TRUE.
       - name: est_rent_high
         description: >
-          Composition-weighted upper bound (3/4-Spanne) of Mietspiegel reference rent.
-          Same formula and fixed profile as est_rent_mid, using rent_high.
+          Composition-weighted upper bound (3/4-Spanne for Berlin; rent_high for Hamburg) of
+          Mietspiegel/Mietenspiegel reference rent. Same formula and fixed profile as
+          est_rent_mid (per city; see est_rent_mid for the Hamburg vs Berlin profile).
           NULL when wohnlage_low_n = TRUE.
       - name: mietspiegel_vintage_used
         description: >
           Mietspiegel edition year used for the modelled rent estimate.
-          Nearest-<= match to the Wohnlage vintage year (geo condition 8).
+          Berlin: nearest-<= match to the Wohnlage vintage year (geo condition 8).
           Approximation disclosure (domain D13): 2026 Wohnlage uses 2026 Mietspiegel
           (stands in for the 2025 MSS panel edition; disclose on G2).
+          Hamburg (#303): the single latest ingested Mietenspiegel edition_year
+          (mietenspiegel_edition_used) -- same value as this row's snapshot_year, since
+          Hamburg has no separate Wohnlage vintage to align against (current-state).
       - name: wohnlage_vintage_matched
         description: >
-          The Wohnlage vintage year that was joined to this BRW snapshot_year.
+          Berlin: the Wohnlage vintage year that was joined to this BRW snapshot_year.
           Nearest-<= Wohnlage vintage for the BRW year. NULL for BRW years before the
           first available Wohnlage vintage. Same as snapshot_year for Wohnlage-only rows.
+          Hamburg (#303): ALWAYS NULL -- Hamburg's Wohnlage side is current-state (no
+          vintage-year dimension of its own), so there is no separate Wohnlage vintage to
+          record here (recording the Mietenspiegel year under this label would misrepresent
+          it as a Wohnlage vintage that does not exist; see mietspiegel_vintage_used instead).
       - name: brw_zscore
         description: >
           Winsorized (1%/99%) z-score of brw_weighted_avg_eur_m2 per (city_code, snapshot_year),
           computed over non-NULL, non-low-n PLRs only.
           POLARITY: ambiguous (see brw_weighted_avg_eur_m2). Sign-flip if pooled into vulnerability.
           NULL when brw_weighted_avg_eur_m2 is NULL or normalization moments unavailable.
+          Berlin-only; ALWAYS NULL for Hamburg rows (#303) -- no BRW input to normalize.
           (geo condition 13; OECD/JRC 2008)
       - name: wohnlage_zscore
         description: >
@@ -811,6 +871,8 @@ models:
           POLARITY: high = desirable = consolidated = LOW vulnerability headroom.
           Sign-flip required for vulnerability composite; use pct_einfach for vuln framing.
           NULL when wohnlage_score is NULL or normalization moments unavailable.
+          Berlin-only; ALWAYS NULL for Hamburg rows (#303) -- wohnlage_score is not
+          produced for Hamburg's 2-tier scheme.
           (geo condition 13; OECD/JRC 2008)
       - name: est_rent_zscore
         description: >
@@ -825,12 +887,18 @@ models:
           ascending (1 = lowest land value; higher rank = higher land value).
           NULL PLRs sorted last. Headline display metric for heavy-tailed land values (G2 page)
           because rank is outlier-insensitive (a few super-prime PLRs skew the z-score).
+          ALWAYS NULL for Hamburg rows (#303) and for any (city_code, snapshot_year) group
+          with NO non-NULL BRW values at all (guards against a degenerate all-NULL
+          partition, where RANK() would otherwise tie every row to rank 1) -- individual
+          NULL-BRW PLRs within an otherwise-populated group still receive a real tied rank
+          (unchanged prior behaviour).
           (geo condition 13)
       - name: brw_percentile
         description: >
           PERCENT_RANK of brw_weighted_avg_eur_m2 within (city_code, snapshot_year),
           ascending. Range [0, 1]; 0 = lowest, 1 = highest land value.
-          NULL PLRs sorted last.
+          NULL PLRs sorted last. Same all-NULL-group guard as brw_rank; ALWAYS NULL for
+          Hamburg rows (#303).
           (geo condition 13)
 
   - name: mart_price_rent_dimension_pre2021
