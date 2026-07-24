@@ -3,16 +3,16 @@
 Reviving a 2018 master thesis — *"Measurement of Gentrification in Berlin via Big Data
 Analytics"* — on a modern, local-first, open-source data stack. Gentriduck is four things at
 once: a public **statistics site** tracking gentrification pressure across Berlin's
-neighbourhoods (and, later, other cities); a **quantified-methodology revival** of that thesis,
-re-checked hypothesis by hypothesis against fresh data; a documented **supervised-agent
+neighbourhoods (and, since July 2026, Hamburg's); a **quantified-methodology revival** of that
+thesis, re-checked hypothesis by hypothesis against fresh data; a documented **supervised-agent
 operating model** — a team of specialised AI agents, coder/reviewer-gated and human-merged, doing
 the engineering in the open; and an **open-data case study** in what free, official sources can
 and can't support. See [`/about`](web/pages/about.md) for the full story, or jump to *Where to
 start* below.
 
 - **Stack:** [dbt](https://www.getdbt.com/) + [DuckDB](https://duckdb.org/) (local) · Python ([uv](https://docs.astral.sh/uv/)), analysis in scipy / scikit-learn · [Evidence.dev](https://evidence.dev/) static site reading published marts via in-browser DuckDB-WASM, hosted free on GitHub / Cloudflare Pages ([ADR-0012](docs/adr/0012-serving-and-hosting-stack.md))
-- **Data:** OpenStreetMap history (© OpenStreetMap contributors, ODbL) + Berlin open data — LOR geographies, EWR population register, Bodenrichtwerte / Mietspiegel price & rent — **free & open only**
-- **Status:** Epics **A–F** substantially complete; the Berlin statistics **website (Epic G) is built and soft-launched** (noindex) on GitHub Pages while the Cloudflare Pages primary host is finalised; **multi-city (Epic H)** underway — Hamburg is ingested and wired through the pipeline, and its city-specific methodology re-fits (OSM completeness-bias correction, trajectory thresholds, an independent annual-cadence lead-lag re-test) are dual-signed-off and landed as groundwork, but Hamburg numbers remain **staged (not yet published)** pending a separate publish-scope decision; **public communication & storytelling (Epic I)** has revised every site page onto one shared narrative arc and added timeline/takeaways/open-data pages, while outward posting (the comms wave) stays gated behind an ADR. Most of the tracked backlog is done (as of 2026-07). See the roadmap below.
+- **Data:** OpenStreetMap history (© OpenStreetMap contributors, ODbL) + Berlin and Hamburg open data — LOR/subarea geographies, population-register socio-economic indicators, Bodenrichtwerte / Mietspiegel price & rent — **free & open only**
+- **Status:** Epics **A–F** substantially complete; the Berlin statistics **website (Epic G) is built and soft-launched** (noindex) on GitHub Pages while the Cloudflare Pages primary host is finalised; **multi-city (Epic H) is live for Hamburg** — its city-specific methodology re-fits (OSM completeness-bias correction, trajectory thresholds, an independent annual-cadence lead-lag re-test) are dual-signed-off, and the city now has a public **`/hamburg` hub** (landing, maps, POI map) plus an area-hierarchy page ladder (I21-g/h); most per-area **statistics** sections on those hierarchy pages still show an honest not-yet-published placeholder, gated on **#303** (open, blocked pending a maintainer publish-scope decision); **public communication & storytelling (Epic I)** has revised every site page onto one shared narrative arc, added timeline/takeaways/open-data pages, and (I21, #284) consolidated the area-hierarchy pages onto one canonical template for both cities; the outward-comms machinery is built and its first six posts are drafted and dual-signed-off (ADR-0021, a `comms-strategist` agent + `comms-draft` skill), but **no post has been published yet** — every post is a manual, maintainer-initiated act, and that step hasn't happened. Most of the tracked backlog is done (as of 2026-07). See the roadmap below.
 
 ## Where to start, depending on who you are
 
@@ -55,10 +55,14 @@ not repeated here so this line can't go stale); the live backlog is the **Gentri
 Project board. Epics (✓ = substantially complete): **A** foundations ✓ ·
 **B** revive the 2018 concept ✓ · **C** longitudinal OSM POI history ✓ · **D** price/rent dimension ✓ ·
 **E** analysis & ML ✓ · **F** serving layer ✓ · **G** public website ✓ (built, soft-launched) ·
-**H** multi-city (Hamburg ingested + wired through the pipeline; city-specific methodology re-fits landed, staged/unpublished pending a publish-scope decision) ·
+**H** multi-city (Hamburg is live — `/hamburg` hub with maps + a POI map, plus an area-hierarchy
+page ladder (I21-g/h); city-specific methodology re-fits dual-signed-off; most per-area statistics
+sections still show an honest not-yet-published placeholder, pending **#303**) ·
 **I** public communication & storytelling (site revision wave — one narrative arc, city deep-dive
-navigation, timeline/takeaways/open-data pages — done; the outward-comms wave, gated behind an ADR,
-is next).
+navigation, timeline/takeaways/open-data pages, and the I21 (#284) area-hierarchy template
+consolidation for both cities — mostly done, #303 open; the outward-comms wave has an accepted ADR,
+a `comms-strategist` agent, and six signed-off draft posts, but the maintainer hasn't published one
+yet).
 
 ## Setup on macOS / Windows / Linux
 

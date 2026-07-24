@@ -1,5 +1,5 @@
 ---
-title: Gentriduck — Berlin Gentrification Index
+title: Gentriduck — Gentrification Index for Berlin & Hamburg
 ---
 
 <!--
@@ -19,12 +19,19 @@ title: Gentriduck — Berlin Gentrification Index
   I4 (#221) added the `/timeline` page and links to it from here (Chapter 2's Alert, and the
   "You design AI systems" audience card) -- per the ticket's "linked from the home page and footer
   nav" acceptance criterion.
+  I21-j (#304) docs/copy pass: now that Hamburg has a live `/hamburg` hub (H3/#237, published
+  2026-07-22) and I21 (#284) has consolidated the area-hierarchy template for both cities, the
+  title/hero framing was Berlin-only and Hamburg was introduced only two-thirds down the page --
+  a light copy touch (frontmatter title, hero lede) makes the framing city-aware up front,
+  without touching the live_data/city_code='BER'-scoped queries below, which stay Berlin-only by
+  design (methodology §6's no-pooled-cross-city-comparison rule). No SQL/frontmatter structure
+  changed.
 -->
 
 <Hero
   eyebrow="A 2018 Berlin master's thesis, revived — built by a supervised team of AI agents"
   title="Gentriduck"
-  lede="A live, public statistics project tracking gentrification pressure across Berlin's neighbourhoods, on a free, open, local-first data stack. Everything here runs on open, official data — Berlin's own social-monitoring reports, the population register, OpenStreetMap, and official land-value/rent references — and every figure describes a small area of a few thousand residents, never a person, household, or building."
+  lede="A live, public statistics project tracking gentrification pressure across neighbourhoods in Berlin — and, since 2026, Hamburg — on a free, open, local-first data stack. Everything here runs on open, official data — each city's own social-monitoring reports, population register, OpenStreetMap, and official land-value/rent references — and every figure describes a small area of a few thousand residents, never a person, household, or building."
 >
   <a href="/how-its-organised" class="primary">How it's organised →</a>
   <a href="#the-finding" class="secondary">What we found →</a>
@@ -132,8 +139,9 @@ maps, per-neighbourhood profiles, time series, and the commercial-mix data — s
      city_code='BER'). Hamburg is a real second city on this site, not folded into the figures
      above — see its own data hub, never a pooled/merged headline (methodology §6's structural
      rule against pooled cross-city comparison). -->
-Gentriduck now also tracks **Hamburg**, admitted 2026-07-18 after its own methodology gate — a
-narrower dataset than Berlin's, honestly scoped on its own page: the **[Hamburg data hub](/hamburg)**.
+Gentriduck now also tracks **Hamburg** — admitted 2026-07-18 after its own methodology gate, and
+live since with maps and a POI overview map — a narrower dataset than Berlin's, honestly scoped
+on its own page: the **[Hamburg data hub](/hamburg)**.
 
 ### Where each neighbourhood sits in the gentrification cycle
 
