@@ -213,6 +213,17 @@ for the full method, or the [methodology page](/methodology) for a plain-languag
   <ButtonGroupItem value="development" valueLabel="Change since previous year"/>
 </ButtonGroup>
 
+<Alert status="warning">
+  <b>"Change since previous year" for POI density is not adjusted for growing OSM coverage.</b>
+  Growing OpenStreetMap contributor coverage over time inflates early-year counts on its own,
+  independent of real-world change (see the citywide growth chart further down this page for the
+  shape of that coverage growth), so an early-year density delta can reflect new OSM contributors
+  catching up rather than real commercial change. Offering Advantage's "change" view is less
+  exposed to this: it is a same-year ratio to the citywide average, so an area-uniform coverage
+  shift cancels out; density's raw count carries no such protection. Read early-year density
+  deltas cautiously.
+</Alert>
+
 ```sql poi_map_data
 -- #210: reads mart_poi_offering_advantage_map (domain-grain, ~1/3 the rows and
 -- 4 fewer columns than the leaf-grain mart_poi_offering_advantage) -- Evidence
