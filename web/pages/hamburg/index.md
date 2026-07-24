@@ -24,8 +24,15 @@ sidebar_position: 12
   - fct_gentrification_change / fct_gentrification_trajectory / mart_area_demographics: BER-only
     (H3 sign-off condition 4/scope guard) -- no Hamburg time-series-with-trajectory-labels page,
     no per-area demographic profile, built here.
-  - mart_price_rent_dimension / mart_price_rent_dimension_pre2021: BER-only -- no Hamburg land
-    value/rent page built here.
+  - mart_price_rent_dimension: admitted Hamburg's Wohnlage tier composition + modelled
+    Mietenspiegel rent (I21-i/#303, docs/epic-h/303-price-rent-hamburg-geo-signoff.md and
+    303-price-rent-hamburg-domain-signoff.md, both PASS) -- narrower IN KIND than Berlin's, not
+    missing: no BRW/land-value signal, 2-tier (not 3-tier) Wohnlage, current-state-only (no
+    multi-year vintage). No Hamburg price/rent display section is built from it here (that
+    remains separate, out-of-scope future work) -- see the table below.
+  - mart_price_rent_dimension_pre2021: still BER-only -- it structurally excludes Hamburg via its
+    `area_vintage = 'lor_2021'` filter (Hamburg rows are `area_vintage = 'current'`); no Hamburg
+    page is built from it here.
   - fct_poi_development / mart_poi_offering_advantage / mart_poi_offering_advantage_map: DO carry
     real HH rows (245,031 / 245,031 / 100,128 respectively) -- this data predates H3 (it flowed in
     via H1, #40, already gated) and is city-agnostic by construction (ADR-0005), so a genuine
