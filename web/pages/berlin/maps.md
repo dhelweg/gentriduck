@@ -56,13 +56,25 @@ sidebar_position: 2
   // #233 (I16): tooltip leads with the human place name instead of Areas.svelte's default
   // areaCol-first tooltip (which would show the bare PLR/BZR area_code) -- area_name is already
   // selected by the `areas` query below via dim_area, so this is a display-only reorder, no new
-  // join. `title` mirrors the pattern already used for the map's own <AreaMap title=...> prop
-  // (inputs.indicator.label). area_code kept, de-emphasised, as a secondary line.
+  // join. area_code kept, de-emphasised, as a secondary line.
+  //
+  // Maintainer report (2026-07-24): the tooltip's field title originally reused
+  // `inputs.indicator.label` -- the same string as the <DropdownOption valueLabel=...> text,
+  // e.g. "Gentrification stage — plain-language, colour-coded (Live data + Planungsraum only)".
+  // That full descriptive form is appropriate for a one-time dropdown choice but unreadable
+  // repeated on every map hover, so the tooltip now uses this short, indicator-only label
+  // instead; the dropdown's own long-form valueLabel is untouched (still needed there to
+  // disambiguate the three indicators' current-availability caveats).
+  const indicatorShortLabel = {
+    status_class: 'Gentrification stage',
+    status_index: 'Social status',
+    dynamism_index: 'Dynamism'
+  };
   $: areaTooltip = [
     { id: 'area_name', showColumnName: false, valueClass: 'font-bold text-sm', fmt: 'id' },
     {
       id: inputs.indicator.value === 'status_class' ? 'stage_label' : inputs.indicator.value,
-      title: inputs.indicator.label,
+      title: indicatorShortLabel[inputs.indicator.value],
       fmt: inputs.indicator.value === 'status_class' ? 'id' : 'num1'
     },
     { id: 'area_code', title: 'Area code', valueClass: 'text-xs opacity-60', fmt: 'id' }

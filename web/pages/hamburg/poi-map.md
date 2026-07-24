@@ -36,9 +36,11 @@ sidebar_position: 2
   $: areaTooltip = [
     {
       id: inputs.metric.value === 'density'
-        ? (inputs.view.value === 'stock' ? 'poi_density_per_km2' : 'density_delta')
-        : (inputs.view.value === 'stock' ? 'oa_domain' : 'oa_delta'),
-      title: inputs.metric.value === 'density' ? 'POI density / km²' : 'Offering Advantage',
+        ? (inputs.view === 'stock' ? 'poi_density_per_km2' : 'density_delta')
+        : (inputs.view === 'stock' ? 'oa_domain' : 'oa_delta'),
+      title:
+        (inputs.metric.value === 'density' ? 'POI density / km²' : 'Offering Advantage')
+        + (inputs.view === 'development' ? ' (change vs. previous year)' : ''),
       fmt: 'num1'
     },
     { id: 'poi_count', title: 'Mapped places (this domain)', fmt: 'num0' },
@@ -185,34 +187,34 @@ where b.snapshot_year = ${inputs.year.value}
     areaCol="area_code"
     value={
         inputs.metric.value === 'density'
-            ? (inputs.view.value === 'stock' ? 'poi_density_per_km2' : 'density_delta')
-            : (inputs.view.value === 'stock' ? 'oa_domain' : 'oa_delta')
+            ? (inputs.view === 'stock' ? 'poi_density_per_km2' : 'density_delta')
+            : (inputs.view === 'stock' ? 'oa_domain' : 'oa_delta')
     }
     legendType="scalar"
     colorPalette={
-        inputs.metric.value === 'density' && inputs.view.value === 'stock'
+        inputs.metric.value === 'density' && inputs.view === 'stock'
             ? undefined
             : divergingPalette
     }
     min={
         inputs.metric.value === 'oa'
-            ? (inputs.view.value === 'stock'
+            ? (inputs.view === 'stock'
                 ? symmetricDomain(poi_map_data, 'oa_domain', 1)[0]
                 : symmetricDomain(poi_map_data, 'oa_delta', 0)[0])
-            : inputs.view.value === 'development'
+            : inputs.view === 'development'
                 ? symmetricDomain(poi_map_data, 'density_delta', 0)[0]
                 : undefined
     }
     max={
         inputs.metric.value === 'oa'
-            ? (inputs.view.value === 'stock'
+            ? (inputs.view === 'stock'
                 ? symmetricDomain(poi_map_data, 'oa_domain', 1)[1]
                 : symmetricDomain(poi_map_data, 'oa_delta', 0)[1])
-            : inputs.view.value === 'development'
+            : inputs.view === 'development'
                 ? symmetricDomain(poi_map_data, 'density_delta', 0)[1]
                 : undefined
     }
-    title="Hamburg statistisches Gebiet — {inputs.metric.value === 'density' ? 'POI density' : 'Offering Advantage'}, {inputs.domain.value}, {inputs.year.value}{inputs.view.value === 'development' ? ' (change vs. previous year)' : ''}"
+    title="Hamburg statistisches Gebiet — {inputs.metric.value === 'density' ? 'POI density' : 'Offering Advantage'}, {inputs.domain.value}, {inputs.year.value}{inputs.view === 'development' ? ' (change vs. previous year)' : ''}"
     startingLat={53.5511}
     startingLong={9.9937}
     startingZoom={10}
