@@ -10,8 +10,8 @@ sidebar_position: 5
   `poi_density_per_km2` values from `mart_poi_offering_advantage` (itself a pure pass-through,
   see that model's header) with no new indicator, weight, or normalization introduced here.
   Follows the existing /berlin/maps AreaMap dropdown pattern (#132/#150/#152 precedent).
-  Berlin-only for now, matching /berlin/maps and /berlin/poi-price-overview -- Hamburg's index
-  isn't signed off yet (#125), even though the OA mart itself has Hamburg rows.
+  Berlin-only for now, matching /berlin/maps -- Hamburg's index isn't signed off yet (#125), even
+  though the OA mart itself has Hamburg rows.
 
   sidebar_position history: bumped 14 -> 15 (I1, #218) to resolve a collision with
   pages/area/index.md's sidebar_position: 14 (2026-07-10 storytelling review, finding 4).
@@ -22,12 +22,14 @@ sidebar_position: 5
   I3 (#220) named consolidation: `/berlin/poi-price-overview` (citywide POI growth + land
   value/rent trend) merges into this page as a "Citywide context" section below the map -- both
   pages already covered the same commercial-mix data source, one per-area/interactive (this page)
-  and one citywide/aggregate (the old page); this page keeps its OA-map identity, the old route
-  becomes a redirect stub (`pages/berlin/poi-price-overview.md`) rather than a 404 for anyone with
-  an old link. No indicator/weight/method changes -- the merged section's SQL and Alerts are
-  copied verbatim from the old page, only cross-links updated. Re-platformed onto `<Hero>`/
-  `<ChapterLabel>`/`<FooterNav>` (removing the plain `# ` heading + hand-copied `<sub>` footer
-  line I1 didn't touch on this page).
+  and one citywide/aggregate (the old page); this page keeps its OA-map identity. The old route
+  originally became a redirect stub (`pages/berlin/poi-price-overview.md`) rather than a 404 for
+  anyone with an old link; that stub was itself removed 2026-07-24 on maintainer request (reported
+  as an unclickable link during the soft-launch phase, when a plain 404 for a stale bookmark is an
+  acceptable tradeoff — see `docs/epic-i/I2-route-map.md`). No indicator/weight/method changes --
+  the merged section's SQL and Alerts are copied verbatim from the old page, only cross-links
+  updated. Re-platformed onto `<Hero>`/`<ChapterLabel>`/`<FooterNav>` (removing the plain `# `
+  heading + hand-copied `<sub>` footer line I1 didn't touch on this page).
 
   I16 (#233): colour-scale + label pass (display-only; oa_domain/poi_density_per_km2 values and
   their upstream definitions, ADR-0017/0018, are untouched). (1) Tooltip now leads with
@@ -80,9 +82,11 @@ sidebar_position: 5
     { id: 'area_name', showColumnName: false, valueClass: 'font-bold text-sm', fmt: 'id' },
     {
       id: inputs.metric.value === 'density'
-        ? (inputs.view.value === 'stock' ? 'poi_density_per_km2' : 'density_delta')
-        : (inputs.view.value === 'stock' ? 'oa_domain' : 'oa_delta'),
-      title: inputs.metric.value === 'density' ? 'POI density / km²' : 'Offering Advantage',
+        ? (inputs.view === 'stock' ? 'poi_density_per_km2' : 'density_delta')
+        : (inputs.view === 'stock' ? 'oa_domain' : 'oa_delta'),
+      title:
+        (inputs.metric.value === 'density' ? 'POI density / km²' : 'Offering Advantage')
+        + (inputs.view === 'development' ? ' (change vs. previous year)' : ''),
       fmt: 'num1'
     },
     { id: 'poi_count', title: 'Mapped places (this domain)', fmt: 'num0' },
@@ -287,34 +291,34 @@ where b.snapshot_year = ${inputs.year.value}
     areaCol="area_code"
     value={
         inputs.metric.value === 'density'
-            ? (inputs.view.value === 'stock' ? 'poi_density_per_km2' : 'density_delta')
-            : (inputs.view.value === 'stock' ? 'oa_domain' : 'oa_delta')
+            ? (inputs.view === 'stock' ? 'poi_density_per_km2' : 'density_delta')
+            : (inputs.view === 'stock' ? 'oa_domain' : 'oa_delta')
     }
     legendType="scalar"
     colorPalette={
-        inputs.metric.value === 'density' && inputs.view.value === 'stock'
+        inputs.metric.value === 'density' && inputs.view === 'stock'
             ? undefined
             : divergingPalette
     }
     min={
         inputs.metric.value === 'oa'
-            ? (inputs.view.value === 'stock'
+            ? (inputs.view === 'stock'
                 ? symmetricDomain(poi_map_data, 'oa_domain', 1)[0]
                 : symmetricDomain(poi_map_data, 'oa_delta', 0)[0])
-            : inputs.view.value === 'development'
+            : inputs.view === 'development'
                 ? symmetricDomain(poi_map_data, 'density_delta', 0)[0]
                 : undefined
     }
     max={
         inputs.metric.value === 'oa'
-            ? (inputs.view.value === 'stock'
+            ? (inputs.view === 'stock'
                 ? symmetricDomain(poi_map_data, 'oa_domain', 1)[1]
                 : symmetricDomain(poi_map_data, 'oa_delta', 0)[1])
-            : inputs.view.value === 'development'
+            : inputs.view === 'development'
                 ? symmetricDomain(poi_map_data, 'density_delta', 0)[1]
                 : undefined
     }
-    title="Berlin Planungsraum (PLR) — {inputs.metric.value === 'density' ? 'POI density' : 'Offering Advantage'}, {inputs.domain.value}, {inputs.year.value}{inputs.view.value === 'development' ? ' (change vs. previous year)' : ''}"
+    title="Berlin Planungsraum (PLR) — {inputs.metric.value === 'density' ? 'POI density' : 'Offering Advantage'}, {inputs.domain.value}, {inputs.year.value}{inputs.view === 'development' ? ' (change vs. previous year)' : ''}"
     startingLat={52.52}
     startingLong={13.405}
     startingZoom={9}

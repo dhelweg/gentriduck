@@ -30,7 +30,10 @@ sidebar_position: 11
   CSS/markup that I1 didn't already extract"). The "Where to go next" grid drops from six cards to
   five, folding the former "Citywide POI & price/rent overview" card into the "POI & Offering
   Advantage map" card -- I3's named consolidation merges that page's content into
-  `/berlin/poi-map` (see that page and `pages/berlin/poi-price-overview.md`'s redirect stub).
+  `/berlin/poi-map` (see that page's header comment). The redirect stub this consolidation
+  originally left at `/berlin/poi-price-overview` was itself removed on maintainer request
+  (2026-07-24, unclickable-link report) rather than kept as a soft-launch bookmark landing page --
+  see `docs/epic-i/I2-route-map.md`'s route-map entry for the current status.
 -->
 
 <Hero compact eyebrow="Chapter 3 — The Evidence" title="Berlin" lede="Gentriduck's original city, and the one with the fullest data: eight years of official social-monitoring editions, a full OpenStreetMap history back to 2008, and official land-value/rent references, all at the neighbourhood (Planungsraum) scale. This page is the deep-dive entry point — pick a view below." />
