@@ -67,11 +67,7 @@ with
     -- gentrification_index's H3 admission) and using the var-driven macro here
     -- would silently admit Hamburg into this D4-bearing mart, which the H3
     -- sign-offs explicitly ruled out of scope (condition 4).
-    ts as (
-        select *
-        from {{ ref("int_gentrification_ts") }}
-        where city_code = 'BER'
-    ),
+    ts as (select * from {{ ref("int_gentrification_ts") }} where city_code = 'BER'),
 
     with_rank as (
         select
