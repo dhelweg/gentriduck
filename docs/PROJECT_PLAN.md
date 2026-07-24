@@ -435,6 +435,18 @@ via I13 once content is revised and routes are frozen; the `/about` route never 
   *DE pair + data-analyst + web pair; **domain gate on mover framing** (inform, never recommend)* ·
   I14, I18. Filed as #244 (slices: #252 data, #253 domain/curation, #254 web).
 
+*I21: third maintainer-driven wave — site information-architecture restructure (scoping doc
+2026-07-18, `docs/epic-i/I21-ia-restructure-scoping.md`).*
+- **I21** **Site information-architecture restructure** (#284, ticket-of-tickets) — consolidate
+  every area-hierarchy page (Bezirk/PGR/BZR/Ortsteil/PLR) onto one canonical per-level template;
+  extend the same shape fresh to Hamburg (`/hamburg/area/…`, mirroring Berlin per the I21-a
+  architect ruling — no Berlin route renamed, I2's route map upheld, not superseded). ·
+  *system-architect (route ruling) + web pair + data-analyst (scoping) + domain-expert
+  (spot-check)* · I2, I14, I18, I19, I20 · **mostly complete**: I21-a/c/d/e/f/g/h (#296–#302)
+  landed 2026-07-23 → 2026-07-24; **I21-i (#303)** — folding Hamburg's per-area *statistics*
+  sections into the new template — remains **open, blocked**, pending a maintainer publish-scope
+  decision; **I21-j (#304)**, this project-docs refresh, closes out the wave.
+
 **I-C — Communication machinery**
 - **I8** **ADR: public communication surface & channel policy** — LinkedIn + Bluesky/Mastodon
   (Instagram deferred pending I9 evidence); **draft-and-screen only, maintainer posts manually**;
