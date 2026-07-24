@@ -1,6 +1,6 @@
 # OA-D5 (#240, extended #285): Cross-Mode Comparison Study
 
-Generated 2026-07-22 23:39 UTC by `analysis/d_oa_mode_comparison.py`. Berlin only, `weight_variant='standard'`, `methodology_variant='faithful'` throughout (the bandwidth-free, hard point-in-polygon, uncurated variant every other OA analysis script anchors on -- oa_bandwidth_sweep.py's own precedent). ADR-0024 D3 never-blend: every figure below is reported per-method, never averaged/combined across methods. **#285 extension:** `density` and `percapita` (both `reference_point='absolute'`, both `expected_temporal_safe=false` per `seed_oa_calculation_methods.csv`) are now included in the cross-mode correlation (§1b, informational only) and the completeness-contamination gate (§4) -- they were absent from the original OA-D5 run because they were added to the pipeline afterwards. They remain excluded from every OTHER deliverable below (MAUP, bandwidth, golden validation) for the same documented reasons the other six non-canonical methods are -- see each section.
+Generated 2026-07-24 22:59 UTC by `analysis/d_oa_mode_comparison.py`. Berlin only, `weight_variant='standard'`, `methodology_variant='faithful'` throughout (the bandwidth-free, hard point-in-polygon, uncurated variant every other OA analysis script anchors on -- oa_bandwidth_sweep.py's own precedent). ADR-0024 D3 never-blend: every figure below is reported per-method, never averaged/combined across methods. **#285 extension:** `density` and `percapita` (both `reference_point='absolute'`, both `expected_temporal_safe=false` per `seed_oa_calculation_methods.csv`) are now included in the cross-mode correlation (§1b, informational only) and the completeness-contamination gate (§4) -- they were absent from the original OA-D5 run because they were added to the pipeline afterwards. They remain excluded from every OTHER deliverable below (MAUP, bandwidth, golden validation) for the same documented reasons the other six non-canonical methods are -- see each section.
 
 ## 1. Cross-mode Spearman rank correlation
 
@@ -193,14 +193,14 @@ Per-method Spearman rho between each area's year-over-year DELTA in domain-level
 
 | Method | rho | p | n | Empirical result | Pre-registered expectation | Confirmed? |
 |---|---|---|---|---|---|---|
-| nested_lq | 0.053 | 0.0000 | 7830 | temporal-safe | safe | yes |
-| global_lq | 0.053 | 0.0000 | 7830 | temporal-safe | safe | yes |
-| log_lq | 0.047 | 0.0000 | 7830 | temporal-safe | safe | yes |
-| share_diff | 0.064 | 0.0000 | 7830 | temporal-safe | safe | yes |
-| shrunk_lq | 0.028 | 0.0145 | 7830 | temporal-safe | safe | yes |
-| raw_share | 0.034 | 0.0028 | 7830 | temporal-safe | unsafe | **NO -- prediction contradicted** |
-| zscore_slq | 0.033 | 0.0035 | 7830 | temporal-safe | unsafe | **NO -- prediction contradicted** |
-| density | -0.019 | 0.0890 | 7830 | temporal-safe | unsafe | **NO -- prediction contradicted** |
+| nested_lq | 0.046 | 0.0000 | 7830 | temporal-safe | safe | yes |
+| global_lq | 0.046 | 0.0000 | 7830 | temporal-safe | safe | yes |
+| log_lq | 0.041 | 0.0003 | 7830 | temporal-safe | safe | yes |
+| share_diff | 0.049 | 0.0000 | 7830 | temporal-safe | safe | yes |
+| shrunk_lq | 0.018 | 0.1171 | 7830 | temporal-safe | safe | yes |
+| raw_share | 0.031 | 0.0067 | 7830 | temporal-safe | unsafe | **NO -- prediction contradicted** |
+| zscore_slq | 0.014 | 0.2128 | 7830 | temporal-safe | unsafe | **NO -- prediction contradicted** |
+| density | -0.010 | 0.3958 | 7830 | temporal-safe | unsafe | **NO -- prediction contradicted** |
 | percapita | n/a | n/a | 540 | indeterminate -- only 1 distinct year-over-year transition available (Spearman undefined against a constant) | - | - |
 
 **density: gate empirically PASSES** at the citywide, per-method level tested here (|rho| stays under 0.3) -- this CONTRADICTS the pre-registered `expected_temporal_safe=false` prediction, the same class of surprise `raw_share`/`zscore_slq` already produced in the original OA-D5 run. **This does not, by itself, authorize a live year-over-year delta on the OA-D7 page**: this is a citywide, per-method check, not the per-cell completeness flag that page's own carried-forward condition requires (see OA-D7 pass-2 header comment) -- a future ticket building that per-cell flag can cite this result as supportive evidence, not as a substitute for it.
@@ -208,6 +208,8 @@ Per-method Spearman rho between each area's year-over-year DELTA in domain-level
 **percapita: gate is INDETERMINATE** (only 1 distinct year-over-year transition available (Spearman undefined against a constant)) -- this is NOT a pass, and is treated as temporal-unsafe by default (no evidence of safety), consistent with the OA-D7 page's existing stock-only treatment, which does not change as a result of this run.
 
 **Why percapita is indeterminate here, not merely `insufficient data`:** Berlin's exact-year EWR-to-POI join (`int_poi_offering_advantage_methods.sql` note 9, OA-D0 geo sign-off C10 -- no nearest-year fallback, and `lor_2021` area-vintage only) only has a literal year match for `snapshot_year` 2024 and 2025 in the current warehouse -- a single year-over-year transition, against which a Spearman correlation is mathematically undefined (there is no second transition to rank against the first). This is a genuine, narrow data-coverage limitation, not a bug in this gate -- a future EWR ingestion covering more reference years (closing the 2021-2023 gap visible in `int_ewr_socioeco`) would let this test actually run with multiple transitions.
+
+**Hamburg cross-check (#312, #318):** see `docs/methodology/OA-D5-hamburg-addendum.md` -- a separate, hand-maintained file this document's own regeneration never touches (that separation is itself the #318 review fix: this Berlin-scoped doc is fully overwritten by every `uv run python analysis/d_oa_mode_comparison.py` run, so the Hamburg record cannot live as a hand-added section in here without being silently destroyed by the next routine refresh).
 
 ## 5. Golden validation (nested-LQ only)
 
@@ -230,7 +232,7 @@ Verified directly against `seed_oa_calculation_methods.csv` (not assumed): **no 
 | shrunk_lq | parent-relative representation, small-base-damped | parent-relative | no (new, ADR-0024) | yes |
 | raw_share | within-group composition, no city normalization | parent-relative | no (new, ADR-0024) | yes |
 | zscore_slq | is the representation big relative to sample size? | parent-relative | no (new, ADR-0024) | yes |
-| density | provision/centrality -- POIs per km2, NOT a location quotient | **absolute** | no (new, ADR-0024) | citywide only -- not a per-cell PASS |
+| density | provision/centrality -- POIs per km2, NOT a location quotient | **absolute** | no (new, ADR-0024) | yes |
 | percapita | provision/exposure -- POIs per 1,000 residents, NOT a location quotient | **absolute** | no (new, ADR-0024) | n/a |
 
 **Never blend (ADR-0017/ADR-0024 D3):** this table is a navigation aid, not a recommendation to pick one column as "the" OA -- each row answers a genuinely different question and no combined score is computed anywhere in this pipeline. The two **absolute** rows (density, percapita) are a genuinely separate class from the seven relative-family rows above them: they may be rank-correlated for information (§1b) but must never share a choropleth colour scale, legend, or numeric axis with the relative family.
