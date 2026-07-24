@@ -90,9 +90,15 @@ city-agnostic mart that has carried real Hamburg rows since H1 (#40).
   removed business can swing its Offering Advantage value disproportionately, so Gebiet-years
   below the same minimum-mapped-place threshold used for Berlin are shown as an unshaded gap rather
   than a potentially misleading value; the raw mapped-place count is always visible in the
-  tooltip. OSM's mapping coverage is not spatially neutral — see the
-  <a href="/berlin/poi-map">Berlin POI map</a>'s caveats (Haklay 2010) for the general point, which
-  applies equally to Hamburg.
+  tooltip. <b>OSM's mapping coverage is not spatially neutral: completeness tends to correlate with
+  area advantage, and poorer/peripheral areas are typically less thoroughly mapped than
+  richer/central ones</b> (Haklay, M. 2010, "How Good is Volunteered Geographical Information?",
+  *Environment and Planning B*). So a blank Gebiet-year can reflect an OSM coverage gap rather than
+  a real absence of commercial activity — please don't read it as evidence that nothing is
+  happening there. Hamburg's own affluent Alster–Elbe axis against a deprived eastern/southern
+  periphery is a sharper socio-spatial divide than Berlin's more mosaic pattern, so this
+  cross-sectional under-mapping gradient may be even steeper here (see the
+  <a href="/berlin/poi-map">Berlin POI map</a> for the same caveat applied there).
 </Alert>
 
 <Dropdown name="metric" title="Metric" defaultValue="density">
@@ -142,6 +148,16 @@ city-agnostic mart that has carried real Hamburg rows since H1 (#40).
   <ButtonGroupItem value="stock" valueLabel="Stock (this year's value)"/>
   <ButtonGroupItem value="development" valueLabel="Change since previous year"/>
 </ButtonGroup>
+
+<Alert status="warning">
+  <b>"Change since previous year" for POI density is not adjusted for growing OSM coverage.</b>
+  Mapper coverage grew fastest in Hamburg's earliest years (the coverage curve stabilizes only
+  around ~2014–2015 — see the citywide growth chart further down this page), so an early-year
+  density delta can reflect new OSM contributors catching up rather than real commercial change.
+  Offering Advantage's "change" view is less exposed to this: it is a same-year ratio to the
+  citywide average, so an area-uniform coverage shift cancels out; density's raw count carries no
+  such protection. Read early-year density deltas cautiously, especially before ~2014.
+</Alert>
 
 ```sql poi_map_data
 -- Single-query form (Berlin's berlin/poi-map.md precedent, that page's `poi_map_data` block):
