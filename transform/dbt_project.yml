@@ -75,11 +75,12 @@ vars:
   # publication-ready (exposed downstream / on the site). H3 (#237): Hamburg is
   # admitted alongside Berlin -- dual sign-off PASS WITH CONDITIONS
   # (docs/epic-h/H3-geo-signoff.md, docs/epic-h/H3-domain-signoff.md). Note this
-  # var gates every consumer of published_cities_filter, but only
-  # gentrification_index's contract (schema.yml) has been widened to accept HH
-  # rows in this ticket -- fct_gentrification_change, fct_gentrification_trajectory,
-  # and mart_area_demographics remain city_code=["BER"]-only by contract, so their
-  # own accepted_values tests still filter/reject any HH rows regardless of this var.
+  # var gates every consumer of published_cities_filter. gentrification_index's
+  # contract (H3 #237) and fct_gentrification_trajectory's contract (#314, using
+  # the H-C2 #159 cadence-normalized window) have been widened to accept HH
+  # rows -- fct_gentrification_change and mart_area_demographics remain
+  # city_code=["BER"]-only by contract, so their own accepted_values tests
+  # still filter/reject any HH rows regardless of this var.
   published_cities: ["BER", "HH"]
   # H-C2 (#159, docs/epic-h/159-hc2-geo-spike.md): fct_gentrification_trajectory's
   # `ts` CTE restricts its classification input to a matched year-span window --
