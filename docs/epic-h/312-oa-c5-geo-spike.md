@@ -32,18 +32,24 @@ completeness multiplier that scales a given year's POI counts uniformly across a
 needing the cross-year cancellation argument #158 relied on for `dynamism_score`'s YoY-delta
 construct. That structural argument is verified empirically below by **extending the existing,
 Berlin-only OA-D5 completeness-contamination gate to Hamburg for the first time**: all nine OA
-calculation methods — including `raw_share`, `density`, and `percapita`, the three methods the
-project's own seed metadata (`seed_oa_calculation_methods.csv`) flags `expected_temporal_safe=false`
-— pass the gate for Hamburg (`|rho| < 0.3`, matching or exceeding Berlin's own already-published
-result), with `percapita` even reaching a *determinate* result for Hamburg (Berlin's own run is
-indeterminate, only one EWR year-transition available).
+calculation methods — including `raw_share`, `zscore_slq`, `density`, and `percapita`, the **four**
+methods the project's own seed metadata (`seed_oa_calculation_methods.csv`) flags
+`expected_temporal_safe=false` — pass the gate for Hamburg (`|rho| < 0.3`, matching or exceeding
+Berlin's own already-published result), with `percapita` even reaching a *determinate* result for
+Hamburg (Berlin's own run is indeterminate, only one EWR year-transition available). (§3's own table
+below already tests and reports `zscore_slq` passing for Hamburg; this TL;DR previously undercounted
+it as one of only "three" flagged methods — corrected here.)
 
 **Recommended path = confirm + document, no code/math change**, exactly #158's precedent outcome:
 
-1. The existing `accepted_values: ["BER", "HH"]` on `mart_poi_offering_advantage.city_code` (and on
-   `mart_poi_oa_methods`, `mart_poi_offering_advantage_map`, `int_poi_offering_advantage_arealevel`)
-   is **methodologically justified**, for every column this mart exposes, not just the LQ family. No
-   widening is needed here — it needs *retroactive validation*, which this doc provides.
+1. The existing `accepted_values: ["BER", "HH"]` on `mart_poi_offering_advantage.city_code`, on
+   `mart_poi_oa_methods.city_code`, and on `int_poi_offering_advantage_arealevel.city_code` is
+   **methodologically justified**, for every column this mart exposes, not just the LQ family — no
+   widening was needed there, only *retroactive validation*, which this doc provides.
+   `mart_poi_offering_advantage_map.city_code`, by contrast, was verified on this branch to have
+   **no** `accepted_values` test prior to #312 (`not_null` only) despite already feeding the live
+   `/hamburg/poi-map` page; this ticket **adds** the missing test there (see R2 below), the one place
+   this doc's recommendation is "widen", not merely "confirm".
 2. No new OA-specific dbt test is needed. The existing city-agnostic `test_c5_poi_share_spike` /
    `test_c5_poi_count_drop` (on `int_poi_status_dynamism`, itself fed by the same
    `fct_poi_development` table OA consumes) already cover the underlying completeness-growth signal
@@ -245,12 +251,19 @@ to this spike, recording that the LQ-family's same-year-ratio invariance was ind
 (not assumed) against Hamburg's own coverage curve and the extended completeness-contamination gate.
 Implemented on this branch (see diff).
 
-### R2 — Confirm (not widen) `mart_poi_offering_advantage`'s `city_code` accepted_values (this ticket)
+### R2 — Confirm existing accepted_values, and add the one that was actually missing (this ticket)
 
-The `["BER", "HH"]` accepted_values already present on `mart_poi_offering_advantage.city_code` (and
-sibling marts `mart_poi_oa_methods`, `mart_poi_offering_advantage_map`,
-`int_poi_offering_advantage_arealevel`) is retroactively validated by this spike. Schema.yml
-description gains a citation to this doc. Implemented on this branch (see diff).
+The `["BER", "HH"]` accepted_values already present on `mart_poi_offering_advantage.city_code`,
+`mart_poi_oa_methods.city_code`, and `int_poi_offering_advantage_arealevel.city_code` is
+retroactively validated by this spike; those columns' schema.yml descriptions gain a citation to
+this doc. `mart_poi_offering_advantage_map.city_code` was checked and, contrary to an earlier draft
+of this doc, did **not** already carry the test — it had `not_null` only, despite being the exact
+mart already feeding the live `/hamburg/poi-map` page (highest-stakes consumer of this
+investigation's conclusion). This ticket **adds** `accepted_values: ["BER", "HH"]` there, grounded
+in this spike's §3 finding that `oa_domain`/`poi_density_per_km2` (the two columns this mart feeds
+to that page's YoY-delta toggle) pass the extended completeness-contamination gate for Hamburg.
+Rebuilt/retested after adding the test (`dbt test --select mart_poi_offering_advantage_map`,
+Hamburg rows pass) — see "Build status" below. Implemented on this branch (see diff).
 
 ### R3 — No new OA-specific dbt test (this ticket, do-not-over-build)
 
@@ -322,7 +335,7 @@ No new failures introduced by the header/schema.yml documentation changes on thi
 
 ```json
 {
-  "verdict_input_for_geo_ds": "The OA location-quotient family (nested_lq/global_lq/log_lq/share_diff/shrunk_lq/raw_share/zscore_slq) is a same-year local-share/city-share ratio, structurally invariant to an area-uniform per-year OSM completeness multiplier -- a stronger invariance than dynamism_score's YoY-delta construct already validated for Hamburg in #158. Empirically confirmed by extending the Berlin-only OA-D5 completeness-contamination gate (OA-D0 geo sign-off Condition C3) to Hamburg for the first time: all nine registered OA methods pass (|rho|<0.06 relative family, |rho|=0.033 density, |rho|=0.015 percapita -- percapita additionally reaches a determinate result for Hamburg where Berlin's own run is indeterminate). No normalization change made or needed; the existing accepted_values=['BER','HH'] on mart_poi_offering_advantage.city_code and sibling marts is retroactively validated, not newly authorized.",
+  "verdict_input_for_geo_ds": "The OA location-quotient family (nested_lq/global_lq/log_lq/share_diff/shrunk_lq/raw_share/zscore_slq) is a same-year local-share/city-share ratio, structurally invariant to an area-uniform per-year OSM completeness multiplier -- a stronger invariance than dynamism_score's YoY-delta construct already validated for Hamburg in #158. Empirically confirmed by extending the Berlin-only OA-D5 completeness-contamination gate (OA-D0 geo sign-off Condition C3) to Hamburg for the first time: all nine registered OA methods pass (|rho|<0.06 relative family, |rho|=0.033 density, |rho|=0.015 percapita -- percapita additionally reaches a determinate result for Hamburg where Berlin's own run is indeterminate). No normalization change made or needed; the existing accepted_values=['BER','HH'] on mart_poi_offering_advantage.city_code, mart_poi_oa_methods.city_code, and int_poi_offering_advantage_arealevel.city_code is retroactively validated, not newly authorized -- the one exception is mart_poi_offering_advantage_map.city_code, which had no accepted_values test before #312 despite already feeding the live /hamburg/poi-map page; this ticket adds it there, grounded in this same finding.",
   "risks": [
     "Structural argument shares #158's area-uniform-within-year completeness premise; a future finding of non-uniform Hamburg mapping bursts would need revisiting both together",
     "The citywide gate is supportive evidence only, not itself authorization for a live per-cell YoY delta absent the still-unbuilt per-cell completeness flag (unchanged standing caveat, both cities)",

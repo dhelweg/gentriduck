@@ -1285,10 +1285,21 @@ models:
             where: "area_code is not null"
     columns:
       - name: city_code
-        description: City identifier (ADR-0005).
+        description: >
+          City identifier (ADR-0005). #312 (docs/epic-h/312-oa-c5-geo-spike.md):
+          `accepted_values=["BER","HH"]` added by #312 -- this mart already
+          fed the live /hamburg/poi-map page's oa_domain/poi_density_per_km2
+          YoY-delta toggle before this test existed; the spike doc
+          retroactively validates that Hamburg's rows are methodologically
+          safe under the extended OA-D0 geo sign-off Condition C3
+          completeness-contamination gate (same standing caveats as Berlin,
+          not relaxed or tightened for Hamburg).
         data_tests:
 
           - not_null
+          - accepted_values:
+              arguments:
+                values: ["BER", "HH"]
       - name: snapshot_year
         description: Calendar year of the OSM snapshot.
         data_tests:
