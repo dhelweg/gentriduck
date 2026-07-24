@@ -298,7 +298,8 @@ until it is refreshed, I21-j).
   (#307).** Hamburg's own statistisches-Gebiet source has no name field; where shown, the name
   above is derived by matching this Gebiet's polygon against OpenStreetMap
   `place=neighbourhood`/`suburb`/`quarter` points. Coverage is partial by design — many Gebiete
-  have no OSM match and fall back to the plain numeric code label ("Statistisches Gebiet {code}").
+  have no OSM match and fall back to the plain numeric code label ("Statistisches Gebiet
+  {'{code}'}").
 - **This page is mostly still a structural scaffold (I21-g, #301).** Every section except "Social
   status & trajectory" (below) and the "Up: Stadtteil" link shows a fixed deferred-state placeholder
   rather than a real Hamburg figure, even where an underlying mart already has real Hamburg rows for
