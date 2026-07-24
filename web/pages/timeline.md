@@ -113,6 +113,19 @@ the whole story chronologically, rather than the current state (which is what th
         'proving the adapter pattern before any second-city launch decision.',
       href: 'https://github.com/dhelweg/gentriduck/issues/125',
       hrefLabel: 'issue #125 (closed 2026-07-09) →'
+    },
+    {
+      date: '2026-07-24',
+      title: 'Site restructured to an area-centric, multi-city-ready IA',
+      body: 'I21 (#284) consolidates every area-hierarchy page (Bezirk/PGR/BZR/Ortsteil/PLR) onto ' +
+        'one canonical per-level template, and scaffolds the same shape fresh for Hamburg, including ' +
+        'its <code>subarea_l1</code>/<code>subarea_l2</code> hierarchy crosswalk — with an explicit architect ' +
+        'ruling (I21-a) that no Berlin route is renamed, so the frozen I2 route map stands. ' +
+        'Sub-tickets #296–#302 landed 2026-07-23 through 2026-07-24; #303 (folding Hamburg\'s ' +
+        'per-area statistics sections into the template) remains open, blocked on a maintainer ' +
+        'publish-scope decision — not part of this milestone.',
+      href: 'https://github.com/dhelweg/gentriduck/issues/302',
+      hrefLabel: 'issue #302 (closed 2026-07-24), last of #296–#302 to land →'
     }
   ];
 

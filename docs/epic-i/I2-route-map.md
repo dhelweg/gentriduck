@@ -8,6 +8,16 @@ where" record the ticket asks for.
 **Gate:** web-engineer-reviewer only (structure/routing only, no data/model/indicator change —
 not methodology-bearing per CLAUDE.md's methodology-gate file list).
 
+> **I21-a (#296) architect ruling — this route map is UPHELD, not superseded.** The I21 site
+> restructure (#284) does **not** rename any Berlin route: `/berlin/area/…` stays frozen as recorded
+> below, and the target IA is achieved by reorganizing *content* within these routes. The
+> city-agnostic area-route shape is confirmed as `/{city}/area/{level}/{code}` (singular) for both
+> cities; Hamburg's greenfield area routes are introduced fresh at `/hamburg/area/…` (mirroring
+> Berlin), not `/hamburg/areas/…`. I13's "routes frozen (I2)" launch precondition (#230) is
+> unchanged. Full reasoning: `docs/epic-i/I21-a-route-ruling.md`. The only future edit this map may
+> need from I21 is a redirect-stub row *if* I21-c chooses to merge `/berlin/area-detail` into
+> `/berlin/area` (established `poi-price-overview` / `methodology-comparison` stub pattern).
+
 ## What changed
 
 Berlin's eight data pages moved from the site's top level into a `/berlin/…` folder, with a new

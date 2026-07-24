@@ -11,6 +11,13 @@ sidebar_position: 23
   methodology gate. Pairs with /how-its-built (data-engineer audience) and productionizes the
   "🤖 You design AI systems" door on the home page.
 
+  I21-j (#304) docs refresh: added the comms-strategist row (I10, #227; ADR-0021) to the agent
+  table below -- the agent + comms-draft skill existed since #227 but this public roster hadn't
+  been updated to list it, even though six posts (I11, #228) are already drafted and signed off.
+  No other change -- the pipeline diagram and process description are unaffected (comms drafting
+  is a separate publish-and-screen loop, not part of "the pipeline that ships a change" to the
+  site itself).
+
   I3 (#220): re-platformed onto the shared `<Hero>`/`<AgentPipeline>`/`<FooterNav>` components,
   removing the hand-copied `.agent-pipeline`/`.pipe-step` markup+CSS this page had duplicated from
   `pages/index.md` (exactly the "appears twice" duplication the 2026-07-10 storytelling review's
@@ -45,6 +52,7 @@ Each agent has one narrow job and works from a shared backlog on a public GitHub
 | **web engineer** ↔ **reviewer** | Build and independently check the public site you're reading now. |
 | **data analyst** | Turns the data into charts, captions, and narrative — including this page's neighbour. |
 | **system architect** | Owns Architecture Decision Records; any new tool, library, or data source needs its sign-off before adoption. |
+| **comms-strategist** | Turns already signed-off findings into draft social-media posts (LinkedIn, Bluesky/Mastodon) under a per-post sign-off gate — never posts, schedules, or holds credentials; every post is a manual act by the human maintainer. |
 
 ## The pipeline that ships a change
 

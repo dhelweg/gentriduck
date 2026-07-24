@@ -76,6 +76,19 @@ breadcrumb: "select area_name as breadcrumb from gentriduck_marts.gentrification
   5. **POI-mix stacked bar reordered** by total mapped-place count for this area, largest segment
      first (`seriesOrder`, computed client-side from the same query already powering the chart -- no
      new query). Previously unordered (stacking order followed SQL row order, not count).
+
+  I21-f (#300): template-consolidation pass -- reorders this page's sections into the canonical
+  per-level order (docs/epic-i/I21-ia-restructure-scoping.md §2.2): portrait (1) -> social status &
+  trajectory (2) -> commercial mix & Offering Advantage (3, "How its commercial mix has developed" +
+  "Offering Advantage profile" grouped under one heading, now ### subsections) -> within-group
+  dominance (4) -> people & structure (5) -> amenities (6) -> land value & rent (7) -> honest
+  caveats (9) -> further reading (10). Row 8 (hierarchy nav) is the existing "Up:" link above the
+  fold -- PLR is a leaf grain with no children to list, so no separate section is added here
+  (omitted, not rendered empty, per the ticket's own rule). Presentation/reordering only -- no
+  query, mart, indicator, or wording change, beyond moving the "How to read the charts" Alert to sit
+  at the top of the (renamed) "Social status & trajectory" section, immediately before the chart it
+  explains, instead of at the tail of the portrait paragraphs. Gate: web-engineer-reviewer only
+  (structure/order, no methodology).
 -->
 
 ```sql area_info
@@ -359,11 +372,15 @@ where
   };
 </script>
 
+
 ## {area_info[0] ? area_info[0].area_name : 'This area'} at a glance
 
 {#each portraitParagraphs as para}
 <p>{@html para}</p>
 {/each}
+
+
+## Social status & trajectory
 
 <Alert status="info">
   <b>How to read the charts:</b> official status runs <b>1 = least deprived</b> to
@@ -373,6 +390,358 @@ where
   walkthrough. Figures are on Berlin's current (2021+) boundaries and the live social-monitoring
   editions (2021–2025).
 </Alert>
+
+
+
+```sql area_trend
+with
+    district_year as (
+        select snapshot_year, avg(status_index) as district_avg_status_index
+        from gentriduck_marts.fct_gentrification_change
+        where
+            city_code = 'BER' and area_vintage = 'lor_2021' and status_index is not null
+            and substr(area_code, 1, 2) = substr('${params.code}', 1, 2)
+        group by snapshot_year
+    ),
+    city_year as (
+        select snapshot_year, avg(status_index) as city_avg_status_index
+        from gentriduck_marts.fct_gentrification_change
+        where city_code = 'BER' and area_vintage = 'lor_2021' and status_index is not null
+        group by snapshot_year
+    )
+select
+    a.snapshot_year,
+    a.status_index as "This area",
+    d.district_avg_status_index as "District average",
+    c.city_avg_status_index as "Berlin average",
+    a.typology_stage
+from gentriduck_marts.fct_gentrification_change as a
+left join district_year as d on d.snapshot_year = a.snapshot_year
+left join city_year as c on c.snapshot_year = a.snapshot_year
+where city_code = 'BER' and area_vintage = 'lor_2021' and area_code = '${params.code}'
+order by a.snapshot_year
+```
+
+<LineChart
+    data={area_trend}
+    x=snapshot_year
+    y={['This area', 'District average', 'Berlin average']}
+    title="Social status over time, {area_info[0] ? area_info[0].area_name : 'this area'} (1 = least deprived … 4 = most deprived)"
+    yAxisTitle="Status class"
+    yMin=1
+    yMax=4
+    emptySet="warn"
+    emptyMessage="No time series for this area."
+/>
+
+District and city lines are the simple average across all Planungsräume in the same Bezirk /
+across Berlin at each edition — context, not a target.
+
+```sql trajectory_summary
+select
+    n_editions,
+    first_edition,
+    last_edition,
+    status_index_first,
+    status_index_last,
+    status_delta,
+    trajectory_type,
+    dominant_stage,
+    trajectory_confidence
+from gentriduck_marts.fct_gentrification_trajectory
+where city_code = 'BER' and area_vintage = 'lor_2021' and area_code = '${params.code}'
+```
+
+```sql district_trajectory_mix
+select trajectory_type, count(*) as n
+from gentriduck_marts.fct_gentrification_trajectory
+where
+    city_code = 'BER' and area_vintage = 'lor_2021'
+    and substr(area_code, 1, 2) = substr('${params.code}', 1, 2)
+group by trajectory_type
+```
+
+{#if hasStatus}
+<BigValue data={context_current} value=stage title="Current stage"/>
+{:else}
+<Alert status="info">
+  This is an uninhabited planning area in Berlin's official population register (e.g. a park,
+  development site, or similar) — no current stage applies here.
+</Alert>
+{/if}
+<BigValue data={trajectory_summary} value=trajectory_type title="Overall trajectory" emptySet="warn"/>
+<BigValue data={trajectory_summary} value=dominant_stage title="Most common stage" emptySet="warn"/>
+<BigValue data={trajectory_summary} value=trajectory_confidence title="Confidence" emptySet="warn"/>
+
+Trajectory labels are explained on the [methodology page](/methodology) — an "improving" label does
+not by itself mean the change was good for existing residents; rising status can reflect
+displacement as easily as incumbent social mobility.
+
+
+## Commercial mix & Offering Advantage
+
+### How its commercial mix has developed
+
+Shops, cafés and other businesses tend to *follow* — not lead — social change (see
+[methodology](/methodology) for the theory). This shows how the mix of mapped places here has
+evolved.
+
+```sql poi_trend
+select
+    snapshot_year,
+    poi_category_h,
+    sum(poi_count) as poi_count
+from gentriduck_marts.fct_poi_development
+where city_code = 'BER' and area_vintage = 'lor_2021' and area_code = '${params.code}'
+group by all
+order by snapshot_year
+```
+
+```sql poi_mix_context
+-- Latest-year top category here vs. this area's district vs. citywide -- textual context for the
+-- stacked bar below (a second stacked bar over the same categories was judged harder to read, not
+-- more informative, for a segment-count comparison).
+with
+    area_latest as (
+        select max(snapshot_year) as snapshot_year
+        from gentriduck_marts.fct_poi_development
+        where city_code = 'BER' and area_vintage = 'lor_2021' and area_code = '${params.code}'
+    ),
+    area_mix as (
+        select poi_category_h, sum(poi_count) as poi_count
+        from gentriduck_marts.fct_poi_development
+        where
+            city_code = 'BER' and area_vintage = 'lor_2021' and area_code = '${params.code}'
+            and snapshot_year = (select snapshot_year from area_latest)
+        group by poi_category_h
+    ),
+    district_mix as (
+        select poi_category_h, sum(poi_count) as poi_count
+        from gentriduck_marts.fct_poi_development
+        where
+            city_code = 'BER' and area_vintage = 'lor_2021'
+            and substr(area_code, 1, 2) = substr('${params.code}', 1, 2)
+            and snapshot_year = (select snapshot_year from area_latest)
+        group by poi_category_h
+    ),
+    city_mix as (
+        select poi_category_h, sum(poi_count) as poi_count
+        from gentriduck_marts.fct_poi_development
+        where
+            city_code = 'BER' and area_vintage = 'lor_2021'
+            and snapshot_year = (select snapshot_year from area_latest)
+        group by poi_category_h
+    )
+select
+    (select snapshot_year from area_latest) as snapshot_year,
+    (select poi_category_h from area_mix order by poi_count desc limit 1) as area_top_category,
+    (select poi_category_h from district_mix order by poi_count desc limit 1) as district_top_category,
+    (select poi_category_h from city_mix order by poi_count desc limit 1) as city_top_category
+```
+
+
+<BarChart
+    data={poi_trend}
+    x=snapshot_year
+    y=poi_count
+    series=poi_category_h
+    seriesOrder={poiCategoryOrder}
+    title="Mapped places by category, {area_info[0] ? area_info[0].area_name : 'this area'} (largest segment first)"
+    yAxisTitle="Number of mapped places"
+    emptySet="warn"
+/>
+
+{#if poiMixCtx && poiMixCtx.area_top_category}
+<p>The most common kind of mapped place here in {poiMixCtx.snapshot_year} is <b>{poiMixCtx.area_top_category}</b>;
+across {bezirkName} it's <b>{poiMixCtx.district_top_category ?? '—'}</b>, and across Berlin as a whole
+it's <b>{poiMixCtx.city_top_category ?? '—'}</b>.</p>
+{/if}
+
+### Offering Advantage profile
+
+<!--
+  #209 (web slice of #207): radar/spider chart of this area's Offering Advantage (OA,
+  ADR-0017/0018) by POI domain, latest available snapshot_year. I14 (#231) fix, per the I15 review
+  (docs/epic-i/I15-oa-review-findings.md §1, both sign-offs' recommendations): reads the
+  domain-grain companion mart `mart_poi_offering_advantage_map` (#210) instead of raw-selecting
+  leaf-grain rows from `mart_poi_offering_advantage`, so each domain renders exactly one radar
+  point (previously a domain with several subtypes rendered the same value on multiple redundant
+  axes -- a chart de-duplication fix; the underlying oa_domain values were always correct, verified
+  in I15 to floating-point exactness). Displayed as % vs citywide baseline
+  (`pct_vs_baseline = (oa_domain - 1) * 100`, a pure display transform of the existing continuous
+  column -- I15 §3, no mart change). Uses Evidence's bundled `<ECharts>` component
+  (`@evidence-dev/core-components`, confirmed present -- no new-tool ADR needed) since Evidence
+  does not ship a radar chart primitive.
+-->
+
+**Offering Advantage (OA)** compares each POI domain's share of this area's mapped places (shops,
+cafés, and other points of interest) to that domain's share across Berlin as a whole — a
+compositional read on the local place *mix*, not a count, and not a value judgment: being
+over-represented in a domain doesn't mean an area is "better" or "worse," only that its commercial
+mix is more specialised in that direction than the city as a whole. The chart below shows each
+domain as a **percentage above or below Berlin's citywide average share** for that domain — e.g.
+"+30%" means this domain makes up about 30% more of the local mix here than it does citywide on
+average; a **negative** percentage means the opposite, under-representation, shown the same way.
+OA is one input among several into the governed index (see [methodology](/methodology)), never a
+standalone gentrification score on its own — and vacancy (if shown) marks the *opposite* pole from
+the others, a pre-reinvestment signal, not a "more OA is more pressure" reading. See the
+[POI & Offering Advantage map](/berlin/poi-map) to explore this across all of Berlin.
+
+```sql poi_oa_radar
+select
+    poi_domain_h,
+    oa_domain,
+    poi_count
+from gentriduck_marts.mart_poi_offering_advantage_map
+where
+    city_code = 'BER'
+    and area_vintage = 'lor_2021'
+    and weight_variant = 'standard'
+    and methodology_variant = 'faithful'
+    and area_code = '${params.code}'
+    and snapshot_year = (
+        select max(snapshot_year)
+        from gentriduck_marts.mart_poi_offering_advantage_map
+        where
+            city_code = 'BER'
+            and area_vintage = 'lor_2021'
+            and weight_variant = 'standard'
+            and methodology_variant = 'faithful'
+            and area_code = '${params.code}'
+            and oa_domain is not null
+    )
+order by oa_domain desc
+```
+
+```sql poi_oa_radar_district
+-- Same domain-grain mart, averaged (unweighted) across every PLR in this area's Bezirk at the same
+-- snapshot_year, for the radar's district-context series.
+select poi_domain_h, avg(oa_domain) as district_avg_oa_domain
+from gentriduck_marts.mart_poi_offering_advantage_map
+where
+    city_code = 'BER'
+    and area_vintage = 'lor_2021'
+    and weight_variant = 'standard'
+    and methodology_variant = 'faithful'
+    and substr(area_code, 1, 2) = substr('${params.code}', 1, 2)
+    and snapshot_year = (
+        select max(snapshot_year)
+        from gentriduck_marts.mart_poi_offering_advantage_map
+        where
+            city_code = 'BER'
+            and area_vintage = 'lor_2021'
+            and weight_variant = 'standard'
+            and methodology_variant = 'faithful'
+            and area_code = '${params.code}'
+            and oa_domain is not null
+    )
+group by poi_domain_h
+```
+
+{#if radarRows.length > 0}
+<ECharts config={radarConfig} data={poi_oa_radar} height="360px" downloadableData downloadableImage />
+{:else}
+<Alert status="warning">
+  No Offering Advantage data for this area (e.g. an uninhabited planning area, or no POIs mapped
+  for any domain here yet).
+</Alert>
+{/if}
+
+{#if radarRows.some((r) => r.lowBase)}
+<Alert status="warning">
+  Domains marked <b>†</b> are based on very few mapped places here (fewer than {OA_LOW_BASE_THRESHOLD}) —
+  treat their percentage cautiously, since a single new or closed business can swing a small base
+  sharply. Counts: {radarRows.filter((r) => r.lowBase).map((r) => `${r.domain} (${r.poiCount ?? 0})`).join(', ')}.
+</Alert>
+{/if}
+
+## Within-group dominance
+
+<!--
+  #298 (I21-d): relocates the "Live: within-group dominance" widget from /methodology-oa-modes §5
+  onto this page -- display-only, per docs/epic-i/I21-ia-restructure-scoping.md §5.3 (already-decided,
+  ADR-0024 D3). mart_poi_dominance is PLR-grain (this page's own grain), so this is the one area
+  page where the mart's own row(s) -- not a children-listing workaround -- are the direct relocation
+  target (contrast pages/berlin/area/bezirk|bzr|pgr|ortsteil/[code].md, which have no PLR-grain
+  `${params.code}` and therefore list constituent PLRs instead). `is_public_safe = true` is restated
+  here (defence in depth -- already filtered at the source layer,
+  web/sources/gentriduck_marts/mart_poi_dominance.sql) so the cuisine-typed internal-study-only
+  group is never an option; `is_thin_base` rows are flagged, never dropped (anti-erasure, OA-D0
+  domain sign-off Condition B.4).
+-->
+
+**Within-group dominance** asks a different question from Offering Advantage: within a curated
+group of businesses, is one type dominating, or is the mix diverse? ("Are fast-food places crowding
+out sit-down restaurants within gastronomy?") The figures below are **sign-blind** — a high
+concentration reading says only that this area's mix is concentrated in the named leading type,
+never whether that is an up-market or down-market shift; read it alongside the status/trajectory
+section above, never in isolation. See the [Offering Advantage decoder](/methodology-oa-modes) §5
+for the full methodology, ethics note, and why cuisine-typed dominance never appears on any public
+page (this table included).
+
+```sql dominance_area
+select
+    dominance_group,
+    case dominance_group
+        when 'gastronomy_category' then 'Gastronomy (Café / Restaurant / Fast Food)'
+        when 'retail_category' then 'Retail (12 categories)'
+        when 'entertainment_category' then 'Entertainment (Bar / Nightlife / Culture / Leisure)'
+        when 'wellness_curated' then 'Wellness / fitness (curated cross-domain group)'
+        else dominance_group
+    end as group_label,
+    hhi,
+    top_share,
+    top_child,
+    top_child_offering_tier,
+    n_children,
+    group_stock_local,
+    is_thin_base
+from gentriduck_marts.mart_poi_dominance
+where
+    city_code = 'BER'
+    -- Defence-in-depth restatement of the source-layer filter (mart_poi_dominance.sql already
+    -- filters is_public_safe = true and city_code = 'BER') -- same pattern as the
+    -- /methodology-oa-modes original this section relocates from.
+    and is_public_safe = true
+    -- area_vintage/weight_variant pinned to avoid returning up to 4 rows per business group
+    -- (mart_poi_dominance's own grain includes both) -- same current-boundary, unweighted
+    -- convention used everywhere else on this site; see pages/berlin/area/bezirk/[code].md's
+    -- header comment for the #298 finding this fixes (the pre-relocation /methodology-oa-modes
+    -- widget did not filter either, and silently mixed vintages/weightings into one ranking).
+    and area_vintage = 'lor_2021'
+    and weight_variant = 'standard'
+    and area_code = '${params.code}'
+    and snapshot_year = (
+        select max(snapshot_year)
+        from gentriduck_marts.mart_poi_dominance
+        where
+            city_code = 'BER' and is_public_safe = true and area_code = '${params.code}'
+            and area_vintage = 'lor_2021' and weight_variant = 'standard'
+    )
+order by hhi desc
+```
+
+{#if dominance_area.filter((r) => !r.is_thin_base).length > 0}
+<DataTable data={dominance_area.filter((r) => !r.is_thin_base)} rows=4 emptySet="warn" emptyMessage="No within-group dominance data for this area.">
+    <Column id=group_label title="Business group"/>
+    <Column id=hhi title="HHI (higher = more concentrated)" fmt="num2"/>
+    <Column id=top_share title="Top-share" fmt="pct1"/>
+    <Column id=top_child title="Leading type"/>
+    <Column id=n_children title="Types in this group here"/>
+    <Column id=group_stock_local title="Group's total POI count here" fmt="num0"/>
+</DataTable>
+{:else}
+<Alert status="warning">No within-group dominance data for this area (e.g. an uninhabited planning
+area, or too few mapped places in every curated group here).</Alert>
+{/if}
+
+{#if dominance_area.some((r) => r.is_thin_base)}
+<Alert status="info">
+  {dominance_area.filter((r) => r.is_thin_base).length} of {dominance_area.length} business group(s)
+  here are too thinly observed to characterize their mix confidently (fewer mapped places than this
+  group's own minimum-base rule) — omitted from the table above, never shown as "commercially dead."
+</Alert>
+{/if}
 
 <!--
   I19-web (#246): "People & structure" block, PLR level -- slice 1 of the web render (BZR/PGR/
@@ -689,268 +1058,6 @@ tagging of restaurant/cafe cuisine is incomplete for smaller or less-mapped area
 This block is a plain inventory, not a recommendation — it never ranks or scores this area against
 others, and makes no claim about whether it is a good or bad place to live.
 </p>
-
-## Social status over time
-
-
-```sql area_trend
-with
-    district_year as (
-        select snapshot_year, avg(status_index) as district_avg_status_index
-        from gentriduck_marts.fct_gentrification_change
-        where
-            city_code = 'BER' and area_vintage = 'lor_2021' and status_index is not null
-            and substr(area_code, 1, 2) = substr('${params.code}', 1, 2)
-        group by snapshot_year
-    ),
-    city_year as (
-        select snapshot_year, avg(status_index) as city_avg_status_index
-        from gentriduck_marts.fct_gentrification_change
-        where city_code = 'BER' and area_vintage = 'lor_2021' and status_index is not null
-        group by snapshot_year
-    )
-select
-    a.snapshot_year,
-    a.status_index as "This area",
-    d.district_avg_status_index as "District average",
-    c.city_avg_status_index as "Berlin average",
-    a.typology_stage
-from gentriduck_marts.fct_gentrification_change as a
-left join district_year as d on d.snapshot_year = a.snapshot_year
-left join city_year as c on c.snapshot_year = a.snapshot_year
-where city_code = 'BER' and area_vintage = 'lor_2021' and area_code = '${params.code}'
-order by a.snapshot_year
-```
-
-<LineChart
-    data={area_trend}
-    x=snapshot_year
-    y={['This area', 'District average', 'Berlin average']}
-    title="Social status over time, {area_info[0] ? area_info[0].area_name : 'this area'} (1 = least deprived … 4 = most deprived)"
-    yAxisTitle="Status class"
-    yMin=1
-    yMax=4
-    emptySet="warn"
-    emptyMessage="No time series for this area."
-/>
-
-District and city lines are the simple average across all Planungsräume in the same Bezirk /
-across Berlin at each edition — context, not a target.
-
-```sql trajectory_summary
-select
-    n_editions,
-    first_edition,
-    last_edition,
-    status_index_first,
-    status_index_last,
-    status_delta,
-    trajectory_type,
-    dominant_stage,
-    trajectory_confidence
-from gentriduck_marts.fct_gentrification_trajectory
-where city_code = 'BER' and area_vintage = 'lor_2021' and area_code = '${params.code}'
-```
-
-```sql district_trajectory_mix
-select trajectory_type, count(*) as n
-from gentriduck_marts.fct_gentrification_trajectory
-where
-    city_code = 'BER' and area_vintage = 'lor_2021'
-    and substr(area_code, 1, 2) = substr('${params.code}', 1, 2)
-group by trajectory_type
-```
-
-{#if hasStatus}
-<BigValue data={context_current} value=stage title="Current stage"/>
-{:else}
-<Alert status="info">
-  This is an uninhabited planning area in Berlin's official population register (e.g. a park,
-  development site, or similar) — no current stage applies here.
-</Alert>
-{/if}
-<BigValue data={trajectory_summary} value=trajectory_type title="Overall trajectory" emptySet="warn"/>
-<BigValue data={trajectory_summary} value=dominant_stage title="Most common stage" emptySet="warn"/>
-<BigValue data={trajectory_summary} value=trajectory_confidence title="Confidence" emptySet="warn"/>
-
-Trajectory labels are explained on the [methodology page](/methodology) — an "improving" label does
-not by itself mean the change was good for existing residents; rising status can reflect
-displacement as easily as incumbent social mobility.
-
-## How its commercial mix has developed
-
-Shops, cafés and other businesses tend to *follow* — not lead — social change (see
-[methodology](/methodology) for the theory). This shows how the mix of mapped places here has
-evolved.
-
-```sql poi_trend
-select
-    snapshot_year,
-    poi_category_h,
-    sum(poi_count) as poi_count
-from gentriduck_marts.fct_poi_development
-where city_code = 'BER' and area_vintage = 'lor_2021' and area_code = '${params.code}'
-group by all
-order by snapshot_year
-```
-
-```sql poi_mix_context
--- Latest-year top category here vs. this area's district vs. citywide -- textual context for the
--- stacked bar below (a second stacked bar over the same categories was judged harder to read, not
--- more informative, for a segment-count comparison).
-with
-    area_latest as (
-        select max(snapshot_year) as snapshot_year
-        from gentriduck_marts.fct_poi_development
-        where city_code = 'BER' and area_vintage = 'lor_2021' and area_code = '${params.code}'
-    ),
-    area_mix as (
-        select poi_category_h, sum(poi_count) as poi_count
-        from gentriduck_marts.fct_poi_development
-        where
-            city_code = 'BER' and area_vintage = 'lor_2021' and area_code = '${params.code}'
-            and snapshot_year = (select snapshot_year from area_latest)
-        group by poi_category_h
-    ),
-    district_mix as (
-        select poi_category_h, sum(poi_count) as poi_count
-        from gentriduck_marts.fct_poi_development
-        where
-            city_code = 'BER' and area_vintage = 'lor_2021'
-            and substr(area_code, 1, 2) = substr('${params.code}', 1, 2)
-            and snapshot_year = (select snapshot_year from area_latest)
-        group by poi_category_h
-    ),
-    city_mix as (
-        select poi_category_h, sum(poi_count) as poi_count
-        from gentriduck_marts.fct_poi_development
-        where
-            city_code = 'BER' and area_vintage = 'lor_2021'
-            and snapshot_year = (select snapshot_year from area_latest)
-        group by poi_category_h
-    )
-select
-    (select snapshot_year from area_latest) as snapshot_year,
-    (select poi_category_h from area_mix order by poi_count desc limit 1) as area_top_category,
-    (select poi_category_h from district_mix order by poi_count desc limit 1) as district_top_category,
-    (select poi_category_h from city_mix order by poi_count desc limit 1) as city_top_category
-```
-
-
-<BarChart
-    data={poi_trend}
-    x=snapshot_year
-    y=poi_count
-    series=poi_category_h
-    seriesOrder={poiCategoryOrder}
-    title="Mapped places by category, {area_info[0] ? area_info[0].area_name : 'this area'} (largest segment first)"
-    yAxisTitle="Number of mapped places"
-    emptySet="warn"
-/>
-
-{#if poiMixCtx && poiMixCtx.area_top_category}
-<p>The most common kind of mapped place here in {poiMixCtx.snapshot_year} is <b>{poiMixCtx.area_top_category}</b>;
-across {bezirkName} it's <b>{poiMixCtx.district_top_category ?? '—'}</b>, and across Berlin as a whole
-it's <b>{poiMixCtx.city_top_category ?? '—'}</b>.</p>
-{/if}
-
-## Offering Advantage profile
-
-<!--
-  #209 (web slice of #207): radar/spider chart of this area's Offering Advantage (OA,
-  ADR-0017/0018) by POI domain, latest available snapshot_year. I14 (#231) fix, per the I15 review
-  (docs/epic-i/I15-oa-review-findings.md §1, both sign-offs' recommendations): reads the
-  domain-grain companion mart `mart_poi_offering_advantage_map` (#210) instead of raw-selecting
-  leaf-grain rows from `mart_poi_offering_advantage`, so each domain renders exactly one radar
-  point (previously a domain with several subtypes rendered the same value on multiple redundant
-  axes -- a chart de-duplication fix; the underlying oa_domain values were always correct, verified
-  in I15 to floating-point exactness). Displayed as % vs citywide baseline
-  (`pct_vs_baseline = (oa_domain - 1) * 100`, a pure display transform of the existing continuous
-  column -- I15 §3, no mart change). Uses Evidence's bundled `<ECharts>` component
-  (`@evidence-dev/core-components`, confirmed present -- no new-tool ADR needed) since Evidence
-  does not ship a radar chart primitive.
--->
-
-**Offering Advantage (OA)** compares each POI domain's share of this area's mapped places (shops,
-cafés, and other points of interest) to that domain's share across Berlin as a whole — a
-compositional read on the local place *mix*, not a count, and not a value judgment: being
-over-represented in a domain doesn't mean an area is "better" or "worse," only that its commercial
-mix is more specialised in that direction than the city as a whole. The chart below shows each
-domain as a **percentage above or below Berlin's citywide average share** for that domain — e.g.
-"+30%" means this domain makes up about 30% more of the local mix here than it does citywide on
-average; a **negative** percentage means the opposite, under-representation, shown the same way.
-OA is one input among several into the governed index (see [methodology](/methodology)), never a
-standalone gentrification score on its own — and vacancy (if shown) marks the *opposite* pole from
-the others, a pre-reinvestment signal, not a "more OA is more pressure" reading. See the
-[POI & Offering Advantage map](/berlin/poi-map) to explore this across all of Berlin.
-
-```sql poi_oa_radar
-select
-    poi_domain_h,
-    oa_domain,
-    poi_count
-from gentriduck_marts.mart_poi_offering_advantage_map
-where
-    city_code = 'BER'
-    and area_vintage = 'lor_2021'
-    and weight_variant = 'standard'
-    and methodology_variant = 'faithful'
-    and area_code = '${params.code}'
-    and snapshot_year = (
-        select max(snapshot_year)
-        from gentriduck_marts.mart_poi_offering_advantage_map
-        where
-            city_code = 'BER'
-            and area_vintage = 'lor_2021'
-            and weight_variant = 'standard'
-            and methodology_variant = 'faithful'
-            and area_code = '${params.code}'
-            and oa_domain is not null
-    )
-order by oa_domain desc
-```
-
-```sql poi_oa_radar_district
--- Same domain-grain mart, averaged (unweighted) across every PLR in this area's Bezirk at the same
--- snapshot_year, for the radar's district-context series.
-select poi_domain_h, avg(oa_domain) as district_avg_oa_domain
-from gentriduck_marts.mart_poi_offering_advantage_map
-where
-    city_code = 'BER'
-    and area_vintage = 'lor_2021'
-    and weight_variant = 'standard'
-    and methodology_variant = 'faithful'
-    and substr(area_code, 1, 2) = substr('${params.code}', 1, 2)
-    and snapshot_year = (
-        select max(snapshot_year)
-        from gentriduck_marts.mart_poi_offering_advantage_map
-        where
-            city_code = 'BER'
-            and area_vintage = 'lor_2021'
-            and weight_variant = 'standard'
-            and methodology_variant = 'faithful'
-            and area_code = '${params.code}'
-            and oa_domain is not null
-    )
-group by poi_domain_h
-```
-
-{#if radarRows.length > 0}
-<ECharts config={radarConfig} data={poi_oa_radar} height="360px" downloadableData downloadableImage />
-{:else}
-<Alert status="warning">
-  No Offering Advantage data for this area (e.g. an uninhabited planning area, or no POIs mapped
-  for any domain here yet).
-</Alert>
-{/if}
-
-{#if radarRows.some((r) => r.lowBase)}
-<Alert status="warning">
-  Domains marked <b>†</b> are based on very few mapped places here (fewer than {OA_LOW_BASE_THRESHOLD}) —
-  treat their percentage cautiously, since a single new or closed business can swing a small base
-  sharply. Counts: {radarRows.filter((r) => r.lowBase).map((r) => `${r.domain} (${r.poiCount ?? 0})`).join(', ')}.
-</Alert>
-{/if}
 
 ## Land value & estimated rent
 

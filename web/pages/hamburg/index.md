@@ -88,7 +88,7 @@ where variant = 'live_data' and area_level = 'subarea_l2' and city_code = 'HH'
 | Socio-demographic baseline composite (D4/EWR) | ✅ 5 indicators, PLR grain | ⛔ not published in this mart (`own_idx_class` is NULL for every Hamburg row) — see methodology §6.2/§6.3 for what the underlying composite looks like where it *is* disclosed |
 | Land value & estimated rent (Bodenrichtwert/Mietspiegel) | ✅ | ⛔ not yet in a published Hamburg mart |
 | Milieuschutz / displacement-zone flag | ✅ | disclosed separately (Hamburg's *soziale Erhaltungsverordnung*, C5/#203) but not yet surfaced as a site page |
-| Named neighbourhoods / district browse | ✅ (542 PLRs, all named) | ⛔ Hamburg's finest grain (943 Gebiete) has **no name** in the source data — only a numeric code (see the map below) |
+| Named neighbourhoods / district browse | ✅ (542 PLRs, all named) | ⛔ Hamburg's finest grain (943 Gebiete) has **no name** in the source data — only a numeric code (see the map below). A [structural area-hierarchy scaffold](/hamburg/area) exists (I21-g, #301) — routes and page layout only, no real per-area figures published yet |
 | Per-area trajectory / time-series page | ✅ | ⛔ needs `fct_gentrification_change`/`fct_gentrification_trajectory`, which remain Berlin-only by design (H3 sign-off condition 4) |
 
 ## Where to go next
@@ -102,6 +102,10 @@ where variant = 'live_data' and area_level = 'subarea_l2' and city_code = 'HH'
     Where shops, cafés, and other mapped places are concentrated across Hamburg — raw density or
     Offering Advantage — plus the same signal added up across the whole city.
   </LinkCard>
+  <LinkCard href="/hamburg/area" icon="🧭" title="Area profiles (scaffold)" cta="See the structure →">
+    A structural preview of the district → Stadtteil → Gebiet drill-down template (I21-g, #301) —
+    routes and page layout only; no real per-area figures are published here yet.
+  </LinkCard>
 </LinkCards>
 
 ## Honest caveats
@@ -114,6 +118,11 @@ where variant = 'live_data' and area_level = 'subarea_l2' and city_code = 'HH'
 - **Only one data variant.** Unlike Berlin (which offers a 2018-thesis-reproduction `standard`
   variant alongside `live_data`), Hamburg only ever appears in the `live_data` variant — there is
   no Hamburg equivalent of the frozen 2018 snapshot.
+- **The [area-profile scaffold](/hamburg/area) shows structure only.** I21-g (#301) introduced the
+  `/hamburg/area/…` route tree (district → Stadtteil → Gebiet) on the same canonical template as
+  Berlin's area pages, but every page in it renders an explicit "not yet published for Hamburg"
+  state rather than a real figure — publishing real content there is its own, separately-gated
+  ticket (I21-i, #303).
 - **Every other caveat on this page is a pointer, not a repeat.** The specific, load-bearing
   differences from Berlin — the Dynamik window's qualitative meaning, the missing D4 indicators,
   the Stadtteil grain ceiling, and the same-named-stage disclosure rule — are stated once, in full,
