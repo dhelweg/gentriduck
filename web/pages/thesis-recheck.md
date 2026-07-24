@@ -20,6 +20,13 @@ sidebar_position: 10
   unchanged; added one backward link to `/about` in "Further reading" per
   docs/epic-i/storytelling-guide.md §2's explicit note ("I3 should add a backward link *into*
   About from thesis-recheck").
+
+  #309: added the fixed BZR/`standard` map (below the six-hypotheses table) that this page never
+  had -- it was previously mixed into /berlin/maps behind a `variant`/`area_level` dropdown pair,
+  the only reason that page ever showed the 2018 thesis's own Dec-2016 BZR snapshot. Moved here in
+  full (no dropdown -- see the map's own script-block comment), next to the hypothesis writeup it
+  actually illustrates. Not methodology-bearing: same `gentrification_index` rows, same
+  `standard`/`bzr` filter, just relocated and no longer selector-driven.
 -->
 
 <Hero compact eyebrow="The historical reproduction study" title="The 2018 thesis, re-checked" lede="Gentriduck began as a question: an <a href='https://github.com/dhelweg/masterthesis2018_gentrification'>award-era master's thesis</a> from 2018 claimed that the churn of shops, cafés and restaurants in a Berlin neighbourhood tracks — and partly <i>predicts</i> — its social change. Eight years and a completely rebuilt, open-source stack later: <b>does that result still hold?</b>" />
@@ -77,6 +84,91 @@ a raw-count comparison is noted where OA and raw count disagree, or where OA has
 | **H3a** | Rapid commercial change *precedes* social-status change | Supported | Reproduces on EWR (raw count); on the modern monitor, raw count points the wrong way, but **OA is correctly signed at a 2-year lag** (significant) | ⚠️ Data- and predictor-dependent |
 | **H3b** | The reverse — social improvement *leads* commercial succession (the thesis's strongest finding) | Strongly supported | Replicates cleanly on EWR; on the modern official monitor a **raw-count classifier collapses**, but testing the same panel with the thesis's own OA predictor **revives the correct direction at a 2-year lag** (rho ‑0.14, p=0.001) | ⚠️ Partially revives under the thesis's own predictor |
 | **H3c** | Commercial dynamism & social movement co-occur (same time) | Supported | Reproduces on EWR (raw count); wrong-signed on the modern monitor under both raw count and OA | ❌ Data-dependent, not rescued by OA |
+
+## The 2018 snapshot, mapped
+
+<script>
+  // #309: carved out of /berlin/maps, where this map used to live behind a `variant`/
+  // `area_level` dropdown pair (see that page's header comment). This is the thesis's own
+  // reproduction -- Berlin's pre-2021 Bezirksregion (BZR) boundaries, the Dec-2016 snapshot,
+  // `gentrification_index`'s `standard` variant -- so unlike /berlin/maps it is fixed, no
+  // dropdown: there is exactly one (variant, area_level) combination to show here.
+  import { base } from '$app/paths';
+
+  // Same ColorBrewer RdYlBu-6 palette and D1xD2 stage ordering as /berlin/maps -- see that
+  // page's script-block header comment for the colorblind-safety rationale and the
+  // Dangschat 1988 / Döring & Ulbricht 2016 ordering citation (unchanged here, just reused).
+  const stageColorPalette = ['#d73027', '#fc8d59', '#fee090', '#e0f3f8', '#91bfdb', '#4575b4'];
+
+  const areaTooltip = [
+    { id: 'area_name', showColumnName: false, valueClass: 'font-bold text-sm', fmt: 'id' },
+    { id: 'stage_label', title: 'Gentrification stage', fmt: 'id' },
+    { id: 'area_code', title: 'Area code', valueClass: 'text-xs opacity-60', fmt: 'id' }
+  ];
+</script>
+
+The map below is the 2018 thesis's own snapshot — Berlin's pre-2021 Bezirksregion (BZR) boundaries,
+December 2016, the same six-stage typology used everywhere else on this site. It's fixed (no data
+or area-level picker) because it's a historical snapshot, not a live view — for the current, live
+picture at neighbourhood (Planungsraum) detail, see the [maps page](/berlin/maps).
+
+```sql thesis_areas
+-- Same stage_label/stage_sort convention as /berlin/maps' `areas` query (see that page for the
+-- full Dangschat 1988 / Döring & Ulbricht 2016 ordering citation) -- reused unmodified, just
+-- filtered to the thesis's own `standard`/`bzr` combination instead of `live_data`/`plr`.
+select
+    city_code,
+    area_code,
+    area_name,
+    status_index,
+    dynamism_index,
+    status_class,
+    case status_class
+        when 'active-gentrification' then 'Active gentrification'
+        when 'pioneer-signal' then 'Early pioneer signal'
+        when 'improving-vulnerable' then 'Improving, vulnerable area'
+        when 'pre-gentrification' then 'Pre-gentrification watch'
+        when 'consolidation-pressure' then 'Consolidated, still intensifying'
+        when 'stable-established' then 'Stable, established'
+    end as stage_label,
+    case status_class
+        when 'active-gentrification' then 1
+        when 'pioneer-signal' then 2
+        when 'improving-vulnerable' then 3
+        when 'pre-gentrification' then 4
+        when 'consolidation-pressure' then 5
+        when 'stable-established' then 6
+        else 99
+    end as stage_sort
+from gentriduck_marts.gentrification_index
+where variant = 'standard'
+  and area_level = 'bzr'
+  and city_code = 'BER'
+  and period_yyyymm = (
+      select max(period_yyyymm)
+      from gentriduck_marts.gentrification_index
+      where variant = 'standard' and area_level = 'bzr'
+  )
+order by stage_sort
+```
+
+<AreaMap
+    data={thesis_areas}
+    geoJsonUrl={`${base}/geo/bzr_standard.geojson`}
+    geoId="area_code"
+    areaCol="area_code"
+    value="stage_label"
+    legendType="categorical"
+    colorPalette={stageColorPalette}
+    title="Berlin Bezirksregion (BZR) — Gentrification stage, 2018 thesis reproduction (Dec 2016 snapshot)"
+    startingLat={52.52}
+    startingLong={13.405}
+    startingZoom={9}
+    tooltip={areaTooltip}
+/>
+
+There's no click-through here — the thesis's pre-2021 area codes don't resolve on the per-area
+pages, which are built on today's boundaries. Hover an area for its name and stage.
 
 ### Read the columns together, not alone
 
