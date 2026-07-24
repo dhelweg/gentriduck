@@ -1574,6 +1574,53 @@ models:
           vulnerable (same sign convention as Berlin's int_ewr_socioeco.ewr_composite).
           NOT directly comparable in magnitude to Berlin's 5-indicator composite.
 
+  - name: int_hamburg_gebiet_osm_names
+    description: >
+      #307 -- statistisches-Gebiet (subarea_l2) -> OSM place-name crosswalk.
+      Hamburg's Gebiet WFS layer has no name property at the source; this
+      model derives a best-effort DISPLAY-ONLY name via point-in-polygon
+      match (ST_Within) of OSM place=neighbourhood|suburb|quarter nodes
+      (stg_hamburg_osm_places) against Gebiet polygons (stg_hamburg_geo).
+      Consumed by dim_area_geometry.area_name for subarea_l2 rows only. NOT
+      methodology-bearing (label enrichment, no index/mart-grain impact).
+      Coverage is PARTIAL by design (943 official Gebiete vs informal OSM
+      tagging) -- unmatched Gebiete simply have no row here. See this
+      model's own header for the full method + tie-break rationale.
+    meta:
+      dbt_meta_owner: data-engineer
+    data_tests:
+
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns:
+              - city_code
+              - area_code
+    columns:
+      - name: city_code
+        description: Canonical city code 'HH' (ADR-0005).
+        data_tests:
+
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ["HH"]
+      - name: area_code
+        description: >
+          Statistisches-Gebiet natural key (subarea_l2). Joins to
+          stg_hamburg_geo.area_code where area_level='subarea_l2'.
+        data_tests:
+
+          - not_null
+      - name: osm_place_name
+        description: Matched OSM `name` tag value -- the derived display name.
+        data_tests:
+
+          - not_null
+      - name: osm_place_type
+        description: "OSM place=* tag of the matched node: neighbourhood|suburb|quarter."
+      - name: osm_place_osm_id
+        description: "OSM node id of the matched place, e.g. 'node/12345' -- provenance only."
+
   - name: int_hamburg_wohnlage_stadtteil
     description: >
       #203 [H-C5]: Wohnlage residential-quality tier composition per
