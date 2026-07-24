@@ -27,6 +27,18 @@ sidebar_position: 10
   full (no dropdown -- see the map's own script-block comment), next to the hypothesis writeup it
   actually illustrates. Not methodology-bearing: same `gentrification_index` rows, same
   `standard`/`bzr` filter, just relocated and no longer selector-driven.
+
+  #309 review fix: the first cut wired this map to `stage_label`/categorical (mirroring
+  /berlin/maps' `live_data`/`plr` map), but `stage_label` is derived from `status_class` via a
+  CASE that only matches the six-stage typology's own values -- and for `standard`/`bzr`,
+  `status_class` instead takes `high`/`medium`/`low` (verified against the build parquet: 137/137
+  rows, 3 distinct values, none of the six-stage strings), so every `stage_label` came out NULL
+  and the map rendered blank with an empty legend. Switched to `dynamism_index` (137/137 populated,
+  scalar) -- same "speed of change" framing and scalar-legend convention (no colorPalette,
+  Evidence's default single-hue sequential ramp, `legendType="scalar"`) /berlin/maps already uses
+  for this indicator. `status_class`'s own `high`/`medium`/`low` labelling was left for a future
+  pass rather than bolted on here under review-fix time pressure -- see that page's Dropdown/
+  indicatorShortLabel pattern if picking this back up.
 -->
 
 <Hero compact eyebrow="The historical reproduction study" title="The 2018 thesis, re-checked" lede="Gentriduck began as a question: an <a href='https://github.com/dhelweg/masterthesis2018_gentrification'>award-era master's thesis</a> from 2018 claimed that the churn of shops, cafés and restaurants in a Berlin neighbourhood tracks — and partly <i>predicts</i> — its social change. Eight years and a completely rebuilt, open-source stack later: <b>does that result still hold?</b>" />
@@ -93,53 +105,44 @@ a raw-count comparison is noted where OA and raw count disagree, or where OA has
   // reproduction -- Berlin's pre-2021 Bezirksregion (BZR) boundaries, the Dec-2016 snapshot,
   // `gentrification_index`'s `standard` variant -- so unlike /berlin/maps it is fixed, no
   // dropdown: there is exactly one (variant, area_level) combination to show here.
+  //
+  // #309 review fix: this used to be `stage_label`/categorical (see the top-of-file comment for
+  // why that rendered blank for `standard`/`bzr`). Now `dynamism_index`, a scalar -- so no
+  // categorical palette is needed here; /berlin/maps' scalar indicators use Evidence's default
+  // single-hue sequential ramp (light -> dark blue), reused here unmodified via `legendType`
+  // alone (no `colorPalette` prop, see the <AreaMap> below).
   import { base } from '$app/paths';
-
-  // Same ColorBrewer RdYlBu-6 palette and D1xD2 stage ordering as /berlin/maps -- see that
-  // page's script-block header comment for the colorblind-safety rationale and the
-  // Dangschat 1988 / Döring & Ulbricht 2016 ordering citation (unchanged here, just reused).
-  const stageColorPalette = ['#d73027', '#fc8d59', '#fee090', '#e0f3f8', '#91bfdb', '#4575b4'];
 
   const areaTooltip = [
     { id: 'area_name', showColumnName: false, valueClass: 'font-bold text-sm', fmt: 'id' },
-    { id: 'stage_label', title: 'Gentrification stage', fmt: 'id' },
+    { id: 'dynamism_index', title: 'Dynamism (speed of change)', fmt: 'num1' },
     { id: 'area_code', title: 'Area code', valueClass: 'text-xs opacity-60', fmt: 'id' }
   ];
 </script>
 
 The map below is the 2018 thesis's own snapshot — Berlin's pre-2021 Bezirksregion (BZR) boundaries,
-December 2016, the same six-stage typology used everywhere else on this site. It's fixed (no data
-or area-level picker) because it's a historical snapshot, not a live view — for the current, live
-picture at neighbourhood (Planungsraum) detail, see the [maps page](/berlin/maps).
+December 2016. Unlike the rest of the site, the plain-language six-stage typology isn't available
+at this variant/level (`status_class` here takes a coarser `high`/`medium`/`low` reading instead —
+see the script-block comment above), so this map instead shades by **dynamism** — how fast an
+area's social status was moving at the time, the same scalar indicator and colour convention the
+[maps page](/berlin/maps) uses for its own "Dynamism" option. It's fixed (no data or area-level
+picker) because it's a historical snapshot, not a live view — for the current, live picture at
+neighbourhood (Planungsraum) detail, see the [maps page](/berlin/maps).
 
 ```sql thesis_areas
--- Same stage_label/stage_sort convention as /berlin/maps' `areas` query (see that page for the
--- full Dangschat 1988 / Döring & Ulbricht 2016 ordering citation) -- reused unmodified, just
--- filtered to the thesis's own `standard`/`bzr` combination instead of `live_data`/`plr`.
+-- #309 review fix: status_class here takes 'high'/'medium'/'low' values, not the six-stage
+-- typology strings /berlin/maps' `live_data`/`plr` query CASEs into stage_label -- running that
+-- same CASE against this `standard`/`bzr` slice produces NULL for all 137 rows (verified against
+-- the build parquet), which is why the first cut of this map rendered blank. dynamism_index and
+-- status_index are both 137/137 populated here, so this maps on dynamism_index (scalar) instead;
+-- status_class is still selected for a future high/medium/low categorical pass, just not mapped.
 select
     city_code,
     area_code,
     area_name,
     status_index,
     dynamism_index,
-    status_class,
-    case status_class
-        when 'active-gentrification' then 'Active gentrification'
-        when 'pioneer-signal' then 'Early pioneer signal'
-        when 'improving-vulnerable' then 'Improving, vulnerable area'
-        when 'pre-gentrification' then 'Pre-gentrification watch'
-        when 'consolidation-pressure' then 'Consolidated, still intensifying'
-        when 'stable-established' then 'Stable, established'
-    end as stage_label,
-    case status_class
-        when 'active-gentrification' then 1
-        when 'pioneer-signal' then 2
-        when 'improving-vulnerable' then 3
-        when 'pre-gentrification' then 4
-        when 'consolidation-pressure' then 5
-        when 'stable-established' then 6
-        else 99
-    end as stage_sort
+    status_class
 from gentriduck_marts.gentrification_index
 where variant = 'standard'
   and area_level = 'bzr'
@@ -149,7 +152,7 @@ where variant = 'standard'
       from gentriduck_marts.gentrification_index
       where variant = 'standard' and area_level = 'bzr'
   )
-order by stage_sort
+order by dynamism_index desc
 ```
 
 <AreaMap
@@ -157,10 +160,9 @@ order by stage_sort
     geoJsonUrl={`${base}/geo/bzr_standard.geojson`}
     geoId="area_code"
     areaCol="area_code"
-    value="stage_label"
-    legendType="categorical"
-    colorPalette={stageColorPalette}
-    title="Berlin Bezirksregion (BZR) — Gentrification stage, 2018 thesis reproduction (Dec 2016 snapshot)"
+    value="dynamism_index"
+    legendType="scalar"
+    title="Berlin Bezirksregion (BZR) — Dynamism (speed of status change), 2018 thesis reproduction (Dec 2016 snapshot)"
     startingLat={52.52}
     startingLong={13.405}
     startingZoom={9}
@@ -168,7 +170,7 @@ order by stage_sort
 />
 
 There's no click-through here — the thesis's pre-2021 area codes don't resolve on the per-area
-pages, which are built on today's boundaries. Hover an area for its name and stage.
+pages, which are built on today's boundaries. Hover an area for its name and dynamism score.
 
 ### Read the columns together, not alone
 
