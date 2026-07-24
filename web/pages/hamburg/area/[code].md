@@ -140,7 +140,7 @@ repeat that figure yet; see the header comment above for why.
 
 ## Where this area sits
 
-This Gebiet's parent Stadtteil is <a href="/hamburg/area/subarea_l1/{parent_info[0] ? parent_info[0].stadtteil_code : ''}">{parent_info[0] ? (parent_info[0].stadtteil_name ?? parent_info[0].stadtteil_code) : 'linked above'}</a>
+This Gebiet's parent Stadtteil is {#if parent_info[0]?.stadtteil_code}<a href="/hamburg/area/subarea_l1/{parent_info[0].stadtteil_code}">{parent_info[0].stadtteil_name ?? parent_info[0].stadtteil_code}</a>{:else}linked above{/if}
 (see the "Up:" link above) — resolved via the OA-D1b (#240) spatial crosswalk, now published to the
 web layer through <code>mart_area_hierarchy</code> (#302, I21-h). See
 <a href="/reference/area-hierarchy">the area-hierarchy reference page</a> for the general concept
