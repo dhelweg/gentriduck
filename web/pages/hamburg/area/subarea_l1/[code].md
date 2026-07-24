@@ -22,11 +22,17 @@ breadcrumb: "select area_name as breadcrumb from gentriduck_marts.dim_area_geome
   Hierarchy nav (§2.2 row 8): a `headline` grain has BOTH a parent (district) and children
   (subarea_l2 / Gebiete in this Stadtteil) — mirrors Berlin's BZR page shape. Both edges exist on
   the data layer (district -> subarea_l1 is source-provided; subarea_l2 -> subarea_l1 is the OA-D1b
-  spatial crosswalk, #240, geo-DS + domain-expert PASS) but NEITHER is exported to a web-queryable
-  mart yet (dim_area_hierarchy is an intermediate model — see pages/hamburg/area/[code].md's header
-  comment for the full explanation of this gap, which is identical for both edges here). Both the
-  "Up:" link and the "children" table below render the same explicit deferred state, not a broken
-  or silently-empty nav.
+  spatial crosswalk, #240, geo-DS + domain-expert PASS).
+
+  #302 (I21-h): closes the web-layer wiring gap flagged in the previous version of this comment
+  (kept in git history) — both edges are now published via the thin pass-through mart
+  mart_area_hierarchy.sql (transform/models/marts/, exported by
+  transform/export_serving_parquet.py, registered under
+  web/sources/gentriduck_marts/mart_area_hierarchy.sql). Export/wiring only — no re-derivation of
+  either edge (see mart_area_hierarchy.sql's own header for the grounding citation back to
+  OA-D1b/#240). The "Up:" link and the "Gebiete in this Stadtteil" children table below now query
+  that mart for real parent/child codes + names (names joined from dim_area_geometry), replacing
+  the previous deferred-state Alerts.
 -->
 
 ```sql stadtteil_name
@@ -36,13 +42,43 @@ where city_code = 'HH' and area_level = 'subarea_l1' and area_code = '${params.c
 limit 1
 ```
 
+```sql parent_info
+-- #302 (I21-h): resolved parent district, via mart_area_hierarchy (thin pass-through of
+-- dim_area_hierarchy's hh_l1_to_district CTE, a source-provided WFS attribute -- see that model's
+-- header). Joined against dim_area_geometry for the display name.
+select
+    h.parent_area_code as district_code,
+    g.area_name as district_name
+from gentriduck_marts.mart_area_hierarchy as h
+left join
+    gentriduck_marts.dim_area_geometry as g
+    on g.city_code = 'HH' and g.area_level = 'district' and g.area_code = h.parent_area_code
+where h.city_code = 'HH' and h.area_level = 'subarea_l1' and h.area_code = '${params.code}'
+limit 1
+```
+
+```sql children
+-- #302 (I21-h): constituent Gebiete, via mart_area_hierarchy (thin pass-through of
+-- dim_area_hierarchy's hh_l2_to_l1 CTE, the OA-D1b/#240 spatial crosswalk -- see that model's
+-- header for the method; this query re-derives nothing). Joined against dim_area_geometry for the
+-- display name -- structural links only, no statistic (I21-i, #303, publishes real figures).
+select
+    h.area_code as gebiet_code,
+    coalesce(g.area_name, h.area_code) as gebiet_name,
+    '/hamburg/area/' || h.area_code as gebiet_link
+from gentriduck_marts.mart_area_hierarchy as h
+left join
+    gentriduck_marts.dim_area_geometry as g
+    on g.city_code = 'HH' and g.area_level = 'subarea_l2' and g.area_code = h.area_code
+where h.city_code = 'HH' and h.area_level = 'subarea_l2' and h.parent_area_code = '${params.code}'
+order by gebiet_name
+```
+
 <Hero compact eyebrow="Chapter 3 — The Evidence" title="{stadtteil_name[0] ? stadtteil_name[0].area_name : 'Stadtteil'}" lede="Hamburg's Stadtteil-level (Bezirksregion-equivalent) scaffold — the headline scale between district and statistisches Gebiet. Structural scaffold only (I21-g, #301); no real figures are published yet." />
 
-<Alert status="info">
-  <b>Up:</b> this Stadtteil's parent district is a resolved, source-provided fact on the data layer,
-  but not yet exported to a web-queryable mart — see the "Where this area sits" section below for
-  the full, honest explanation, rather than a broken or guessed link here.
-</Alert>
+<!-- #302 (I21-h): real "Up:" link, same #255-precedent value-guarded static-prefix-href pattern
+     as pages/berlin/area/[code].md's own Up-link. -->
+<p>Up: {#if parent_info[0]?.district_code}<a href="/hamburg/area/district/{parent_info[0].district_code}">{parent_info[0].district_name ?? 'District profile'}</a>{:else}<a href="/hamburg/area/district">District profile</a>{/if} · <a href="/hamburg/area/subarea_l1">all Stadtteile</a> · <a href="/hamburg/area/district">all districts</a></p>
 
 [All Stadtteile](/hamburg/area/subarea_l1) · [Districts](/hamburg/area/district) ·
 [Hamburg data hub](/hamburg)
@@ -80,24 +116,25 @@ promotes this grain to primary-equivalent scoring (currently out of scope; see
 
 ## Where this area sits
 
-<Alert status="info">
-  <b>Hierarchy nav pending web-layer wiring, both directions.</b> This Stadtteil's parent district
-  and its constituent Gebiete are both resolved on the data layer (
-  <code>dim_area_hierarchy.sql</code>'s <code>hh_l1_to_district</code> and <code>hh_l2_to_l1</code>
-  edges — the latter a geo-DS + domain-expert-approved spatial crosswalk, OA-D1b/#240, merged to
-  <code>develop</code>) but neither is exported to a web-queryable mart yet — only
-  <code>transform/models/marts/*.sql</code> models are exported to parquet
-  (<code>transform/export_serving_parquet.py</code>), and <code>dim_area_hierarchy</code> is an
-  intermediate model. This is disclosed here rather than shown as a broken link or an empty table.
-</Alert>
+### Gebiete in this Stadtteil
+
+<DataTable data={children} rows=20 link=gebiet_link emptySet="warn" emptyMessage="No constituent Gebiete found for this Stadtteil.">
+    <Column id=gebiet_name title="Statistisches Gebiet"/>
+</DataTable>
+
+This Stadtteil's parent district is linked above ("Up:") and this list of constituent Gebiete both
+come from <code>mart_area_hierarchy</code> (#302, I21-h), a thin pass-through of
+<code>dim_area_hierarchy.sql</code>'s <code>hh_l1_to_district</code> (source-provided) and
+<code>hh_l2_to_l1</code> (OA-D1b/#240 spatial crosswalk, geo-DS + domain-expert PASS) edges — this
+ticket publishes those already-resolved edges to the web layer without re-deciding either method.
 
 ## Honest caveats
 
 - **This entire page is a structural scaffold (I21-g, #301).** No section above shows a real
   Hamburg figure — publishing this page's content is a separately-gated follow-up (I21-i, #303).
-- **Both the "Up" link and "children" table are disclosed as pending, not broken.** The underlying
-  parent/child links are resolved (one source-provided, one a signed-off spatial crosswalk); only
-  their export to a web-queryable mart is outstanding.
+- **The "Up" link and "Gebiete in this Stadtteil" table are real, not placeholders (#302, I21-h).**
+  The underlying parent/child links were resolved and signed off earlier (one source-provided, one
+  the OA-D1b/#240 spatial crosswalk); this ticket only publishes them to the web layer.
 - See [Hamburg's data hub](/hamburg) for the full, current inventory of what is and isn't published
   for Hamburg, and [methodology & data sources §6](/methodology) for how Hamburg's data differs from
   Berlin's generally.

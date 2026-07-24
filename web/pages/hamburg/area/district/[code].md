@@ -34,10 +34,16 @@ breadcrumb: "select area_name as breadcrumb from gentriduck_marts.dim_area_geome
   up-link-less, children-table-only treatment. Hamburg's district -> subarea_l1 edge is
   SOURCE-PROVIDED (the WFS 'bezirk' attribute on the Stadtteil layer, passed through unmodified in
   dim_area_hierarchy.sql's `hh_l1_to_district` CTE — not a derivation, unlike the L2->L1 spatial
-  crosswalk) but, like that edge, dim_area_hierarchy is an intermediate model with no mart/Evidence
-  source registered (see pages/hamburg/area/[code].md's header comment for the same gap, restated
-  here for this page's own children-table case) — so no live "children" table can be built yet
-  either. Rendered below as an explicit deferred state, not an empty DataTable.
+  crosswalk).
+
+  #302 (I21-h): closes the web-layer wiring gap flagged in the previous version of this comment
+  (kept in git history) — this edge is now published via the thin pass-through mart
+  mart_area_hierarchy.sql (transform/models/marts/, exported by
+  transform/export_serving_parquet.py, registered under
+  web/sources/gentriduck_marts/mart_area_hierarchy.sql). Export/wiring only — no re-derivation (see
+  mart_area_hierarchy.sql's own header for the grounding citation). The "Stadtteile in this
+  district" table below now queries that mart for real child codes + names (names joined from
+  dim_area_geometry), replacing the previous deferred-state Alert.
 -->
 
 ```sql district_name
@@ -45,6 +51,23 @@ select area_name
 from gentriduck_marts.dim_area_geometry
 where city_code = 'HH' and area_level = 'district' and area_code = '${params.code}'
 limit 1
+```
+
+```sql children
+-- #302 (I21-h): constituent Stadtteile, via mart_area_hierarchy (thin pass-through of
+-- dim_area_hierarchy's hh_l1_to_district CTE, a source-provided WFS attribute -- see that model's
+-- header). Joined against dim_area_geometry for the display name -- structural links only, no
+-- statistic (I21-i, #303, publishes real figures).
+select
+    h.area_code as stadtteil_code,
+    coalesce(g.area_name, h.area_code) as stadtteil_name,
+    '/hamburg/area/subarea_l1/' || h.area_code as stadtteil_link
+from gentriduck_marts.mart_area_hierarchy as h
+left join
+    gentriduck_marts.dim_area_geometry as g
+    on g.city_code = 'HH' and g.area_level = 'subarea_l1' and g.area_code = h.area_code
+where h.city_code = 'HH' and h.area_level = 'subarea_l1' and h.parent_area_code = '${params.code}'
+order by stadtteil_name
 ```
 
 <Hero compact eyebrow="Chapter 3 — The Evidence" title="{district_name[0] ? district_name[0].area_name : 'District'} — district profile" lede="Hamburg's district-level (Bezirk-equivalent) scaffold — the coarsest grain in Hamburg's area hierarchy. Structural scaffold only (I21-g, #301); no real figures are published yet." />
@@ -86,14 +109,14 @@ Stadtteile'/Gebiete's own stages — never a single re-scored index value for th
 
 ### Stadtteile in this district
 
-<Alert status="info">
-  <b>Children table pending web-layer wiring.</b> This district's constituent Stadtteile are a
-  source-provided fact (Hamburg's own WFS district attribute) resolved on the data layer in
-  <code>dim_area_hierarchy.sql</code>, but that model is not yet exported to a web-queryable mart
-  (see this page's own header comment for the full explanation — the same plumbing gap affects
-  every Hamburg area page's hierarchy nav). This is disclosed here rather than shown as an empty
-  table.
-</Alert>
+<DataTable data={children} rows=20 link=stadtteil_link emptySet="warn" emptyMessage="No constituent Stadtteile found for this district.">
+    <Column id=stadtteil_name title="Stadtteil"/>
+</DataTable>
+
+This table comes from <code>mart_area_hierarchy</code> (#302, I21-h), a thin pass-through of
+<code>dim_area_hierarchy.sql</code>'s <code>hh_l1_to_district</code> edge (source-provided, the
+Hamburg WFS district attribute) — this ticket publishes that already-resolved edge to the web layer
+without re-deciding it.
 
 ## Honest caveats
 
@@ -102,9 +125,9 @@ Stadtteile'/Gebiete's own stages — never a single re-scored index value for th
 - **Even once published, this grain will never show a single re-scored gentrification-index value**
   — only a distribution of its constituent areas' own stages, per the same ruling already governing
   Berlin's Bezirk/PGR/BZR pages (`docs/epic-i/I-coarse-index-geo-decision.md`, DECLINE).
-- **The "Stadtteile in this district" table is disclosed as pending, not broken.** The underlying
-  parent link is source-provided and already resolved in the data layer; only its export to a
-  web-queryable mart is outstanding.
+- **The "Stadtteile in this district" table is real, not a placeholder (#302, I21-h).** The
+  underlying parent link is source-provided and was already resolved in the data layer; this ticket
+  only publishes it to the web layer.
 - See [Hamburg's data hub](/hamburg) for the full, current inventory of what is and isn't published
   for Hamburg, and [methodology & data sources §6](/methodology) for how Hamburg's data differs from
   Berlin's generally.

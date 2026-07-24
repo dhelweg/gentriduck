@@ -1568,6 +1568,61 @@ models:
           straddling PLR (82 of 542 lor_2021 PLRs, 15.1%, per
           int_berlin_plr_ortsteil_overlap.sql's empirical count).
 
+  - name: mart_area_hierarchy
+    description: >
+      #302 (I21-h): thin display mart exposing dim_area_hierarchy to the web
+      layer -- pure pass-through, no new computation (see model header for
+      the full method and grounding). Lets an area page render a real "Up:"
+      parent link / children table for edges dim_area_hierarchy resolves but
+      that don't nest by code-prefix substr(), e.g. Hamburg's
+      district <- subarea_l1 <- subarea_l2 ladder.
+      GATE: this commit is export/wiring only (no new spatial method) --
+      every edge exposed here (including Hamburg's subarea_l2 -> subarea_l1
+      ST_Within crosswalk) was already resolved and dual-signed-off as
+      OA-D1b (#240, ADR-0024 D4); publishing it as a web-facing mart for the
+      first time is the new surface gated by this ticket, per
+      dim_area_hierarchy.sql's own header.
+    meta:
+      dbt_meta_owner: data-engineer
+    data_tests:
+
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns:
+              - city_code
+              - area_level
+              - area_code
+    columns:
+      - name: city_code
+        description: City identifier (ADR-0005).
+        data_tests:
+
+          - not_null
+      - name: area_level
+        description: Area level of the child (edge source) row.
+        data_tests:
+
+          - not_null
+      - name: area_code
+        description: Child area code.
+        data_tests:
+
+          - not_null
+      - name: parent_area_level
+        description: Area level of the resolved parent.
+        data_tests:
+
+          - not_null
+      - name: parent_area_code
+        description: >
+          Resolved parent area code. See dim_area_hierarchy.sql's header for
+          how each edge is derived (code-prefix substr, source-provided
+          pass-through, or the Hamburg subarea_l2 -> subarea_l1 spatial
+          crosswalk).
+        data_tests:
+
+          - not_null
+
   - name: mart_ortsteil_plr_stage_mix
     description: >
       #269 (I-ortsteile): child-PLR typology-STAGE DISTRIBUTION per Ortsteil,
