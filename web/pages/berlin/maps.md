@@ -30,6 +30,16 @@ sidebar_position: 2
   ranges (1-4 / 1-3) with no meaningful zero/baseline to diverge around, and a single-hue ramp is
   inherently colorblind-safe (hue is constant; only lightness varies) -- geo-DS consulted, no
   change needed there.
+
+  #309: carved the `standard`/`bzr` (2018 thesis, Dec 2016 snapshot) map out of this page entirely
+  -- it now lives as a small, fixed map on /thesis-recheck, next to the six-hypothesis writeup,
+  where it actually belongs. That was the only reason this page carried a `variant` ("Data")
+  dropdown and a `bzr` option on `area_level` -- `gentrification_index` has no `live_data`+`bzr`
+  combination (see the now-removed warning Alert this page used to show for exactly that gap), so
+  once `standard` left, `variant` had nothing left to select between and `area_level` had only
+  `plr` left. Rather than ship a single-option dropdown, both are now hardcoded (`live_data`/
+  `plr`) and their `<Dropdown>`s removed; #310 will reintroduce a real `area_level` picker once it
+  adds new *live_data*-backed levels (Bezirk/PGR/Ortsteil) to this mart -- out of scope here.
 -->
 
 <script>
@@ -60,11 +70,10 @@ sidebar_position: 2
   //
   // Maintainer report (2026-07-24): the tooltip's field title originally reused
   // `inputs.indicator.label` -- the same string as the <DropdownOption valueLabel=...> text,
-  // e.g. "Gentrification stage — plain-language, colour-coded (Live data + Planungsraum only)".
-  // That full descriptive form is appropriate for a one-time dropdown choice but unreadable
-  // repeated on every map hover, so the tooltip now uses this short, indicator-only label
-  // instead; the dropdown's own long-form valueLabel is untouched (still needed there to
-  // disambiguate the three indicators' current-availability caveats).
+  // e.g. "Gentrification stage — plain-language, colour-coded". That full descriptive form is
+  // appropriate for a one-time dropdown choice but unreadable repeated on every map hover, so the
+  // tooltip now uses this short, indicator-only label instead; the dropdown's own longer-form
+  // valueLabel is untouched.
   const indicatorShortLabel = {
     status_class: 'Gentrification stage',
     status_index: 'Social status',
@@ -83,7 +92,7 @@ sidebar_position: 2
 
 <Hero compact eyebrow="Chapter 3 — The Evidence" title="Maps — gentrification pressure by area" lede="Colours each of Berlin's neighbourhoods by its current gentrification-pressure signal, so you can see at a glance which parts of the city show the strongest or weakest pressure." />
 
-Pick a map level and an indicator below.
+Pick an indicator below.
 
 Right now this map covers Berlin only — Hamburg's boundaries are ready behind the scenes, but the
 underlying index doesn't have real Hamburg numbers yet
@@ -105,38 +114,11 @@ for now.
   left blank.
 </Alert>
 
-<Dropdown name="variant" title="Data" defaultValue="live_data">
-  <DropdownOption value="live_data" valueLabel="Live data (latest MSS editions, 2013–2025)"/>
-  <DropdownOption value="standard" valueLabel="2018 thesis reproduction (Dec 2016 snapshot)"/>
-</Dropdown>
-
-<Dropdown name="area_level" title="Area level" defaultValue="plr">
-  <DropdownOption value="bzr" valueLabel="Bezirksregion (BZR) — 2018 thesis reproduction only"/>
-  <DropdownOption value="plr" valueLabel="Planungsraum (PLR)"/>
-</Dropdown>
-
-{#if inputs.variant.value === 'live_data' && inputs.area_level.value === 'bzr'}
-<Alert status="warning">
-  The "Live data" option only has neighbourhood-level (Planungsraum) detail — there's no wider
-  Bezirksregion view for it yet. Switch "Area level" to Planungsraum, or "Data" to the 2018 thesis
-  reproduction, to see a Bezirksregion map.
-</Alert>
-{/if}
-
 <Dropdown name="indicator" title="Indicator" defaultValue="status_class">
-  <DropdownOption value="status_class" valueLabel="Gentrification stage — plain-language, colour-coded (Live data + Planungsraum only)"/>
+  <DropdownOption value="status_class" valueLabel="Gentrification stage — plain-language, colour-coded"/>
   <DropdownOption value="status_index" valueLabel="Social status — how deprived or affluent (current snapshot)"/>
   <DropdownOption value="dynamism_index" valueLabel="Dynamism — how fast that status is changing"/>
 </Dropdown>
-
-{#if inputs.indicator.value === 'status_class' && (inputs.variant.value !== 'live_data' || inputs.area_level.value !== 'plr')}
-<Alert status="warning">
-  "Gentrification stage" is only available for "Live data" at the Planungsraum level — the six-stage
-  typology isn't computed for the 2018 thesis reproduction or the Bezirksregion aggregate. Switch
-  "Data" to Live data and "Area level" to Planungsraum to use it, or pick "Social status" /
-  "Dynamism" above.
-</Alert>
-{/if}
 
 ```sql areas
 -- #152: stage_label is the de-jargoned, human-readable form of status_class (typology_stage
@@ -178,33 +160,26 @@ select
         when 'stable-established' then 6
         else 99
     end as stage_sort,
-    -- Drill-down click-through target (#133 G1d, exact-code fix #150): only wire the link for
-    -- `live_data`, since /berlin/area/[code] queries fct_gentrification_change etc. on lor_2021
-    -- (current, 542-PLR) area codes -- the `standard` (2018 thesis, 447-PLR pre-2021) variant's
-    -- codes don't resolve there. Only the PLR branch below actually renders this as a link.
-    case
-        when '${inputs.variant.value}' = 'live_data' then '${base}/berlin/area/' || area_code
-    end as link
+    -- Drill-down click-through target (#133 G1d, exact-code fix #150): /berlin/area/[code]
+    -- queries fct_gentrification_change etc. on lor_2021 (current, 542-PLR) area codes, which
+    -- this `live_data`/`plr` query always returns -- see #309 for why the `standard` variant
+    -- (pre-2021 codes, no click-through) no longer appears on this page at all.
+    '${base}/berlin/area/' || area_code as link
 from gentriduck_marts.gentrification_index
-where variant = '${inputs.variant.value}'
-  and area_level = '${inputs.area_level.value}'
+where variant = 'live_data'
+  and area_level = 'plr'
   and city_code = 'BER'
   and period_yyyymm = (
       select max(period_yyyymm)
       from gentriduck_marts.gentrification_index
-      where variant = '${inputs.variant.value}' and area_level = '${inputs.area_level.value}'
+      where variant = 'live_data' and area_level = 'plr'
   )
 order by stage_sort
 ```
 
-{#if inputs.area_level.value === 'plr'}
-
-<!-- #149: `standard` and `live_data` sit on opposite sides of Berlin's 2021 area-boundary
-     redraw (447 pre-2021 PLR vs. 542 current PLR) -- picking the geojson by variant keeps
-     the boundaries in sync with whichever area codes the query above actually returns. -->
 <AreaMap
     data={areas}
-    geoJsonUrl={`${base}/geo/plr_${inputs.variant.value}.geojson`}
+    geoJsonUrl={`${base}/geo/plr_live_data.geojson`}
     geoId="area_code"
     areaCol="area_code"
     value={inputs.indicator.value === 'status_class' ? 'stage_label' : inputs.indicator.value}
@@ -218,40 +193,7 @@ order by stage_sort
     tooltip={areaTooltip}
 />
 
-{#if inputs.variant.value === 'live_data'}
-
 Click a Planungsraum on the map to open its exact neighbourhood page.
-
-{/if}
-{#if inputs.variant.value !== 'live_data'}
-
-Click-through is only available for "Live data" — the 2018 thesis reproduction uses Berlin's
-pre-2021 area codes, which the per-area page doesn't cover. Switch "Data" above, or browse by
-district on the [area detail page](/berlin/area-detail).
-
-{/if}
-
-{:else}
-
-<!-- #149: BZR only has `standard`-variant data (see the warning above), so the geoJsonUrl
-     stays fixed to that vintage regardless of the selected variant -- there's no
-     `bzr_live_data.geojson` to switch to yet. -->
-<AreaMap
-    data={areas}
-    geoJsonUrl={`${base}/geo/bzr_standard.geojson`}
-    geoId="area_code"
-    areaCol="area_code"
-    value={inputs.indicator.value === 'status_class' ? 'stage_label' : inputs.indicator.value}
-    legendType={inputs.indicator.value === 'status_class' ? 'categorical' : 'scalar'}
-    colorPalette={inputs.indicator.value === 'status_class' ? stageColorPalette : undefined}
-    title="Berlin Bezirksregion (BZR) — {inputs.indicator.label}, latest period"
-    startingLat={52.52}
-    startingLong={13.405}
-    startingZoom={9}
-    tooltip={areaTooltip}
-/>
-
-{/if}
 
 ## The numbers behind the map
 
@@ -269,13 +211,13 @@ select
         when 'stable-established' then 'Stable, established'
     end as stage_label
 from gentriduck_marts.gentrification_index
-where variant = '${inputs.variant.value}'
-  and area_level = '${inputs.area_level.value}'
+where variant = 'live_data'
+  and area_level = 'plr'
   and city_code = 'BER'
   and period_yyyymm = (
       select max(period_yyyymm)
       from gentriduck_marts.gentrification_index
-      where variant = '${inputs.variant.value}' and area_level = '${inputs.area_level.value}'
+      where variant = 'live_data' and area_level = 'plr'
   )
 order by dynamism_index desc
 ```
@@ -284,17 +226,18 @@ order by dynamism_index desc
     <Column id=area_name title="Area"/>
     <Column id=status_index title="Social status (1=least deprived … 4=most deprived)"/>
     <Column id=dynamism_index title="Speed of change (higher = faster upward change)"/>
-    <Column id=stage_label title="Gentrification stage (Live data + Planungsraum only)"/>
+    <Column id=stage_label title="Gentrification stage"/>
 </DataTable>
 
 Want to see how one specific area has changed over the years? Use the
 [time series page](/berlin/time-series). Clicking a Planungsraum (PLR) on the map above opens its
 exact neighbourhood page ([#133](https://github.com/dhelweg/gentriduck/issues/133),
-[#150](https://github.com/dhelweg/gentriduck/issues/150)) when viewing "Live data"; the
-Bezirksregion map above is view-only for now, and browsing by district still works on the
+[#150](https://github.com/dhelweg/gentriduck/issues/150)); browsing by district still works on the
 [area detail page](/berlin/area-detail). Want the commercial-mix (shops/cafés) view instead of the
 social-status index -- POI density and Offering Advantage by domain -- see the
-[POI & Offering Advantage map](/berlin/poi-map).
+[POI & Offering Advantage map](/berlin/poi-map). Looking for the 2018 thesis reproduction's
+Bezirksregion (BZR) map instead? It now lives on
+[the 2018 thesis, re-checked](/thesis-recheck).
 
 ## Honest caveats
 
@@ -302,8 +245,9 @@ social-status index -- POI density and Offering Advantage by domain -- see the
   **more deprived**, not more prosperous; a negative pressure trend means **higher** gentrification
   pressure — see the alert above the map and [methodology & data sources](/methodology) for the
   full decoder.
-- **"Gentrification stage" is only computed for Live data at the Planungsraum level** — it is not
-  available for the 2018 thesis reproduction (`standard`) or the coarser Bezirksregion aggregate.
+- This map covers Berlin's current, live data at Planungsraum (neighbourhood) detail only. The
+  2018 thesis's Dec-2016-snapshot reproduction, at the coarser Bezirksregion level, has its own
+  fixed map on [the 2018 thesis, re-checked](/thesis-recheck).
 - Areas without a value (e.g. uninhabited planning areas) are drawn but left blank — a blank area
   is missing data, not a "zero pressure" reading.
 
@@ -315,6 +259,8 @@ social-status index -- POI density and Offering Advantage by domain -- see the
   profile via a map click.
 - **[POI & Offering Advantage map](/berlin/poi-map)** — the commercial-mix (shops/cafés) view of
   the same neighbourhoods.
+- **[The 2018 thesis, re-checked](/thesis-recheck)** — the fixed 2018 thesis reproduction map
+  (Bezirksregion, Dec 2016 snapshot) and six-hypothesis writeup.
 - **[Methodology & data sources](/methodology)** — what "gentrification pressure" and the six-stage
   typology mean.
 
