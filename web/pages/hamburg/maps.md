@@ -39,10 +39,20 @@ sidebar_position: 1
 
   // No area_name to lead with (genuinely blank at Gebiet grain, see header comment) -- tooltip
   // leads with the Gebiet code itself instead of a name.
+  //
+  // Maintainer report (2026-07-24, mirrors the same fix on /berlin/maps): the tooltip field title
+  // originally reused `inputs.indicator.label`, the long descriptive dropdown valueLabel text --
+  // fine for a one-time dropdown choice, unreadable repeated on every map hover. Short,
+  // indicator-only label used for the tooltip instead; the dropdown's own valueLabel is untouched.
+  const indicatorShortLabel = {
+    status_class: 'Gentrification stage',
+    status_index: 'Social status',
+    dynamism_index: 'Dynamism'
+  };
   $: areaTooltip = [
     {
       id: inputs.indicator.value === 'status_class' ? 'stage_label' : inputs.indicator.value,
-      title: inputs.indicator.label,
+      title: indicatorShortLabel[inputs.indicator.value],
       fmt: inputs.indicator.value === 'status_class' ? 'id' : 'num1'
     },
     { id: 'area_code', title: 'Gebiet code', valueClass: 'text-xs opacity-60', fmt: 'id' }

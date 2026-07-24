@@ -16,7 +16,10 @@ not methodology-bearing per CLAUDE.md's methodology-gate file list).
 > Berlin), not `/hamburg/areas/…`. I13's "routes frozen (I2)" launch precondition (#230) is
 > unchanged. Full reasoning: `docs/epic-i/I21-a-route-ruling.md`. The only future edit this map may
 > need from I21 is a redirect-stub row *if* I21-c chooses to merge `/berlin/area-detail` into
-> `/berlin/area` (established `poi-price-overview` / `methodology-comparison` stub pattern).
+> `/berlin/area` (previously the `poi-price-overview` / `methodology-comparison` stub pattern;
+> note the `poi-price-overview` stub was itself removed 2026-07-24 on maintainer request — a
+> plain 404 during the noindex soft-launch phase is now the preferred tradeoff over a stub page
+> readers reported as confusing/unclickable, so a future consolidation may prefer removal too).
 
 ## What changed
 
@@ -46,7 +49,7 @@ is the template to follow, and it can be added at that point without touching Be
 | All neighbourhoods (index) | `/area` | `/berlin/area` | moved (`pages/area/index.md` → `pages/berlin/area/index.md`) |
 | Area detail (per-PLR, templated) | `/area/[code]` | `/berlin/area/[code]` | moved (`pages/area/[code].md` → `pages/berlin/area/[code].md`); still generates one static page per current PLR (542 areas) via the same link-crawl mechanism (Evidence builds whatever route a link points at) |
 | POI & Offering Advantage map | `/poi-map` | `/berlin/poi-map` | moved |
-| Citywide POI & price/rent overview | `/poi-price-overview` | `/berlin/poi-price-overview` | moved |
+| Citywide POI & price/rent overview | `/poi-price-overview` | *(removed, was `/berlin/poi-price-overview`)* | content merged into `/berlin/poi-map`'s "Citywide context" section (I3, #220); the redirect stub this consolidation left behind was itself removed 2026-07-24 on maintainer request — a plain 404 for a stale bookmark is an acceptable tradeoff during the noindex soft-launch phase, so no route occupies this path any more |
 | *(future, Epic H gate)* Hamburg landing page | — | `/hamburg` | not built in this ticket — scaffold only when Hamburg's methodology gate clears |
 
 ## Sidebar `sidebar_position` scheme
@@ -92,7 +95,7 @@ the pre-move top-level ordering):
 | Area detail (district browse) | 3 |
 | All neighbourhoods (`area` sub-folder, label/position set by `pages/berlin/area/index.md`) | 4 |
 | POI & Offering Advantage map | 5 |
-| Citywide POI & price/rent overview | 6 |
+| ~~Citywide POI & price/rent overview~~ | ~~6~~ *(page removed 2026-07-24, see route map above)* |
 
 `pages/berlin/area/[code].md` (the templated per-area route) carries no `sidebar_position` — it is
 a dynamic route, not a sidebar entry, same as before the move.
