@@ -14,11 +14,12 @@ breadcrumb: "select area_name as breadcrumb from gentriduck_marts.dim_area_geome
   SCOPE (Track 1 of I21 §4 — structure only, no live data): same discipline as
   pages/hamburg/area/[code].md — the canonical `context_only` section order renders in full, but
   every substantive section shows the shared <NotYetPublished> honest-deferred state rather than a
-  live query, even for marts that already hardcode-restrict to Berlin (mart_area_demographics,
-  fct_gentrification_change/trajectory — see docs/epic-i/I21-web-feasibility.md §5's publish-gate
-  footnote) and would therefore just render an empty-state anyway: a fixed placeholder is used
-  instead of relying on an incidental empty query result, so this page's honesty doesn't depend on
-  which marts happen to be city-gated today (see NotYetPublished.svelte's own header comment).
+  live query, even for marts that hardcode-restrict to Berlin (mart_area_demographics,
+  fct_gentrification_change — see docs/epic-i/I21-web-feasibility.md §5's publish-gate
+  footnote) or, as of #314, admit Hamburg rows (fct_gentrification_trajectory) but have no page
+  section wired to them yet: a fixed placeholder is used instead of relying on an incidental
+  empty/unwired query result, so this page's honesty doesn't depend on which marts happen to be
+  city-gated today (see NotYetPublished.svelte's own header comment).
   area_name IS read from dim_area_geometry (structural — Hamburg's 7 districts are genuinely named
   in the source data), the same "plumbing, not a statistic" precedent as the district index page.
 

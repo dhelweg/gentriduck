@@ -483,11 +483,13 @@ models:
       Method citation: Dangschat (1988) double invasion-succession cycle;
       thesis §3.2 (Gentrifizierung als Prozess); ADR-0008 (R-A7 #77) D1 outcome.
 
-      Berlin-only scope (#125): explicitly filtered to city_code='BER' in the SQL
-      (see model header) -- Hamburg rows exist upstream in int_gentrification_ts
-      (H1 #40, ADR-0014) but are staged out of this mart pending the gate decision
-      (Berlin-calibrated trajectory thresholds not yet reviewed against Hamburg's
-      annual cadence).
+      Berlin + Hamburg scope (#314): admitted via published_cities_filter in the
+      SQL (see model header) -- widened from the prior Berlin-only ["BER"] scope
+      (#125) now that H-C2 (#159, dual-signed-off PASS) established a
+      cadence-normalized trajectory_window_years=6 classification window so the
+      Berlin-calibrated trajectory thresholds transfer to Hamburg's annual
+      Sozialmonitoring cadence unmodified. Berlin's output is unchanged (#159's
+      provable no-op).
     meta:
       dbt_meta_owner: data-engineer
     data_tests:
@@ -500,14 +502,16 @@ models:
               - area_vintage
     columns:
       - name: city_code
-        description: City identifier (ADR-0005). Always 'BER' (#125 staging filter; see model header).
+        description: >
+          City identifier (ADR-0005). 'BER' or 'HH' (#314 widened from
+          Berlin-only #125 staging filter; see model header).
         data_type: varchar
         data_tests:
 
           - not_null
           - accepted_values:
               arguments:
-                values: ["BER"]
+                values: ["BER", "HH"]
       - name: area_code
         description: PLR area code (LOR 2021 or pre-2021 vintage).
         data_type: varchar
@@ -515,14 +519,16 @@ models:
 
           - not_null
       - name: area_vintage
-        description: LOR vintage identifier ('lor_pre2021' or 'lor_2021').
+        description: >
+          Area vintage identifier. Berlin: LOR vintage ('lor_pre2021' or
+          'lor_2021'). Hamburg: 'current' (single vintage, ADR-0014; #314).
         data_type: varchar
         data_tests:
 
           - not_null
           - accepted_values:
               arguments:
-                values: ["lor_pre2021", "lor_2021"]
+                values: ["lor_pre2021", "lor_2021", "current"]
       - name: n_editions
         description: Number of MSS editions available for this PLR within this vintage.
         data_type: bigint
