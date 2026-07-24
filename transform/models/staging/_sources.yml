@@ -242,6 +242,16 @@ sources:
         meta:
           external_location: "{{ env_var('PWD', '.') }}/data/raw/osm/hamburg/*.parquet"
 
+      - name: hamburg_places
+        description: >
+          #307 -- current-snapshot OSM place=neighbourhood|suburb|quarter
+          nodes for Hamburg, extracted from the same .osh.pbf. A SEPARATE
+          directory/source from `hamburg` above (not POI-shaped, must not
+          land in that glob) -- read by stg_hamburg_osm_places. See
+          ingest_hamburg_osm_places.py for the extraction method.
+        meta:
+          external_location: "{{ env_var('PWD', '.') }}/data/raw/osm/hamburg_places/*.parquet"
+
   - name: analysis_precompute
     description: >
       OA-D3c (#280, ADR-0025): precomputed analysis-layer results tables that

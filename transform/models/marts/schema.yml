@@ -1067,7 +1067,12 @@ models:
 
           - not_null
       - name: area_name
-        description: Area name (WFS UTF-8 source; see dim_area's dedup pattern).
+        description: >
+          Area name (WFS UTF-8 source; see dim_area's dedup pattern). EXCEPTION,
+          #307: Hamburg subarea_l2 (statistisches Gebiet) rows have no WFS name
+          -- area_name here is instead a best-effort OSM-derived name (via
+          int_hamburg_gebiet_osm_names' point-in-polygon match), and may be
+          NULL where no OSM match was found (partial coverage by design).
         data_type: varchar
       - name: area_vintage
         description: >

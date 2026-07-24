@@ -649,6 +649,65 @@ models:
 
           - not_null
 
+  - name: stg_hamburg_osm_places
+    description: >
+      #307 -- Staging view over the current-snapshot OSM place=neighbourhood|
+      suburb|quarter nodes for Hamburg, produced by
+      ingestion/hamburg/osm/ingest_hamburg_osm_places.py (reuses the same
+      Hamburg-covering Geofabrik .osh.pbf already ingested for H1 POI
+      history; ODbL). Storage:
+      data/raw/osm/hamburg_places/place_names.parquet (gitignored; a SIBLING
+      directory to data/raw/osm/hamburg/, not inside it -- see the ingestion
+      script's own header note for why). Feeds
+      int_hamburg_gebiet_osm_names.sql's point-in-polygon name match.
+      Returns zero rows (typed stub) when no parquet has been ingested.
+      Nodes only (deliberate scope decision, not methodology-bearing --
+      see the ingestion script's header for the rationale): OSM place
+      polygons on ways/relations are not extracted.
+    meta:
+      dbt_meta_owner: data-engineer
+    data_tests:
+
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns:
+              - osm_id
+          config:
+            where: "osm_id is not null"
+      # Data-presence gate (docs/lessons/local-first-data-presence.md). Warn,
+      # not error, unlike stg_hamburg_geo/stg_osm_poi: this source is a
+      # best-effort *name enrichment* (partial coverage is expected and
+      # acceptable per #307's own scope note), not a keystone panel input --
+      # its absence should not block an otherwise-green build.
+      - assert_not_empty:
+          config:
+            severity: warn
+    columns:
+      - name: city_code
+        description: Canonical city code 'HH' (ADR-0005; matches dim_city.city_code).
+        data_tests:
+
+          - accepted_values:
+              arguments:
+                values: ["HH"]
+      - name: osm_id
+        description: "OSM node id, e.g. 'node/12345'."
+      - name: place_type
+        description: "OSM place=* tag value: 'neighbourhood' | 'suburb' | 'quarter'."
+        data_tests:
+
+          - accepted_values:
+              arguments:
+                values: ["neighbourhood", "suburb", "quarter"]
+      - name: place_name
+        description: OSM `name` tag value -- the candidate human-readable area name.
+      - name: lon
+        description: WGS-84 node longitude.
+      - name: lat
+        description: WGS-84 node latitude.
+      - name: source_attribution
+        description: Mandatory ODbL attribution string.
+
   - name: stg_hamburg_sozialmonitoring
     description: >
       Staging view over the Hamburg Sozialmonitoring parquet — ADR-0014 Pillar 2,
