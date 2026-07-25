@@ -268,6 +268,57 @@ def export_oa_arealevel_geometry(con: duckdb.DuckDBPyConnection) -> None:
         )
 
 
+def export_hamburg_rollup_geometry(con: duckdb.DuckDBPyConnection) -> None:
+    """#310 (map granularity selector): plain geometry FeatureCollections for Hamburg's
+    subarea_l1 (Stadtteil) and district (Bezirk) levels -- the two new rollup levels
+    `/hamburg/maps`'s "Area level" dropdown adds. Same geometry-only pattern as
+    `export_oa_arealevel_geometry()` above (no `gentrification_index` join -- the OA-D7
+    precedent this mirrors -- the choropleth values are joined client-side from
+    `mart_area_rollup_stage_mix` by the Evidence page's own SQL query, geoId/areaCol =
+    `area_code`). Named `<area_level>_current.geojson` (Hamburg's single, un-split
+    geometry vintage -- see stg_hamburg_geo/dim_area_hierarchy's own "current" vintage
+    convention) rather than reusing the `<area_level>_<variant>` scheme, since Hamburg's
+    rollup levels have no `gentrification_index` variant of their own (mirrors
+    `export_oa_arealevel_geometry()`'s own naming rationale in this module's header).
+    Both subarea_l2 (via `export_hamburg_geometry()` above) and subarea_l1/district
+    (here) share the same LGV Hamburg WFS source `dim_area_geometry` already ingests --
+    no new data source.
+    """
+    for area_level in ("subarea_l1", "district"):
+        rows = con.execute(
+            """
+            select city_code, area_code, area_name, geometry_geojson
+            from dim_area_geometry
+            where city_code = 'HH' and area_level = ? and area_vintage = 'current'
+            order by area_code
+            """,
+            [area_level],
+        ).fetchall()
+
+        features = [
+            {
+                "type": "Feature",
+                "geometry": json.loads(geometry_geojson),
+                "properties": {
+                    "city_code": city_code,
+                    "area_code": area_code,
+                    "area_name": area_name,
+                },
+            }
+            for city_code, area_code, area_name, geometry_geojson in rows
+        ]
+
+        feature_collection = {"type": "FeatureCollection", "features": features}
+        out_path = OUT_DIR / f"{area_level}_current.geojson"
+        out_path.write_text(json.dumps(feature_collection))
+        logger.info(
+            "exported hamburg %s/current (%d features) -> %s",
+            area_level,
+            len(features),
+            out_path.relative_to(REPO_ROOT),
+        )
+
+
 def export_hamburg_geometry(con: duckdb.DuckDBPyConnection) -> None:
     """Hamburg `subarea_l2` (statistisches Gebiet) FeatureCollection, joined against
     `gentrification_index`'s `city_code='HH'` rows at their latest `period_yyyymm`. See this
@@ -497,6 +548,7 @@ def main() -> None:
     export_gentrification_index_geometry(con)
     export_oa_arealevel_geometry(con)
     export_hamburg_geometry(con)
+    export_hamburg_rollup_geometry(con)
     export_area_drilldown_geometry(con)
     export_ortsteil_self_geometry(con)
 

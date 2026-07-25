@@ -33,13 +33,24 @@ sidebar_position: 2
 
   #309: carved the `standard`/`bzr` (2018 thesis, Dec 2016 snapshot) map out of this page entirely
   -- it now lives as a small, fixed map on /thesis-recheck, next to the six-hypothesis writeup,
-  where it actually belongs. That was the only reason this page carried a `variant` ("Data")
-  dropdown and a `bzr` option on `area_level` -- `gentrification_index` has no `live_data`+`bzr`
-  combination (see the now-removed warning Alert this page used to show for exactly that gap), so
-  once `standard` left, `variant` had nothing left to select between and `area_level` had only
-  `plr` left. Rather than ship a single-option dropdown, both are now hardcoded (`live_data`/
-  `plr`) and their `<Dropdown>`s removed; #310 will reintroduce a real `area_level` picker once it
-  adds new *live_data*-backed levels (Bezirk/PGR/Ortsteil) to this mart -- out of scope here.
+  where it actually belongs.
+
+  #310 (map granularity selector): reintroduces a real `area_level` picker, as #309's carve-out
+  comment anticipated -- Planungsraum (PLR, the individual-neighbourhood leaf level, unchanged
+  from #309) plus three new *rollup* levels sourced from `mart_area_rollup_stage_mix` (NOT from
+  `gentrification_index` -- that mart's contract is unchanged by this ticket): Bezirk, Prognoseraum
+  (PGR), Ortsteil. Per the #310 design decision (dual geo-DS + domain-expert pre-implementation
+  review, see the issue's design-decision comment): a rollup level never shows a single re-derived
+  typology label alone -- the map colours by the population-weighted PLURALITY ("dominant") stage,
+  but every tooltip/table also always carries `dominant_share` (and an `is_dominant_fragile` flag
+  when fewer than 3 real PLRs roll up into that area) right next to it, and the full
+  population-weighted stage MIX for every area is one click away on that area's own profile page
+  (`/berlin/area/bezirk/[code]`, `.../pgr/[code]`, `.../ortsteil/[code]`) as well as in the "Stage
+  mix" table below the map -- never presented as a standalone re-scored index. `status_index`/
+  `dynamism_index` at a rollup level are the population-weighted MEAN of the same D1/D2 ordinals
+  PLR-level values carry (mart_area_rollup_stage_mix.status_index_weighted_mean /
+  dynamism_index_weighted_mean) -- see that mart's header for the weighting method and the
+  documented population-completeness caveat (`has_incomplete_population`).
 -->
 
 <script>
@@ -79,20 +90,58 @@ sidebar_position: 2
     status_index: 'Social status',
     dynamism_index: 'Dynamism'
   };
-  $: areaTooltip = [
-    { id: 'area_name', showColumnName: false, valueClass: 'font-bold text-sm', fmt: 'id' },
-    {
-      id: inputs.indicator.value === 'status_class' ? 'stage_label' : inputs.indicator.value,
-      title: indicatorShortLabel[inputs.indicator.value],
-      fmt: inputs.indicator.value === 'status_class' ? 'id' : 'num1'
-    },
-    { id: 'area_code', title: 'Area code', valueClass: 'text-xs opacity-60', fmt: 'id' }
-  ];
+
+  // #310: which mart/area_level combination is currently selected. 'plr' is the individual-
+  // neighbourhood leaf level (gentrification_index, unchanged from #309); the other three are
+  // rollup levels (mart_area_rollup_stage_mix) -- see this page's header comment.
+  $: isRollup = inputs.area_level.value !== 'plr';
+
+  // #310: geometry file + human label per area_level -- pgr_lor2021.geojson/bezirk_lor2021.geojson
+  // (OA-D7, #240) and ortsteil_self.geojson (#308) are geometry-only exports already published for
+  // other pages; reused verbatim here (no new export needed for Berlin -- see model header of
+  // web/scripts/export_area_geojson.py's export_oa_arealevel_geometry()/export_ortsteil_self_geometry()).
+  const geoJsonByLevel = {
+    plr: 'plr_live_data.geojson',
+    pgr: 'pgr_lor2021.geojson',
+    bezirk: 'bezirk_lor2021.geojson',
+    ortsteil: 'ortsteil_self.geojson'
+  };
+  const areaLevelLabel = {
+    plr: 'Planungsraum (PLR)',
+    pgr: 'Prognoseraum (PGR)',
+    bezirk: 'Bezirk',
+    ortsteil: 'Ortsteil'
+  };
+  $: geoJsonUrl = `${base}/geo/${geoJsonByLevel[inputs.area_level.value]}`;
+
+  // #310: rollup rows carry dominant_share/is_dominant_fragile/n_habitable_children alongside the
+  // usual indicator value -- always shown together (design point 3: never a standalone label).
+  $: areaTooltip = isRollup
+    ? [
+        { id: 'area_name', showColumnName: false, valueClass: 'font-bold text-sm', fmt: 'id' },
+        {
+          id: inputs.indicator.value === 'status_class' ? 'stage_label' : inputs.indicator.value,
+          title: indicatorShortLabel[inputs.indicator.value],
+          fmt: inputs.indicator.value === 'status_class' ? 'id' : 'num1'
+        },
+        { id: 'dominant_share', title: 'Population share of dominant stage', fmt: 'pct0' },
+        { id: 'n_habitable_children', title: 'Constituent areas with data', fmt: 'id' },
+        { id: 'area_code', title: 'Area code', valueClass: 'text-xs opacity-60', fmt: 'id' }
+      ]
+    : [
+        { id: 'area_name', showColumnName: false, valueClass: 'font-bold text-sm', fmt: 'id' },
+        {
+          id: inputs.indicator.value === 'status_class' ? 'stage_label' : inputs.indicator.value,
+          title: indicatorShortLabel[inputs.indicator.value],
+          fmt: inputs.indicator.value === 'status_class' ? 'id' : 'num1'
+        },
+        { id: 'area_code', title: 'Area code', valueClass: 'text-xs opacity-60', fmt: 'id' }
+      ];
 </script>
 
 <Hero compact eyebrow="Chapter 3 — The Evidence" title="Maps — gentrification pressure by area" lede="Colours each of Berlin's neighbourhoods by its current gentrification-pressure signal, so you can see at a glance which parts of the city show the strongest or weakest pressure." />
 
-Pick an indicator below.
+Pick an area level and an indicator below.
 
 Right now this map covers Berlin only — Hamburg's boundaries are ready behind the scenes, but the
 underlying index doesn't have real Hamburg numbers yet
@@ -114,13 +163,34 @@ for now.
   left blank.
 </Alert>
 
+<Dropdown name="area_level" title="Area level" defaultValue="plr">
+  <DropdownOption value="plr" valueLabel="Planungsraum (PLR) — individual neighbourhoods"/>
+  <DropdownOption value="bezirk" valueLabel="Bezirk — 12 boroughs"/>
+  <DropdownOption value="pgr" valueLabel="Prognoseraum (PGR) — ~58 mid-level areas"/>
+  <DropdownOption value="ortsteil" valueLabel="Ortsteil — ~97 traditional neighbourhoods"/>
+</Dropdown>
+
+{#if isRollup}
+<Alert status="info">
+  <b>Bezirk / PGR / Ortsteil are population-weighted rollups of the PLR-level data</b> — never a
+  re-scored index at this grain (averaging the underlying 1-4/1-3 MSS ordinals into a single new
+  category would be statistically invalid; see the
+  <a href="https://github.com/dhelweg/gentriduck/issues/310">#310 design decision</a>). The map
+  colours by the <b>dominant (most common) stage</b> among that area's constituent PLRs, weighted
+  by population — its tooltip and the tables below always show the dominant stage's population
+  <b>share</b> alongside it, and the "Stage mix" table further down shows the full breakdown, never
+  just the single dominant label. Areas with fewer than 3 PLRs with real data are flagged as a
+  fragile ("small sample") dominant reading.
+</Alert>
+{/if}
+
 <Dropdown name="indicator" title="Indicator" defaultValue="status_class">
   <DropdownOption value="status_class" valueLabel="Gentrification stage — plain-language, colour-coded"/>
   <DropdownOption value="status_index" valueLabel="Social status — how deprived or affluent (current snapshot)"/>
   <DropdownOption value="dynamism_index" valueLabel="Dynamism — how fast that status is changing"/>
 </Dropdown>
 
-```sql areas
+```sql areas_plr
 -- #152: stage_label is the de-jargoned, human-readable form of status_class (typology_stage
 -- from int_gentrification_ts's D1xD2 matrix, ADR-0008 -- no thresholds touched here, just a
 -- friendlier string). stage_sort orders rows by gentrification-pressure severity (most acute
@@ -177,15 +247,84 @@ where variant = 'live_data'
 order by stage_sort
 ```
 
+```sql areas_rollup
+-- #310: one row per rollup area (bezirk/pgr/ortsteil), picked deterministically from
+-- mart_area_rollup_stage_mix's per-(area, typology_stage) grain via QUALIFY -- dominant_stage,
+-- dominant_share, status_index_weighted_mean, dynamism_index_weighted_mean, n_habitable_children,
+-- is_dominant_fragile and has_incomplete_population are all CONSTANT across an area's stage rows
+-- (see that mart's header), so any single row carries them; the row itself is not otherwise used
+-- (the "Stage mix" table further down this page queries the full per-stage grain separately).
+-- Bezirk has no area_name in dim_area (mart_area_rollup_stage_mix's own documented gap) -- the
+-- same fixed 12-entry fallback web/scripts/export_area_geojson.py's BEZIRK_NAMES already uses for
+-- this mart's geojson counterpart is reused here so the tooltip/table isn't blank for Bezirk.
+select
+    city_code,
+    area_code,
+    coalesce(
+        area_name,
+        case area_code
+            when '01' then 'Mitte'
+            when '02' then 'Friedrichshain-Kreuzberg'
+            when '03' then 'Pankow'
+            when '04' then 'Charlottenburg-Wilmersdorf'
+            when '05' then 'Spandau'
+            when '06' then 'Steglitz-Zehlendorf'
+            when '07' then 'Tempelhof-Schöneberg'
+            when '08' then 'Neukölln'
+            when '09' then 'Treptow-Köpenick'
+            when '10' then 'Marzahn-Hellersdorf'
+            when '11' then 'Lichtenberg'
+            when '12' then 'Reinickendorf'
+            else area_code
+        end
+    ) as area_name,
+    status_index_weighted_mean as status_index,
+    dynamism_index_weighted_mean as dynamism_index,
+    dominant_stage as status_class,
+    dominant_share,
+    n_habitable_children,
+    is_dominant_fragile,
+    has_incomplete_population,
+    case dominant_stage
+        when 'active-gentrification' then 'Active gentrification'
+        when 'pioneer-signal' then 'Early pioneer signal'
+        when 'improving-vulnerable' then 'Improving, vulnerable area'
+        when 'pre-gentrification' then 'Pre-gentrification watch'
+        when 'consolidation-pressure' then 'Consolidated, still intensifying'
+        when 'stable-established' then 'Stable, established'
+    end as stage_label,
+    case dominant_stage
+        when 'active-gentrification' then 1
+        when 'pioneer-signal' then 2
+        when 'improving-vulnerable' then 3
+        when 'pre-gentrification' then 4
+        when 'consolidation-pressure' then 5
+        when 'stable-established' then 6
+        else 99
+    end as stage_sort,
+    -- Rollup profile pages (all pre-existing routes): /berlin/area/<level>/<code>.
+    '${base}/berlin/area/${inputs.area_level.value}/' || area_code as link
+from gentriduck_marts.mart_area_rollup_stage_mix
+where area_level = '${inputs.area_level.value}'
+  and city_code = 'BER'
+  and period_yyyymm = (
+      select max(period_yyyymm)
+      from gentriduck_marts.mart_area_rollup_stage_mix
+      where area_level = '${inputs.area_level.value}' and city_code = 'BER'
+  )
+qualify row_number() over (partition by area_code order by typology_stage) = 1
+order by stage_sort
+```
+
 <AreaMap
-    data={areas}
-    geoJsonUrl={`${base}/geo/plr_live_data.geojson`}
+    data={isRollup ? areas_rollup : areas_plr}
+    geoJsonUrl={geoJsonUrl}
     geoId="area_code"
     areaCol="area_code"
     value={inputs.indicator.value === 'status_class' ? 'stage_label' : inputs.indicator.value}
     legendType={inputs.indicator.value === 'status_class' ? 'categorical' : 'scalar'}
     colorPalette={inputs.indicator.value === 'status_class' ? stageColorPalette : undefined}
-    title="Berlin Planungsraum (PLR) — {inputs.indicator.label}, latest period"
+    title="Berlin {areaLevelLabel[inputs.area_level.value]} — {inputs.indicator.label}, latest period"
     startingLat={52.52}
     startingLong={13.405}
     startingZoom={9}
@@ -193,11 +332,11 @@ order by stage_sort
     tooltip={areaTooltip}
 />
 
-Click a Planungsraum on the map to open its exact neighbourhood page.
+Click an area on the map to open its exact {isRollup ? 'profile' : 'neighbourhood'} page.
 
 ## The numbers behind the map
 
-```sql area_table
+```sql area_table_plr
 select
     area_name,
     status_index,
@@ -222,12 +361,85 @@ where variant = 'live_data'
 order by dynamism_index desc
 ```
 
-<DataTable data={area_table} rows=10>
+```sql area_table_rollup
+select
+    area_name,
+    status_index_weighted_mean as status_index,
+    dynamism_index_weighted_mean as dynamism_index,
+    case dominant_stage
+        when 'active-gentrification' then 'Active gentrification'
+        when 'pioneer-signal' then 'Early pioneer signal'
+        when 'improving-vulnerable' then 'Improving, vulnerable area'
+        when 'pre-gentrification' then 'Pre-gentrification watch'
+        when 'consolidation-pressure' then 'Consolidated, still intensifying'
+        when 'stable-established' then 'Stable, established'
+    end as stage_label,
+    dominant_share,
+    n_habitable_children,
+    is_dominant_fragile
+from gentriduck_marts.mart_area_rollup_stage_mix
+where area_level = '${inputs.area_level.value}'
+  and city_code = 'BER'
+  and period_yyyymm = (
+      select max(period_yyyymm)
+      from gentriduck_marts.mart_area_rollup_stage_mix
+      where area_level = '${inputs.area_level.value}' and city_code = 'BER'
+  )
+qualify row_number() over (partition by area_code order by typology_stage) = 1
+order by dynamism_index_weighted_mean desc
+```
+
+{#if isRollup}
+
+<DataTable data={area_table_rollup} rows=10>
+    <Column id=area_name title="Area"/>
+    <Column id=status_index title="Social status (1=least deprived … 4=most deprived, population-weighted mean)"/>
+    <Column id=dynamism_index title="Speed of change (population-weighted mean)"/>
+    <Column id=stage_label title="Dominant gentrification stage"/>
+    <Column id=dominant_share title="Dominant stage's population share" fmt="pct0"/>
+    <Column id=n_habitable_children title="PLRs with data"/>
+    <Column id=is_dominant_fragile title="Fragile (< 3 PLRs)?"/>
+</DataTable>
+
+### Stage mix — full breakdown per area
+
+Never rely on the dominant stage alone: this table is the full population-weighted stage
+distribution behind every area above, including the `uninhabited / no data` share where relevant.
+
+```sql area_mix_table
+select
+    area_name,
+    typology_stage,
+    stage_population_share,
+    stage_n_children
+from gentriduck_marts.mart_area_rollup_stage_mix
+where area_level = '${inputs.area_level.value}'
+  and city_code = 'BER'
+  and period_yyyymm = (
+      select max(period_yyyymm)
+      from gentriduck_marts.mart_area_rollup_stage_mix
+      where area_level = '${inputs.area_level.value}' and city_code = 'BER'
+  )
+order by area_name, stage_population_share desc nulls last
+```
+
+<DataTable data={area_mix_table} rows=10 search=true>
+    <Column id=area_name title="Area"/>
+    <Column id=typology_stage title="Stage"/>
+    <Column id=stage_population_share title="Population share" fmt="pct0"/>
+    <Column id=stage_n_children title="Constituent PLRs"/>
+</DataTable>
+
+{:else}
+
+<DataTable data={area_table_plr} rows=10>
     <Column id=area_name title="Area"/>
     <Column id=status_index title="Social status (1=least deprived … 4=most deprived)"/>
     <Column id=dynamism_index title="Speed of change (higher = faster upward change)"/>
     <Column id=stage_label title="Gentrification stage"/>
 </DataTable>
+
+{/if}
 
 Want to see how one specific area has changed over the years? Use the
 [time series page](/berlin/time-series). Clicking a Planungsraum (PLR) on the map above opens its
@@ -245,8 +457,12 @@ Bezirksregion (BZR) map instead? It now lives on
   **more deprived**, not more prosperous; a negative pressure trend means **higher** gentrification
   pressure — see the alert above the map and [methodology & data sources](/methodology) for the
   full decoder.
-- This map covers Berlin's current, live data at Planungsraum (neighbourhood) detail only. The
-  2018 thesis's Dec-2016-snapshot reproduction, at the coarser Bezirksregion level, has its own
+- **Bezirk / PGR / Ortsteil are population-weighted rollups, never a re-scored index.** The map
+  colours by the population-weighted *dominant* stage among each area's constituent PLRs — always
+  shown with its population share and the full stage mix (see the "Stage mix" table), never as a
+  standalone label. Areas with fewer than 3 PLRs contributing real data are flagged fragile.
+- This map's Planungsraum (PLR) level covers Berlin's current, live data at neighbourhood detail.
+  The 2018 thesis's Dec-2016-snapshot reproduction, at the coarser Bezirksregion level, has its own
   fixed map on [the 2018 thesis, re-checked](/thesis-recheck).
 - Areas without a value (e.g. uninhabited planning areas) are drawn but left blank — a blank area
   is missing data, not a "zero pressure" reading.

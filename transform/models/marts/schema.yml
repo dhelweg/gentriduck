@@ -1790,6 +1790,195 @@ models:
 
           - not_null
 
+  - name: mart_area_rollup_stage_mix
+    description: >
+      #310 (map granularity selector): population-weighted typology_stage MIX
+      (never a single re-derived label -- see model header) + a paired
+      population-weighted plurality "dominant stage"/dominant_share, plus
+      population-weighted-mean status_index/dynamism_index, for
+      gentrification_index area_levels one or more rollup hops above the
+      finest live_data grain: Berlin bezirk/pgr/ortsteil, Hamburg
+      subarea_l1/district. Generalizes the #269 mart_ortsteil_plr_stage_mix
+      pattern via mart_area_hierarchy (#302) instead of a single-purpose join,
+      and upgrades #269's plain child count to a population weight (falling
+      back to an equal weight of 1 per child when gentrification_index.population
+      is NULL for that period -- see model header "WEIGHTING NOTE" for the
+      empirical gap this covers and has_incomplete_population below).
+      'uninhabited / no data' is an explicit typology_stage bucket, visible in
+      the mix but excluded from the weighted-mean/vote denominator (design
+      point 5). variant='live_data' only (the only variant carrying a
+      status_class/typology_stage -- see gentrification_index.sql).
+      Dual sign-off requirement: methodology-bearing (CLAUDE.md R-C1) --
+      see docs/epic-*/310-*-signoff.md once recorded.
+    meta:
+      dbt_meta_owner: data-engineer
+    data_tests:
+
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns:
+              - city_code
+              - area_level
+              - area_code
+              - period_yyyymm
+              - variant
+              - typology_stage
+    columns:
+      - name: city_code
+        description: City identifier (ADR-0005 seam).
+        data_tests:
+
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ["BER", "HH"]
+      - name: area_level
+        description: >
+          Rollup area_level -- one or more hops above the finest live_data
+          grain (plr for Berlin, subarea_l2 for Hamburg). Berlin:
+          bezirk (borough), pgr (Prognoseraum), ortsteil (non-LOR Bezirk
+          subdivision, via the #269 dominant PLR->Ortsteil crosswalk).
+          Hamburg: subarea_l1 (Stadtteil), district (Bezirk).
+        data_tests:
+
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ["bezirk", "pgr", "ortsteil", "subarea_l1", "district"]
+      - name: area_code
+        description: Area code at this row's area_level. Part of the natural key.
+        data_tests:
+
+          - not_null
+      - name: area_name
+        description: >
+          Area name from dim_area, denormalized for convenience. NULL for
+          area_level='bezirk' -- dim_area carries no 'bezirk'-level rows today
+          (see model header); not fabricated here.
+      - name: period_yyyymm
+        description: >
+          Period key matching gentrification_index's own period_yyyymm
+          (YYYY12 snapshot convention for live_data).
+        data_tests:
+
+          - not_null
+      - name: variant
+        description: Always 'live_data' (see model header scope note).
+        data_tests:
+
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ["live_data"]
+      - name: typology_stage
+        description: >
+          D1xD2 typology stage name (gentrification_index.status_class), or
+          the literal 'uninhabited / no data' bucket for children with no MSS/
+          Sozialmonitoring classification (status_class IS NULL).
+        data_tests:
+
+          - not_null
+          - accepted_values:
+              arguments:
+                values:
+                  - active-gentrification
+                  - pioneer-signal
+                  - improving-vulnerable
+                  - pre-gentrification
+                  - consolidation-pressure
+                  - stable-established
+                  - uninhabited / no data
+      - name: n_children
+        description: Total count of leaf children (habitable + uninhabited) rolled into this area, for this period.
+        data_tests:
+
+          - not_null
+      - name: n_habitable_children
+        description: >
+          Count of leaf children with a real (non-null) typology_stage --
+          the denominator basis for the dominant-stage vote and
+          is_dominant_fragile.
+        data_tests:
+
+          - not_null
+      - name: is_dominant_fragile
+        description: >
+          TRUE when n_habitable_children < 3 (design point 3) -- the
+          consuming UI must suppress or caveat the dominant_stage/
+          dominant_share label as fragile when this is TRUE (the mix itself
+          is always safe to display).
+        data_tests:
+
+          - not_null
+      - name: has_incomplete_population
+        description: >
+          TRUE when at least one habitable child in this area had a NULL
+          gentrification_index.population for this period, so its aggregation
+          weight fell back to 1 (equal-weight) instead of a real population
+          figure -- see model header "WEIGHTING NOTE". A consumer wanting a
+          strict population-weighted-only reading should treat rows with this
+          TRUE as approximate.
+        data_tests:
+
+          - not_null
+      - name: stage_n_children
+        description: Count of leaf children in this specific typology_stage bucket, for this area/period.
+        data_tests:
+
+          - not_null
+      - name: stage_weight
+        description: >
+          Sum of the aggregation weight (real population where known, else 1
+          per child -- see has_incomplete_population) for leaf children in
+          this specific typology_stage bucket.
+        data_tests:
+
+          - not_null
+      - name: stage_population_share
+        description: >
+          stage_weight / (sum of stage_weight across habitable children only).
+          NULL for the 'uninhabited / no data' bucket (excluded from the
+          denominator, design point 5) and when there are zero habitable
+          children.
+        data_tests:
+
+          - dbt_utils.accepted_range:
+              arguments:
+                min_value: 0
+                max_value: 1
+              config:
+                where: "stage_population_share is not null"
+      - name: status_index_weighted_mean
+        description: >
+          Population-weighted mean of gentrification_index.status_index
+          (D1 MSS Status ordinal, 1=hoch/best ... 4=sehr_niedrig/worst) over
+          this area's habitable children. NULL when no habitable child has a
+          non-null status_index.
+      - name: dynamism_index_weighted_mean
+        description: >
+          Population-weighted mean of gentrification_index.dynamism_index
+          (D2 MSS Dynamik ordinal) over this area's habitable children. NULL
+          when no habitable child has a non-null dynamism_index.
+      - name: dominant_stage
+        description: >
+          Population-weighted plurality typology_stage among this area's
+          habitable children (design point 3) -- ALWAYS pair with the mix
+          (typology_stage/stage_population_share rows for this area), never
+          display standalone. NULL when n_habitable_children = 0.
+      - name: dominant_share
+        description: >
+          Population share (stage_weight / habitable_weight) of dominant_stage
+          among this area's habitable children. NULL when n_habitable_children
+          = 0.
+        data_tests:
+
+          - dbt_utils.accepted_range:
+              arguments:
+                min_value: 0
+                max_value: 1
+              config:
+                where: "dominant_share is not null"
+
   - name: mart_poi_oa_methods
     description: >
       OA-D3/OA-D3b (#240/#280, ADR-0024): long-format serving view over
