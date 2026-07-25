@@ -177,6 +177,11 @@ from totals as t cross join top cross join trending as tr
 ```
 
 <script>
+  // #308: for the drill-down mini map's geoJsonUrl/link base-path prefixing (#144 convention) --
+  // see this page's "## Where this area sits" section below. Hoisted into this page's single
+  // existing <script> block (Svelte allows only one instance-level <script> per component/page).
+  import { base } from '$app/paths';
+
   $: trajMix = trajectory_mix_summary?.[0];
   $: trajTakeaway = (!trajMix || trajMix.n_total == null || Number(trajMix.n_total) === 0)
     ? null
@@ -220,6 +225,45 @@ from totals as t cross join top cross join trending as tr
 <NotYetPublished what="land value / estimated rent figures for this district" />
 
 ## Where this area sits
+
+<!-- #308: shared per-area drill-down mini map (web/components/AreaDrilldownMap.svelte). This
+     district's own polygon highlighted, its Stadtteile (the next level down) clickable -- mirrors
+     pages/berlin/area/bezirk/[code].md's own drill-down mini map, city-agnostic component (ADR-0005),
+     Hamburg's own `mart_area_hierarchy` edge (district <- subarea_l1, source-provided, see this
+     page's own header comment) used instead of Berlin's substr()-prefix derivation. `base` is
+     imported once, in this page's single existing `<script>` block above. -->
+
+```sql minimap_areas
+-- Self row's name resolved directly in SQL (not a JS-templated string literal) so a WFS-sourced
+-- name containing a quote character can never break this query's own SQL syntax.
+select
+    'district:' || '${params.code}' as feature_key,
+    coalesce(nullif(area_name, ''), '${params.code}') as area_name,
+    'This area' as role,
+    1 as sort_order,
+    cast(null as varchar) as link
+from gentriduck_marts.dim_area_geometry
+where city_code = 'HH' and area_level = 'district' and area_code = '${params.code}'
+union all
+select
+    'subarea_l1:' || h.area_code as feature_key,
+    coalesce(g.area_name, h.area_code) as area_name,
+    'Click to explore' as role,
+    2 as sort_order,
+    '${base}/hamburg/area/subarea_l1/' || h.area_code as link
+from gentriduck_marts.mart_area_hierarchy as h
+left join
+    gentriduck_marts.dim_area_geometry as g
+    on g.city_code = 'HH' and g.area_level = 'subarea_l1' and g.area_code = h.area_code
+where h.city_code = 'HH' and h.area_level = 'subarea_l1' and h.parent_area_code = '${params.code}'
+order by sort_order, area_name
+```
+
+<AreaDrilldownMap
+    data={minimap_areas}
+    geoJsonUrl={`${base}/geo/district_subarea_l1_drilldown.geojson`}
+    title="{district_name[0] ? district_name[0].area_name : 'This district'} and its Stadtteile"
+/>
 
 ### Stadtteile in this district
 
