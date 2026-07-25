@@ -118,6 +118,10 @@ limit 1
 ```
 
 <script>
+  // #308: for the drill-down mini map's geoJsonUrl base-path prefixing (#144 convention) -- see
+  // this page's "## Where this area sits" section below.
+  import { base } from '$app/paths';
+
   // Plain script-computed fallback, kept out of markdown text/attribute strings -- mdsvex's
   // smart-quote pass rewrites straight `'…'` quotes inside markdown text (including heading text
   // containing a mustache expression) into curly typographic quotes, which then breaks the Svelte
@@ -284,6 +288,33 @@ displacement as easily as incumbent social mobility.
 <NotYetPublished what="land value / estimated rent figures for this area" />
 
 ## Where this area sits
+
+<!--
+  #308: shared per-area drill-down mini map (web/components/AreaDrilldownMap.svelte). This is
+  Hamburg's finest published small-area grain (statistisches Gebiet) -- no further level to drill
+  into, same leaf treatment as Berlin's PLR page. Self-only: this Gebiet's own polygon highlighted
+  for orientation, no clickable children. Reuses subarea_l1_subarea_l2_drilldown.geojson (every
+  Gebiet polygon already lives in that file as a "child" feature of its own Stadtteil) -- no new
+  geometry export needed for this leaf level.
+-->
+```sql minimap_areas
+-- Name resolved directly in SQL (not via a JS-templated string literal) so an OSM-derived name
+-- (#307) containing a quote character can never break this query's own SQL syntax -- same
+-- coalesce-to-code fallback as name_info/nameLabel above, re-expressed in SQL only.
+select
+    'subarea_l2:' || '${params.code}' as feature_key,
+    coalesce(nullif(area_name, ''), '${params.code}') as area_name,
+    'This area' as role,
+    cast(null as varchar) as link
+from gentriduck_marts.dim_area_geometry
+where city_code = 'HH' and area_level = 'subarea_l2' and area_code = '${params.code}'
+```
+
+<AreaDrilldownMap
+    data={minimap_areas}
+    geoJsonUrl={`${base}/geo/subarea_l1_subarea_l2_drilldown.geojson`}
+    title={nameLabel ?? codeLabel}
+/>
 
 This Gebiet's parent Stadtteil is {#if parent_info[0]?.stadtteil_code}<a href="/hamburg/area/subarea_l1/{parent_info[0].stadtteil_code}">{parent_info[0].stadtteil_name ?? parent_info[0].stadtteil_code}</a>{:else}linked above{/if}
 (see the "Up:" link above) — resolved via the OA-D1b (#240) spatial crosswalk, now published to the

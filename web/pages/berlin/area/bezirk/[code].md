@@ -186,6 +186,11 @@ from totals as t cross join top cross join advanced as a
 ```
 
 <script>
+  // #308: for the drill-down mini map's geoJsonUrl/link base-path prefixing (#144 convention) --
+  // see this page's "## Where this area sits" section below. Hoisted into this page's single
+  // existing <script> block (Svelte allows only one instance-level <script> per component/page).
+  import { base } from '$app/paths';
+
   $: mssMix = stage_mix_summary?.[0];
   $: mssTakeaway = (!mssMix || mssMix.n_total == null || Number(mssMix.n_total) === 0)
     ? null
@@ -460,6 +465,64 @@ order by sort_order
 <BarChart data={age_mix} x=age_band y=share title="Age structure, {bezirk_name[0].bezirk_name}" yFmt="pct0"/>
 
 ## Where this area sits
+
+<!--
+  #308: shared per-area drill-down mini map (web/components/AreaDrilldownMap.svelte). This
+  district's own polygon highlighted, its Prognoseräume (the primary LOR-ladder next level down,
+  matching this page's "Up:"/breadcrumb chain and the "Prognoseräume in this district" table right
+  below) each clickable. Ortsteile are a SEPARATE, non-nesting geography (see the "Ortsteile in this
+  district" table further down and its own explanatory paragraph) -- deliberately not drawn on this
+  same map alongside the PGR children, to keep one map to one "drill down exactly one level"
+  affordance per the issue spec; Ortsteil already has its own browsable table/index on this page.
+  `base` is imported once, in this page's single existing `<script>` block above (Svelte allows
+  only one instance-level `<script>` per component/page).
+-->
+
+```sql minimap_areas
+-- Self row's name resolved via the same fixed 12-entry lookup as this page's own `bezirk_name`
+-- query above, re-expressed in SQL only (not a JS-templated string literal) so this query's SQL
+-- syntax can never depend on the contents of an external name value -- same defensive reasoning
+-- applied throughout this section for the WFS-sourced PGR/BZR/Ortsteil/Hamburg names.
+select
+    'bezirk:' || '${params.code}' as feature_key,
+    bezirk_name as area_name,
+    'This area' as role,
+    1 as sort_order,
+    cast(null as varchar) as link
+from (
+    select '01' as bezirk_code, 'Mitte' as bezirk_name
+    union all select '02', 'Friedrichshain-Kreuzberg'
+    union all select '03', 'Pankow'
+    union all select '04', 'Charlottenburg-Wilmersdorf'
+    union all select '05', 'Spandau'
+    union all select '06', 'Steglitz-Zehlendorf'
+    union all select '07', 'Tempelhof-Schöneberg'
+    union all select '08', 'Neukölln'
+    union all select '09', 'Treptow-Köpenick'
+    union all select '10', 'Marzahn-Hellersdorf'
+    union all select '11', 'Lichtenberg'
+    union all select '12', 'Reinickendorf'
+) t
+where bezirk_code = '${params.code}'
+union all
+select
+    'pgr:' || area_code as feature_key,
+    coalesce(area_name, area_code) as area_name,
+    'Click to explore' as role,
+    2 as sort_order,
+    '${base}/berlin/area/pgr/' || area_code as link
+from gentriduck_marts.dim_area_geometry
+where city_code = 'BER' and area_level = 'pgr' and area_vintage = 'lor_2021'
+  and area_code is not null and trim(area_code) <> ''
+  and substr(area_code, 1, 2) = '${params.code}'
+order by sort_order, area_name
+```
+
+<AreaDrilldownMap
+    data={minimap_areas}
+    geoJsonUrl={`${base}/geo/bezirk_pgr_drilldown.geojson`}
+    title="{bezirk_name[0] ? bezirk_name[0].bezirk_name : 'This district'} and its Prognoseräume"
+/>
 
 ### Prognoseräume in this district
 
