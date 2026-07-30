@@ -302,6 +302,10 @@ limit 15
      pages/berlin/area/[code].md's Up-link comment for the full "undefined"-cascade rationale. -->
 <p>Up: {#if bezirk_info[0]?.bezirk_code}<a href="/berlin/area/bezirk/{bezirk_info[0].bezirk_code}">{bezirk_info[0].bezirk_name}</a>{:else}<a href="/berlin/area/bezirk">District profile</a>{/if} · <a href="/berlin/area/ortsteil">all Ortsteile</a> · <a href="/berlin/area/bezirk">all districts</a> · <a href="/berlin/area">full neighbourhood list</a></p>
 
+<!-- #326: same fix as pages/berlin/area/bezirk/[code].md's header comment -- the previous
+     `<a href="/berlin/area/[code]">` here was a literal, non-templated `[code]` placeholder left in
+     as real HTML, producing a bogus, always-identical `/berlin/area/[code]` crawl target. Fixed by
+     pointing at the full neighbourhood list instead. -->
 <Alert status="info">
   Ortsteil is a different (non-LOR) Berlin geography from the Planungsraum/Bezirksregion/
   Prognoseraum ladder used elsewhere on this site — it does not nest cleanly into Planungsräume, so
@@ -309,9 +313,9 @@ limit 15
   assignment</b> (each Planungsraum rolls into the one Ortsteil containing the largest share of its
   area), not a code-prefix match. Figures are <b>sums and population-weighted averages</b> under
   that assignment — never a separately re-scored index. See the
-  <a href="/methodology">methodology page</a> for why coarse-grain areas are not re-scored, and
-  <a href="/berlin/area/[code]">any neighbourhood's own page</a> for the actual gentrification
-  index and trajectory.
+  <a href="/methodology">methodology page</a> for why coarse-grain areas are not re-scored, and any
+  neighbourhood's own page in the <a href="/berlin/area">full neighbourhood list</a> for the actual
+  gentrification index and trajectory.
 </Alert>
 
 {#if !hasChildren}
