@@ -105,6 +105,14 @@ PROJDIR="$HOME/.claude/projects/$(printf '%s' "$DIR" | sed 's#[/._]#-#g')"
 # respinning through the whole outage every ~30 min). Per-host, per-session so two repos don't clash.
 WATCHDOG_FLAG="$HOME/.claude/.gentriduck-devmode-watchdog-kill.$SESSION_NAME"
 
+# Set by the watchdog iff it killed the session because of an EXPIRED OAUTH LOGIN (issue #324),
+# never for a generic hang or a #245 connectivity wedge. Those two can plausibly self-heal by
+# waiting and retrying; an expired login cannot — the fresh `claude` process just prints
+# "Login expired · Please run /login" and sits idle forever, and no amount of respinning fixes
+# that. The main loop below checks this flag to stop respinning entirely instead of looping
+# forever, since a human has to run `claude /login` to recover.
+LOGIN_EXPIRED_FLAG="$HOME/.claude/.gentriduck-devmode-login-expired.$SESSION_NAME"
+
 # Keep the host awake while running, using whatever's available; no-op on a
 # headless server that never sleeps.
 if command -v caffeinate >/dev/null 2>&1; then            # macOS
@@ -124,6 +132,27 @@ watchdog() {
         pgrep -f -- "--remote-control $SESSION_NAME" >/dev/null 2>&1 || return     # claude already gone
         newest="$(ls -t "$PROJDIR"/*.jsonl 2>/dev/null | head -1)"
         [ -n "$newest" ] || continue                                              # no transcript yet
+
+        # Login-expiry short-circuit (issue #324): checked on EVERY 60s tick, independent of the
+        # STALL_SECS idle threshold below, because this failure mode is unambiguous the instant it
+        # appears and can never self-heal — there is no point burning the full 1800s stall window
+        # just to notice something that waiting cannot fix. Distinct from the #245 connectivity
+        # signature: that scrape only runs once we've already confirmed a long idle, and connectivity
+        # errors CAN plausibly clear on their own; an expired login cannot.
+        #
+        # Bounded to the last 50 JSONL lines (NOT the whole ever-growing transcript): a session that
+        # merely reads/greps/quotes THIS SCRIPT (e.g. investigating an ops ticket) echoes this very
+        # literal string into its own transcript via the tool-result, which would otherwise stay a
+        # false-positive match for the rest of that session's life once scrolled past. Tailing means
+        # only a recent, live occurrence — the actual banner printing right now — can trigger it.
+        if tail -n 50 "$newest" 2>/dev/null | grep -qaiE 'Login expired|Please run */login'; then
+            echo "--- watchdog: LOGIN EXPIRED — session cannot self-heal via retry $(date) ---" >> "$LOG"
+            echo "    run \`claude /login\` manually to re-authenticate, then relaunch devmode" >> "$LOG"
+            touch "$WATCHDOG_FLAG" "$LOGIN_EXPIRED_FLAG"
+            pkill -f -- "--remote-control $SESSION_NAME"
+            return
+        fi
+
         # GNU stat (-c %Y) first — the Linux host. On macOS BSD-stat rejects -c (stderr only,
         # no stdout) so it falls through to -f %m. Doing BSD-first on Linux is WRONG: `stat -f`
         # is --file-system there, prints fs-info to stdout AND exits non-zero, polluting mtime.
@@ -166,10 +195,10 @@ mkdir -p "$(dirname "$LOG")"
 } | tee -a "$LOG"
 
 fails=0
-rm -f "$WATCHDOG_FLAG"                                      # drop any stale flag from a previous run
+rm -f "$WATCHDOG_FLAG" "$LOGIN_EXPIRED_FLAG"                # drop any stale flags from a previous run
 while true; do
     start=$(date +%s)
-    rm -f "$WATCHDOG_FLAG"                                  # fresh each attempt; the watchdog sets it iff it kills
+    rm -f "$WATCHDOG_FLAG" "$LOGIN_EXPIRED_FLAG"             # fresh each attempt; the watchdog sets them iff it kills
     echo "--- devmode start $(date) (perm: $PERM_LABEL) ---" >> "$LOG"
 
     watchdog & wd=$!                                        # self-healing: restart on hang, not just exit
@@ -180,6 +209,21 @@ while true; do
     ran=$(( $(date +%s) - start ))
     if [ -f "$WATCHDOG_FLAG" ]; then watchdog_killed=1; else watchdog_killed=0; fi
     rm -f "$WATCHDOG_FLAG"
+
+    # Issue #324: an expired OAuth login is fundamentally unlike a generic hang or the #245
+    # connectivity wedge — infinite retry/backoff cannot fix it, only a human running
+    # `claude /login` can. So instead of falling into the fails/backoff cycle below (which would
+    # just spin at STALL_SECS-idle + capped-backoff forever, as it did for 18 days / 303 restarts),
+    # stop respinning entirely and exit non-zero so the outage is loud on the process level too,
+    # not just in the log.
+    if [ -f "$LOGIN_EXPIRED_FLAG" ]; then
+        echo "--- devmode: STOPPING (not respinning) — OAuth login expired $(date) ---" >> "$LOG"
+        echo "    run \`claude /login\` to re-authenticate, then relaunch:" >> "$LOG"
+        echo "    tmux new-session -d -s devmode \"$SCRIPT_DIR/$(basename "$0")\"" >> "$LOG"
+        rm -f "$LOGIN_EXPIRED_FLAG"
+        exit 1
+    fi
+
     # A fault is EITHER a quick exit (fast crash) OR a watchdog kill (idle-hung — the connectivity
     # wedge of #245, which runs LONG before the kill and so used to look healthy here). Both escalate
     # backoff; only a long run that the watchdog did NOT have to kill resets it. Cap at 1800s so a
