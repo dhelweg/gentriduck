@@ -299,57 +299,101 @@ where variant = 'live_data'
 order by stage_sort
 ```
 
-```sql areas_rollup
--- #310 review fix (HIGH-2): mart_area_rollup_stage_mix.area_name is NULL for every Berlin Bezirk
--- row (that mart's own documented gap -- dim_area carries no bezirk-level rows, see this mart's
--- header) -- the `base` CTE below is where the Bezirk-name fallback (the same fixed 12-entry
--- lookup web/scripts/export_area_geojson.py's BEZIRK_NAMES already uses for this mart's geojson
--- counterpart; keep both in sync if Bezirk names/boundaries ever change) is applied. NB: an
--- earlier revision of this fix tried to define this CTE ONCE as its own top-level ```sql block
--- and have `areas_rollup`/`area_table_rollup`/`area_mix_table` all reference it by name (true
--- Evidence query chaining) -- confirmed by an actual `evidence build` that this DuckDB-WASM setup
--- does NOT expose one page block's result set as a queryable table to a later block ("Catalog
--- Error: Table with name ... does not exist"), so the identical `base` CTE text is duplicated
--- verbatim across the three queries below instead. If a future Evidence version adds real query
--- chaining, collapse these three `base` CTEs back into one shared block.
+```sql bezirk_names
+-- #310 review fix (MEDIUM-A): fixed 12-entry Berlin Bezirk code -> name lookup, needed because
+-- mart_area_rollup_stage_mix.area_name is NULL for every Berlin Bezirk row (that mart's own
+-- documented gap -- dim_area carries no bezirk-level rows, see this mart's header). Kept in sync
+-- with web/scripts/export_area_geojson.py's BEZIRK_NAMES constant if Bezirk names/boundaries ever
+-- change.
 --
+-- Defined ONCE here, as its own top-level SQL block, and referenced BY NAME using Evidence's own
+-- block-interpolation syntax from the `areas_rollup`, `area_table_rollup`, and `area_mix_table`
+-- blocks below, instead of repeating this lookup three times (see those blocks for the actual
+-- reference). An earlier revision of this fix claimed Evidence/DuckDB-WASM does not support one
+-- page block referencing another block's result, and duplicated this lookup verbatim into three
+-- separate blocks instead -- that claim was wrong. Per
+-- @evidence-dev/preprocess/src/extract-queries/extract-queries.cjs's query-chaining step, that
+-- interpolation syntax textually inlines the referenced block as a parenthesised subquery
+-- wherever it appears in another block's text (confirmed against the installed Evidence version
+-- with a real `evidence build`). The "Catalog Error: Table with name ... does not exist" the
+-- original author hit came from referencing a block by its BARE name as a table identifier (e.g.
+-- `from base`), not from this interpolation syntax.
+--
+-- NB: this comment deliberately avoids spelling out this block's own reference token literally --
+-- Evidence's query-chaining resolver scans EVERY block's full text (comments included) for that
+-- exact token, so writing this block's own name inside that syntax, in its own text, creates a
+-- literal self-reference that the resolver reports as "Compiler error: circular reference" (hit
+-- and fixed during this review pass -- see the actual reference in `areas_rollup` etc. below for
+-- what this looks like when it is NOT self-referential).
+select
+    area_code,
+    case area_code
+        when '01' then 'Mitte'
+        when '02' then 'Friedrichshain-Kreuzberg'
+        when '03' then 'Pankow'
+        when '04' then 'Charlottenburg-Wilmersdorf'
+        when '05' then 'Spandau'
+        when '06' then 'Steglitz-Zehlendorf'
+        when '07' then 'Tempelhof-Schöneberg'
+        when '08' then 'Neukölln'
+        when '09' then 'Treptow-Köpenick'
+        when '10' then 'Marzahn-Hellersdorf'
+        when '11' then 'Lichtenberg'
+        when '12' then 'Reinickendorf'
+    end as bezirk_name
+from
+    (
+        values
+            ('01'),
+            ('02'),
+            ('03'),
+            ('04'),
+            ('05'),
+            ('06'),
+            ('07'),
+            ('08'),
+            ('09'),
+            ('10'),
+            ('11'),
+            ('12')
+    ) as t (area_code)
+```
+
+```sql areas_rollup
 -- One row per rollup area (bezirk/pgr/ortsteil), picked deterministically from
 -- mart_area_rollup_stage_mix's per-(area, typology_stage) grain via QUALIFY -- dominant_stage,
 -- dominant_share, status_index_weighted_mean, dynamism_index_weighted_mean, n_habitable_children,
 -- is_dominant_fragile and has_incomplete_population are all CONSTANT across an area's stage rows
 -- (see that mart's header), so any single row carries them; the row itself is not otherwise used
 -- (the "Stage mix" table further down this page queries the full per-stage grain separately).
+--
+-- #310 review fix (MEDIUM-A): area_name falls back to the shared Bezirk-name lookup block above
+-- (see that block's header comment; referenced by name in the actual `left join` below) wherever
+-- the mart's own area_name is NULL -- every Bezirk row, since dim_area carries no bezirk-level
+-- rows. At PGR/Ortsteil grain the mart's area_name is always populated, so the left join below is
+-- a no-op there (no PGR/Ortsteil code ever matches a '01'..'12' Bezirk code).
+--
+-- NB: this comment deliberately avoids spelling out the lookup block's interpolation token in
+-- prose (see the `bezirk_names` block's own header comment for why -- doing so would textually
+-- substitute the lookup's entire compiled SQL into the middle of THIS single-line comment,
+-- breaking out of the comment and corrupting the query, exactly as it would for a self-reference).
 with
     base as (
         select
-            city_code,
-            area_code,
-            coalesce(
-                area_name,
-                case area_code
-                    when '01' then 'Mitte'
-                    when '02' then 'Friedrichshain-Kreuzberg'
-                    when '03' then 'Pankow'
-                    when '04' then 'Charlottenburg-Wilmersdorf'
-                    when '05' then 'Spandau'
-                    when '06' then 'Steglitz-Zehlendorf'
-                    when '07' then 'Tempelhof-Schöneberg'
-                    when '08' then 'Neukölln'
-                    when '09' then 'Treptow-Köpenick'
-                    when '10' then 'Marzahn-Hellersdorf'
-                    when '11' then 'Lichtenberg'
-                    when '12' then 'Reinickendorf'
-                    else area_code
-                end
-            ) as area_name,
-            status_index_weighted_mean as status_index,
-            dynamism_index_weighted_mean as dynamism_index,
-            dominant_stage as status_class,
-            dominant_share,
-            n_habitable_children,
-            is_dominant_fragile,
-            has_incomplete_population,
-            case dominant_stage
+            m.city_code,
+            m.area_code,
+            coalesce(m.area_name, bn.bezirk_name, m.area_code) as area_name,
+            m.status_index_weighted_mean as status_index,
+            m.dynamism_index_weighted_mean as dynamism_index,
+            -- dominant_stage as status_class kept for shape symmetry with `areas_plr`'s
+            -- status_class column (not otherwise consumed downstream at this grain -- the map/
+            -- tooltip read `stage_label` instead).
+            m.dominant_stage as status_class,
+            m.dominant_share,
+            m.n_habitable_children,
+            m.is_dominant_fragile,
+            m.has_incomplete_population,
+            case m.dominant_stage
                 when 'active-gentrification' then 'Active gentrification'
                 when 'pioneer-signal' then 'Early pioneer signal'
                 when 'improving-vulnerable' then 'Improving, vulnerable area'
@@ -357,7 +401,7 @@ with
                 when 'consolidation-pressure' then 'Consolidated, still intensifying'
                 when 'stable-established' then 'Stable, established'
             end as stage_label,
-            case dominant_stage
+            case m.dominant_stage
                 when 'active-gentrification' then 1
                 when 'pioneer-signal' then 2
                 when 'improving-vulnerable' then 3
@@ -372,34 +416,37 @@ with
             -- ('') rather than NULL when not fragile, so the tooltip line renders empty instead
             -- of a formatted "-" placeholder.
             case
-                when is_dominant_fragile
+                when m.is_dominant_fragile
                 then 'Small sample — fewer than 3 constituent areas, dominant-stage reading may not be robust'
                 else ''
             end as fragile_note,
             -- #310 review fix (MEDIUM-3): pairs the "population-weighted" claim with an explicit
             -- caveat whenever the weighting silently degraded to equal-weight for this area (see
-            -- mart_area_rollup_stage_mix's own WEIGHTING NOTE / has_incomplete_population).
+            -- mart_area_rollup_stage_mix's own WEIGHTING NOTE / MEDIUM-C fix: whenever this flag
+            -- is true, the mart now equal-weights EVERY child in the area consistently -- never a
+            -- silent partial-coverage mix of weighting schemes within the same area).
             case
-                when has_incomplete_population
+                when m.has_incomplete_population
                 then 'Population data incomplete for this area — equal-weighted, not population-weighted'
                 else ''
             end as population_note,
             -- Rollup profile pages (all pre-existing routes): /berlin/area/<level>/<code>.
-            '${base}/berlin/area/${inputs.area_level.value}/' || area_code as link
-        from gentriduck_marts.mart_area_rollup_stage_mix
-        where area_level = '${inputs.area_level.value}'
-          and city_code = 'BER'
+            '${base}/berlin/area/${inputs.area_level.value}/' || m.area_code as link
+        from gentriduck_marts.mart_area_rollup_stage_mix as m
+        left join ${bezirk_names} as bn on m.area_code = bn.area_code
+        where m.area_level = '${inputs.area_level.value}'
+          and m.city_code = 'BER'
           -- #310 review fix (LOW-6): explicit even though the mart is currently single-variant --
           -- defends against a future second variant silently duplicating rows here.
-          and variant = 'live_data'
-          and period_yyyymm = (
+          and m.variant = 'live_data'
+          and m.period_yyyymm = (
               select max(period_yyyymm)
               from gentriduck_marts.mart_area_rollup_stage_mix
               where
                   area_level = '${inputs.area_level.value}' and city_code = 'BER'
                   and variant = 'live_data'
           )
-        qualify row_number() over (partition by area_code order by typology_stage) = 1
+        qualify row_number() over (partition by m.area_code order by m.typology_stage) = 1
     )
 select *
 from base
@@ -452,68 +499,39 @@ order by dynamism_index desc
 ```
 
 ```sql area_table_rollup
--- #310 review fix (HIGH-2): same Bezirk-name-fallback `base` CTE as `areas_rollup` above (see
--- that query's header comment for why this is duplicated rather than referenced by name -- no
--- cross-block query chaining in this Evidence setup) -- not the raw (NULL-for-Bezirk) mart column.
-with
-    base as (
-        select
-            area_code,
-            coalesce(
-                area_name,
-                case area_code
-                    when '01' then 'Mitte'
-                    when '02' then 'Friedrichshain-Kreuzberg'
-                    when '03' then 'Pankow'
-                    when '04' then 'Charlottenburg-Wilmersdorf'
-                    when '05' then 'Spandau'
-                    when '06' then 'Steglitz-Zehlendorf'
-                    when '07' then 'Tempelhof-Schöneberg'
-                    when '08' then 'Neukölln'
-                    when '09' then 'Treptow-Köpenick'
-                    when '10' then 'Marzahn-Hellersdorf'
-                    when '11' then 'Lichtenberg'
-                    when '12' then 'Reinickendorf'
-                    else area_code
-                end
-            ) as area_name,
-            status_index_weighted_mean as status_index,
-            dynamism_index_weighted_mean as dynamism_index,
-            dominant_share,
-            n_habitable_children,
-            is_dominant_fragile,
-            has_incomplete_population,
-            case dominant_stage
-                when 'active-gentrification' then 'Active gentrification'
-                when 'pioneer-signal' then 'Early pioneer signal'
-                when 'improving-vulnerable' then 'Improving, vulnerable area'
-                when 'pre-gentrification' then 'Pre-gentrification watch'
-                when 'consolidation-pressure' then 'Consolidated, still intensifying'
-                when 'stable-established' then 'Stable, established'
-            end as stage_label
-        from gentriduck_marts.mart_area_rollup_stage_mix
-        where area_level = '${inputs.area_level.value}'
-          and city_code = 'BER'
-          and variant = 'live_data'
-          and period_yyyymm = (
-              select max(period_yyyymm)
-              from gentriduck_marts.mart_area_rollup_stage_mix
-              where
-                  area_level = '${inputs.area_level.value}' and city_code = 'BER'
-                  and variant = 'live_data'
-          )
-        qualify row_number() over (partition by area_code order by typology_stage) = 1
-    )
+-- #310 review fix (MEDIUM-A): area_name fallback via the shared Bezirk-name lookup block defined
+-- once above (see that block's header comment; referenced by name in the actual `left join`
+-- below) instead of duplicating the Bezirk code -> name CTE here -- not the raw (NULL-for-Bezirk)
+-- mart column.
 select
-    area_name,
-    status_index,
-    dynamism_index,
-    stage_label,
-    dominant_share,
-    n_habitable_children,
-    is_dominant_fragile,
-    has_incomplete_population
-from base
+    coalesce(m.area_name, bn.bezirk_name, m.area_code) as area_name,
+    m.status_index_weighted_mean as status_index,
+    m.dynamism_index_weighted_mean as dynamism_index,
+    m.dominant_share,
+    m.n_habitable_children,
+    m.is_dominant_fragile,
+    m.has_incomplete_population,
+    case m.dominant_stage
+        when 'active-gentrification' then 'Active gentrification'
+        when 'pioneer-signal' then 'Early pioneer signal'
+        when 'improving-vulnerable' then 'Improving, vulnerable area'
+        when 'pre-gentrification' then 'Pre-gentrification watch'
+        when 'consolidation-pressure' then 'Consolidated, still intensifying'
+        when 'stable-established' then 'Stable, established'
+    end as stage_label
+from gentriduck_marts.mart_area_rollup_stage_mix as m
+left join ${bezirk_names} as bn on m.area_code = bn.area_code
+where m.area_level = '${inputs.area_level.value}'
+  and m.city_code = 'BER'
+  and m.variant = 'live_data'
+  and m.period_yyyymm = (
+      select max(period_yyyymm)
+      from gentriduck_marts.mart_area_rollup_stage_mix
+      where
+          area_level = '${inputs.area_level.value}' and city_code = 'BER'
+          and variant = 'live_data'
+  )
+qualify row_number() over (partition by m.area_code order by m.typology_stage) = 1
 order by dynamism_index desc
 ```
 
@@ -536,45 +554,18 @@ Never rely on the dominant stage alone: this table is the full population-weight
 distribution behind every area above, including the `uninhabited / no data` share where relevant.
 
 ```sql area_mix_table
--- #310 review fix (HIGH-2): same Bezirk-name fallback as `areas_rollup`/`area_table_rollup` above
--- (see `areas_rollup`'s header comment for why this is duplicated rather than referenced by
--- name), applied here via a small `names` CTE joined onto the full per-stage grain -- not this
--- mart's raw (NULL-for-Bezirk) area_name column -- otherwise both this table's Bezirk rows AND
--- its `order by area_name` degenerate to blank/undefined for all 12 Bezirke.
-with
-    names as (
-        select distinct
-            area_code,
-            coalesce(
-                area_name,
-                case area_code
-                    when '01' then 'Mitte'
-                    when '02' then 'Friedrichshain-Kreuzberg'
-                    when '03' then 'Pankow'
-                    when '04' then 'Charlottenburg-Wilmersdorf'
-                    when '05' then 'Spandau'
-                    when '06' then 'Steglitz-Zehlendorf'
-                    when '07' then 'Tempelhof-Schöneberg'
-                    when '08' then 'Neukölln'
-                    when '09' then 'Treptow-Köpenick'
-                    when '10' then 'Marzahn-Hellersdorf'
-                    when '11' then 'Lichtenberg'
-                    when '12' then 'Reinickendorf'
-                    else area_code
-                end
-            ) as area_name
-        from gentriduck_marts.mart_area_rollup_stage_mix
-        where area_level = '${inputs.area_level.value}'
-          and city_code = 'BER'
-          and variant = 'live_data'
-    )
+-- #310 review fix (MEDIUM-A): area_name fallback via the shared Bezirk-name lookup block defined
+-- once above (referenced by name in the actual `left join` below), left-joined directly onto the
+-- mart's full per-stage grain -- not this mart's raw (NULL-for-Bezirk) area_name column --
+-- otherwise both this table's Bezirk rows AND its `order by area_name` degenerate to
+-- blank/undefined for all 12 Bezirke.
 select
-    n.area_name,
+    coalesce(m.area_name, bn.bezirk_name, m.area_code) as area_name,
     m.typology_stage,
     m.stage_population_share,
     m.stage_n_children
 from gentriduck_marts.mart_area_rollup_stage_mix as m
-inner join names as n on m.area_code = n.area_code
+left join ${bezirk_names} as bn on m.area_code = bn.area_code
 where m.area_level = '${inputs.area_level.value}'
   and m.city_code = 'BER'
   and m.variant = 'live_data'
@@ -583,7 +574,7 @@ where m.area_level = '${inputs.area_level.value}'
       from gentriduck_marts.mart_area_rollup_stage_mix
       where area_level = '${inputs.area_level.value}' and city_code = 'BER' and variant = 'live_data'
   )
-order by n.area_name, m.stage_population_share desc nulls last
+order by area_name, m.stage_population_share desc nulls last
 ```
 
 <DataTable data={area_mix_table} rows=10 search=true>

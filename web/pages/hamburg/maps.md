@@ -255,17 +255,34 @@ order by stage_sort
 -- /berlin/maps' `areas_rollup` query for the identical pattern/rationale (dominant_stage,
 -- dominant_share, status_index_weighted_mean, dynamism_index_weighted_mean,
 -- n_habitable_children, is_dominant_fragile, has_incomplete_population are all CONSTANT across
--- an area's typology_stage rows). NB: `area_table_rollup`/`area_mix_table` below each re-run an
--- equivalent query rather than referencing this one by name -- an earlier revision of this fix
--- tried true Evidence query chaining (one ```sql block referencing another by name) but
--- `evidence build` confirmed this DuckDB-WASM setup does not expose one page block's result set
--- as a queryable table to a later block ("Catalog Error: Table ... does not exist").
+-- an area's typology_stage rows).
+--
+-- #310 review fix (MEDIUM-A): `area_table_rollup`/`area_mix_table` below each re-run an
+-- equivalent query directly against the mart rather than chaining from this block by name using
+-- Evidence's own block-interpolation syntax -- not because Evidence/DuckDB-WASM lacks support for
+-- that (an earlier revision of this comment claimed exactly that; it was wrong -- see
+-- /berlin/maps' `bezirk_names` block, added in the #310 review's MEDIUM-A fix, for a working
+-- example of one block referencing another this way), but because `area_mix_table` needs the full
+-- per-stage grain this query has already collapsed via QUALIFY, and `area_table_rollup` only
+-- needs a handful of the same columns -- a direct re-select reads just as clearly as a chained one
+-- here, for a query this short. Hamburg's subarea_l1/district area_name is real (no
+-- Berlin-Bezirk-style blank-name gap, see H3-domain-signoff.md §condition 3), so unlike
+-- /berlin/maps this page has no name-fallback lookup to de-duplicate in the first place.
+--
+-- NB: this comment deliberately avoids spelling out this block's own name inside that
+-- interpolation syntax -- Evidence's query-chaining resolver scans a block's full text (comments
+-- included) for that exact token, so a block mentioning its own name that way, in its own text,
+-- creates a literal self-reference the resolver reports as "Compiler error: circular reference"
+-- (hit and fixed during this review pass, both here and in /berlin/maps' `bezirk_names` block).
 select
     city_code,
     area_code,
     area_name,
     status_index_weighted_mean as status_index,
     dynamism_index_weighted_mean as dynamism_index,
+    -- dominant_stage as status_class kept for shape symmetry with `areas_leaf`'s status_class
+    -- column (#310 review, LOW-J) -- not otherwise consumed downstream at this grain (the map/
+    -- tooltip read `stage_label` instead).
     dominant_stage as status_class,
     dominant_share,
     n_habitable_children,
