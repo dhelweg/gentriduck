@@ -88,12 +88,18 @@ where bezirk_code = '${params.code}'
 [All districts](/berlin/area/bezirk) · [full neighbourhood list](/berlin/area) ·
 [district browse](/berlin/area-detail)
 
+<!-- #326: the previous version of this Alert linked
+     `<a href="/berlin/area/[code]">any neighbourhood's own page</a>` -- a literal, non-templated
+     `[code]` placeholder left in as real HTML, which produced a bogus, always-identical
+     `/berlin/area/[code]` crawl target (Evidence's build crawls any real `<a href>`, template
+     placeholder or not). Fixed by pointing at the actual full neighbourhood list instead, the same
+     safe, already-crawlable target this page already links from its own top-of-page nav. -->
 <Alert status="info">
   Figures on this page are <b>sums and population-weighted averages</b> of this district's
   neighbourhoods (Planungsräume) — never a separately re-scored index. See the
-  <a href="/methodology">methodology page</a> for why coarse-grain areas are not re-scored, and
-  <a href="/berlin/area/[code]">any neighbourhood's own page</a> for the actual gentrification
-  index and trajectory.
+  <a href="/methodology">methodology page</a> for why coarse-grain areas are not re-scored, and any
+  neighbourhood's own page in the <a href="/berlin/area">full neighbourhood list</a> for the actual
+  gentrification index and trajectory.
 </Alert>
 
 <!--
