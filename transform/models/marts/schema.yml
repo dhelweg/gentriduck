@@ -1801,12 +1801,18 @@ models:
       subarea_l1/district. Generalizes the #269 mart_ortsteil_plr_stage_mix
       pattern via mart_area_hierarchy (#302) instead of a single-purpose join,
       and upgrades #269's plain child count to a population weight (falling
-      back to an equal weight of 1 per child when gentrification_index.population
-      is NULL for that period -- see model header "WEIGHTING NOTE" for the
-      empirical gap this covers and has_incomplete_population below).
+      back to an equal weight of 1 per child when population coverage is
+      incomplete for the area -- see model header "WEIGHTING NOTE" /
+      MEDIUM-C fix for the empirical gap this covers and
+      has_incomplete_population below).
       'uninhabited / no data' is an explicit typology_stage bucket, visible in
       the mix but excluded from the weighted-mean/vote denominator (design
-      point 5). variant='live_data' only (the only variant carrying a
+      point 5) -- it is ALSO used for a rollup area with zero real
+      leaf children at all (a structurally orphaned area, e.g. Berlin
+      Ortsteil 0608/1106 or Hamburg subarea_l1 02118/02119/02121/02703/02712
+      -- see model header MEDIUM-B fix): every hierarchy area gets a row for
+      every period its city publishes, never silently dropped.
+      variant='live_data' only (the only variant carrying a
       status_class/typology_stage -- see gentrification_index.sql).
       Dual sign-off requirement: methodology-bearing (CLAUDE.md R-C1) --
       see docs/epic-*/310-*-signoff.md once recorded.
@@ -1855,6 +1861,11 @@ models:
           Area name from dim_area, denormalized for convenience. NULL for
           area_level='bezirk' -- dim_area carries no 'bezirk'-level rows today
           (see model header); not fabricated here.
+        data_tests:
+
+          - not_null:
+              config:
+                where: "area_level != 'bezirk'"
       - name: period_yyyymm
         description: >
           Period key matching gentrification_index's own period_yyyymm
@@ -1874,7 +1885,10 @@ models:
         description: >
           D1xD2 typology stage name (gentrification_index.status_class), or
           the literal 'uninhabited / no data' bucket for children with no MSS/
-          Sozialmonitoring classification (status_class IS NULL).
+          Sozialmonitoring classification (status_class IS NULL) -- also used
+          (MEDIUM-B fix, #310 review) as the single row for a structurally
+          orphaned rollup area with zero real leaf children at all (see
+          n_children/n_habitable_children).
         data_tests:
 
           - not_null
@@ -1889,7 +1903,14 @@ models:
                   - stable-established
                   - uninhabited / no data
       - name: n_children
-        description: Total count of leaf children (habitable + uninhabited) rolled into this area, for this period.
+        description: >
+          Total count of REAL leaf children (habitable + uninhabited) rolled
+          into this area, for this period. 0 for a structurally orphaned
+          rollup area with zero real leaf children at all (MEDIUM-B fix --
+          e.g. Berlin Ortsteil 0608/1106, Hamburg subarea_l1
+          02118/02119/02121/02703/02712) -- the area still gets exactly one
+          row (typology_stage='uninhabited / no data') so it is drawn-but-
+          blank rather than silently dropped.
         data_tests:
 
           - not_null
@@ -1897,7 +1918,8 @@ models:
         description: >
           Count of leaf children with a real (non-null) typology_stage --
           the denominator basis for the dominant-stage vote and
-          is_dominant_fragile.
+          is_dominant_fragile. 0 for a structurally orphaned rollup area
+          (see n_children).
         data_tests:
 
           - not_null
@@ -1912,25 +1934,70 @@ models:
           - not_null
       - name: has_incomplete_population
         description: >
-          TRUE when at least one habitable child in this area had a NULL
-          gentrification_index.population for this period, so its aggregation
-          weight fell back to 1 (equal-weight) instead of a real population
-          figure -- see model header "WEIGHTING NOTE". A consumer wanting a
-          strict population-weighted-only reading should treat rows with this
-          TRUE as approximate.
+          TRUE when at least one real habitable child in this area had a NULL
+          gentrification_index.population for this period. MEDIUM-C fix
+          (#310 review): whenever this is TRUE (whether population is missing
+          for SOME or ALL of the area's real habitable children --
+          see n_children_without_population/population_coverage_frac),
+          EVERY child in the area is aggregated with an equal weight of 1
+          (see model header "WEIGHTING NOTE" / MEDIUM-C fix) -- so
+          "equal-weighted, not population-weighted" is an honest claim
+          whenever this is TRUE, not just in the all-or-nothing case. FALSE
+          for a structurally orphaned rollup area (n_habitable_children = 0
+          -- nothing to be incomplete about).
         data_tests:
 
           - not_null
+      - name: n_children_without_population
+        description: >
+          MEDIUM-C fix (#310 review): count of this area's real habitable
+          children with a NULL gentrification_index.population for this
+          period. 0 either when population is fully known (
+          has_incomplete_population = FALSE) or when there are zero real
+          habitable children to begin with -- distinguish the two via
+          n_habitable_children. A value strictly between 0 and
+          n_habitable_children means coverage was PARTIAL for this area (the
+          near-drop-out failure mode MEDIUM-C fixed the weighting for, see
+          population_coverage_frac).
+        data_tests:
+
+          - not_null
+      - name: population_coverage_frac
+        description: >
+          MEDIUM-C fix (#310 review): n_children_with_population /
+          n_habitable_children for this area's real habitable children (0.0
+          =  no coverage at all -- the original, safe all-equal-weight
+          fallback case; 1.0 = full coverage, real population weighting used
+          throughout; strictly between 0 and 1 = PARTIAL coverage -- the
+          near-drop-out failure mode MEDIUM-C's equal-weight-the-whole-area
+          fallback now closes). NULL when n_habitable_children = 0 (nothing
+          to compute a coverage fraction over).
+        data_tests:
+
+          - dbt_utils.accepted_range:
+              arguments:
+                min_value: 0
+                max_value: 1
+              config:
+                where: "population_coverage_frac is not null"
       - name: stage_n_children
-        description: Count of leaf children in this specific typology_stage bucket, for this area/period.
+        description: >
+          Count of REAL leaf children in this specific typology_stage bucket,
+          for this area/period. 0 for the single synthetic
+          'uninhabited / no data' bucket row of a structurally orphaned
+          rollup area (MEDIUM-B fix) -- never counts the placeholder row
+          itself as a child.
         data_tests:
 
           - not_null
       - name: stage_weight
         description: >
-          Sum of the aggregation weight (real population where known, else 1
-          per child -- see has_incomplete_population) for leaf children in
-          this specific typology_stage bucket.
+          Sum of the aggregation weight (real population where known, else an
+          equal weight of 1 for every child in the area once
+          has_incomplete_population is TRUE -- see that column's
+          description/MEDIUM-C fix) for REAL leaf children in this specific
+          typology_stage bucket. 0 for a structurally orphaned rollup area's
+          placeholder row (MEDIUM-B fix).
         data_tests:
 
           - not_null
