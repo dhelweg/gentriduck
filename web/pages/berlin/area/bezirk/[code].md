@@ -93,7 +93,36 @@ where bezirk_code = '${params.code}'
      `[code]` placeholder left in as real HTML, which produced a bogus, always-identical
      `/berlin/area/[code]` crawl target (Evidence's build crawls any real `<a href>`, template
      placeholder or not). Fixed by pointing at the actual full neighbourhood list instead, the same
-     safe, already-crawlable target this page already links from its own top-of-page nav. -->
+     safe, already-crawlable target this page already links from its own top-of-page nav.
+
+     #326 follow-up finding: this fix (plus the matching one in
+     pages/berlin/area/ortsteil/[code].md and the bare-bzr/pgr de-link in
+     pages/methodology-oa-modes.md) turned out to be the WHOLE fix -- a full clean `npm run build`
+     after these two changes reproduces zero prerender 500s, including every OTHER route named in
+     #326 (bzr/[code] real codes 025007/023004/024006, Hamburg subarea_l1/[code] codes such as
+     02509, and the "linked from /berlin/area/02400624" report). None of those turned out to be
+     independent bugs, and no mart/component was changed to fix them:
+     - Direct DuckDB queries against every exported mart these pages read (dim_area_geometry,
+       gentrification_index, mart_area_demographics, mart_poi_oa_arealevel, mart_poi_dominance,
+       mart_area_hierarchy, fct_gentrification_trajectory) confirmed complete rows for every
+       individually-named code above -- the failures were never a data gap.
+     - "linked from /berlin/area/02400624" is real but benign, not a bug in this project's own
+       code: every page here declares a `breadcrumb:` frontmatter query, and Evidence's own
+       `BreadCrumbs.svelte` (`@evidence-dev/core-components`) renders a crumb trail that includes
+       the CURRENT page as a real, clickable `<a href>` by design (see its `buildCrumbs()`, which
+       only nulls a crumb's href when the matched file-tree node isn't a page) -- i.e. every page on
+       this site "links to itself" via its own breadcrumb, normally a harmless no-op once the URL is
+       already in the prerender crawler's visited set.
+     - The most likely reason the bzr/pgr real-code and Hamburg subarea_l1 failures clustered right
+       around the literal-`[code]`/bare-bzr-pgr crawl hits (rather than being scattered): SvelteKit's
+       default prerender concurrency is 1 (strictly sequential), and this site's duckdb-wasm query
+       engine is a single instance reused across that sequential crawl -- a page-render throw can
+       plausibly leave it in a bad state for whichever page is rendered immediately next. Not
+       independently confirmed with a debugger/stack trace (out of this ticket's scope once the
+       clean-build result was reproducible), but consistent with every check performed here: no
+       code/data defect specific to any of the individually-named pages, and all of them render
+       cleanly once the two link bugs above are gone. -->
+
 <Alert status="info">
   Figures on this page are <b>sums and population-weighted averages</b> of this district's
   neighbourhoods (Planungsräume) — never a separately re-scored index. See the
