@@ -142,9 +142,9 @@ this page picks up from there.
   The §2 nine-methods table below still queries <code>mart_poi_oa_methods</code> live, for one Kiez
   at a time. The OA-across-area-scales figure (formerly §4's live map) and the within-group
   dominance table (formerly §5's live table) have moved to headline/context-only grain on each
-  area's own canonical page — <a href="/berlin/area/bezirk">district</a>, Bezirksregion,
-  Prognoseraum, and (dominance only — see §4's own note below)
-  <a href="/berlin/area/ortsteil">Ortsteil</a> — so the
+  area's own canonical page — <a href="/berlin/area/bezirk">district, Bezirksregion, and
+  Prognoseraum</a> (reachable via a district page, then one of its Prognoseräume), and (dominance
+  only — see §4's own note below) <a href="/berlin/area/ortsteil">Ortsteil</a> — so the
   figure lives where it's about one specific place, not duplicated here. §4/§5 below keep the
   explainer prose and a link to "see this on your area's page." What's <b>still not</b> live
   anywhere: a PLR-grain choropleth for the eight non-canonical methods (the canonical nested-LQ PLR
@@ -481,19 +481,19 @@ POI mix, and status trajectory. Every page carries the same `maup_caveat_require
 headline/context-only framing described above:
 
 - [District (Bezirk) profiles](/berlin/area/bezirk) — context only, never a Kiez-level claim.
-- **Bezirksregion (BZR) profiles** — this project's recommended public headline scale for anything
-  coarser than a single neighbourhood; reachable by drilling into a district page above, then its
-  "Prognoseräume" and "Bezirksregionen" child tables (BZR/PGR have no standalone list page of their
-  own — #326).
-- **Prognoseraum (PGR) profiles** — context only, never a Kiez-level claim; reachable the same way,
-  from a district page's own child table.
+- [Bezirksregion (BZR) profiles](/berlin/area/bezirk) — this project's recommended public headline
+  scale for anything coarser than a single neighbourhood; reachable by drilling into a district page
+  above, into one of its Prognoseräume, then that Prognoseraum's own "Bezirksregionen" table
+  (BZR/PGR have no standalone list page of their own).
+- [Prognoseraum (PGR) profiles](/berlin/area/bezirk) — context only, never a Kiez-level claim;
+  reachable the same way, from a district page's own "Prognoseräume" table.
 - The canonical nested-LQ figure at Kiez (PLR) grain is already live on the
   [POI & Offering Advantage map](/berlin/poi-map) and on
   [every neighbourhood's own page](/berlin/area).
 
-Pick a district, Bezirksregion, or Prognoseraum above to see its own "Offering Advantage across the
-area hierarchy" section — the same figure this page used to show on a single shared map, now shown
-one area at a time, in context.
+Pick a district above, then drill down into one of its Bezirksregionen or Prognoseräume, to see its
+own "Offering Advantage across the area hierarchy" section — the same figure this page used to show
+on a single shared map, now shown one area at a time, in context.
 
 ## 5. Within-group dominance: monoculture, or a mix?
 
@@ -607,10 +607,12 @@ cells:
 
 - [Neighbourhood (PLR) profiles](/berlin/area) — this area's own dominance figures, across all four
   public-safe groups.
-- [District (Bezirk)](/berlin/area/bezirk), **Bezirksregion (BZR)**, and **Prognoseraum (PGR)**
-  profiles — a ranked table of this area's own constituent neighbourhoods (no district/BZR/PGR-level
-  dominance figure exists to show instead — see the note above). BZR/PGR pages have no standalone
-  list page of their own; reach them by drilling into a district page above (#326).
+- [District (Bezirk)](/berlin/area/bezirk), [Bezirksregion (BZR)](/berlin/area/bezirk), and
+  [Prognoseraum (PGR)](/berlin/area/bezirk) profiles — a ranked table of this area's own constituent
+  neighbourhoods (no district/BZR/PGR-level dominance figure exists to show instead — see the note
+  above). BZR/PGR pages have no standalone list page of their own; reach them by drilling into a
+  district page above, into one of its Prognoseräume, then that Prognoseraum's own "Bezirksregionen"
+  table.
 - [Ortsteil profiles](/berlin/area/ortsteil) — the same ranked table, joined through the
   dominant-overlap crosswalk (see the [area-hierarchy reference](/reference/area-hierarchy)).
 
@@ -756,10 +758,11 @@ live query:
 - [ADR-0017](https://github.com/dhelweg/gentriduck/blob/main/docs/adr/0017-poi-offering-advantage-revival.md) and [ADR-0018](https://github.com/dhelweg/gentriduck/blob/main/docs/adr/0018-causal-tiered-poi-selection.md) — the base Offering Advantage construct and its curated/faithful split, which this page extends rather than replaces.
 - [Methodology & data sources](/methodology) — the governed index this page's methods feed into (unchanged by anything here) and its own honest limitations.
 - [POI & Offering Advantage map](/berlin/poi-map) — the canonical nested-LQ method at PLR grain, live since before this page existed.
-- [District (Bezirk)](/berlin/area/bezirk), Bezirksregion (BZR), Prognoseraum (PGR, both reachable
-  by drilling into a district page above — #326), [Ortsteil](/berlin/area/ortsteil), and
-  [neighbourhood (PLR)](/berlin/area) profiles — where the §4/§5 "see this on your area's page"
-  links above lead (#298, I21-d).
+- [District (Bezirk)](/berlin/area/bezirk), [Bezirksregion (BZR)](/berlin/area/bezirk), and
+  [Prognoseraum (PGR)](/berlin/area/bezirk) profiles (both reachable by drilling into a district page
+  above, into one of its Prognoseräume, then that Prognoseraum's own "Bezirksregionen" table),
+  [Ortsteil](/berlin/area/ortsteil), and [neighbourhood (PLR)](/berlin/area) profiles — where the
+  §4/§5 "see this on your area's page" links above lead (#298, I21-d).
 
 ---
 
