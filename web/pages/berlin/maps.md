@@ -74,6 +74,22 @@ sidebar_position: 2
   reader-facing copy now prefers "most widespread stage" over "dominant stage" (internal column
   keys like `dominant_stage`/`dominant_share`/`is_dominant_fragile` are untouched -- this is a
   copy-only rename, not a mart or schema change).
+
+  #310 domain re-review fixes (2026-07-30, second round, PASS WITH CONCERNS on the D1 fix commit --
+  see docs/epic-e/310-map-granularity-domain-signoff.md, "Re-review after fix commit 18dfeda3"):
+  D1/D3/D4/C1/C5 were confirmed resolved on their own merits, but the D4 counterweight and the C1
+  scalar-column relabelling each reintroduced the exact D2 label-overreach defect in two new
+  places -- both now fixed here. D2-R1 (domain, blocking) -- `acute_stage_share` was labelled
+  "Residents in an acute-pressure stage" (tooltip, table column, D3 Alert, Honest-caveats bullet):
+  an unconditional residents claim, false on Hamburg's rollup surface (7/7 districts, 99/104
+  Stadtteile equal-weighted per `has_incomplete_population`) where it is really a share of
+  constituent areas, not residents -- relabelled "Share in an acute-pressure stage", with the same
+  "(population-weighted, or equal-weighted -- see the incomplete-data column)" hedge
+  `dominant_share` already carried, in all four places. D2-R2 (domain, blocking) -- the C1 scalar
+  column titles/Indicator note/caveats bullet dropped the pre-existing "where available" qualifier
+  and asserted "population-weighted mean ordinal class" unconditionally; restored as "mean ordinal
+  class (mean rank), population-weighted where population data is complete and equal-weighted
+  otherwise" in all four places.
 -->
 
 <script>
@@ -211,12 +227,17 @@ sidebar_position: 2
         { id: 'dominant_share', title: "Most widespread stage's share", fmt: 'pct0' },
         // #310 review fix (D4 -- domain sign-off blocking): composition counterweight, computed
         // in the areas_rollup query below as a sum over already-published stage_population_share
-        // rows (no mart change) -- the share of residents in the three most acute stages
+        // rows (no mart change) -- the share of the area in the three most acute stages
         // (active-gentrification + pioneer-signal + improving-vulnerable), shown in the same
         // visual unit as the fill colour/most-widespread-stage label so a reader can't mistake a
         // "Stable, established" plurality for an all-clear (see the domain sign-off's Neukölln/
         // Spandau frontier-inversion finding, and the D3 caveat below).
-        { id: 'acute_stage_share', title: 'Residents in an acute-pressure stage', fmt: 'pct0' },
+        // #310 review fix (D2-R1 -- domain re-review blocking): "Residents in an acute-pressure
+        // stage" was an unconditional residents claim, false wherever has_incomplete_population is
+        // true (today: the whole Hamburg rollup surface) -- neutral "share" label here, same
+        // fix as dominant_share above; the population_note line below still discloses per-row
+        // whenever THIS area fell back to equal weighting.
+        { id: 'acute_stage_share', title: 'Share in an acute-pressure stage', fmt: 'pct0' },
         { id: 'n_habitable_children', title: 'Constituent areas with data', fmt: 'id' },
         {
           id: 'fragile_note',
@@ -296,9 +317,9 @@ Hamburg's own indicators, area levels, and observation window.
   acute</b> stage citywide, coarser levels are systematically biased toward reading as calm, not
   toward neutral noise. An area whose map colour reads "Stable, established" can still contain
   neighbourhoods under active gentrification pressure; this map alone cannot show you whether it
-  does. The share of residents in an acute-pressure stage (in the tooltip and table below) and the
-  Planungsraum (PLR) level — the finest grain this site publishes — are where that pressure is
-  actually locatable.
+  does. The share of the area in an acute-pressure stage (residents where population data exists,
+  otherwise constituent areas — in the tooltip and table below) and the Planungsraum (PLR) level —
+  the finest grain this site publishes — are where that pressure is actually locatable.
 </Alert>
 {/if}
 
@@ -315,7 +336,8 @@ Hamburg's own indicators, area levels, and observation window.
   coloured, ranked map indicator at Bezirk/PGR/Ortsteil grain (averaging discrete ordinal classes
   into a coarse-grain score and colouring or ranking by it is a documented methodology red line
   for this project — see the <a href="/methodology">methodology & data sources</a> page); those
-  raw ordinals remain available, clearly labelled as a population-weighted mean ordinal class, in
+  raw ordinals remain available, clearly labelled as a mean ordinal class (mean rank),
+  population-weighted where population data is complete and equal-weighted otherwise, in
   the table below and as a real map colour at the Planungsraum (PLR) level above.
 </p>
 {/if}
@@ -633,9 +655,10 @@ order by dynamism_index desc
 -- ordinal class code is exactly the "presented, coloured, or ordered" construct the standing #267
 -- domain decision forbids for a coarse scalar -- order by area_name instead (matches the
 -- Stage-mix table below). status_index/dynamism_index remain visible as informational columns
--- (see the Column titles below, per the geo-DS's C1: "population-weighted mean ordinal class
--- (mean rank)", not a score) -- keeping the mart's diagnostic columns available is exactly what
--- D1 remedy (a) intends; only the map-colour/rank uses are removed.
+-- (see the Column titles below, per the geo-DS's C1: "mean ordinal class (mean rank)", not a
+-- score -- #310 review fix D2-R2: population-weighted where population data is complete and
+-- equal-weighted otherwise, not unconditionally) -- keeping the mart's diagnostic columns
+-- available is exactly what D1 remedy (a) intends; only the map-colour/rank uses are removed.
 --
 -- NB: see `areas_rollup`'s own header comment above for why `acute_stage_share_raw` is coalesced
 -- to 0 below only when the area has at least one habitable child (the mart is sparse -- a filtered
@@ -702,11 +725,11 @@ order by area_name
 
 <DataTable data={area_table_rollup} rows=10>
     <Column id=area_name title="Area"/>
-    <Column id=status_index title="Social status — population-weighted mean ordinal class (mean rank; 1=least deprived … 4=most deprived)"/>
-    <Column id=dynamism_index title="Speed of change — population-weighted mean ordinal class (mean rank)"/>
+    <Column id=status_index title="Social status — mean ordinal class (mean rank; 1=least deprived … 4=most deprived), population-weighted where population data is complete and equal-weighted otherwise"/>
+    <Column id=dynamism_index title="Speed of change — mean ordinal class (mean rank), population-weighted where population data is complete and equal-weighted otherwise"/>
     <Column id=stage_label title="Most widespread gentrification stage"/>
     <Column id=dominant_share title="Most widespread stage's share (population-weighted, or equal-weighted — see the incomplete-data column)" fmt="pct0"/>
-    <Column id=acute_stage_share title="Residents in an acute-pressure stage (active-gentrification + pioneer-signal + improving-vulnerable)" fmt="pct0"/>
+    <Column id=acute_stage_share title="Share in an acute-pressure stage (active-gentrification + pioneer-signal + improving-vulnerable; population-weighted, or equal-weighted — see the incomplete-data column)" fmt="pct0"/>
     <Column id=n_habitable_children title="PLRs with data"/>
     <Column id=is_dominant_fragile title="Fragile (< 3 PLRs)?"/>
     <Column id=has_incomplete_population title="Population data incomplete (share above is equal-weighted, not population-weighted)?"/>
@@ -806,13 +829,15 @@ Bezirksregion (BZR) map instead? It now lives on
   widespread stage is, by construction, usually the least acute one — so coarser levels
   systematically understate pressure rather than randomly blurring it. An area shown as "Stable,
   established" can still contain neighbourhoods under acute pressure; this map cannot be read as
-  evidence that pressure is absent anywhere in it. The share of residents in an acute-pressure
-  stage (in the tooltip and table above) and the Planungsraum (PLR) level — the finest grain this
-  site publishes — are where that pressure is actually locatable.
-- **The rollup "Social status"/"Speed of change" figures are a population-weighted mean ordinal
-  class (a mean rank), not a rescaled score.** They are not offered as a map colour at Bezirk/
-  PGR/Ortsteil grain, and the table above no longer ranks by them, for exactly this reason — see
-  the Indicator note above the map.
+  evidence that pressure is absent anywhere in it. The share of the area in an acute-pressure stage
+  (residents where population data exists, otherwise constituent areas — in the tooltip and table
+  above) and the Planungsraum (PLR) level — the finest grain this site publishes — are where that
+  pressure is actually locatable.
+- **The rollup "Social status"/"Speed of change" figures are a mean ordinal class (a mean rank),
+  population-weighted where population data is complete and equal-weighted otherwise, not a
+  rescaled score.** They are not offered as a map colour at Bezirk/PGR/Ortsteil grain, and the
+  table above no longer ranks by them, for exactly this reason — see the Indicator note above the
+  map.
 - **Ortsteil figures are approximate, unlike PGR/Bezirk which nest exactly.** PLRs do not nest
   cleanly into Ortsteile, so each Ortsteil's figures are assembled from the PLRs a dominant-overlap
   rule assigns to it, not from a clean administrative nesting — the drawn polygon is the true
