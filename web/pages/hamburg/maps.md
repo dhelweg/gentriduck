@@ -42,7 +42,50 @@ sidebar_position: 1
 <script>
   import { base } from '$app/paths';
 
-  const stageColorPalette = ['#d73027', '#fc8d59', '#fee090', '#e0f3f8', '#91bfdb', '#4575b4'];
+  // #152/#233 (I16): intuitive "worse -> red, best -> blue" ramp for the six-stage typology.
+  // ColorBrewer RdYlBu-6 (colorblind-safe per colorbrewer2.org).
+  //
+  // #310 review fix (HIGH-1): EvidenceMap assigns this ramp POSITIONALLY over the DISTINCT
+  // indicator values present in the `data` array actually passed to <AreaMap>, in first-occurrence
+  // order -- see @evidence-dev/core-components' EvidenceMap.js: `handleLegendValues()` computes
+  // `values = [...new Set(data.map(d => d[value]))]`, and `handleFillColor()` then looks up
+  // `colorPalette[values.indexOf(item[value])]`. At the subarea_l2 leaf grain all six stages are
+  // (usually) present, so a flat 6-entry array happened to line up with `stage_sort` order below --
+  // but at a rollup level (Stadtteil/Bezirk) typically only a SUBSET of the six stages occurs, so
+  // the same palette slot silently gets reassigned to a different (often much less severe) stage
+  // -- e.g. a Bezirk where every constituent Gebiet happens to be 'active-gentrification' would
+  // still render solid RED (correct, coincidentally), but a Bezirk that's entirely
+  // 'stable-established' would ALSO render solid RED (palette index 0), inverting this page's own
+  // "red = highest pressure" legend/Alert -- this is exactly the bug reported for Hamburg's
+  // district level (see the #310 review findings). Fix: a fixed stage_label -> hex lookup
+  // (`stageColorByLabel`) plus `presentStagePalette()`, which derives the colorPalette array from
+  // the CURRENT query result's own distinct stage_label values in first-occurrence order -- the
+  // exact same `[...new Set(data.map(d => d[value]))]` derivation EvidenceMap.js performs -- so
+  // `colorPalette[i]` always names the same stage `values[i]` will resolve to, regardless of how
+  // many/which stages are present at the selected area_level. (The `areas_leaf`/`areas_rollup`
+  // queries below stay ordered by `stage_sort` -- most-acute-first -- purely so first-occurrence
+  // order is deterministic/readable.)
+  const stageColorByLabel = {
+    'Active gentrification': '#d73027',
+    'Early pioneer signal': '#fc8d59',
+    'Improving, vulnerable area': '#fee090',
+    'Pre-gentrification watch': '#e0f3f8',
+    'Consolidated, still intensifying': '#91bfdb',
+    'Stable, established': '#4575b4'
+  };
+
+  function presentStagePalette(rows) {
+    const seen = new Set();
+    const palette = [];
+    for (const row of rows ?? []) {
+      const label = row?.stage_label;
+      if (label != null && !seen.has(label) && label in stageColorByLabel) {
+        seen.add(label);
+        palette.push(stageColorByLabel[label]);
+      }
+    }
+    return palette;
+  }
 
   const indicatorShortLabel = {
     status_class: 'Gentrification stage',
@@ -51,11 +94,12 @@ sidebar_position: 1
   };
 
   // #310: subarea_l2 is the individual-Gebiet leaf level (gentrification_index, unchanged from
-  // H3); subarea_l1/district are rollup levels (mart_area_rollup_stage_mix).
+  // H3); subarea_l1/district are rollup levels (mart_area_rollup_stage_mix). subarea_l2 genuinely
+  // has no area_name in the source data (H3-domain-signoff.md condition 3); subarea_l1/district DO
+  // carry a real Stadtteil/Bezirk name -- since that's exactly the same condition as `isRollup`,
+  // the tooltip below branches on `isRollup` directly rather than a separate `hasAreaName` (#310
+  // review fix, LOW-7: dead indirection -- the two were definitionally identical).
   $: isRollup = inputs.area_level.value !== 'subarea_l2';
-  // subarea_l2 genuinely has no area_name in the source data (H3-domain-signoff.md condition 3);
-  // subarea_l1/district DO carry a real Stadtteil/Bezirk name.
-  $: hasAreaName = inputs.area_level.value !== 'subarea_l2';
 
   const geoJsonByLevel = {
     subarea_l2: 'subarea_l2_live_data.geojson',
@@ -73,11 +117,12 @@ sidebar_position: 1
   // tooltip leads with the Gebiet code instead of a name there; subarea_l1/district (#310) DO
   // have a name, and additionally always carry dominant_share/n_habitable_children alongside the
   // indicator value (design point 3: never a standalone dominant-stage label).
+  // #310 review fix (MEDIUM-3/MEDIUM-4): `fragile_note`/`population_note` (computed in the
+  // `areas_rollup` query below) surface `is_dominant_fragile`/`has_incomplete_population` inline
+  // -- blank when the flag is false, the caveat sentence when true.
   $: areaTooltip = isRollup
     ? [
-        ...(hasAreaName
-          ? [{ id: 'area_name', showColumnName: false, valueClass: 'font-bold text-sm', fmt: 'id' }]
-          : []),
+        { id: 'area_name', showColumnName: false, valueClass: 'font-bold text-sm', fmt: 'id' },
         {
           id: inputs.indicator.value === 'status_class' ? 'stage_label' : inputs.indicator.value,
           title: indicatorShortLabel[inputs.indicator.value],
@@ -85,6 +130,18 @@ sidebar_position: 1
         },
         { id: 'dominant_share', title: 'Population share of dominant stage', fmt: 'pct0' },
         { id: 'n_habitable_children', title: 'Constituent Gebiete with data', fmt: 'id' },
+        {
+          id: 'fragile_note',
+          showColumnName: false,
+          valueClass: 'text-xs text-amber-700',
+          fmt: 'id'
+        },
+        {
+          id: 'population_note',
+          showColumnName: false,
+          valueClass: 'text-xs text-amber-700',
+          fmt: 'id'
+        },
         { id: 'area_code', title: 'Area code', valueClass: 'text-xs opacity-60', fmt: 'id' }
       ]
     : [
@@ -137,10 +194,13 @@ sidebar_position: 1
   <a href="https://github.com/dhelweg/gentriduck/issues/310">#310 design decision</a>, the same
   decision applied unmodified to Berlin's Bezirk/PGR/Ortsteil rollups). The map colours by the
   <b>dominant (most common) stage</b> among that area's constituent Gebiete, weighted by
-  population — its tooltip and the tables below always show the dominant stage's population
-  <b>share</b> alongside it, and the "Stage mix" table further down shows the full breakdown.
-  Areas with fewer than 3 Gebiete with real data are flagged as a fragile ("small sample") dominant
-  reading.
+  population where available — its tooltip and the tables below always show the dominant stage's
+  population <b>share</b> alongside it, and the "Stage mix" table further down shows the full
+  breakdown. Areas with fewer than 3 Gebiete with real data are flagged as a fragile ("small
+  sample") dominant reading. <b>Hamburg's latest published period has no population figures for
+  effectively any Gebiet</b> — every Stadtteil/Bezirk rollup shown here currently falls back to
+  <b>equal</b> weighting across its constituent Gebiete rather than true population weighting,
+  flagged as "population data incomplete" in the table and map tooltip below.
 </Alert>
 {/if}
 
@@ -195,7 +255,11 @@ order by stage_sort
 -- /berlin/maps' `areas_rollup` query for the identical pattern/rationale (dominant_stage,
 -- dominant_share, status_index_weighted_mean, dynamism_index_weighted_mean,
 -- n_habitable_children, is_dominant_fragile, has_incomplete_population are all CONSTANT across
--- an area's typology_stage rows).
+-- an area's typology_stage rows). NB: `area_table_rollup`/`area_mix_table` below each re-run an
+-- equivalent query rather than referencing this one by name -- an earlier revision of this fix
+-- tried true Evidence query chaining (one ```sql block referencing another by name) but
+-- `evidence build` confirmed this DuckDB-WASM setup does not expose one page block's result set
+-- as a queryable table to a later block ("Catalog Error: Table ... does not exist").
 select
     city_code,
     area_code,
@@ -223,14 +287,35 @@ select
         when 'consolidation-pressure' then 5
         when 'stable-established' then 6
         else 99
-    end as stage_sort
+    end as stage_sort,
+    -- #310 review fix (MEDIUM-4): pairs the dominant-stage reading with an explicit caveat
+    -- whenever is_dominant_fragile -- per the #310 design decision (issue comment point 3) this
+    -- must never be shown as a standalone, confident-looking label. Blank ('') rather than NULL
+    -- when not fragile, so the tooltip line renders empty instead of a formatted "-" placeholder.
+    case
+        when is_dominant_fragile
+        then 'Small sample — fewer than 3 constituent areas, dominant-stage reading may not be robust'
+        else ''
+    end as fragile_note,
+    -- #310 review fix (MEDIUM-3): pairs the "population-weighted" claim with an explicit caveat
+    -- whenever the weighting silently degraded to equal-weight for this area (see
+    -- mart_area_rollup_stage_mix's own WEIGHTING NOTE / has_incomplete_population -- Hamburg's
+    -- entire latest published period has this for effectively every Gebiet).
+    case
+        when has_incomplete_population
+        then 'Population data incomplete for this area — equal-weighted, not population-weighted'
+        else ''
+    end as population_note
 from gentriduck_marts.mart_area_rollup_stage_mix
 where area_level = '${inputs.area_level.value}'
   and city_code = 'HH'
+  -- #310 review fix (LOW-6): explicit even though the mart is currently single-variant --
+  -- defends against a future second variant silently duplicating rows here.
+  and variant = 'live_data'
   and period_yyyymm = (
       select max(period_yyyymm)
       from gentriduck_marts.mart_area_rollup_stage_mix
-      where area_level = '${inputs.area_level.value}' and city_code = 'HH'
+      where area_level = '${inputs.area_level.value}' and city_code = 'HH' and variant = 'live_data'
   )
 qualify row_number() over (partition by area_code order by typology_stage) = 1
 order by stage_sort
@@ -243,7 +328,7 @@ order by stage_sort
     areaCol="area_code"
     value={inputs.indicator.value === 'status_class' ? 'stage_label' : inputs.indicator.value}
     legendType={inputs.indicator.value === 'status_class' ? 'categorical' : 'scalar'}
-    colorPalette={inputs.indicator.value === 'status_class' ? stageColorPalette : undefined}
+    colorPalette={inputs.indicator.value === 'status_class' ? presentStagePalette(isRollup ? areas_rollup : areas_leaf) : undefined}
     title="Hamburg {areaLevelLabel[inputs.area_level.value]} — {inputs.indicator.label}, latest period"
     startingLat={53.5511}
     startingLong={9.9937}
@@ -291,14 +376,16 @@ select
     end as stage_label,
     dominant_share,
     n_habitable_children,
-    is_dominant_fragile
+    is_dominant_fragile,
+    has_incomplete_population
 from gentriduck_marts.mart_area_rollup_stage_mix
 where area_level = '${inputs.area_level.value}'
   and city_code = 'HH'
+  and variant = 'live_data'
   and period_yyyymm = (
       select max(period_yyyymm)
       from gentriduck_marts.mart_area_rollup_stage_mix
-      where area_level = '${inputs.area_level.value}' and city_code = 'HH'
+      where area_level = '${inputs.area_level.value}' and city_code = 'HH' and variant = 'live_data'
   )
 qualify row_number() over (partition by area_code order by typology_stage) = 1
 order by dynamism_index_weighted_mean desc
@@ -308,12 +395,13 @@ order by dynamism_index_weighted_mean desc
 
 <DataTable data={area_table_rollup} rows=10>
     <Column id=area_name title="Area"/>
-    <Column id=status_index title="Social status (1=least deprived … 4=most deprived, population-weighted mean)"/>
-    <Column id=dynamism_index title="Speed of change (population-weighted mean, 3-year window)"/>
+    <Column id=status_index title="Social status (1=least deprived … 4=most deprived, population-weighted mean where available)"/>
+    <Column id=dynamism_index title="Speed of change (population-weighted mean where available, 3-year window)"/>
     <Column id=stage_label title="Dominant gentrification stage"/>
     <Column id=dominant_share title="Dominant stage's population share" fmt="pct0"/>
     <Column id=n_habitable_children title="Gebiete with data"/>
     <Column id=is_dominant_fragile title="Fragile (< 3 Gebiete)?"/>
+    <Column id=has_incomplete_population title="Population data incomplete (equal-weighted)?"/>
 </DataTable>
 
 ### Stage mix — full breakdown per area
@@ -322,6 +410,9 @@ Never rely on the dominant stage alone: this table is the full population-weight
 distribution behind every area above, including the `uninhabited / no data` share where relevant.
 
 ```sql area_mix_table
+-- #310 review fix (LOW-6): explicit variant filter, same as areas_rollup/area_table_rollup above
+-- -- Hamburg's subarea_l1/district area_name is real (no Berlin-Bezirk-style blank-name gap), so
+-- unlike /berlin/maps' equivalent query this one needs no name-fallback join.
 select
     area_name,
     typology_stage,
@@ -330,10 +421,11 @@ select
 from gentriduck_marts.mart_area_rollup_stage_mix
 where area_level = '${inputs.area_level.value}'
   and city_code = 'HH'
+  and variant = 'live_data'
   and period_yyyymm = (
       select max(period_yyyymm)
       from gentriduck_marts.mart_area_rollup_stage_mix
-      where area_level = '${inputs.area_level.value}' and city_code = 'HH'
+      where area_level = '${inputs.area_level.value}' and city_code = 'HH' and variant = 'live_data'
   )
 order by area_name, stage_population_share desc nulls last
 ```
@@ -372,6 +464,11 @@ Offering Advantage by domain — see the
   by the population-weighted *dominant* stage among each area's constituent Gebiete — always shown
   with its population share and the full stage mix (see the "Stage mix" table), never as a
   standalone label. Areas with fewer than 3 Gebiete contributing real data are flagged fragile.
+- **"Population-weighted" is a best-effort weighting, not a guarantee.** Hamburg's latest published
+  period has no population figures for effectively any Gebiet, so every Stadtteil/Bezirk rollup
+  shown here currently falls back to *equal* weighting across its constituent Gebiete rather than
+  true population weighting — flagged per-area as "population data incomplete" in the table and
+  map tooltip.
 - **No neighbourhood names at the Gebiet level** — Hamburg's statistische Gebiete are shown by
   numeric code only; see the [Hamburg data hub](/hamburg) for why. Stadtteil/Bezirk do have names.
 - **Only Hamburg's D1/D2 Sozialmonitoring outcome is shown here** — the demographic (D4)

@@ -49,9 +49,9 @@
 -- `gentrification_index.population` is NOT reliably populated for every live_data
 -- period: empirically (re-derive by querying gentrification_index directly), Berlin's
 -- 202112/202312 periods and Hamburg's entire latest 202512 period carry
--- `population IS NULL` for effectively every row (only 6/542 non-null in Berlin
--- 202112/202312; 0/857 non-null in Hamburg 202512) -- including rows that DO have a
--- real (non-null) status_class. A strict `coalesce(population, 0)` weight would zero
+-- `population IS NULL` for EVERY row (0/542 non-null in Berlin 202112 and 0/542
+-- non-null in Berlin 202312; 0/857 non-null in Hamburg 202512) -- including rows that
+-- DO have a real (non-null) status_class. A strict `coalesce(population, 0)` weight would zero
 -- out nearly every habitable child in exactly those periods, degenerating
 -- `status_index_weighted_mean`/`dominant_stage` to NULL across the board for the
 -- CURRENT/latest Hamburg period and two of Berlin's recent periods -- the periods a
