@@ -118,4 +118,16 @@ All four are mechanical/verification items enforceable by the data-engineer-revi
 admission commit; none requires new methodology. On their satisfaction I am satisfied the Hamburg
 admission into `gentrification_index` is spatially and statistically sound.
 
+---
+
+## Addendum (2026-07-31, #329)
+
+The "3-indicator-vs-5-indicator D4 (EWR) composite difference" referenced above is a historical
+description, left as-is. #329 subsequently changed `int_ewr_socioeco_hamburg`'s `ewr_composite` to
+a **2-indicator** composite (dropping `unemployment_share` as a predictor/outcome conflation risk
+against Hamburg's own D1 Sozialmonitoring Statusindex, ADR-0014 §2). This does not change the
+finding above — the composite still does not enter `gentrification_index` (this mart), so the
+conclusion that "Question 4's '3-vs-5 composite' concern is moot for this specific mart" continues
+to hold verbatim for the now-2-vs-5 composite.
+
 **Verdict: PASS WITH CONDITIONS**

@@ -1385,7 +1385,7 @@ models:
       framing gated by domain-expert sign-off (I19-domain-signoff.md, PASS).
       Rollup rule (extensive=sum, intensive=summed-numerator recompute)
       geo-DS approved (I19-geo-signoff.md, PASS), reusing int_mss_bzr_aggregate's
-      precedent. Berlin only; Hamburg parity deferred to after H3 (#237).
+      precedent.
 
       #269 (I-ortsteile): extended with an 'ortsteil' level. Same rollup rule;
       constituent-PLR membership comes from the DOMINANT PLR->Ortsteil
@@ -1393,6 +1393,17 @@ models:
       is_dominant_ortsteil), not a code-prefix substr() -- Ortsteil does not
       nest into PLR (see dim_area_hierarchy.sql). 'ortsteil' rows are always
       area_vintage='lor_2021' (the crosswalk's scope).
+
+      #313: widened to Hamburg (city_code='HH') -- INDIVIDUAL indicators
+      only, no blended composite column (the Hamburg EWR-equivalent composite
+      stays Berlin-only-excluded from fct_gentrification_change.sql; see
+      mart_area_demographics.sql header for the full rationale). Hamburg rows
+      are exposed at Stadtteil grain (area_level='subarea_l1') and rolled up
+      to district/Bezirk (area_level='district') only -- never at the finer
+      Gebiet grain (domain-expert condition, #313: Hamburg's Gebiet-level EWR
+      predictor pillar is uniformly inherited from its parent Stadtteil with
+      zero sub-Stadtteil variation, so Gebiet-grain display would be false
+      precision). unemployment_share is Hamburg-only.
     meta:
       dbt_meta_owner: data-engineer
     data_tests:
@@ -1407,35 +1418,50 @@ models:
               - reference_year
     columns:
       - name: city_code
-        description: City identifier (ADR-0005). Currently 'BER' only.
+        description: City identifier (ADR-0005). 'BER' or 'HH' (#313).
         data_tests:
 
           - not_null
           - accepted_values:
               arguments:
-                values: ["BER"]
+                values: ["BER", "HH"]
       - name: area_level
-        description: Geo-hierarchy level (I18/I-ortsteile) -- plr, bzr, pgr, bezirk, or ortsteil.
+        description: >
+          Geo-hierarchy level -- plr, bzr, pgr, bezirk, or ortsteil (Berlin,
+          I18/I-ortsteile); subarea_l1 (Stadtteil) or district (Bezirk)
+          (Hamburg, #313).
         data_tests:
 
           - not_null
           - accepted_values:
               arguments:
-                values: ["plr", "bzr", "pgr", "bezirk", "ortsteil"]
+                values:
+                  [
+                    "plr",
+                    "bzr",
+                    "pgr",
+                    "bezirk",
+                    "ortsteil",
+                    "subarea_l1",
+                    "district",
+                  ]
       - name: area_code
-        description: LOR area code at this level's own grain (8/6/4/2-digit).
+        description: >
+          LOR area code at this level's own grain (8/6/4/2-digit) for Berlin;
+          Hamburg Stadtteil/Bezirk code (#313) for Hamburg.
         data_tests:
 
           - not_null
       - name: reference_year
-        description: Calendar year of the 31-Dec EWR snapshot.
+        description: Calendar year of the 31-Dec EWR snapshot (Berlin) or the annual release (Hamburg, #313).
         data_tests:
 
           - not_null
       - name: residents_total
         description: >
-          Total registered residents. PLR: EWR indicator value. Rolled-up
-          levels: SUM of constituent PLR values (extensive indicator).
+          Total registered residents. Finest grain (PLR / Stadtteil): EWR
+          indicator value. Rolled-up levels: SUM of constituent finer-grain
+          values (extensive indicator).
       - name: foreigners_share
         description: >
           Share of foreign nationals. Rolled-up levels: recomputed from
@@ -1447,15 +1473,46 @@ models:
           Share of residents with migration background. Same rollup rule and
           domain-expert framing gate as foreigners_share. Methodologically
           stable only from 2017 (Mikrozensus reform, cf. int_ewr_socioeco).
+          Berlin only -- NULL for all Hamburg rows (#313); Hamburg's EWR
+          source does not publish this indicator.
+      - name: unemployment_share
+        description: >
+          Share of registered unemployed. Hamburg only (#313) -- NULL for all
+          Berlin rows; Berlin's EWR source does not publish this indicator at
+          this mart's grain. DENOMINATOR (#313 C-2): sourced from Hamburg's
+          EWR column `arb_arbeitslose_ingesamt_proz` ("Arbeitslose je 100
+          Einwohner") -- TOTAL RESIDENT POPULATION, not the working-age
+          population, i.e. this is NOT the German *Arbeitslosenquote*
+          (unemployment rate). Population-denominator, consistent with the
+          internal arithmetic; NOT independently confirmed from a
+          Statistikamt Nord variable definition document (see
+          int_ewr_demographics_wide_hamburg's schema.yml entry for the full
+          grounding). NOT comparable to Berlin's MSS `arbeitslose_anteil`
+          (mart_mss_area_aggregate) -- different numerator (SGB II vs. all
+          registered unemployed) AND different denominator (working-age vs.
+          total population); do not present the two indicators side by side
+          as if they measured the same thing. Because the denominator IS
+          total population, this mart's district rollup weight
+          (residents_total) is exactly correct for this indicator, not an
+          approximation. Rolled-up (district) values recomputed from summed
+          numerators (population-weighted), never averaged, same rule as
+          every other *_share column. Carries the SAME small-area-grain
+          stigmatization/misuse framing caveat as foreigners_share
+          (domain-expert condition, #313, citing
+          docs/epic-i/I19-domain-signoff.md's precedent for that framing).
       - name: n_plr
-        description: Number of constituent PLRs contributing to this row (1 for area_level='plr').
+        description: >
+          Number of constituent finer-grain areas contributing to this row
+          (1 for area_level in ('plr', 'subarea_l1'); count of constituent
+          PLRs/Stadtteile for rolled-up levels, #313).
         data_tests:
 
           - not_null
       - name: any_indicator_suppressed
         description: >
-          TRUE if this area/year (or, for rollups, any constituent PLR) had a
-          suppressed source cell -- degrade gracefully, don't silently zero.
+          TRUE if this area/year (or, for rollups, any constituent
+          PLR/Stadtteil) had a suppressed source cell -- degrade gracefully,
+          don't silently zero.
         data_tests:
 
           - not_null
@@ -1860,12 +1917,19 @@ models:
         description: >
           Area name from dim_area, denormalized for convenience. NULL for
           area_level='bezirk' -- dim_area carries no 'bezirk'-level rows today
-          (see model header); not fabricated here.
+          (see model header); not fabricated here. Also NULL for the 4 Hamburg
+          subarea_l1 rows whose area_code is one of the merged EWR
+          disclosure-control Stadtteil pairs (e.g. '02117/118' -- #313 C-1,
+          dim_area_hierarchy.sql's hh_l1_merged_to_district CTE): these
+          composite codes have no WFS feature/geometry of their own, so
+          dim_area (which is sourced from the WFS) carries no row for them
+          either -- same "honest, not fabricated" discipline as the
+          bezirk-level case, not a new exception class.
         data_tests:
 
           - not_null:
               config:
-                where: "area_level != 'bezirk'"
+                where: "area_level != 'bezirk' and area_code not like '%/%'"
       - name: period_yyyymm
         description: >
           Period key matching gentrification_index's own period_yyyymm

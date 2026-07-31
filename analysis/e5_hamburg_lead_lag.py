@@ -553,6 +553,108 @@ def test_h3_d4_clustered(df_ll: pd.DataFrame) -> list[dict]:
 
 
 # ---------------------------------------------------------------------------
+# #330 self-correction record (durability fix -- D330-C1, geo-signoff E-C1,
+# domain-signoff D330-C1/C2/C3/C4/C5:
+# docs/epic-h/330-hh-e5-regen-geo-signoff.md,
+# docs/epic-h/330-hh-e5-regen-domain-signoff.md)
+# ---------------------------------------------------------------------------
+#
+# This block is a STATIC historical audit record, not a live computation: it
+# documents a specific one-time methodology correction (#329 removed
+# `unemployment_share` -- a direct constituent of Hamburg's own D1 Statusindex
+# outcome -- from the Hamburg D4 composite) and preserves the stale,
+# contaminated pre-#329 Section 2 numbers (generated 2026-07-10) for audit
+# purposes. It is embedded directly in this generator -- rather than left as
+# a hand-edit on the generated markdown file -- because `write_findings`
+# below rewrites docs/epic-h/E5-hamburg-lead-lag-findings.md wholesale
+# (`open(OUTPUT_MD, "w")`) on every `uv run poe analysis` run: a note living
+# only in the generated file would be silently erased by the next
+# regeneration, which is exactly the failure both #330 sign-offs flagged
+# (domain-signoff §2 "one command away from deletion"; geo-signoff E-C1). Do
+# not delete this block; if the underlying #329/#330 correction is ever
+# superseded by a further methodology change, update this text (and re-run
+# the dual methodology gate per CLAUDE.md) rather than removing the audit
+# trail.
+CORRECTION_330_NOTE_MD = """## Correction (#330): pre-#330 Section 2 numbers were computed under a contaminated D4 composite
+
+**This note must not be deleted or silently overwritten by a future regeneration** -- it records a
+methodology self-correction that is itself part of the O2 whitepaper narrative (per #329
+domain-expert sign-off condition D-C2, `docs/epic-h/329-hh-d4-conflation-domain-signoff.md`).
+
+Prior to #329 (merged into `develop` @ 4cee9dce), Hamburg's D4 predictor composite
+(`int_ewr_socioeco_hamburg.ewr_composite`) was built from **three** indicators, one of which
+(`unemployment_share`) is also a direct constituent of Hamburg's own D1 outcome (the Sozialmonitoring
+Statusindex used as `status_index_t`/`status_index_tk` throughout this document). Because the
+covariate (`ewr_composite_t`) and the dependent variable it was being used to control for both
+partly reflected the same underlying unemployment measure, the **entire stale Section 2 row** first
+reported here (dated 2026-07-10) was **partly self-predicting** -- not only the `ewr_composite_t`
+coefficient/p-value itself, but also the primary change-predictor coefficients (`delta_dynamism_t`
+for H3a, `delta_status_ordinal` for H3b), since partialling out an endogenous control biases every
+coefficient in the same OLS specification. This was therefore not an independent D4-controlled test
+of H3a/H3b, but one contaminated by shared construction with D1. #329 removed `unemployment_share`
+from the Hamburg composite (now a 2-indicator composite); this document was regenerated against that
+corrected composite per #330 on 2026-07-31 (Section 1 and Section 2 tables above are the
+corrected/current numbers).
+
+The **stale, contaminated** pre-#329 Section 2 results (3-indicator composite, generated 2026-07-10)
+are kept below for transparency and audit trail, not because they are usable for any citation or
+inference -- do not cite these numbers as an independent D4-controlled result.
+
+<details>
+<summary>Superseded/contaminated: pre-#329 Section 2 results (3-indicator composite incl. unemployment_share -- DO NOT CITE)</summary>
+
+| Hyp | Test | N | N clusters | Value | p-value | Sig | Expected Dir | Actual Dir | Match | ewr_composite_t coef (p) |
+|---|---|---|---|---|---|---|---|---|---|---|
+| H3a (D4-controlled, Stadtteil-clustered) | OLS-clustered k=1 (1yr) | 9118 | 95 | -0.0058 | 0.0964 | No | negative | negative | PASS | -2.75e-04 (p=0.9370) |
+| H3b (D4-controlled, Stadtteil-clustered) | OLS-clustered k=1 (1yr) | 9118 | 95 | -0.1165 | 0.1388 | No | negative | negative | PASS | -0.0023 (p=0.8007) |
+| H3a (D4-controlled, Stadtteil-clustered) | OLS-clustered k=2 (2yr) | 8277 | 95 | -0.0018 | 0.6125 | No | negative | negative | PASS | -0.0081 (p=0.2089) |
+| H3b (D4-controlled, Stadtteil-clustered) | OLS-clustered k=2 (2yr) | 8277 | 95 | -0.0257 | 0.6109 | No | negative | negative | PASS | -0.0130 (p=0.1817) |
+| H3a (D4-controlled, Stadtteil-clustered) | OLS-clustered k=3 (3yr) | 7436 | 95 | -0.0057 | 0.1642 | No | negative | negative | PASS | -0.0168 (p=0.0573) |
+| H3b (D4-controlled, Stadtteil-clustered) | OLS-clustered k=3 (3yr) | 7436 | 95 | -0.0721 | 0.2158 | No | negative | negative | PASS | -0.0056 (p=0.4800) |
+
+Stale directional agreement (D4-controlled, clustered): 6/6. Stale significant: 0/6.
+Stale overall scorecard (bivariate + D4-controlled, pre-#329 composite): 12/15 directional agreement,
+5/15 significant.
+
+**Note on the 5/15 -> 3/15 significance drop (#330 regeneration; D330-C2 correction):** this drop is
+**not caused by #329**. Section 2 -- the only part of this document that reads `ewr_composite_t` --
+is 0/6 significant in **both** the stale (pre-#329) and corrected (post-#329) runs, so the composite
+fix changed none of Section 2's significance calls. The entire 5/15 -> 3/15 drop comes from
+**Section 1** (`run_spearman`, which never reads `ewr_composite_t` and therefore structurally cannot
+be affected by #329): H3a/H3b at k=1 lost their only nominally-significant bivariate result,
+flipping from Sig=Yes (p=0.0384, N=9285) in the stale run to Sig=No (p=0.0514, N=9293) in this
+regeneration -- alongside a shift in rho (-0.0215 -> -0.0202). Because #329 touched only Hamburg's
+D4-composite SQL and Section 1 has no D4 dependency, this Section 1 shift must originate elsewhere in
+`develop` between the stale run's generation date (2026-07-10) and this regeneration (2026-07-31) --
+most plausibly **#313** (Hamburg merged-Stadtteil crosswalk fix, commit `3ed12751`) and/or **#307**.
+**Consequence: this regeneration is a combined-run comparison** (D4-composite fix #329 + crosswalk
+fix #313 + possibly other intervening `develop` commits), **not a clean #329-only counterfactual** --
+the corrected 3/15 overall-significant count reflects all of that combined change, not #329 in
+isolation. See the forward note in Limitations below for how to isolate a clean #329-only effect if
+one is ever needed for citation.
+
+</details>
+
+**What changed and what didn't:** directional agreement is identical (6/6 PASS in both the stale and
+corrected Section 2 runs) and significance is identical (0/6 significant in both) -- but this should
+**not** be read as "nothing changed": the whole stale Section 2 row is unusable, not only its
+`ewr_composite_t` column (see the broadened contamination note above). Point estimates and p-values
+on the **primary** change-predictor coefficients moved substantially, not modestly -- e.g. H3b k=1's
+primary coefficient moved -0.1165 -> -0.0477 (a 59% reduction in magnitude) and H3a k=1's p-value
+moved 0.0964 -> 0.3081 -- alongside the smaller `ewr_composite_t` shift (e.g. H3a k=1: -2.75e-04
+(p=0.9370) -> 0.0017 (p=0.6544), even flipping sign). None of these shifts happened to flip a
+directional-match or significance call at p<0.05 in this dataset, so the substantive conclusion (no
+significant D4-controlled directional effect for either H3a or H3b at any lag_k) is unchanged --
+but that stability is a property of this dataset, not evidence the pre-#329 specification was valid.
+The correction was necessary because an endogenous control (one that shares construction with the D1
+outcome it is meant to partial out) is not a methodologically valid test of H3a/H3b regardless of
+whether its point estimates happen to resemble the corrected ones; identical qualitative conclusions
+from an invalid and a valid specification here is a property of this dataset, not a retrospective
+justification for having used the invalid specification. See Limitations/Epic B framing below.
+"""
+
+
+# ---------------------------------------------------------------------------
 # Output
 # ---------------------------------------------------------------------------
 
@@ -638,7 +740,11 @@ def write_findings(
         f.write(
             "- **Task:** H-C3 (#160) -- annual-cadence Hamburg lead-lag model + independent H3a/H3b re-test\n"
         )
-        f.write("- **Issue:** #160 (H-C3); #129 (Stadtteil SE-clustering binding requirement)\n")
+        f.write(
+            "- **Issue:** #160 (H-C3); #129 (Stadtteil SE-clustering binding requirement) "
+            "**(Follow-up now tracked: #265 (H-reg-SE) — see "
+            "`docs/planning/deferred-work-audit-2026-07.md`.)**\n"
+        )
         f.write(f"- **Date:** {today}\n")
         f.write(f"- **Data:** int_hamburg_lead_lag (H-C3 #160), n={len(df_ll)} rows\n")
         f.write(
@@ -717,6 +823,12 @@ def write_findings(
             f"Significant: {n_sig_d4}/{len(results_d4_clustered)}.**\n\n"
         )
 
+        # #330 durability fix (D330-C1 / E-C1): emit the self-correction record from
+        # the generator itself so it survives every `uv run poe analysis` re-run --
+        # see CORRECTION_330_NOTE_MD's own header comment for the full rationale.
+        f.write(CORRECTION_330_NOTE_MD)
+        f.write("\n")
+
         f.write("## Overall scorecard\n\n")
         all_results = results_bivariate + results_d4_clustered
         n_pass_all = sum(1 for r in all_results if r["dir_match"])
@@ -724,6 +836,19 @@ def write_findings(
         f.write(
             f"**Total directional agreement: {n_pass_all}/{len(all_results)}. "
             f"Significant: {n_sig_all}/{len(all_results)}.**\n\n"
+        )
+        # D330-C4: composition caveat -- do not let "n/{len(all_results)}" be read as
+        # "{len(all_results)} lead-lag tests"; Section 1 is symmetric co-movement,
+        # Section 2 is the only genuinely directional D4-controlled test.
+        f.write(
+            f"**Composition caveat:** this {len(all_results)}-test count mixes two different kinds "
+            f"of test -- {len(results_bivariate)} of them are the symmetric bivariate co-movement "
+            "tests from Section 1 (which, per the caveat above Section 1's table, cannot by "
+            f"construction distinguish H3a from H3b), and only {len(results_d4_clustered)} are the "
+            f"genuinely directional D4-controlled tests from Section 2. Do not cite "
+            f'"{n_pass_all}/{len(all_results)}" as "{len(all_results)} lead-lag tests" -- read it as '
+            f"{len(results_bivariate)} co-movement tests plus {len(results_d4_clustered)} directional "
+            "tests.\n\n"
         )
 
         f.write("## Comparison to Berlin (int_mss_lead_lag / e1_regressions.py test_h3)\n\n")
@@ -765,13 +890,31 @@ def write_findings(
             "(02120, Airbus works/airport), Neuland (02702, industrial estate), Moorburg (02711, "
             "industrial/former power plant), confirmed by direct query against "
             "`stg_hamburg_ewr_stadtteil` to be a genuine no-EWR-coverage gap (same "
-            ">300-resident-threshold rationale as Stage 1), not a join/name-matching bug. See the "
-            "observed cluster count (95) reported in Section 2 above.\n"
+            ">300-resident-threshold rationale as Stage 1), not a join/name-matching bug. "
+            "**Re-verified per #330**: dropping `unemployment_share` from the D4 composite (#329) "
+            "removes one column's worth of potential NULLs but does not change which Stadtteile "
+            "have zero EWR rows for the two *remaining* indicators, so the observed cluster count "
+            "is unchanged at 95 after the #330 regeneration (re-run on 2026-07-31 against the "
+            "corrected 2-indicator composite; see the observed cluster count (95) reported in "
+            "Section 2 above -- same value as the pre-#330 run, confirmed not coincidental but "
+            "structural, since the NULL-driving gap is at the Stadtteil/EWR-coverage level, not "
+            "the indicator-count level).\n"
         )
         f.write(
             "- **Epic B framing**: directional/exploratory revival work (CLAUDE.md) -- honest "
             "reporting of whatever direction/significance is observed is the bar, not matching "
             "Berlin's thesis-confirmed result.\n"
+        )
+        f.write(
+            "- **Forward note on isolating a clean #329-only effect (E-C2, geo-signoff "
+            "`docs/epic-h/330-hh-e5-regen-geo-signoff.md`, citation-only, no action required now):** "
+            "this regeneration's before/after comparison is confounded between #329 (D4-composite "
+            "fix) and other `develop` changes landed since the stale run (2026-07-10), most "
+            "plausibly #313's Hamburg merged-Stadtteil crosswalk fix and/or #307 -- see the "
+            '"Note on the 5/15 -> 3/15 significance drop" above. If a clean #329-only effect is '
+            "ever needed for citation, re-run the pre-#329 (3-indicator) composite against the "
+            "*current* data snapshot to isolate it, rather than relying on the 2026-07-10 stale "
+            "numbers as the pre-#329 baseline.\n"
         )
 
 

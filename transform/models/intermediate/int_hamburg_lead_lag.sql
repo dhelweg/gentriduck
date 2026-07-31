@@ -86,8 +86,10 @@
 -- rather than a substantive Hamburg exclusion.
 --
 -- D4 baseline discipline (index-definition.md §4.3, binding; same rule as
--- Berlin's model, re-applied to Hamburg's 3-indicator ewr_composite from
--- int_ewr_socioeco_hamburg):
+-- Berlin's model, re-applied to Hamburg's 2-indicator ewr_composite from
+-- int_ewr_socioeco_hamburg -- #329, 2026-07-31: unemployment_share was dropped
+-- from that composite as a predictor/outcome conflation with Hamburg's D1
+-- Sozialmonitoring Statusindex; see that model's header):
 -- D4 enters ONLY as a baseline LEVEL (ewr_composite_t at time t). NO D4 delta
 -- columns in the predictor block (D4 changes are near-tautological outcome
 -- proxies; Döring & Ulbricht 2016; §4.2). D4 change features are excluded by
