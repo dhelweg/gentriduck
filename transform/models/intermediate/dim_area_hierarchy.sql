@@ -54,6 +54,20 @@
 -- ingest_hamburg_geo.py's WFS_LAYERS['stadtteil']['parent_prop']) -- this is
 -- source-provided, not a derivation, so it is simply passed through here.
 --
+-- MERGED EWR Stadtteil pairs (#313 C-1): this WFS-sourced edge (the
+-- hh_l1_to_district CTE below) only covers the 104 individual official
+-- Stadtteile the WFS digitizes. Hamburg's EWR-equivalent Stadtteil source
+-- (stg_hamburg_ewr_stadtteil) additionally publishes 4 small-count
+-- disclosure-control MERGED Stadtteil pairs per year (e.g. '02117/118'),
+-- which have no WFS feature/geometry of their own and so cannot resolve
+-- through this pass-through edge. These 4 pairs are covered instead by an
+-- explicit, hardcoded `hh_l1_merged_to_district` CTE (see that CTE's own
+-- comment, below, for the full grounding: which 4 pairs, which Bezirk each
+-- resolves to and why, and the 15,310-resident / 4.1%-of-Hamburg-Mitte
+-- undercount this fixes) -- see also
+-- docs/epic-h/313-hh-area-demographics-geo-signoff.md (F1) and
+-- 313-hh-area-demographics-domain-signoff.md (D-1).
+--
 -- subarea_l2 (statistisches Gebiet) -> subarea_l1 (Stadtteil): RESOLVED
 -- 2026-07-17 (OA-D1b, #240, ADR-0024 D4) via a ST_Within(centroid,
 -- parent_geom) spatial crosswalk. Confirmed live 2026-07-12 (see the previous
@@ -227,6 +241,66 @@ with
             and parent_area_code is not null
     ),
 
+    -- Hamburg: the 4 MERGED disclosure-control Stadtteil pairs -> Bezirk
+    -- (#313 C-1). Hamburg's EWR-equivalent Stadtteil source
+    -- (stg_hamburg_ewr_stadtteil) publishes 99 units per year, not the 104
+    -- individual official Stadtteile the LGV WFS digitizes: 95 individual
+    -- codes plus 4 small-count-disclosure-control MERGED pairs whose
+    -- area_code is a slash-joined composite of its two constituent
+    -- Stadtteil-Schluessel (stable across all 12 confirmed years,
+    -- 2013-2024; see stg_hamburg_ewr_stadtteil.sql's header). These
+    -- composite codes have no WFS feature of their own -- the WFS only ever
+    -- digitizes the 104 individual Stadtteile -- so hh_l1_to_district above
+    -- (a straight pass-through of the WFS's own 'bezirk' attribute) has NO
+    -- edge for them, and mart_area_demographics.sql's hh_with_district inner
+    -- join silently dropped all 4 from every Hamburg district rollup before
+    -- this fix (15,310 residents / 0.78% of Hamburg in 2024, concentrated as
+    -- a 4.1% undercount of Hamburg-Mitte and a 1.4% undercount of Harburg --
+    -- see docs/epic-h/313-hh-area-demographics-geo-signoff.md F1 and
+    -- 313-hh-area-demographics-domain-signoff.md D-1 for the full finding).
+    --
+    -- An explicit hardcoded VALUES crosswalk is used here rather than a
+    -- substr()/code-prefix derivation (the pattern used elsewhere in this
+    -- model): a slash-joined two-fragment code (e.g. '02117/118') has no
+    -- well-formed prefix position to read a parent digit from, so a
+    -- derivation would be either wrong or a disguised hardcode anyway --
+    -- hardcoding the 4 source-confirmed facts directly is the honest choice
+    -- (same conclusion the domain sign-off reaches independently).
+    --
+    -- District assignment fact for each pair (verified independently against
+    -- stg_hamburg_geo's own WFS-sourced parent_area_code for each
+    -- constituent individual Stadtteil code -- both halves of every pair
+    -- share the same Bezirk, so no allocation judgement is being made, only
+    -- a lookup of an unambiguous fact):
+    -- 02117/118 = Kleiner Grasbrook (02117) + Steinwerder (02118)
+    -- -> Hamburg-Mitte, Bezirk '1'
+    -- 02119/120 = Waltershof (02119) + Finkenwerder (02120)
+    -- -> Hamburg-Mitte, Bezirk '1'
+    -- 02702/703 = Neuland (02702) + Gut Moor (02703)
+    -- -> Harburg, Bezirk '7'
+    -- 02711/712 = Moorburg (02711) + Altenwerder (02712)
+    -- -> Harburg, Bezirk '7'
+    -- District codes are the plain (non-zero-padded) single-digit strings
+    -- '1'/'7' -- confirmed to match hh_l1_to_district's/dim_area's own
+    -- Hamburg district area_code format (queried directly against the built
+    -- warehouse: dim_area's HH district rows are area_code in
+    -- ('1','2','3','4','5','6','7'), and hh_l1_to_district emits the SAME
+    -- un-padded single-digit strings for these Bezirke via the WFS
+    -- pass-through -- not a 2-digit padded code).
+    hh_l1_merged_to_district(
+        city_code,
+        area_level,
+        area_code,
+        parent_area_level,
+        parent_area_code
+    ) as (
+        values
+            ('HH', 'subarea_l1', '02117/118', 'district', '1'),
+            ('HH', 'subarea_l1', '02119/120', 'district', '1'),
+            ('HH', 'subarea_l1', '02702/703', 'district', '7'),
+            ('HH', 'subarea_l1', '02711/712', 'district', '7')
+    ),
+
     -- Berlin: Ortsteil -> Bezirk (#269, I-ortsteile). Source-provided parent
     -- code (WFS `sch` prefix, passed through by stg_berlin_ortsteil), same
     -- pass-through treatment as hh_l1_to_district above -- see header.
@@ -343,6 +417,9 @@ with
         union all
         select *
         from hh_l1_to_district
+        union all
+        select *
+        from hh_l1_merged_to_district
         union all
         select *
         from ber_ortsteil_to_bezirk

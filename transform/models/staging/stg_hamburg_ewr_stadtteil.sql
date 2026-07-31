@@ -1,10 +1,29 @@
 -- stg_hamburg_ewr_stadtteil.sql
 -- Staging view over Hamburg's "Regionalstatistische Daten der Stadtteile"
--- parquet (Stadtteil grain, ~104-105 areas), produced by
+-- parquet (Stadtteil grain), produced by
 -- ingestion/hamburg/ewr/ingest_hamburg_ewr_stadtteil.py
 -- (#40 H1, ADR-0014 Pillar 3 -- PRIMARY source only). UNPIVOTs wide-format
 -- parquet (one row per Stadtteil x year) to long format (one row per
 -- Stadtteil x year x indicator), mirroring stg_berlin_ewr's shape.
+--
+-- GRAIN (#313 C-1, 2026-07-31; corrects an earlier "~104-105 areas" claim):
+-- this source publishes 99 units, not 104/105 -- 95 individual Stadtteile
+-- plus 4 MERGED Stadtteil pairs (ordinary German small-count disclosure
+-- control), whose area_code is a slash-joined composite of the two
+-- constituent Stadtteil-Schluessel (stable across all 12 confirmed years,
+-- 2013-2024):
+-- 02117/118 = Kleiner Grasbrook + Steinwerder (Hamburg-Mitte, Bezirk '1')
+-- 02119/120 = Waltershof + Finkenwerder       (Hamburg-Mitte, Bezirk '1')
+-- 02702/703 = Neuland + Gut Moor               (Harburg, Bezirk '7')
+-- 02711/712 = Moorburg + Altenwerder           (Harburg, Bezirk '7')
+-- These 4 rows appear at Stadtteil grain here like any other area_code (this
+-- model does no filtering or special-casing of them); their Bezirk
+-- resolution for the mart's district rollup is handled downstream by an
+-- explicit crosswalk in dim_area_hierarchy.sql (hh_l1_merged_to_district
+-- CTE), since the WFS geo layer this model does NOT read has no feature for
+-- a merged pair. See ingest_hamburg_ewr_stadtteil.py's module docstring and
+-- docs/epic-h/313-hh-area-demographics-geo-signoff.md (F1) /
+-- 313-hh-area-demographics-domain-signoff.md (D-1) for the full grounding.
 --
 -- Storage path: data/raw/hamburg/ewr_stadtteil/stadtteile.parquet
 --

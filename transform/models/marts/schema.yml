@@ -1479,9 +1479,24 @@ models:
         description: >
           Share of registered unemployed. Hamburg only (#313) -- NULL for all
           Berlin rows; Berlin's EWR source does not publish this indicator at
-          this mart's grain. Rolled-up (district) values recomputed from
-          summed numerators (population-weighted), never averaged, same rule
-          as every other *_share column. Carries the SAME small-area-grain
+          this mart's grain. DENOMINATOR (#313 C-2): sourced from Hamburg's
+          EWR column `arb_arbeitslose_ingesamt_proz` ("Arbeitslose je 100
+          Einwohner") -- TOTAL RESIDENT POPULATION, not the working-age
+          population, i.e. this is NOT the German *Arbeitslosenquote*
+          (unemployment rate). Population-denominator, consistent with the
+          internal arithmetic; NOT independently confirmed from a
+          Statistikamt Nord variable definition document (see
+          int_ewr_demographics_wide_hamburg's schema.yml entry for the full
+          grounding). NOT comparable to Berlin's MSS `arbeitslose_anteil`
+          (mart_mss_area_aggregate) -- different numerator (SGB II vs. all
+          registered unemployed) AND different denominator (working-age vs.
+          total population); do not present the two indicators side by side
+          as if they measured the same thing. Because the denominator IS
+          total population, this mart's district rollup weight
+          (residents_total) is exactly correct for this indicator, not an
+          approximation. Rolled-up (district) values recomputed from summed
+          numerators (population-weighted), never averaged, same rule as
+          every other *_share column. Carries the SAME small-area-grain
           stigmatization/misuse framing caveat as foreigners_share
           (domain-expert condition, #313, citing
           docs/epic-i/I19-domain-signoff.md's precedent for that framing).
@@ -1902,12 +1917,19 @@ models:
         description: >
           Area name from dim_area, denormalized for convenience. NULL for
           area_level='bezirk' -- dim_area carries no 'bezirk'-level rows today
-          (see model header); not fabricated here.
+          (see model header); not fabricated here. Also NULL for the 4 Hamburg
+          subarea_l1 rows whose area_code is one of the merged EWR
+          disclosure-control Stadtteil pairs (e.g. '02117/118' -- #313 C-1,
+          dim_area_hierarchy.sql's hh_l1_merged_to_district CTE): these
+          composite codes have no WFS feature/geometry of their own, so
+          dim_area (which is sourced from the WFS) carries no row for them
+          either -- same "honest, not fabricated" discipline as the
+          bezirk-level case, not a new exception class.
         data_tests:
 
           - not_null:
               config:
-                where: "area_level != 'bezirk'"
+                where: "area_level != 'bezirk' and area_code not like '%/%'"
       - name: period_yyyymm
         description: >
           Period key matching gentrification_index's own period_yyyymm

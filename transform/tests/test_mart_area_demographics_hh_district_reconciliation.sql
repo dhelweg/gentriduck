@@ -11,8 +11,26 @@
 -- every district row is reconciled, not just one hand-picked example.
 --
 -- residents_total: exact sum match (extensive indicator).
--- foreigners_share: recomputed from summed numerators (intensive indicator,
--- rollup rule per mart_area_demographics.sql header) must match within 1e-9.
+-- foreigners_share, unemployment_share: recomputed from summed numerators
+-- (intensive indicators, rollup rule per mart_area_demographics.sql header)
+-- must match within 1e-9. unemployment_share added #313 C-2 (geo-DS F3
+-- non-blocking suggestion): pins the district rollup's exact behaviour on a
+-- NULL-share Stadtteil (its residents stay in the denominator, its NULL
+-- share drops out of the numerator -- same precedent as foreigners_share,
+-- see F3) as a regression guard, alongside the C-2 denominator
+-- documentation in schema.yml.
+--
+-- SCOPE NOTE (#313 C-1, docs/epic-h/313-hh-area-demographics-geo-signoff.md
+-- F1 / 313-hh-area-demographics-domain-signoff.md D-1): this test's
+-- hand_summed CTE joins through dim_area_hierarchy's subarea_l1 -> district
+-- edge -- the SAME edge mart_area_demographics.sql's hh_with_district CTE
+-- joins through. It therefore verifies ROLLUP ARITHMETIC (do the Stadtteile
+-- that DO resolve to a district sum correctly?), not rollup COMPLETENESS
+-- (does every Stadtteil resolve to a district at all?) -- a Stadtteil
+-- missing from that edge is absent from both sides of this comparison and
+-- cancels out, undetected. The completeness question is covered separately,
+-- and independently of this join, by
+-- test_mart_area_demographics_hh_district_completeness.sql.
 --
 -- Returns rows that FAIL reconciliation. Zero rows = test passes.
 with
@@ -23,7 +41,8 @@ with
             area_vintage,
             reference_year,
             residents_total,
-            foreigners_share
+            foreigners_share,
+            unemployment_share
         from {{ ref("mart_area_demographics") }}
         where area_level = 'subarea_l1'
     ),
@@ -36,7 +55,9 @@ with
             sl.reference_year,
             sum(sl.residents_total) as expected_residents_total,
             sum(sl.foreigners_share * sl.residents_total)
-            / nullif(sum(sl.residents_total), 0) as expected_foreigners_share
+            / nullif(sum(sl.residents_total), 0) as expected_foreigners_share,
+            sum(sl.unemployment_share * sl.residents_total)
+            / nullif(sum(sl.residents_total), 0) as expected_unemployment_share
         from subarea_l1_rows as sl
         inner join
             {{ ref("dim_area_hierarchy") }} as dah
@@ -54,7 +75,8 @@ with
             area_vintage,
             reference_year,
             residents_total as mart_residents_total,
-            foreigners_share as mart_foreigners_share
+            foreigners_share as mart_foreigners_share,
+            unemployment_share as mart_unemployment_share
         from {{ ref("mart_area_demographics") }}
         where area_level = 'district'
     )
@@ -67,7 +89,9 @@ select
     h.expected_residents_total,
     m.mart_residents_total,
     h.expected_foreigners_share,
-    m.mart_foreigners_share
+    m.mart_foreigners_share,
+    h.expected_unemployment_share,
+    m.mart_unemployment_share
 from hand_summed as h
 inner join
     mart_district as m
@@ -80,5 +104,10 @@ where
     > 0.001
     or abs(
         coalesce(h.expected_foreigners_share, 0) - coalesce(m.mart_foreigners_share, 0)
+    )
+    > 1e-9
+    or abs(
+        coalesce(h.expected_unemployment_share, 0)
+        - coalesce(m.mart_unemployment_share, 0)
     )
     > 1e-9

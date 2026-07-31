@@ -96,7 +96,11 @@
 -- District rollup uses dim_area_hierarchy's Hamburg subarea_l1 -> district
 -- edge (source-provided WFS attribute, see that model's header) via a JOIN,
 -- NOT a code-prefix substr() -- Hamburg area codes do not nest like Berlin's
--- LOR codes.
+-- LOR codes. That edge now ALSO covers Hamburg's 4 merged EWR Stadtteil
+-- codes (#313 C-1 fix, e.g. '02117/118') via an explicit crosswalk CTE
+-- added to dim_area_hierarchy.sql -- see hh_with_district's own comment
+-- below for the full C-1 finding/fix and that model's header for the
+-- crosswalk's grounding.
 -- unemployment_share is Hamburg-only (NULL for all Berlin rows, never
 -- fabricated); Berlin-only indicators not published in Hamburg's EWR source
 -- (age_18_27_share, age_27_45_share, age_45_65_share, mean_age_years,
@@ -106,6 +110,14 @@
 -- unemployment_share carries the SAME small-area-grain stigmatization/misuse
 -- framing caveat as foreigners_share (domain-expert condition, #313, citing
 -- docs/epic-i/I19-domain-signoff.md's precedent for that framing).
+-- unemployment_share's DENOMINATOR (#313 C-2) is total resident population
+-- ("Arbeitslose je 100 Einwohner"), NOT the working-age population -- i.e.
+-- it is NOT the German Arbeitslosenquote and is NOT comparable to Berlin's
+-- MSS arbeitslose_anteil (different numerator and denominator); see this
+-- column's schema.yml entry (marts + intermediate) for the full grounding.
+-- Because the denominator IS total population, this mart's district rollup
+-- weight (residents_total) is exact for unemployment_share, not an
+-- approximation.
 -- n_plr is reused (not renamed) for Hamburg rows too -- semantically "number
 -- of constituent finer-grain areas rolled into this row" (1 Stadtteil for
 -- subarea_l1 rows, count of constituent Stadtteile for district rows); kept
@@ -415,12 +427,27 @@ with
     -- aggregation formula, just a different constituent-area lookup
     -- mechanism (mirrors the Ortsteil rollup's own precedent for a
     -- non-code-prefix parent lookup).
-    -- inner join intentionally: a Stadtteil with no district parent edge in
-    -- dim_area_hierarchy (should not occur -- empirically all 99 Stadtteile
-    -- resolve to exactly one district, verified via
-    -- test_mart_area_demographics_hh_district_reconciliation.sql's row-count
-    -- reconciliation) is excluded rather than silently coalesced, same
-    -- discipline as the Ortsteil CTE above.
+    -- inner join: every one of the 99 Stadtteil units Hamburg's EWR source
+    -- publishes now has a resolvable district parent edge in
+    -- dim_area_hierarchy -- 95 individual Stadtteile via the WFS-sourced
+    -- subarea_l1 -> district edge, plus the 4 MERGED disclosure-control
+    -- Stadtteil pairs (e.g. '02117/118') via the explicit
+    -- hh_l1_merged_to_district crosswalk added for #313 C-1 (see
+    -- dim_area_hierarchy.sql's header for the full grounding). Before that
+    -- fix, this inner join silently dropped the 4 merged units -- 15,310
+    -- Hamburg residents (0.78% of the city), concentrated as a 4.1%
+    -- undercount in Hamburg-Mitte and a 1.4% undercount in Harburg -- and
+    -- the prior version of this comment incorrectly asserted this "should
+    -- not occur" and was "empirically verified" by the reconciliation test;
+    -- neither was true (see docs/epic-h/313-hh-area-demographics-geo-
+    -- signoff.md F1 and 313-hh-area-demographics-domain-signoff.md D-1 for
+    -- the full finding). The inner join is kept (rather than switched to a
+    -- left join) because every Stadtteil now DOES resolve; a future
+    -- Stadtteil with no district parent edge would still be silently
+    -- excluded here, same discipline as the Ortsteil CTE above --
+    -- test_mart_area_demographics_hh_district_completeness.sql now guards
+    -- against that regression independently of this join (see that test's
+    -- header for why the existing reconciliation test could not).
     hh_with_district as (
         select hb.*, dah.parent_area_code as district_code
         from hh_base as hb

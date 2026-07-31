@@ -5275,7 +5275,22 @@ models:
         description: Total registered residents per Stadtteil (EWR-equivalent indicator residents_total).
       - name: unemployment_share
         description: >
-          Share of registered unemployed. Hamburg-only indicator (not
+          Share of registered unemployed, sourced from Hamburg's EWR column
+          `arb_arbeitslose_ingesamt_proz` ("Arbeitslose je 100 Einwohner").
+          DENOMINATOR (#313 C-2): TOTAL RESIDENT POPULATION, not the
+          working-age population and not the labour force -- i.e. this is
+          NOT the German *Arbeitslosenquote* (unemployment rate). This
+          reading is population-denominator, consistent with the internal
+          arithmetic (an implied citywide registered-unemployed headcount
+          that only makes sense against total residents, not working-age
+          population -- reproduced 2026-07-31 against
+          data/raw/hamburg/ewr_stadtteil/stadtteile.parquet); it is NOT
+          independently confirmed from a Statistikamt Nord variable
+          definition document (none was found in this repo or linked from
+          the ingestor). NOT comparable to Berlin's MSS `arbeitslose_anteil`
+          (mart_mss_area_aggregate) -- different numerator (SGB II vs. all
+          registered unemployed) AND different denominator (working-age
+          population vs. total population). Hamburg-only indicator (not
           published in Berlin's EWR source) -- carries the same
           small-area-grain stigmatization/misuse framing caveat as
           foreigners_share (see mart_area_demographics.sql / schema.yml).

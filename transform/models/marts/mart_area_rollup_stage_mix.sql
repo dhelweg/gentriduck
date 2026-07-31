@@ -665,6 +665,21 @@ with
     -- condition 3). A friendly Bezirk display name, if wanted, belongs in the
     -- presentation layer (see web/scripts/export_area_geojson.py's BEZIRK_NAMES
     -- for the existing precedent), not fabricated here.
+    --
+    -- area_name is ALSO genuinely NULL for the 4 Hamburg subarea_l1 rows
+    -- whose area_code is one of the merged EWR disclosure-control Stadtteil
+    -- pairs (#313 C-1, e.g. '02117/118' -- see dim_area_hierarchy.sql's
+    -- hh_l1_merged_to_district CTE). These composite codes have no WFS
+    -- feature of their own, so dim_area (WFS-sourced) has no row for them --
+    -- and no leaf statistisches-Gebiet ever maps to the COMPOSITE code
+    -- either (the subarea_l2->subarea_l1 spatial crosswalk only ever
+    -- resolves to an INDIVIDUAL Stadtteil code), so these 4 codes are ALSO
+    -- MEDIUM-B "structural orphans" here (zero real leaf children, every
+    -- period) -- the same 'uninhabited / no data' placeholder-row treatment
+    -- as Ortsteil 0608/1106 and Stadtteil 02118/02119/02121/02703/02712
+    -- above, just for a different underlying reason (a composite code with
+    -- no WFS geometry at all, vs. an individual code whose mapped Gebiete
+    -- are simply uninhabited).
     -- =========================================================================
     area_name_lookup as (
         select distinct city_code, area_level, area_code, area_name
