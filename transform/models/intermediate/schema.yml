@@ -5232,3 +5232,57 @@ models:
         data_tests:
 
           - not_null
+
+  - name: int_ewr_demographics_wide_hamburg
+    description: >
+      #313: Hamburg analogue of int_ewr_demographics_wide -- pivots
+      stg_hamburg_ewr_stadtteil (long format, all 7 Hamburg EWR-equivalent
+      indicators) to wide format, one row per (city_code='HH', area_code,
+      area_vintage, reference_year), STADTTEIL grain (deliberately NOT
+      Gebiet -- domain-expert condition, #313; see model header). Display-only
+      re-pivot -- separate from int_ewr_socioeco_hamburg[_disagg] (the
+      D4-predictor-composite pivot, which disaggregates to Gebiet grain for a
+      different use case) -- makes no change to any index weight/
+      normalization. Feeds mart_area_demographics.
+    meta:
+      dbt_meta_owner: data-engineer
+    data_tests:
+
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns:
+              - city_code
+              - area_code
+              - area_vintage
+              - reference_year
+    columns:
+      - name: city_code
+        description: City identifier; always 'HH' (source is Hamburg-only EWR-equivalent).
+        data_tests:
+
+          - not_null
+      - name: area_code
+        description: Hamburg Stadtteil Schluessel (subarea_l1 grain).
+        data_tests:
+
+          - not_null
+      - name: reference_year
+        description: Calendar year of the annual release.
+        data_tests:
+
+          - not_null
+      - name: residents_total
+        description: Total registered residents per Stadtteil (EWR-equivalent indicator residents_total).
+      - name: unemployment_share
+        description: >
+          Share of registered unemployed. Hamburg-only indicator (not
+          published in Berlin's EWR source) -- carries the same
+          small-area-grain stigmatization/misuse framing caveat as
+          foreigners_share (see mart_area_demographics.sql / schema.yml).
+      - name: any_indicator_suppressed
+        description: >
+          TRUE if any pivoted indicator for this area/year was suppressed at
+          source (propagated, not silently zeroed).
+        data_tests:
+
+          - not_null
