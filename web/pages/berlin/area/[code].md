@@ -89,6 +89,11 @@ breadcrumb: "select area_name as breadcrumb from gentriduck_marts.gentrification
   at the top of the (renamed) "Social status & trajectory" section, immediately before the chart it
   explains, instead of at the tail of the portrait paragraphs. Gate: web-engineer-reviewer only
   (structure/order, no methodology).
+
+  #308: supersedes this comment's "no separate section is added here" line -- that was specifically
+  about an empty children TABLE (PLR has no children to list), not about orientation. #308 adds a
+  "Where this area sits" section back at this same row-8 position, containing only the shared
+  per-area drill-down mini map in its self-only (leaf) mode -- see that section's own comment below.
 -->
 
 ```sql area_info
@@ -190,6 +195,10 @@ where
 <p>Up: {#if area_info[0]?.bzr_code}<a href="/berlin/area/bzr/{area_info[0].bzr_code}">Bezirksregion profile</a>{:else}<a href="/berlin/area/bezirk">Bezirksregion profile</a>{/if} · <a href="/berlin/area-detail">district browse</a> · <a href="/berlin/area/bezirk">all districts</a></p>
 
 <script>
+  // #308: for the drill-down mini map's geoJsonUrl base-path prefixing (#144 convention) -- see
+  // this page's "## Where this area sits" section below.
+  import { base } from '$app/paths';
+
   const areaName = () => (area_info?.[0] ? area_info[0].area_name : 'This area');
   $: bezirkName = district_info?.[0]?.bezirk_name ?? 'its district';
 
@@ -1113,6 +1122,43 @@ order by p.snapshot_year
     <Column id=est_rent_low title="Estimated rent, low (EUR/m²)"/>
     <Column id=est_rent_high title="Estimated rent, high (EUR/m²)"/>
 </DataTable>
+
+<!--
+  #308: shared per-area drill-down mini map (web/components/AreaDrilldownMap.svelte). PLR is
+  Berlin's finest LOR grain -- no further children to drill into (per I21-f/#300's own header note
+  above, this is exactly why this page previously had no "Where this area sits" section at all: "PLR
+  is a leaf grain with no children to list, so no separate section is added here"). That omission
+  was specifically about an empty children TABLE, not about orientation -- #308 adds this section
+  back with a self-only mini map (this area's own polygon highlighted, no drill-down affordance),
+  reusing bzr_plr_drilldown.geojson (every PLR polygon already lives in that file as a "child"
+  feature of its own Bezirksregion -- no new geometry export needed for this leaf level). Placed at
+  the same canonical row-8 position (docs/epic-i/I21-ia-restructure-scoping.md §2.2) the Bezirk/PGR/
+  BZR pages already use for their own "Where this area sits" section, immediately before "Honest
+  caveats".
+-->
+## Where this area sits
+
+```sql minimap_areas
+-- Name resolved directly in SQL (not a JS-templated string literal) so a source-derived name
+-- containing a quote character can never break this query's own SQL syntax.
+select
+    'plr:' || '${params.code}' as feature_key,
+    coalesce(nullif(area_name, ''), '${params.code}') as area_name,
+    'This area' as role,
+    cast(null as varchar) as link
+from gentriduck_marts.dim_area_geometry
+where city_code = 'BER' and area_level = 'plr' and area_vintage = 'lor_2021'
+  and area_code = '${params.code}'
+```
+
+<AreaDrilldownMap
+    data={minimap_areas}
+    geoJsonUrl={`${base}/geo/bzr_plr_drilldown.geojson`}
+    title="{area_info[0] ? area_info[0].area_name : 'This area'}"
+/>
+
+This is Berlin's finest published small-area grain (Planungsraum) — there is no further level to
+drill into. See the Bezirksregion link above ("Up:") to zoom back out.
 
 ## Honest caveats
 

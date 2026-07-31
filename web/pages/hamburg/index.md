@@ -21,11 +21,23 @@ sidebar_position: 12
     (943 distinct Gebiete), period_yyyymm 201312..202512 (13 annual editions).
     own_idx_class/own_idx_class_bi are hard-NULL for every HH row (H3 admission is D1/D2 outcome
     only, not the D4-EWR composite) -- see /maps below and /methodology §6.
-  - fct_gentrification_change / fct_gentrification_trajectory / mart_area_demographics: BER-only
-    (H3 sign-off condition 4/scope guard) -- no Hamburg time-series-with-trajectory-labels page,
-    no per-area demographic profile, built here.
-  - mart_price_rent_dimension / mart_price_rent_dimension_pre2021: BER-only -- no Hamburg land
-    value/rent page built here.
+  - fct_gentrification_change / mart_area_demographics: still BER-only (H3 sign-off condition
+    4/scope guard). fct_gentrification_trajectory itself was widened to admit Hamburg rows by
+    #314 (using H-C2 #159's dual-signed-off cadence-normalized trajectory_window_years window,
+    unmodified thresholds) -- but no web display layer for it is built here yet, so this remains
+    a data-layer-only change: no Hamburg time-series-with-trajectory-labels page, no per-area
+    demographic profile, built here. The `<NotYetPublished>` placeholders on the Hamburg
+    area-detail pages (area/[code].md, area/subarea_l1/[code].md, area/district/[code].md)
+    already gate the trajectory section generically, so #314 required no web change.
+  - mart_price_rent_dimension: admitted Hamburg's Wohnlage tier composition + modelled
+    Mietenspiegel rent (I21-i/#303, docs/epic-h/303-price-rent-hamburg-geo-signoff.md and
+    303-price-rent-hamburg-domain-signoff.md, both PASS) -- narrower IN KIND than Berlin's, not
+    missing: no BRW/land-value signal, 2-tier (not 3-tier) Wohnlage, current-state-only (no
+    multi-year vintage). No Hamburg price/rent display section is built from it here (that
+    remains separate, out-of-scope future work) -- see the table below.
+  - mart_price_rent_dimension_pre2021: still BER-only -- it structurally excludes Hamburg via its
+    `area_vintage = 'lor_2021'` filter (Hamburg rows are `area_vintage = 'current'`); no Hamburg
+    page is built from it here.
   - fct_poi_development / mart_poi_offering_advantage / mart_poi_offering_advantage_map: DO carry
     real HH rows (245,031 / 245,031 / 100,128 respectively) -- this data predates H3 (it flowed in
     via H1, #40, already gated) and is city-agnostic by construction (ADR-0005), so a genuine
@@ -35,14 +47,19 @@ sidebar_position: 12
     grain, not a bug) -- see that page and /methodology §6 point 3 for what this means for the map.
 
   NOT built here, and why: a district-browse/area-detail page (Berlin's primary browse entry)
-  needs named areas and a per-area profile drawing on fct_gentrification_change/trajectory/
-  price-rent, none of which Hamburg has; a "full searchable list" page (Berlin's secondary browse
-  entry) would be a 943-row table of bare numeric codes with no name to search by -- not a useful
-  mirror of Berlin's named-PLR list, so it is not built either. A time-series page mirroring
-  Berlin's (citywide trend + "biggest movers" trajectory table) would need
-  fct_gentrification_change/fct_gentrification_trajectory, which remain Berlin-only by the H3
-  sign-off's explicit scope guard (condition 4) -- so no /hamburg/time-series page either. This
-  page states that gap honestly rather than building a thinner mirror.
+  needs named areas and a per-area profile drawing on fct_gentrification_change (still
+  Berlin-only, H3 sign-off condition 4) and fct_gentrification_trajectory (admits Hamburg as of
+  #314, but no per-area display section is built from it here) and price-rent (which Hamburg
+  *does* have since #303 --
+  narrower in kind, see the table below -- but no per-area display section is built from it here);
+  Hamburg's Gebiete carry no name in the source data either way, so this page isn't built. A "full
+  searchable list" page (Berlin's secondary browse entry) would be a 943-row table of bare numeric
+  codes with no name to search by -- not a useful mirror of Berlin's named-PLR list, so it is not
+  built either. A time-series page mirroring Berlin's (citywide trend + "biggest movers"
+  trajectory table) would need fct_gentrification_change (still Berlin-only, H3 sign-off
+  condition 4) and fct_gentrification_trajectory (admits Hamburg as of #314, but no page is
+  built from it here) -- so no /hamburg/time-series page either. This page states that gap
+  honestly rather than building a thinner mirror.
 -->
 
 <Hero compact eyebrow="Chapter 3 — The Evidence" title="Hamburg" lede="Gentriduck's second city, admitted 2026-07-18 (H3, #237) after a dedicated methodology gate. Hamburg's own official Sozialmonitoring reports its social-status and change classification, at the statistisches-Gebiet (Kiez-equivalent) scale — and OpenStreetMap's commercial-mix data covers Hamburg the same way it covers Berlin. This is a genuinely narrower dataset than Berlin's, and this page says exactly how." />
@@ -86,10 +103,10 @@ where variant = 'live_data' and area_level = 'subarea_l2' and city_code = 'HH'
 | Six-stage typology (D1×D2 matrix) | ✅ | ✅ — same matrix, different underlying window (see methodology §6.1) |
 | Commercial/amenity mix (D3, OSM POI + Offering Advantage) | ✅ | ✅ — see [POI & Offering Advantage map](/hamburg/poi-map) |
 | Socio-demographic baseline composite (D4/EWR) | ✅ 5 indicators, PLR grain | ⛔ not published in this mart (`own_idx_class` is NULL for every Hamburg row) — see methodology §6.2/§6.3 for what the underlying composite looks like where it *is* disclosed |
-| Land value & estimated rent (Bodenrichtwert/Mietspiegel) | ✅ | ⛔ not yet in a published Hamburg mart |
+| Land value & estimated rent (Bodenrichtwert/Mietspiegel) | ✅ | ⚠️ narrower in kind, not missing — `mart_price_rent_dimension` carries Hamburg's Wohnlage tier composition + modelled Mietenspiegel rent (I21-i/#303): no BRW/land-value equivalent, 2-tier not 3-tier Wohnlage, current-state-only. No Hamburg display section is built from it here yet |
 | Milieuschutz / displacement-zone flag | ✅ | disclosed separately (Hamburg's *soziale Erhaltungsverordnung*, C5/#203) but not yet surfaced as a site page |
 | Named neighbourhoods / district browse | ✅ (542 PLRs, all named) | ⛔ Hamburg's finest grain (943 Gebiete) has **no name** in the source data — only a numeric code (see the map below). A [structural area-hierarchy scaffold](/hamburg/area) exists (I21-g, #301) — routes and page layout only, no real per-area figures published yet |
-| Per-area trajectory / time-series page | ✅ | ⛔ needs `fct_gentrification_change`/`fct_gentrification_trajectory`, which remain Berlin-only by design (H3 sign-off condition 4) |
+| Per-area trajectory / time-series page | ✅ | ⛔ needs `fct_gentrification_change` (still Berlin-only by design, H3 sign-off condition 4) and a web wiring pass for `fct_gentrification_trajectory` (admits Hamburg rows as of #314, but no page section reads them yet — gated behind `<NotYetPublished>`) |
 
 ## Where to go next
 

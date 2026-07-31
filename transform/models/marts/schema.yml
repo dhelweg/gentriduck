@@ -483,11 +483,13 @@ models:
       Method citation: Dangschat (1988) double invasion-succession cycle;
       thesis §3.2 (Gentrifizierung als Prozess); ADR-0008 (R-A7 #77) D1 outcome.
 
-      Berlin-only scope (#125): explicitly filtered to city_code='BER' in the SQL
-      (see model header) -- Hamburg rows exist upstream in int_gentrification_ts
-      (H1 #40, ADR-0014) but are staged out of this mart pending the gate decision
-      (Berlin-calibrated trajectory thresholds not yet reviewed against Hamburg's
-      annual cadence).
+      Berlin + Hamburg scope (#314): admitted via published_cities_filter in the
+      SQL (see model header) -- widened from the prior Berlin-only ["BER"] scope
+      (#125) now that H-C2 (#159, dual-signed-off PASS) established a
+      cadence-normalized trajectory_window_years=6 classification window so the
+      Berlin-calibrated trajectory thresholds transfer to Hamburg's annual
+      Sozialmonitoring cadence unmodified. Berlin's output is unchanged (#159's
+      provable no-op).
     meta:
       dbt_meta_owner: data-engineer
     data_tests:
@@ -500,14 +502,16 @@ models:
               - area_vintage
     columns:
       - name: city_code
-        description: City identifier (ADR-0005). Always 'BER' (#125 staging filter; see model header).
+        description: >
+          City identifier (ADR-0005). 'BER' or 'HH' (#314 widened from
+          Berlin-only #125 staging filter; see model header).
         data_type: varchar
         data_tests:
 
           - not_null
           - accepted_values:
               arguments:
-                values: ["BER"]
+                values: ["BER", "HH"]
       - name: area_code
         description: PLR area code (LOR 2021 or pre-2021 vintage).
         data_type: varchar
@@ -515,14 +519,16 @@ models:
 
           - not_null
       - name: area_vintage
-        description: LOR vintage identifier ('lor_pre2021' or 'lor_2021').
+        description: >
+          Area vintage identifier. Berlin: LOR vintage ('lor_pre2021' or
+          'lor_2021'). Hamburg: 'current' (single vintage, ADR-0014; #314).
         data_type: varchar
         data_tests:
 
           - not_null
           - accepted_values:
               arguments:
-                values: ["lor_pre2021", "lor_2021"]
+                values: ["lor_pre2021", "lor_2021", "current"]
       - name: n_editions
         description: Number of MSS editions available for this PLR within this vintage.
         data_type: bigint
@@ -685,8 +691,10 @@ models:
     columns:
       - name: city_code
         description: >
-          City identifier (ADR-0005). Always 'BER' — normalised by int_berlin_brw_plr and
-          int_berlin_wohnlage_plr (staging layers emit 'berlin'; normalised for dim_city FK).
+          City identifier (ADR-0005). 'BER' (normalised by int_berlin_brw_plr and
+          int_berlin_wohnlage_plr; staging layers emit 'berlin', normalised for dim_city FK)
+          or 'HH' (Hamburg, admitted #303 -- see #303 section in the model header for the
+          BRW-absence / 2-tier-vs-3-tier-Wohnlage / current-state-only disclosures).
         data_tests:
 
           - not_null:
@@ -694,7 +702,7 @@ models:
                 where: "area_code is not null"
           - accepted_values:
               arguments:
-                values: ["BER"]
+                values: ["BER", "HH"]
               config:
                 where: "area_code is not null"
       - name: snapshot_year
@@ -702,13 +710,19 @@ models:
           Price/rent dimension vintage year (integer).
           For BRW-only rows: derived from YEAR(brw.reference_date), 2017–2024.
           For Wohnlage-only rows (e.g. 2026): Wohnlage WFS edition year.
+          For Hamburg rows (#303): the Mietenspiegel edition_year actually used
+          (mietenspiegel_edition_used) -- Hamburg's Wohnlage side is current-state (no
+          vintage series of its own), so the Mietenspiegel edition year is the only real
+          "vintage" signal it carries.
         data_tests:
 
           - not_null:
               config:
                 where: "area_code is not null"
       - name: area_code
-        description: PLR area code (8-digit, zero-padded). LOR 2021 scheme for BRW; vintage-specific for Wohnlage.
+        description: >
+          PLR area code (8-digit, zero-padded) for Berlin; Hamburg Stadtteil area_code for HH
+          (#303). LOR 2021 scheme for Berlin BRW; vintage-specific for Berlin Wohnlage.
         data_tests:
 
           - not_null
@@ -716,6 +730,9 @@ models:
         description: >
           LOR boundary vintage. 'lor_2021' for BRW rows (always lor_2021 in int_berlin_brw_plr).
           'lor_pre2021' or 'lor_2021' for Wohnlage rows (vintage-specific join).
+          'current' for Hamburg rows (#303) -- Hamburg's Wohnlagenverzeichnis is a
+          current-state crosswalk with no historical vintage dimension (see
+          int_hamburg_wohnlage_stadtteil header).
         data_tests:
 
           - not_null:
@@ -723,39 +740,70 @@ models:
                 where: "area_code is not null"
           - accepted_values:
               arguments:
-                values: ["lor_pre2021", "lor_2021"]
+                values: ["lor_pre2021", "lor_2021", "current"]
               config:
                 where: "area_code is not null"
       - name: brw_weighted_avg_eur_m2
         description: >
           Area-weighted mean Bodenrichtwert (EUR/m²) for residential BRW zones overlapping
           this PLR. NULL for non-residential/uninhabited PLRs (pure park/water/airport).
+          Berlin-only (city_code='BER'); ALWAYS NULL for Hamburg rows (#303) -- no
+          BRW-equivalent land-value source has been ingested for Hamburg.
           POLARITY: ambiguous context covariate (domain D2). High = price-surface/consolidation.
           Sign-flip required for vulnerability composite. NOT a vulnerability score.
           BRW LEVEL ≠ rent gap (Smith 1979) — the rent gap is a difference, not a level (domain D1).
       - name: n_brw_zones
-        description: Count of distinct residential BRW zones contributing to brw_weighted_avg_eur_m2.
+        description: >
+          Count of distinct residential BRW zones contributing to brw_weighted_avg_eur_m2.
+          Berlin-only; ALWAYS NULL for Hamburg rows (#303).
       - name: brw_residential_coverage_frac
         description: >
           Fraction of the PLR area covered by residential BRW zones (0–1).
           NULL when no W% BRW zones overlap this PLR. Use to identify thin-signal PLRs.
+          Berlin-only; ALWAYS NULL for Hamburg rows (#303).
       - name: pct_einfach
         description: >
           Share of Wohnlage-classified addresses in the 'einfach' (simple/basic) tier for
           this PLR-vintage. 0.0 if this tier is absent; NULL if no Wohnlage data available.
+          Berlin-only (3-tier scheme); ALWAYS NULL for Hamburg rows (#303) -- see
+          pct_gute_wohnlage/pct_normale_wohnlage for Hamburg's own 2-tier vocabulary
+          (NOT cross-mapped to this column; non-equivalent schemes).
           POLARITY: vulnerability-positive (high pct_einfach = more upgrading headroom;
           inner-city precondition for gentrification per Blasius & Dangschat 1990; domain D3).
       - name: pct_mittel
-        description: Share of addresses in the 'mittel' (medium) Wohnlage tier. 0.0 if absent.
+        description: >
+          Share of addresses in the 'mittel' (medium) Wohnlage tier. 0.0 if absent.
+          Berlin-only; ALWAYS NULL for Hamburg rows (#303).
       - name: pct_gut
-        description: Share of addresses in the 'gut' (good/desirable) Wohnlage tier. 0.0 if absent.
+        description: >
+          Share of addresses in the 'gut' (good/desirable) Wohnlage tier. 0.0 if absent.
+          Berlin-only; ALWAYS NULL for Hamburg rows (#303).
+      - name: pct_gute_wohnlage
+        description: >
+          Hamburg-only (#303): share of Wohnlage-classified addresses in the 'Gute Wohnlage'
+          (good location) tier for this Stadtteil. 0.0 if absent; NULL if no Wohnlage data
+          available. ALWAYS NULL for Berlin rows -- Hamburg's 2-tier vocabulary is NOT
+          equivalent to Berlin's 3-tier pct_einfach/pct_mittel/pct_gut and is never
+          cross-mapped onto those columns (int_hamburg_wohnlage_stadtteil header; any
+          cross-city Wohnlage comparison must go through the G2 non-equivalence disclosure).
+          POLARITY: analogous role to Berlin's pct_gut (desirable tier) but NOT numerically
+          comparable across cities (different tier count/definition).
+      - name: pct_normale_wohnlage
+        description: >
+          Hamburg-only (#303): share of addresses in the 'Normale Wohnlage' (normal location)
+          tier for this Stadtteil. 0.0 if absent; NULL if no Wohnlage data available. ALWAYS
+          NULL for Berlin rows. See pct_gute_wohnlage for the non-equivalence disclosure.
       - name: wohnlage_n_addresses
-        description: Total count of Wohnlage-classified address points in this PLR-vintage across all tiers.
+        description: >
+          Total count of Wohnlage-classified address points in this area-vintage across
+          all tiers. For Hamburg rows (#303), re-derived from int_hamburg_wohnlage_
+          stadtteil's own SUM(n_addresses) (identical computation, different grain).
       - name: wohnlage_low_n
         description: >
-          TRUE when this PLR-vintage has fewer than 10 total Wohnlage address points.
+          TRUE when this area-vintage has fewer than 10 total Wohnlage address points.
           When TRUE: wohnlage_score, est_rent_mid/low/high, wohnlage_zscore, est_rent_zscore
-          are all NULL (unstable composition; geo condition 7).
+          are all NULL (unstable composition; geo condition 7). Populated for both Berlin
+          and Hamburg rows.
       - name: wohnlage_score
         description: >
           Ordinal-mean approximation of Wohnlage quality per PLR:
@@ -763,14 +811,22 @@ models:
           Range: [1.0, 3.0]. LABELLED AS ORDINAL-MEAN APPROXIMATION — the three tiers are
           ordered but not equidistant; do not treat as interval-scaled in regression without noting.
           NULL when wohnlage_low_n = TRUE.
+          Berlin-only; ALWAYS NULL for Hamburg rows (#303) -- with only two tiers, a
+          share-weighted ordinal mean would just be a linear rescale of pct_gute_wohnlage,
+          adding no independent information (int_hamburg_wohnlage_mietenspiegel header).
           POLARITY: high score = more desirable = consolidated = LOW residual headroom.
           Sign-flip required for vulnerability composite (for vulnerability framing, use pct_einfach).
       - name: est_rent_mid
         description: >
-          Modelled/estimated net cold rent (EUR/m²/month) at the fixed reference dwelling profile:
-          size = 60–90 m², construction year = 1950–1964, standard equipment (mit SH/Bad/IWC).
-          Formula: pct_einfach * ms_einfach_mid + pct_mittel * ms_mittel_mid + pct_gut * ms_gut_mid
-          using the Mietspiegel rent_mid values for the nearest-<= vintage.
+          Modelled/estimated net cold rent (EUR/m²/month) at the fixed reference dwelling profile.
+          Berlin: size = 60–90 m², construction year = 1950–1964, standard equipment (mit
+          SH/Bad/IWC). Formula: pct_einfach * ms_einfach_mid + pct_mittel * ms_mittel_mid +
+          pct_gut * ms_gut_mid using the Mietspiegel rent_mid values for the nearest-<= vintage.
+          Hamburg (#303): size = '66m² bis unter 91m²', construction year = '1968 bis 1977',
+          ausstattung = 'mit Bad und Sammelheizung' (Hamburg's own representative-profile
+          analogue; see int_hamburg_wohnlage_mietenspiegel header). Formula: pct_gute_wohnlage
+          * ms_gute_mid + pct_normale_wohnlage * ms_normale_mid, using the single latest
+          ingested Mietenspiegel edition (no vintage matching -- current-state Wohnlage).
           "modelled/estimated net cold rent at a fixed reference dwelling profile — NOT observed
            rent paid." (domain D6; Mietspiegel ortsübliche Vergleichsmiete; Holm 2010.)
           Bestandsmiete/lagging bias: conservative, understates leading-edge rent pressure (domain D7).
@@ -778,31 +834,41 @@ models:
           POLARITY: affordability-negative (high = less affordable; Bestandsmiete-lagging).
       - name: est_rent_low
         description: >
-          Composition-weighted lower bound (3/4-Spanne) of Mietspiegel reference rent.
-          Same formula and fixed profile as est_rent_mid, using rent_low.
+          Composition-weighted lower bound (3/4-Spanne for Berlin; rent_low for Hamburg) of
+          Mietspiegel/Mietenspiegel reference rent. Same formula and fixed profile as
+          est_rent_mid (per city; see est_rent_mid for the Hamburg vs Berlin profile).
           NULL when wohnlage_low_n = TRUE.
       - name: est_rent_high
         description: >
-          Composition-weighted upper bound (3/4-Spanne) of Mietspiegel reference rent.
-          Same formula and fixed profile as est_rent_mid, using rent_high.
+          Composition-weighted upper bound (3/4-Spanne for Berlin; rent_high for Hamburg) of
+          Mietspiegel/Mietenspiegel reference rent. Same formula and fixed profile as
+          est_rent_mid (per city; see est_rent_mid for the Hamburg vs Berlin profile).
           NULL when wohnlage_low_n = TRUE.
       - name: mietspiegel_vintage_used
         description: >
           Mietspiegel edition year used for the modelled rent estimate.
-          Nearest-<= match to the Wohnlage vintage year (geo condition 8).
+          Berlin: nearest-<= match to the Wohnlage vintage year (geo condition 8).
           Approximation disclosure (domain D13): 2026 Wohnlage uses 2026 Mietspiegel
           (stands in for the 2025 MSS panel edition; disclose on G2).
+          Hamburg (#303): the single latest ingested Mietenspiegel edition_year
+          (mietenspiegel_edition_used) -- same value as this row's snapshot_year, since
+          Hamburg has no separate Wohnlage vintage to align against (current-state).
       - name: wohnlage_vintage_matched
         description: >
-          The Wohnlage vintage year that was joined to this BRW snapshot_year.
+          Berlin: the Wohnlage vintage year that was joined to this BRW snapshot_year.
           Nearest-<= Wohnlage vintage for the BRW year. NULL for BRW years before the
           first available Wohnlage vintage. Same as snapshot_year for Wohnlage-only rows.
+          Hamburg (#303): ALWAYS NULL -- Hamburg's Wohnlage side is current-state (no
+          vintage-year dimension of its own), so there is no separate Wohnlage vintage to
+          record here (recording the Mietenspiegel year under this label would misrepresent
+          it as a Wohnlage vintage that does not exist; see mietspiegel_vintage_used instead).
       - name: brw_zscore
         description: >
           Winsorized (1%/99%) z-score of brw_weighted_avg_eur_m2 per (city_code, snapshot_year),
           computed over non-NULL, non-low-n PLRs only.
           POLARITY: ambiguous (see brw_weighted_avg_eur_m2). Sign-flip if pooled into vulnerability.
           NULL when brw_weighted_avg_eur_m2 is NULL or normalization moments unavailable.
+          Berlin-only; ALWAYS NULL for Hamburg rows (#303) -- no BRW input to normalize.
           (geo condition 13; OECD/JRC 2008)
       - name: wohnlage_zscore
         description: >
@@ -811,6 +877,8 @@ models:
           POLARITY: high = desirable = consolidated = LOW vulnerability headroom.
           Sign-flip required for vulnerability composite; use pct_einfach for vuln framing.
           NULL when wohnlage_score is NULL or normalization moments unavailable.
+          Berlin-only; ALWAYS NULL for Hamburg rows (#303) -- wohnlage_score is not
+          produced for Hamburg's 2-tier scheme.
           (geo condition 13; OECD/JRC 2008)
       - name: est_rent_zscore
         description: >
@@ -825,12 +893,18 @@ models:
           ascending (1 = lowest land value; higher rank = higher land value).
           NULL PLRs sorted last. Headline display metric for heavy-tailed land values (G2 page)
           because rank is outlier-insensitive (a few super-prime PLRs skew the z-score).
+          ALWAYS NULL for Hamburg rows (#303) and for any (city_code, snapshot_year) group
+          with NO non-NULL BRW values at all (guards against a degenerate all-NULL
+          partition, where RANK() would otherwise tie every row to rank 1) -- individual
+          NULL-BRW PLRs within an otherwise-populated group still receive a real tied rank
+          (unchanged prior behaviour).
           (geo condition 13)
       - name: brw_percentile
         description: >
           PERCENT_RANK of brw_weighted_avg_eur_m2 within (city_code, snapshot_year),
           ascending. Range [0, 1]; 0 = lowest, 1 = highest land value.
-          NULL PLRs sorted last.
+          NULL PLRs sorted last. Same all-NULL-group guard as brw_rank; ALWAYS NULL for
+          Hamburg rows (#303).
           (geo condition 13)
 
   - name: mart_price_rent_dimension_pre2021
@@ -993,7 +1067,12 @@ models:
 
           - not_null
       - name: area_name
-        description: Area name (WFS UTF-8 source; see dim_area's dedup pattern).
+        description: >
+          Area name (WFS UTF-8 source; see dim_area's dedup pattern). EXCEPTION,
+          #307: Hamburg subarea_l2 (statistisches Gebiet) rows have no WFS name
+          -- area_name here is instead a best-effort OSM-derived name (via
+          int_hamburg_gebiet_osm_names' point-in-polygon match), and may be
+          NULL where no OSM match was found (partial coverage by design).
         data_type: varchar
       - name: area_vintage
         description: >
@@ -1050,7 +1129,17 @@ models:
         description: >
           City identifier (ADR-0005). #281: canonicalized at this mart's own
           `oa` CTE (QA-4 legacy-lowercase normalisation) -- output is
-          canonical-only.
+          canonical-only. #312 (docs/epic-h/312-oa-c5-geo-spike.md):
+          `accepted_values=["BER","HH"]` is methodologically re-fit and
+          retroactively validated for Hamburg -- the OA location-quotient
+          columns (oa_domain/oa_category/oa_type) are same-year local/city
+          share ratios, invariant to an area-uniform per-year OSM
+          completeness multiplier by construction (stronger than the C5
+          dynamism_score precedent, #158); `poi_density_per_km2` was
+          additionally checked against the extended, Hamburg-scoped OA-D0 geo
+          sign-off Condition C3 completeness-contamination gate and passes
+          (see spike doc Sec 3) -- same standing caveats as Berlin's already-
+          published equivalent, not relaxed or tightened for Hamburg.
         data_tests:
 
           - not_null
@@ -1201,10 +1290,21 @@ models:
             where: "area_code is not null"
     columns:
       - name: city_code
-        description: City identifier (ADR-0005).
+        description: >
+          City identifier (ADR-0005). #312 (docs/epic-h/312-oa-c5-geo-spike.md):
+          `accepted_values=["BER","HH"]` added by #312 -- this mart already
+          fed the live /hamburg/poi-map page's oa_domain/poi_density_per_km2
+          YoY-delta toggle before this test existed; the spike doc
+          retroactively validates that Hamburg's rows are methodologically
+          safe under the extended OA-D0 geo sign-off Condition C3
+          completeness-contamination gate (same standing caveats as Berlin,
+          not relaxed or tightened for Hamburg).
         data_tests:
 
           - not_null
+          - accepted_values:
+              arguments:
+                values: ["BER", "HH"]
       - name: snapshot_year
         description: Calendar year of the OSM snapshot.
         data_tests:
@@ -1690,6 +1790,262 @@ models:
 
           - not_null
 
+  - name: mart_area_rollup_stage_mix
+    description: >
+      #310 (map granularity selector): population-weighted typology_stage MIX
+      (never a single re-derived label -- see model header) + a paired
+      population-weighted plurality "dominant stage"/dominant_share, plus
+      population-weighted-mean status_index/dynamism_index, for
+      gentrification_index area_levels one or more rollup hops above the
+      finest live_data grain: Berlin bezirk/pgr/ortsteil, Hamburg
+      subarea_l1/district. Generalizes the #269 mart_ortsteil_plr_stage_mix
+      pattern via mart_area_hierarchy (#302) instead of a single-purpose join,
+      and upgrades #269's plain child count to a population weight (falling
+      back to an equal weight of 1 per child when population coverage is
+      incomplete for the area -- see model header "WEIGHTING NOTE" /
+      MEDIUM-C fix for the empirical gap this covers and
+      has_incomplete_population below).
+      'uninhabited / no data' is an explicit typology_stage bucket, visible in
+      the mix but excluded from the weighted-mean/vote denominator (design
+      point 5) -- it is ALSO used for a rollup area with zero real
+      leaf children at all (a structurally orphaned area, e.g. Berlin
+      Ortsteil 0608/1106 or Hamburg subarea_l1 02118/02119/02121/02703/02712
+      -- see model header MEDIUM-B fix): every hierarchy area gets a row for
+      every period its city publishes, never silently dropped.
+      variant='live_data' only (the only variant carrying a
+      status_class/typology_stage -- see gentrification_index.sql).
+      Dual sign-off requirement: methodology-bearing (CLAUDE.md R-C1) --
+      see docs/epic-*/310-*-signoff.md once recorded.
+    meta:
+      dbt_meta_owner: data-engineer
+    data_tests:
+
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns:
+              - city_code
+              - area_level
+              - area_code
+              - period_yyyymm
+              - variant
+              - typology_stage
+    columns:
+      - name: city_code
+        description: City identifier (ADR-0005 seam).
+        data_tests:
+
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ["BER", "HH"]
+      - name: area_level
+        description: >
+          Rollup area_level -- one or more hops above the finest live_data
+          grain (plr for Berlin, subarea_l2 for Hamburg). Berlin:
+          bezirk (borough), pgr (Prognoseraum), ortsteil (non-LOR Bezirk
+          subdivision, via the #269 dominant PLR->Ortsteil crosswalk).
+          Hamburg: subarea_l1 (Stadtteil), district (Bezirk).
+        data_tests:
+
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ["bezirk", "pgr", "ortsteil", "subarea_l1", "district"]
+      - name: area_code
+        description: Area code at this row's area_level. Part of the natural key.
+        data_tests:
+
+          - not_null
+      - name: area_name
+        description: >
+          Area name from dim_area, denormalized for convenience. NULL for
+          area_level='bezirk' -- dim_area carries no 'bezirk'-level rows today
+          (see model header); not fabricated here.
+        data_tests:
+
+          - not_null:
+              config:
+                where: "area_level != 'bezirk'"
+      - name: period_yyyymm
+        description: >
+          Period key matching gentrification_index's own period_yyyymm
+          (YYYY12 snapshot convention for live_data).
+        data_tests:
+
+          - not_null
+      - name: variant
+        description: Always 'live_data' (see model header scope note).
+        data_tests:
+
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ["live_data"]
+      - name: typology_stage
+        description: >
+          D1xD2 typology stage name (gentrification_index.status_class), or
+          the literal 'uninhabited / no data' bucket for children with no MSS/
+          Sozialmonitoring classification (status_class IS NULL) -- also used
+          (MEDIUM-B fix, #310 review) as the single row for a structurally
+          orphaned rollup area with zero real leaf children at all (see
+          n_children/n_habitable_children).
+        data_tests:
+
+          - not_null
+          - accepted_values:
+              arguments:
+                values:
+                  - active-gentrification
+                  - pioneer-signal
+                  - improving-vulnerable
+                  - pre-gentrification
+                  - consolidation-pressure
+                  - stable-established
+                  - uninhabited / no data
+      - name: n_children
+        description: >
+          Total count of REAL leaf children (habitable + uninhabited) rolled
+          into this area, for this period. 0 for a structurally orphaned
+          rollup area with zero real leaf children at all (MEDIUM-B fix --
+          e.g. Berlin Ortsteil 0608/1106, Hamburg subarea_l1
+          02118/02119/02121/02703/02712) -- the area still gets exactly one
+          row (typology_stage='uninhabited / no data') so it is drawn-but-
+          blank rather than silently dropped.
+        data_tests:
+
+          - not_null
+      - name: n_habitable_children
+        description: >
+          Count of leaf children with a real (non-null) typology_stage --
+          the denominator basis for the dominant-stage vote and
+          is_dominant_fragile. 0 for a structurally orphaned rollup area
+          (see n_children).
+        data_tests:
+
+          - not_null
+      - name: is_dominant_fragile
+        description: >
+          TRUE when n_habitable_children < 3 (design point 3) -- the
+          consuming UI must suppress or caveat the dominant_stage/
+          dominant_share label as fragile when this is TRUE (the mix itself
+          is always safe to display).
+        data_tests:
+
+          - not_null
+      - name: has_incomplete_population
+        description: >
+          TRUE when at least one real habitable child in this area had a NULL
+          gentrification_index.population for this period. MEDIUM-C fix
+          (#310 review): whenever this is TRUE (whether population is missing
+          for SOME or ALL of the area's real habitable children --
+          see n_children_without_population/population_coverage_frac),
+          EVERY child in the area is aggregated with an equal weight of 1
+          (see model header "WEIGHTING NOTE" / MEDIUM-C fix) -- so
+          "equal-weighted, not population-weighted" is an honest claim
+          whenever this is TRUE, not just in the all-or-nothing case. FALSE
+          for a structurally orphaned rollup area (n_habitable_children = 0
+          -- nothing to be incomplete about).
+        data_tests:
+
+          - not_null
+      - name: n_children_without_population
+        description: >
+          MEDIUM-C fix (#310 review): count of this area's real habitable
+          children with a NULL gentrification_index.population for this
+          period. 0 either when population is fully known (
+          has_incomplete_population = FALSE) or when there are zero real
+          habitable children to begin with -- distinguish the two via
+          n_habitable_children. A value strictly between 0 and
+          n_habitable_children means coverage was PARTIAL for this area (the
+          near-drop-out failure mode MEDIUM-C fixed the weighting for, see
+          population_coverage_frac).
+        data_tests:
+
+          - not_null
+      - name: population_coverage_frac
+        description: >
+          MEDIUM-C fix (#310 review): n_children_with_population /
+          n_habitable_children for this area's real habitable children (0.0
+          =  no coverage at all -- the original, safe all-equal-weight
+          fallback case; 1.0 = full coverage, real population weighting used
+          throughout; strictly between 0 and 1 = PARTIAL coverage -- the
+          near-drop-out failure mode MEDIUM-C's equal-weight-the-whole-area
+          fallback now closes). NULL when n_habitable_children = 0 (nothing
+          to compute a coverage fraction over).
+        data_tests:
+
+          - dbt_utils.accepted_range:
+              arguments:
+                min_value: 0
+                max_value: 1
+              config:
+                where: "population_coverage_frac is not null"
+      - name: stage_n_children
+        description: >
+          Count of REAL leaf children in this specific typology_stage bucket,
+          for this area/period. 0 for the single synthetic
+          'uninhabited / no data' bucket row of a structurally orphaned
+          rollup area (MEDIUM-B fix) -- never counts the placeholder row
+          itself as a child.
+        data_tests:
+
+          - not_null
+      - name: stage_weight
+        description: >
+          Sum of the aggregation weight (real population where known, else an
+          equal weight of 1 for every child in the area once
+          has_incomplete_population is TRUE -- see that column's
+          description/MEDIUM-C fix) for REAL leaf children in this specific
+          typology_stage bucket. 0 for a structurally orphaned rollup area's
+          placeholder row (MEDIUM-B fix).
+        data_tests:
+
+          - not_null
+      - name: stage_population_share
+        description: >
+          stage_weight / (sum of stage_weight across habitable children only).
+          NULL for the 'uninhabited / no data' bucket (excluded from the
+          denominator, design point 5) and when there are zero habitable
+          children.
+        data_tests:
+
+          - dbt_utils.accepted_range:
+              arguments:
+                min_value: 0
+                max_value: 1
+              config:
+                where: "stage_population_share is not null"
+      - name: status_index_weighted_mean
+        description: >
+          Population-weighted mean of gentrification_index.status_index
+          (D1 MSS Status ordinal, 1=hoch/best ... 4=sehr_niedrig/worst) over
+          this area's habitable children. NULL when no habitable child has a
+          non-null status_index.
+      - name: dynamism_index_weighted_mean
+        description: >
+          Population-weighted mean of gentrification_index.dynamism_index
+          (D2 MSS Dynamik ordinal) over this area's habitable children. NULL
+          when no habitable child has a non-null dynamism_index.
+      - name: dominant_stage
+        description: >
+          Population-weighted plurality typology_stage among this area's
+          habitable children (design point 3) -- ALWAYS pair with the mix
+          (typology_stage/stage_population_share rows for this area), never
+          display standalone. NULL when n_habitable_children = 0.
+      - name: dominant_share
+        description: >
+          Population share (stage_weight / habitable_weight) of dominant_stage
+          among this area's habitable children. NULL when n_habitable_children
+          = 0.
+        data_tests:
+
+          - dbt_utils.accepted_range:
+              arguments:
+                min_value: 0
+                max_value: 1
+              config:
+                where: "dominant_share is not null"
+
   - name: mart_poi_oa_methods
     description: >
       OA-D3/OA-D3b (#240/#280, ADR-0024): long-format serving view over
@@ -1740,7 +2096,12 @@ models:
           City identifier (ADR-0005). #281: canonicalized upstream in
           int_poi_offering_advantage_methods (its own output boundary) --
           this mart is a pure pass-through reshape, so it inherits the
-          canonical-only output.
+          canonical-only output. #312 (docs/epic-h/312-oa-c5-geo-spike.md):
+          `accepted_values=["BER","HH"]` is retroactively validated for
+          Hamburg -- the C5 completeness-bias re-fit was verified at the
+          int_poi_offering_advantage_methods source, including the
+          density/percapita/raw_share columns this mart also carries; see
+          that model's header and the spike doc.
         data_tests:
 
           - not_null:

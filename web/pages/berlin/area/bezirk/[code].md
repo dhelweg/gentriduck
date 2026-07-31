@@ -88,12 +88,47 @@ where bezirk_code = '${params.code}'
 [All districts](/berlin/area/bezirk) · [full neighbourhood list](/berlin/area) ·
 [district browse](/berlin/area-detail)
 
+<!-- #326: the previous version of this Alert linked
+     `<a href="/berlin/area/[code]">any neighbourhood's own page</a>` -- a literal, non-templated
+     `[code]` placeholder left in as real HTML, which produced a bogus, always-identical
+     `/berlin/area/[code]` crawl target (Evidence's build crawls any real `<a href>`, template
+     placeholder or not). Fixed by pointing at the actual full neighbourhood list instead, the same
+     safe, already-crawlable target this page already links from its own top-of-page nav.
+
+     #326 follow-up finding: this fix (plus the matching one in
+     pages/berlin/area/ortsteil/[code].md and the bare-bzr/pgr de-link in
+     pages/methodology-oa-modes.md) turned out to be the WHOLE fix for every OTHER 500 named in
+     #326 -- a full clean `npm run build` after these two changes reproduces zero prerender 500s for
+     the bzr/[code] real codes 025007/023004/024006 and the Hamburg subarea_l1/[code] codes such as
+     02509. None of those were independent bugs, and no mart/component was changed to fix them:
+     - Direct DuckDB queries against every exported mart these pages read (dim_area_geometry,
+       gentrification_index, mart_area_demographics, mart_poi_oa_arealevel, mart_poi_dominance,
+       mart_area_hierarchy, fct_gentrification_trajectory) confirmed complete rows for every
+       individually-named code above -- the failures were never a data gap.
+     - The "linked from /berlin/area/02400624" report is a separate, non-bug finding: that page was
+       never actually 500ing, it just links to itself via its own breadcrumb, real but benign, not a
+       bug in this project's own code. Every page here declares a `breadcrumb:` frontmatter query,
+       and Evidence's own `BreadCrumbs.svelte` (`@evidence-dev/core-components`) renders a crumb
+       trail that includes the CURRENT page as a real, clickable `<a href>` by design (see its
+       `buildCrumbs()`, which only nulls a crumb's href when the matched file-tree node isn't a
+       page) -- i.e. every page on this site "links to itself" via its own breadcrumb, normally a
+       harmless no-op once the URL is already in the prerender crawler's visited set.
+     - The most likely (but NOT independently stack-trace-confirmed) reason the bzr/pgr real-code
+       and Hamburg subarea_l1 failures clustered right around the literal-`[code]`/bare-bzr-pgr crawl
+       hits (rather than being scattered): SvelteKit's default prerender concurrency is 1 (strictly
+       sequential), and this site's duckdb-wasm query engine is a single instance reused across that
+       sequential crawl -- a page-render throw could plausibly leave it in a bad state for whichever
+       page is rendered immediately next. This is a plausible, consistent-with-the-evidence theory,
+       not a confirmed root cause (out of this ticket's scope once the clean-build result was
+       reproducible): no code/data defect specific to any of the individually-named pages, and all of
+       them render cleanly once the two link bugs above are gone. -->
+
 <Alert status="info">
   Figures on this page are <b>sums and population-weighted averages</b> of this district's
   neighbourhoods (Planungsräume) — never a separately re-scored index. See the
-  <a href="/methodology">methodology page</a> for why coarse-grain areas are not re-scored, and
-  <a href="/berlin/area/[code]">any neighbourhood's own page</a> for the actual gentrification
-  index and trajectory.
+  <a href="/methodology">methodology page</a> for why coarse-grain areas are not re-scored, and any
+  neighbourhood's own page in the <a href="/berlin/area">full neighbourhood list</a> for the actual
+  gentrification index and trajectory.
 </Alert>
 
 <!--
@@ -186,6 +221,11 @@ from totals as t cross join top cross join advanced as a
 ```
 
 <script>
+  // #308: for the drill-down mini map's geoJsonUrl/link base-path prefixing (#144 convention) --
+  // see this page's "## Where this area sits" section below. Hoisted into this page's single
+  // existing <script> block (Svelte allows only one instance-level <script> per component/page).
+  import { base } from '$app/paths';
+
   $: mssMix = stage_mix_summary?.[0];
   $: mssTakeaway = (!mssMix || mssMix.n_total == null || Number(mssMix.n_total) === 0)
     ? null
@@ -460,6 +500,64 @@ order by sort_order
 <BarChart data={age_mix} x=age_band y=share title="Age structure, {bezirk_name[0].bezirk_name}" yFmt="pct0"/>
 
 ## Where this area sits
+
+<!--
+  #308: shared per-area drill-down mini map (web/components/AreaDrilldownMap.svelte). This
+  district's own polygon highlighted, its Prognoseräume (the primary LOR-ladder next level down,
+  matching this page's "Up:"/breadcrumb chain and the "Prognoseräume in this district" table right
+  below) each clickable. Ortsteile are a SEPARATE, non-nesting geography (see the "Ortsteile in this
+  district" table further down and its own explanatory paragraph) -- deliberately not drawn on this
+  same map alongside the PGR children, to keep one map to one "drill down exactly one level"
+  affordance per the issue spec; Ortsteil already has its own browsable table/index on this page.
+  `base` is imported once, in this page's single existing `<script>` block above (Svelte allows
+  only one instance-level `<script>` per component/page).
+-->
+
+```sql minimap_areas
+-- Self row's name resolved via the same fixed 12-entry lookup as this page's own `bezirk_name`
+-- query above, re-expressed in SQL only (not a JS-templated string literal) so this query's SQL
+-- syntax can never depend on the contents of an external name value -- same defensive reasoning
+-- applied throughout this section for the WFS-sourced PGR/BZR/Ortsteil/Hamburg names.
+select
+    'bezirk:' || '${params.code}' as feature_key,
+    bezirk_name as area_name,
+    'This area' as role,
+    1 as sort_order,
+    cast(null as varchar) as link
+from (
+    select '01' as bezirk_code, 'Mitte' as bezirk_name
+    union all select '02', 'Friedrichshain-Kreuzberg'
+    union all select '03', 'Pankow'
+    union all select '04', 'Charlottenburg-Wilmersdorf'
+    union all select '05', 'Spandau'
+    union all select '06', 'Steglitz-Zehlendorf'
+    union all select '07', 'Tempelhof-Schöneberg'
+    union all select '08', 'Neukölln'
+    union all select '09', 'Treptow-Köpenick'
+    union all select '10', 'Marzahn-Hellersdorf'
+    union all select '11', 'Lichtenberg'
+    union all select '12', 'Reinickendorf'
+) t
+where bezirk_code = '${params.code}'
+union all
+select
+    'pgr:' || area_code as feature_key,
+    coalesce(area_name, area_code) as area_name,
+    'Click to explore' as role,
+    2 as sort_order,
+    '${base}/berlin/area/pgr/' || area_code as link
+from gentriduck_marts.dim_area_geometry
+where city_code = 'BER' and area_level = 'pgr' and area_vintage = 'lor_2021'
+  and area_code is not null and trim(area_code) <> ''
+  and substr(area_code, 1, 2) = '${params.code}'
+order by sort_order, area_name
+```
+
+<AreaDrilldownMap
+    data={minimap_areas}
+    geoJsonUrl={`${base}/geo/bezirk_pgr_drilldown.geojson`}
+    title="{bezirk_name[0] ? bezirk_name[0].bezirk_name : 'This district'} and its Prognoseräume"
+/>
 
 ### Prognoseräume in this district
 

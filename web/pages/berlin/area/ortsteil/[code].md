@@ -270,6 +270,10 @@ limit 15
 ```
 
 <script>
+  // #308: for the drill-down mini map's geoJsonUrl/link base-path prefixing (#144 convention) --
+  // see this section's own "## Where this area sits" comment below.
+  import { base } from '$app/paths';
+
   $: hasChildren = child_count?.[0] && Number(child_count[0].n) > 0;
   $: childrenRows = Array.isArray(children) ? children : Array.from(children ?? []);
   $: anyLowConfidence = childrenRows.some((r) => Number(r.overlap_frac_of_plr) < 0.8);
@@ -298,6 +302,10 @@ limit 15
      pages/berlin/area/[code].md's Up-link comment for the full "undefined"-cascade rationale. -->
 <p>Up: {#if bezirk_info[0]?.bezirk_code}<a href="/berlin/area/bezirk/{bezirk_info[0].bezirk_code}">{bezirk_info[0].bezirk_name}</a>{:else}<a href="/berlin/area/bezirk">District profile</a>{/if} · <a href="/berlin/area/ortsteil">all Ortsteile</a> · <a href="/berlin/area/bezirk">all districts</a> · <a href="/berlin/area">full neighbourhood list</a></p>
 
+<!-- #326: same fix as pages/berlin/area/bezirk/[code].md's header comment -- the previous
+     `<a href="/berlin/area/[code]">` here was a literal, non-templated `[code]` placeholder left in
+     as real HTML, producing a bogus, always-identical `/berlin/area/[code]` crawl target. Fixed by
+     pointing at the full neighbourhood list instead. -->
 <Alert status="info">
   Ortsteil is a different (non-LOR) Berlin geography from the Planungsraum/Bezirksregion/
   Prognoseraum ladder used elsewhere on this site — it does not nest cleanly into Planungsräume, so
@@ -305,9 +313,9 @@ limit 15
   assignment</b> (each Planungsraum rolls into the one Ortsteil containing the largest share of its
   area), not a code-prefix match. Figures are <b>sums and population-weighted averages</b> under
   that assignment — never a separately re-scored index. See the
-  <a href="/methodology">methodology page</a> for why coarse-grain areas are not re-scored, and
-  <a href="/berlin/area/[code]">any neighbourhood's own page</a> for the actual gentrification
-  index and trajectory.
+  <a href="/methodology">methodology page</a> for why coarse-grain areas are not re-scored, and any
+  neighbourhood's own page in the <a href="/berlin/area">full neighbourhood list</a> for the actual
+  gentrification index and trajectory.
 </Alert>
 
 {#if !hasChildren}
@@ -467,6 +475,32 @@ against each neighbourhood's own status/dynamism trajectory before drawing any c
 
 
 ## Where this area sits
+
+<!--
+  #308: shared per-area drill-down mini map (web/components/AreaDrilldownMap.svelte). Ortsteil has
+  no child level in mart_area_hierarchy (Ortsteil<->PLR is a non-nesting area-overlap crosswalk, not
+  a hierarchy edge -- see this page's own header comment) -- grouped with Berlin's PLR page as one of
+  the two finest-grain, no-drill-down levels per the #308 issue text. Self-only: this Ortsteil's own
+  polygon highlighted for orientation, no clickable children (reuses `ortsteil_self.geojson`, a
+  plain per-Ortsteil FeatureCollection -- see web/scripts/export_area_geojson.py).
+-->
+```sql minimap_areas
+-- Name resolved directly in SQL (not a JS-templated string literal) so a WFS-sourced name
+-- containing a quote character can never break this query's own SQL syntax.
+select
+    'ortsteil:' || '${params.code}' as feature_key,
+    coalesce(nullif(area_name, ''), '${params.code}') as area_name,
+    'This area' as role,
+    cast(null as varchar) as link
+from gentriduck_marts.dim_area_geometry
+where city_code = 'BER' and area_level = 'ortsteil' and area_code = '${params.code}'
+```
+
+<AreaDrilldownMap
+    data={minimap_areas}
+    geoJsonUrl={`${base}/geo/ortsteil_self.geojson`}
+    title="{ortsteil_name[0] ? ortsteil_name[0].area_name : 'This Ortsteil'}"
+/>
 
 ### Neighbourhoods (Planungsräume) dominantly assigned to this Ortsteil
 

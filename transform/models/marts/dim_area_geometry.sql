@@ -24,6 +24,13 @@
 -- current vintage; area_vintage set to the literal 'current' since this
 -- source has no pre2021/2021 split). Added #269 (I-ortsteile) so Ortsteil
 -- profile pages can render a choropleth polygon, same as PGR/BZR/PLR.
+-- 6a. int_hamburg_gebiet_osm_names (DERIVED, #307) -- best-effort OSM-place
+-- point-in-polygon name crosswalk for Hamburg statistisches-Gebiet
+-- (subarea_l2) rows, which have no name at the WFS source. Left-joined into
+-- the hamburg CTE below; only fills area_name where it is otherwise blank
+-- (subarea_l2 only) -- district/subarea_l1's real WFS names are untouched.
+-- Partial coverage is expected (943 official Gebiete vs informal OSM
+-- neighbourhood tagging) -- unmatched Gebiete keep area_name = '' as before.
 -- 6. berlin_bezirk (DERIVED, not a new source) -- OA-D6 (#240, ADR-0024):
 -- Bezirk (12 districts) has no WFS geometry source of its own. Per the
 -- maintainer's OA-D0 confirmed scope knob #3 ("Geometry = reuse + dissolve
@@ -128,17 +135,36 @@ with
         group by lor.city_code, lor.area_vintage, substr(lor.area_code, 1, 2)
     ),
 
+    -- #307: best-effort OSM-derived name for statistisches-Gebiet (subarea_l2)
+    -- rows, which have no name at the WFS source (see stg_hamburg_geo's own
+    -- area_name column note: "'' for statgebiet, which the source does not
+    -- name"). int_hamburg_gebiet_osm_names is a point-in-polygon crosswalk
+    -- over OSM place=neighbourhood|suburb|quarter nodes -- see that model's
+    -- header for the method and its documented partial-coverage caveat.
+    -- Only applied where area_name is already blank (subarea_l2); district/
+    -- subarea_l1's real WFS names are never overridden.
     hamburg as (
         select
             geo.city_code,
             geo.area_level,
             geo.area_code,
-            geo.area_name,
+            case
+                when
+                    geo.area_level = 'subarea_l2'
+                    and (geo.area_name is null or geo.area_name = '')
+                then osm_names.osm_place_name
+                else geo.area_name
+            end as area_name,
             geo.area_vintage,
             geo.geometry_wkb,
             city.native_crs_epsg
         from {{ ref("stg_hamburg_geo") }} as geo
         left join {{ ref("dim_city") }} as city on geo.city_code = city.city_code
+        left join
+            {{ ref("int_hamburg_gebiet_osm_names") }} as osm_names
+            on geo.city_code = osm_names.city_code
+            and geo.area_code = osm_names.area_code
+            and geo.area_level = 'subarea_l2'
         where geo.area_code is not null
     ),
 

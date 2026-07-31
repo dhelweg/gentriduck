@@ -15,9 +15,12 @@ sidebar_position: 2
   domains, area_vintage='current' throughout (no pre/post-2021 boundary split, unlike Berlin).
 
   Differences from /berlin/poi-map, all deliberate:
-  - No price/rent "citywide context" section -- mart_price_rent_dimension has zero Hamburg rows
-    (confirmed BER-only in the built parquet); this page does not claim a Hamburg land-value/rent
-    signal that doesn't exist.
+  - No price/rent "citywide context" section -- as of I21-i/#303, mart_price_rent_dimension now
+    carries 104 Hamburg rows (Wohnlage tier composition + modelled Mietenspiegel rent), narrower
+    IN KIND than Berlin's signal (no BRW/land-value equivalent, 2-tier not 3-tier Wohnlage,
+    current-state-only), per docs/epic-h/303-price-rent-hamburg-{geo,domain}-signoff.md (both
+    PASS). This page still does not build a display section from it -- that is separate,
+    out-of-scope future work, not an assertion that no Hamburg price/rent data exists.
   - Uses the new `subarea_l2_live_data.geojson` for the choropleth (same file
     pages/hamburg/maps.md uses -- this page ignores that file's baked-in gentrification-index
     properties and only reads geometry + area_code, the same "geometry vehicle, values joined
@@ -87,9 +90,15 @@ city-agnostic mart that has carried real Hamburg rows since H1 (#40).
   removed business can swing its Offering Advantage value disproportionately, so Gebiet-years
   below the same minimum-mapped-place threshold used for Berlin are shown as an unshaded gap rather
   than a potentially misleading value; the raw mapped-place count is always visible in the
-  tooltip. OSM's mapping coverage is not spatially neutral — see the
-  <a href="/berlin/poi-map">Berlin POI map</a>'s caveats (Haklay 2010) for the general point, which
-  applies equally to Hamburg.
+  tooltip. <b>OSM's mapping coverage is not spatially neutral: completeness tends to correlate with
+  area advantage, and poorer/peripheral areas are typically less thoroughly mapped than
+  richer/central ones</b> (Haklay, M. 2010, "How Good is Volunteered Geographical Information?",
+  *Environment and Planning B*). So a blank Gebiet-year can reflect an OSM coverage gap rather than
+  a real absence of commercial activity — please don't read it as evidence that nothing is
+  happening there. Hamburg's own affluent Alster–Elbe axis against a deprived eastern/southern
+  periphery is a sharper socio-spatial divide than Berlin's more mosaic pattern, so this
+  cross-sectional under-mapping gradient may be even steeper here (see the
+  <a href="/berlin/poi-map">Berlin POI map</a> for the same caveat applied there).
 </Alert>
 
 <Dropdown name="metric" title="Metric" defaultValue="density">
@@ -139,6 +148,16 @@ city-agnostic mart that has carried real Hamburg rows since H1 (#40).
   <ButtonGroupItem value="stock" valueLabel="Stock (this year's value)"/>
   <ButtonGroupItem value="development" valueLabel="Change since previous year"/>
 </ButtonGroup>
+
+<Alert status="warning">
+  <b>"Change since previous year" for POI density is not adjusted for growing OSM coverage.</b>
+  Mapper coverage grew fastest in Hamburg's earliest years (the coverage curve stabilizes only
+  around ~2014–2015 — see the citywide growth chart further down this page), so an early-year
+  density delta can reflect new OSM contributors catching up rather than real commercial change.
+  Offering Advantage's "change" view is less exposed to this: it is a same-year ratio to the
+  citywide average, so an area-uniform coverage shift cancels out; density's raw count carries no
+  such protection. Read early-year density deltas cautiously, especially before ~2014.
+</Alert>
 
 ```sql poi_map_data
 -- Single-query form (Berlin's berlin/poi-map.md precedent, that page's `poi_map_data` block):
@@ -234,8 +253,9 @@ what is and isn't built.
   A simple citywide total of the same governed data used above — no new indicator, weight, or
   method is introduced here, so no separate methodology sign-off applies. Unlike
   <a href="/berlin/poi-map">Berlin's equivalent section</a>, there is no land-value/rent chart here:
-  Hamburg has no published price/rent mart on this site (see <a href="/hamburg">the Hamburg data
-  hub</a>).
+  Hamburg's price/rent mart now carries narrower-in-kind data (Wohnlage tier composition +
+  modelled Mietenspiegel rent, I21-i/#303) than Berlin's, but no chart or section is built from it
+  on this page (see <a href="/hamburg">the Hamburg data hub</a>).
 </Alert>
 
 ### Shops, cafés & amenities, citywide
@@ -298,8 +318,10 @@ limit 15
 - **OSM early-year completeness bias** — the citywide POI-growth chart's early years should be
   read cautiously, for the same reason as Berlin's (see [methodology §6](/methodology)).
 - **No neighbourhood names** — Hamburg's statistische Gebiete are shown by numeric code only.
-- **No land value or rent context** — unlike the Berlin equivalent of this page, there is no
-  published price/rent mart for Hamburg on this site.
+- **No land value or rent chart on this page (yet)** — Hamburg's price/rent mart now carries
+  narrower-in-kind data than Berlin's (Wohnlage tier composition + modelled Mietenspiegel rent,
+  I21-i/#303: no BRW/land-value equivalent, 2-tier not 3-tier Wohnlage, current-state-only), but no
+  chart or section is built from it on this page.
 - **Offering Advantage and POI density are commercial-side signals, not the outcome variable** —
   see [methodology §1](/methodology).
 - **Thinly-mapped Gebiete are suppressed, not shown as zero** — same D-3 minimum-mapped-place

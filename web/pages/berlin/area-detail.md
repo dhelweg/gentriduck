@@ -124,7 +124,7 @@ limit 1
 
 ---
 
-## Spotlight — {chosen[0].area_name}
+## Spotlight — {chosen[0]?.area_name ?? 'this district'}
 
 ```sql spotlight
 select
@@ -160,11 +160,24 @@ where g.variant = 'live_data' and g.area_level = 'plr' and g.city_code = 'BER'
 <BigValue data={spotlight} value=trajectory_type title="Overall trajectory" emptySet="warn"/>
 <BigValue data={spotlight} value=trajectory_confidence title="Confidence" emptySet="warn"/>
 
+<!-- #323: guard on the VALUE (`chosen[0]?.area_code`), not just the row -- same #255 precedent as
+     every /berlin/area/[code]-style Up-link (see e.g. pages/berlin/area/[code].md's Up-link
+     comment for the full "undefined"-cascade rationale). This page isn't itself a `[code].md`
+     template, but its `chosen`/`spotlight` queries are driven by a Dropdown input rather than a
+     route param, and can be legitimately empty (build-time/shell rendering before the input's
+     default value is bound); `chosen[0].area_code` was previously read directly, so an
+     empty/placeholder result rendered the literal text "undefined" into this static `<a href>` --
+     a real, crawlable `/berlin/area/undefined` route that Evidence then tried to prerender as the
+     `/berlin/area/[code]` template and failed on (#323). -->
 <p>
+{#if chosen[0]?.area_code}
 {chosen[0].area_name} is currently the highest gentrification-pressure neighbourhood in the
 selected district. Its full profile — social-status trajectory, commercial-mix development,
 Offering Advantage, demographics, amenities, and land value/rent — is on its
 <a href="/berlin/area/{chosen[0].area_code}">canonical area page</a>.
+{:else}
+Pick a district above to see its highest-pressure neighbourhood — each one also has a full profile in the <a href="/berlin/area">neighbourhood list</a>.
+{/if}
 </p>
 
 Trajectory labels are explained on the [methodology page](/methodology) — an "improving" label does

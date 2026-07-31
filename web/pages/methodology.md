@@ -354,6 +354,20 @@ We would rather state these plainly than have you discover them by surprise.
   [geo-data-scientist decision](https://github.com/dhelweg/gentriduck/blob/main/docs/epic-i/I-coarse-index-geo-decision.md)
   and the [domain-expert decision](https://github.com/dhelweg/gentriduck/blob/main/docs/epic-i/I-coarse-index-domain-decision.md)
   for the full reasoning.
+- **The [maps](/berlin/maps) area-level selector colours a rollup *typology stage*, never a rescored
+  scalar — the #267 decline above still applies unmodified.** At Bezirk/PGR/Ortsteil (Berlin) and
+  Stadtteil/Bezirk (Hamburg) grain, the map colours by each area's *plurality* ("most widespread")
+  gentrification stage among its constituent PLRs/Gebiete — population-weighted where an area's
+  population data is complete, equal-weighted as a flagged fallback otherwise — always paired with
+  that stage's share, a small-sample flag, and a composition counterweight (the combined share of the
+  area in an acute-pressure stage), never shown as a standalone label. `status_index`/`dynamism_index`
+  are **not** offered as a map colour, and the table is **not** ranked by them, at any rollup grain —
+  they remain visible only as a plainly-labelled, unsorted diagnostic column. This is the first time a
+  rollup typology label is coloured citywide (beyond the earlier per-area-profile-only
+  [#249](https://github.com/dhelweg/gentriduck/issues/249) precedent), reviewed and dual-gated on
+  [#310](https://github.com/dhelweg/gentriduck/issues/310); see the
+  [#310 rollup-typology-colour decision](https://github.com/dhelweg/gentriduck/blob/main/docs/methodology/310-rollup-typology-colour-decision.md)
+  for exactly what was and wasn't extended.
 
 ## 7. Faithful vs improved — a methodology comparison
 
@@ -563,6 +577,7 @@ project's public GitHub repository:
 - [Offering Advantage — modes, scales & dominance](/methodology-oa-modes) — the dedicated page for OA's nine calculation methods, four spatial scales, and the within-group dominance construct (ADR-0024), extending the faithful/improved comparison in §7
 - B1 displacement/affordability sign-offs (§2): [Milieuschutz geo](https://github.com/dhelweg/gentriduck/blob/main/docs/methodology/B1-milieuschutz-geo-signoff.md) / [domain](https://github.com/dhelweg/gentriduck/blob/main/docs/methodology/B1-milieuschutz-domain-signoff.md), [rent-pressure geo](https://github.com/dhelweg/gentriduck/blob/main/docs/methodology/B1-rent-pressure-geo-signoff.md) / [domain](https://github.com/dhelweg/gentriduck/blob/main/docs/methodology/B1-rent-pressure-domain-signoff.md), [turnover geo](https://github.com/dhelweg/gentriduck/blob/main/docs/methodology/B1-turnover-geo-signoff.md) / [domain](https://github.com/dhelweg/gentriduck/blob/main/docs/methodology/B1-turnover-domain-signoff.md)
 - Coarse-grain (BZR/PGR/Bezirk) index-value decline (§6): [geo-data-scientist decision](https://github.com/dhelweg/gentriduck/blob/main/docs/epic-i/I-coarse-index-geo-decision.md) / [domain-expert decision](https://github.com/dhelweg/gentriduck/blob/main/docs/epic-i/I-coarse-index-domain-decision.md)
+- Map area-level selector — rollup typology colouring (§6): [#310 rollup-typology-colour decision](https://github.com/dhelweg/gentriduck/blob/main/docs/methodology/310-rollup-typology-colour-decision.md), with the full dual sign-off in [geo](https://github.com/dhelweg/gentriduck/blob/main/docs/epic-e/310-map-granularity-geo-signoff.md) / [domain](https://github.com/dhelweg/gentriduck/blob/main/docs/epic-e/310-map-granularity-domain-signoff.md)
 - Hamburg admission (§6): [H1 geo](https://github.com/dhelweg/gentriduck/blob/main/docs/epic-h/H1-geo-signoff.md) / [H1 domain](https://github.com/dhelweg/gentriduck/blob/main/docs/epic-h/H1-domain-signoff.md) sign-offs (pipeline wiring, the four publication conditions restated in §6 above), [H3 geo](https://github.com/dhelweg/gentriduck/blob/main/docs/epic-h/H3-geo-signoff.md) / [H3 domain](https://github.com/dhelweg/gentriduck/blob/main/docs/epic-h/H3-domain-signoff.md) sign-offs (the #237 admission decision itself), and the Hamburg C-series validation re-fits: [C1/#158 geo](https://github.com/dhelweg/gentriduck/blob/main/docs/epic-h/158-hc1-geo-signoff.md) / [domain](https://github.com/dhelweg/gentriduck/blob/main/docs/epic-h/158-hc1-domain-signoff.md), [C2/#159 geo](https://github.com/dhelweg/gentriduck/blob/main/docs/epic-h/159-hc2-geo-signoff.md) / [domain](https://github.com/dhelweg/gentriduck/blob/main/docs/epic-h/159-hc2-domain-signoff.md), [C3/#160 geo](https://github.com/dhelweg/gentriduck/blob/main/docs/epic-h/160-hc3-geo-signoff.md) / [domain](https://github.com/dhelweg/gentriduck/blob/main/docs/epic-h/160-hc3-domain-signoff.md), [C5/#203 geo](https://github.com/dhelweg/gentriduck/blob/main/docs/epic-h/203-hc5-geo-signoff.md) / [domain](https://github.com/dhelweg/gentriduck/blob/main/docs/epic-h/203-hc5-domain-signoff.md), [C6/#215 geo](https://github.com/dhelweg/gentriduck/blob/main/docs/epic-h/215-hc6-geo-signoff.md) / [domain](https://github.com/dhelweg/gentriduck/blob/main/docs/epic-h/215-hc6-domain-signoff.md)
 
 See also the [home page](/) for the current index, [time-series](/berlin/time-series) for per-area

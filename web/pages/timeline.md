@@ -121,11 +121,39 @@ the whole story chronologically, rather than the current state (which is what th
         'one canonical per-level template, and scaffolds the same shape fresh for Hamburg, including ' +
         'its <code>subarea_l1</code>/<code>subarea_l2</code> hierarchy crosswalk — with an explicit architect ' +
         'ruling (I21-a) that no Berlin route is renamed, so the frozen I2 route map stands. ' +
-        'Sub-tickets #296–#302 landed 2026-07-23 through 2026-07-24; #303 (folding Hamburg\'s ' +
-        'per-area statistics sections into the template) remains open, blocked on a maintainer ' +
-        'publish-scope decision — not part of this milestone.',
+        'Sub-tickets #296–#302 landed 2026-07-23 through 2026-07-24; folding Hamburg\'s per-area ' +
+        'statistics sections into the template (#303) was still open and blocked on a maintainer ' +
+        'publish-scope decision at this point — not part of this milestone, resolved the same day ' +
+        '(see next entry).',
       href: 'https://github.com/dhelweg/gentriduck/issues/302',
       hrefLabel: 'issue #302 (closed 2026-07-24), last of #296–#302 to land →'
+    },
+    {
+      date: '2026-07-24',
+      title: 'Hamburg\'s per-area statistics go live (mostly)',
+      body: 'The maintainer\'s #303 publish-scope ruling splits "fold in Hamburg\'s statistics" into ' +
+        'one admission-shaped ticket per mart: price/rent (#303, narrowed), commercial-mix/Offering ' +
+        'Advantage (#312, needed its own OSM-completeness-bias re-fit), and status/trajectory (#314, ' +
+        'wired onto the pages by #317). All four clear dual geo + domain sign-off and land the same ' +
+        'day, replacing most ' +
+        '<code>&lt;NotYetPublished&gt;</code> placeholders on the Hamburg area pages with real data. ' +
+        'Only the demographics/change composite (#313) stays placeholder — Hamburg\'s EWR-equivalent ' +
+        'has 3 indicators vs Berlin\'s 5, and how to present that honestly is still an open maintainer ' +
+        'ruling.',
+      href: 'https://github.com/dhelweg/gentriduck/issues/303',
+      hrefLabel: 'issue #303 (closed 2026-07-24) →'
+    },
+    {
+      date: '2026-07-30',
+      title: 'Map granularity selector',
+      body: 'Both cities\' <code>/maps</code> pages gain a Bezirk/PGR/Ortsteil (Berlin) and ' +
+        'Stadtteil/district (Hamburg) rollup view alongside the original PLR/Gebiet grain — a ' +
+        'population-weighted dominant-stage colouring with its own composition counterweight and ' +
+        'small-sample flag, never a re-scored index at the coarser grain. Dual geo + domain ' +
+        'sign-off, including a three-round domain re-review that caught and fixed a label-overreach ' +
+        'defect before integration.',
+      href: 'https://github.com/dhelweg/gentriduck/issues/310',
+      hrefLabel: 'issue #310 (closed 2026-07-30) →'
     }
   ];
 

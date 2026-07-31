@@ -116,6 +116,10 @@ Dependencies: duckdb, pandas, scipy (all already in pyproject.toml).
 
 Usage:
   uv run python analysis/d_oa_mode_comparison.py
+  uv run python analysis/d_oa_mode_comparison.py --city-code HH   # #318: Hamburg
+    completeness-contamination gate only (deliverable 4), see docs/methodology/
+    OA-D5-mode-comparison-findings.md's Hamburg addendum and #312 geo sign-off
+    Condition R4 (docs/epic-h/312-hh-oa-geo-signoff.md).
 
 Citations: Openshaw (1984), The Modifiable Areal Unit Problem, CATMOG 38
 (MAUP framing, §7 threshold); Isard (1960); Isserman (1977) JAIP; Efron &
@@ -129,6 +133,7 @@ ADR-0024 D3 (never-blend).
 
 from __future__ import annotations
 
+import argparse
 import os
 import sys
 from datetime import datetime, timezone
@@ -229,12 +234,49 @@ def _table_exists(con: duckdb.DuckDBPyConnection, name: str) -> bool:
     return name in {r[0] for r in rows}
 
 
+def _city_filter_sql(city_code: str, alias: str = "") -> tuple[str, list]:
+    """SQL WHERE-fragment + duckdb params matching this warehouse's per-city
+    `city_code` storage convention. #318 (tooling/reproducibility only, no
+    new indicator/weight/normalization): parametrizes the two previously
+    Berlin-hardcoded filters below (`load_methods_level`,
+    `run_contamination_gate`) so the completeness-contamination gate
+    (deliverable 4) is re-runnable for a second city from a single committed
+    command -- #312's geo sign-off Condition R4
+    (docs/epic-h/312-hh-oa-geo-signoff.md, citing 312-oa-c5-geo-spike.md's own
+    R4) flagged the pre-#318 Hamburg numbers as an uncommitted, ad hoc filter
+    swap, not yet reproducible from committed code.
+
+    Berlin ('BER', the default -- preserves pre-#318 behavior byte-for-byte)
+    keeps its two historical spellings verbatim: 'BER' (most models) and
+    lowercase 'berlin' (`int_osm_poi_plr_weighted`'s own convention, also
+    matched by `oa_bandwidth_sweep.py`'s identical filter). Any other
+    city_code (e.g. 'HH' for Hamburg, `e5_hamburg_lead_lag.py`'s own
+    convention) is matched case-insensitively (`upper()` both sides, #318
+    review fix -- `--city-code hh` now matches stored 'HH' rows the same way
+    Berlin's own filter above already tolerates case), parameter-bound rather
+    than f-string-interpolated (the value passed through here is always an
+    internal/CLI-controlled city_code, never untrusted external text --
+    parameter binding is precautionary hygiene, not a response to a modeled
+    threat)."""
+    col = f"{alias}.city_code" if alias else "city_code"
+    if city_code.upper() == "BER":
+        return f"(lower({col}) = 'berlin' OR {col} = 'BER')", []
+    # Case-insensitive match, mirroring Berlin's own case-insensitivity above --
+    # this warehouse's non-Berlin city_code convention is uppercase (e.g. 'HH',
+    # e5_hamburg_lead_lag.py's own convention), so upper() on both sides lets
+    # `--city-code hh` (lowercase CLI input) match stored 'HH' rows instead of
+    # silently returning zero rows.
+    return f"upper({col}) = ?", [city_code.upper()]
+
+
 # ---------------------------------------------------------------------------
 # 1. Cross-mode Spearman correlation matrix
 # ---------------------------------------------------------------------------
 
 
-def load_methods_level(con: duckdb.DuckDBPyConnection, level: str) -> "pd.DataFrame":
+def load_methods_level(
+    con: duckdb.DuckDBPyConnection, level: str, city_code: str = "BER"
+) -> "pd.DataFrame":
     """One row per distinct taxonomy leaf at `level`'s own grain (deduped,
     since int_poi_offering_advantage_methods fans out over the finer levels
     below the requested one -- e.g. a domain-level row repeats once per
@@ -242,13 +284,18 @@ def load_methods_level(con: duckdb.DuckDBPyConnection, level: str) -> "pd.DataFr
     documented dedup precedent for the identical fan-out issue). Loads ALL
     nine method columns in one query (#285) -- both the 1a (relative-family)
     and 1b (absolute-vs-relative) correlation passes below reuse this single
-    load rather than re-querying per pair-set."""
+    load rather than re-querying per pair-set.
+
+    `city_code` (#318, default 'BER' -- preserves pre-#318 behavior
+    byte-for-byte): see `_city_filter_sql` for the per-city filter
+    convention."""
     key_cols = {
         "domain": ["poi_domain_h"],
         "category": ["poi_domain_h", "poi_category_h"],
         "type": ["poi_domain_h", "poi_category_h", "poi_type_h"],
     }[level]
     value_cols = ", ".join(f"any_value(oa_{level}_{m}) AS {m}" for m in ALL_METHODS)
+    filter_sql, params = _city_filter_sql(city_code)
     sql = f"""
         SELECT
             area_code,
@@ -256,12 +303,12 @@ def load_methods_level(con: duckdb.DuckDBPyConnection, level: str) -> "pd.DataFr
             {", ".join(key_cols)},
             {value_cols}
         FROM int_poi_offering_advantage_methods
-        WHERE (lower(city_code) = 'berlin' OR city_code = 'BER')
+        WHERE {filter_sql}
           AND weight_variant = 'standard'
           AND methodology_variant = 'faithful'
         GROUP BY area_code, snapshot_year, {", ".join(key_cols)}
     """
-    return con.execute(sql).df()
+    return con.execute(sql, params).df()
 
 
 def cross_mode_correlation(
@@ -360,7 +407,9 @@ def run_maup_nested_lq(con: duckdb.DuckDBPyConnection) -> list[dict]:
 # ---------------------------------------------------------------------------
 
 
-def run_contamination_gate(con: duckdb.DuckDBPyConnection, methods: list[str]) -> list[dict]:
+def run_contamination_gate(
+    con: duckdb.DuckDBPyConnection, methods: list[str], city_code: str = "BER"
+) -> list[dict]:
     """Domain-level only (the coverage proxy, all_domains_stock_city, is a
     single city-wide constant per year -- it does not vary by taxonomy level
     or area, so testing all three levels would not add information beyond
@@ -372,15 +421,33 @@ def run_contamination_gate(con: duckdb.DuckDBPyConnection, methods: list[str]) -
     int_poi_offering_advantage (all_domains_stock_city, the coverage-growth
     proxy int_poi_status_dynamism.sql's own C5 sign-off already established)
     on the shared grain key. SAME query shape used for the original seven
-    methods -- extended, not reinvented, per #285's own binding instruction."""
+    methods -- extended, not reinvented, per #285's own binding instruction.
+
+    `city_code` (#318, default 'BER' -- preserves pre-#318 behavior
+    byte-for-byte, same threshold/logic, just which city's rows are queried):
+    see `_city_filter_sql`. #312's geo sign-off Condition R4
+    (docs/epic-h/312-hh-oa-geo-signoff.md / 312-oa-c5-geo-spike.md's own R4)
+    explicitly cautioned that naively dropping the city filter without also
+    carrying `city_code` through the delta-computation partition would be a
+    latent correctness trap if area_code ever collides across cities (Berlin
+    PLR vs Hamburg Gebiet codes do not collide today, verified in that spike,
+    but nothing guarantees that forever). This function still queries exactly
+    ONE city per call (no filter is dropped here), but the delta groupby key
+    below is `(city_code, area_code)`, not `area_code` alone, honoring that
+    caution defensively -- harmless today (a single-city result set has only
+    one distinct city_code, so the extra key changes no numbers), and correct
+    if a future caller ever unions multiple cities' rows before calling this
+    function."""
     if not (
         _table_exists(con, "int_poi_offering_advantage_methods")
         and _table_exists(con, "int_poi_offering_advantage")
     ):
         return []
     method_cols = ", ".join(f"any_value(m.oa_domain_{meth}) AS {meth}" for meth in methods)
+    filter_sql, params = _city_filter_sql(city_code, alias="m")
     sql = f"""
         SELECT
+            m.city_code,
             m.area_code,
             m.snapshot_year,
             any_value(o.all_domains_stock_city) AS coverage_proxy,
@@ -396,19 +463,19 @@ def run_contamination_gate(con: duckdb.DuckDBPyConnection, methods: list[str]) -
             AND m.poi_type_h = o.poi_type_h
             AND m.weight_variant = o.weight_variant
             AND m.methodology_variant = o.methodology_variant
-        WHERE (lower(m.city_code) = 'berlin' OR m.city_code = 'BER')
+        WHERE {filter_sql}
           AND m.weight_variant = 'standard'
           AND m.methodology_variant = 'faithful'
-        GROUP BY m.area_code, m.snapshot_year
+        GROUP BY m.city_code, m.area_code, m.snapshot_year
     """
-    df = con.execute(sql).df()
+    df = con.execute(sql, params).df()
     if df.empty:
         return []
-    df = df.sort_values(["area_code", "snapshot_year"])
+    df = df.sort_values(["city_code", "area_code", "snapshot_year"])
     deltas = df.copy()
-    deltas["coverage_delta"] = deltas.groupby("area_code")["coverage_proxy"].diff()
+    deltas["coverage_delta"] = deltas.groupby(["city_code", "area_code"])["coverage_proxy"].diff()
     for meth in methods:
-        deltas[f"{meth}_delta"] = deltas.groupby("area_code")[meth].diff()
+        deltas[f"{meth}_delta"] = deltas.groupby(["city_code", "area_code"])[meth].diff()
 
     results = []
     for meth in methods:
@@ -731,6 +798,15 @@ def render_report(
         "`int_ewr_socioeco`) would let this test actually run with multiple "
         "transitions.\n"
     )
+    lines.append(
+        "**Hamburg cross-check (#312, #318):** see "
+        "`docs/methodology/OA-D5-hamburg-addendum.md` -- a separate, hand-maintained "
+        "file this document's own regeneration never touches (that separation is "
+        "itself the #318 review fix: this Berlin-scoped doc is fully overwritten by "
+        "every `uv run python analysis/d_oa_mode_comparison.py` run, so the Hamburg "
+        "record cannot live as a hand-added section in here without being silently "
+        "destroyed by the next routine refresh).\n"
+    )
 
     lines.append("## 5. Golden validation (nested-LQ only)\n")
     lines.append(
@@ -818,7 +894,60 @@ def render_report(
     return "\n".join(lines) + "\n"
 
 
+def _print_contamination_gate(city_code: str, contamination: list[dict]) -> list[str]:
+    """Plain-text render of the completeness-contamination gate (deliverable 4)
+    for a single city -- used by the #318 `--city-code` gate-only CLI path so
+    a non-Berlin re-run (e.g. Hamburg, #312) has a committed, single-command
+    result without regenerating the Berlin-scoped findings doc (see `main`).
+    Returns the list of temporal-unsafe method names (empty if none)."""
+    print(f"Completeness-contamination gate (OA-D0 C3) -- city_code={city_code}\n")
+    print(f"{'Method':<12}{'rho':>10}{'p':>12}{'n':>8}  Result")
+    unsafe = []
+    for r in contamination:
+        if r["rho"] is None:
+            print(f"{r['method']:<12}{'n/a':>10}{'n/a':>12}{r['n']:>8}  {r.get('note')}")
+            continue
+        result_s = "temporal-UNSAFE" if r["temporal_unsafe"] else "temporal-safe"
+        print(f"{r['method']:<12}{r['rho']:>10.3f}{r['p']:>12.4f}{r['n']:>8}  {result_s}")
+        if r["temporal_unsafe"]:
+            unsafe.append(r["method"])
+    return unsafe
+
+
 def main() -> int:
+    # #318: `--city-code` lets the completeness-contamination gate (deliverable
+    # 4, "the ONE gate this ticket must actually run" per the module
+    # docstring) be re-run for a second city from a single committed command,
+    # closing #312 geo sign-off Condition R4 (the pre-#318 Hamburg numbers
+    # came from an uncommitted ad hoc filter swap). Default 'BER' is UNCHANGED
+    # pre-#318 behavior: the full six-deliverable report, written to the
+    # Berlin-scoped OUTPUT_MD. Any other city_code runs ONLY the
+    # contamination gate and prints its result -- it does not regenerate
+    # OUTPUT_MD, whose narrative text (MAUP §2, bandwidth §3, golden
+    # validation §5) is Berlin-specific and out of this ticket's tooling-only
+    # scope (issue #318: "no new indicator/weight/normalization" -- a
+    # multi-city rewrite of those sections would be exactly that kind of
+    # scope creep for a change that should only parametrize which city's
+    # data is queried).
+    parser = argparse.ArgumentParser(
+        description="OA-D5 (#240/#285) mode-comparison study / completeness-contamination gate"
+    )
+    parser.add_argument(
+        "--city-code",
+        default="BER",
+        help=(
+            "City to run against. Default 'BER' (Berlin) runs the full report "
+            "(all six deliverables) and writes "
+            "docs/methodology/OA-D5-mode-comparison-findings.md. Any other "
+            "city_code (e.g. 'HH' for Hamburg) runs ONLY the completeness-"
+            "contamination gate (deliverable 4) against that city's data and "
+            "prints its result table -- see docs/methodology/"
+            "OA-D5-mode-comparison-findings.md's Hamburg addendum (#318)."
+        ),
+    )
+    args = parser.parse_args()
+    city_code = args.city_code
+
     if not DUCKDB_PATH.exists():
         print(f"WARN: {DUCKDB_PATH} does not exist. Skipping (data-presence guard).")
         return 0
@@ -827,6 +956,17 @@ def main() -> int:
         if not _table_exists(con, "int_poi_offering_advantage_methods"):
             print("WARN: int_poi_offering_advantage_methods not built. Skipping.")
             return 0
+
+        if city_code.upper() != "BER":
+            contamination = run_contamination_gate(con, ALL_METHODS, city_code=city_code)
+            if not contamination:
+                print(f"WARN: no contamination-gate data for city_code={city_code}. Skipping.")
+                return 0
+            unsafe = _print_contamination_gate(city_code, contamination)
+            if unsafe:
+                print(f"\nCOMPLETENESS-CONTAMINATION GATE: temporal-unsafe methods: {unsafe}")
+            return 0
+
         level_dfs = {level: load_methods_level(con, level) for level in LEVELS}
         cross_mode = {
             level: cross_mode_correlation(level_dfs[level], level, RELATIVE_PAIRS)

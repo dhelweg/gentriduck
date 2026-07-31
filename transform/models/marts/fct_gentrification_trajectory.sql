@@ -63,19 +63,22 @@
 -- Known hotspot PLRs (persistently deprived) and coldspot PLRs (stable-established)
 -- validated in analysis/backtest_index.py.
 --
--- BERLIN-ONLY SCOPE (#125, staging decision -- not a methodology change): as of the
--- H1 (#40) integration, int_gentrification_ts also carries Hamburg rows
--- (city_code='HH', ADR-0014). This mart stays Berlin-only for now: the trajectory
--- thresholds (status_delta >= 1, status_range <= 1, etc.) were derived and
--- back-tested (R-B2) against Berlin's biennial MSS panel and have not been
--- reviewed for Hamburg's annual Sozialmonitoring panel, and the H1 sign-offs
--- (docs/epic-h/H1-geo-signoff.md, H1-domain-signoff.md) scoped their PASS to
--- int_gentrification_ts pipeline wiring only ("no dashboard/report is published
--- from it yet").
+-- BERLIN-ONLY SCOPE, HISTORICAL (#125, staging decision -- not a methodology
+-- change): as of the H1 (#40) integration, int_gentrification_ts also carries
+-- Hamburg rows (city_code='HH', ADR-0014). This mart stayed Berlin-only for a
+-- time: the trajectory thresholds (status_delta >= 1, status_range <= 1, etc.)
+-- were derived and back-tested (R-B2) against Berlin's biennial MSS panel and
+-- had not been reviewed for Hamburg's annual Sozialmonitoring panel, and the H1
+-- sign-offs (docs/epic-h/H1-geo-signoff.md, H1-domain-signoff.md) scoped their
+-- PASS to int_gentrification_ts pipeline wiring only ("no dashboard/report is
+-- published from it yet").
 -- METHODOLOGY QUESTION flagged for the gate (#125): do these Berlin-calibrated
 -- trajectory thresholds transfer to Hamburg's annual (not biennial) cadence
 -- unmodified, or does "status_delta >= 1 within the panel" mean something
--- different when editions are 1 year apart instead of 2? Not decided here.
+-- different when editions are 1 year apart instead of 2? Answered by H-C2
+-- (#159) below: yes, once the classification input is bounded to a matched
+-- year-span window -- see #314 update further down for how Hamburg was
+-- subsequently admitted into this mart using that fix.
 --
 -- H-C2 (#159) matched year-span classification window (geo-DS spike
 -- docs/epic-h/159-hc2-geo-spike.md): the METHODOLOGY QUESTION above is answered
@@ -106,37 +109,55 @@
 -- H-C2 #159 PR). This is why the fix needs no R-B2 re-calibration. For Hamburg
 -- (city_code='HH', area_vintage='current', max=2025) the window trims the
 -- input to snapshot_year >= 2019, i.e. ~7 of the 13 annual editions (2019-2025,
--- a 6-year span) -- Berlin-comparable, though Hamburg rows are already excluded
--- before this window logic even runs: `ts_with_vintage_max`'s WHERE clause
--- filters to city_code='BER' (H3 #237 update below) upstream of the `ts`
--- window-trim CTE, so Hamburg rows never reach this window filter in a
--- normal build, regardless of the `published_cities` var's contents.
+-- a 6-year span) -- Berlin-comparable. At the time #159 landed, Hamburg rows
+-- were still excluded upstream of this window filter (see the now-superseded
+-- H3/#314-history note below); #314 (below) subsequently admitted them.
 -- Left out of scope (spike R2, Berlin-affecting): endpoint-only status_delta
 -- (first vs last edition only, ignoring interior years) is fragile --
 -- ~19-25% of Hamburg's full-panel trend calls flip under 3-edition-smoothed
 -- endpoints -- but fixing that (smoothing or a regression slope) would change
 -- Berlin's output too and would reopen the R-B2 back-test; deferred to a
 -- future issue if pursued, and would need its own fresh dual sign-off.
--- This window fix does NOT widen accepted_values beyond ["BER"] (spike R4) --
--- it is Berlin-output-preserving groundwork, not a Hamburg-publication
--- decision; publishing Hamburg trajectories needs a separate fresh geo-DS +
+-- #159 itself did NOT widen accepted_values beyond ["BER"] (spike R4) -- it
+-- was Berlin-output-preserving groundwork, not a Hamburg-publication decision;
+-- publishing Hamburg trajectories needed a separate fresh geo-DS +
 -- domain-expert dual sign-off referencing this spike, per the #125/#158
--- precedent.
+-- precedent. That sign-off is #314's job (see below).
 --
--- H3 (#237) scope guard update: the H3 dual sign-off (docs/epic-h/
--- H3-geo-signoff.md, H3-domain-signoff.md) admitted Hamburg into
--- gentrification_index ONLY, and widened the global `published_cities` var to
--- ["BER","HH"] to do so (see dbt_project.yml). H3 condition 4 requires this
--- trajectory mart remain city_code='BER' -- the Berlin-calibrated trajectory
--- thresholds (status_delta >= 1, status_range <= 1) have not been reviewed
--- against Hamburg's annual cadence (this file's own H-C2/#159 note above), so
--- the `ts_with_vintage_max` CTE below now filters on a literal city_code='BER'
+-- H3 (#237) scope guard, HISTORICAL -- superseded by #314 below: the H3 dual
+-- sign-off (docs/epic-h/H3-geo-signoff.md, H3-domain-signoff.md) admitted
+-- Hamburg into gentrification_index ONLY, and widened the global
+-- `published_cities` var to ["BER","HH"] to do so (see dbt_project.yml). H3
+-- condition 4 required this trajectory mart remain city_code='BER' -- the
+-- Berlin-calibrated trajectory thresholds (status_delta >= 1, status_range <=
+-- 1) had not yet been reviewed against Hamburg's annual cadence at that time,
+-- so the `ts_with_vintage_max` CTE filtered on a literal city_code='BER'
 -- instead of published_cities_filter, decoupling this mart's scope from the
--- publication-readiness var that gentrification_index now shares with Hamburg.
+-- publication-readiness var that gentrification_index shared with Hamburg.
+--
+-- #314 (Hamburg admission into this mart): with #159's cadence-normalized
+-- `trajectory_window_years` window dual-signed-off PASS
+-- (docs/epic-h/159-hc2-geo-signoff.md, 159-hc2-domain-signoff.md) and this
+-- ticket's own fresh dual sign-off (docs/epic-h/314-*-signoff.md) confirming
+-- the widening itself is faithful (per the #237/#302/#303 admission-into-mart
+-- precedent), the H3 scope guard above is lifted: `ts_with_vintage_max` now
+-- filters via the `published_cities_filter` macro (see macros/
+-- published_cities_filter.sql; currently ["BER","HH"], dbt_project.yml)
+-- instead of a literal 'BER', and Hamburg rows
+-- are classified using the SAME #159 window/thresholds as Berlin -- no
+-- Hamburg-specific re-derivation, per #159's own finding that the thresholds
+-- transfer once the input window is span-matched. `accepted_values` in
+-- schema.yml is correspondingly widened to ["BER","HH"]. Berlin's output is
+-- unaffected (still the #159 no-op guarantee); see docs/epic-h/159-hc2-geo-spike.md
+-- §evidence and this file's PR for the before/after regression check.
 --
 -- dbt_meta_owner: data-engineer
 -- geo-ds-sign-off: docs/methodology/R-B2-geo-signoff.md (R-B2 #71 PASS used as basis)
 -- geo-ds-spike: docs/epic-h/159-hc2-geo-spike.md (H-C2 #159, matched-window fix)
+-- geo-ds-sign-off: docs/epic-h/159-hc2-geo-signoff.md (H-C2 #159 PASS, window fix)
+-- domain-sign-off: docs/epic-h/159-hc2-domain-signoff.md (H-C2 #159 PASS, window fix)
+-- geo-ds-sign-off: docs/epic-h/314-*-geo-signoff.md (#314, HH admission -- pending)
+-- domain-sign-off: docs/epic-h/314-*-domain-signoff.md (#314, HH admission -- pending)
 -- depends_on: {{ ref('int_gentrification_ts') }}
 {{
     config(
@@ -175,12 +196,17 @@ with
                 partition by city_code, area_vintage
             ) as vintage_max_year
         from {{ ref("int_gentrification_ts") }}
-        -- Berlin-only staging filter (#125; H3 #237 scope guard -- see header
-        -- note). Literal 'BER' filter, NOT published_cities_filter: the global
-        -- published_cities var now includes 'HH' (widened for
-        -- gentrification_index's H3 admission), and the var-driven macro would
-        -- silently admit Hamburg into this Berlin-calibrated trajectory mart.
-        where is_uninhabited = false and city_code = 'BER'
+        -- #314: widened from a literal city_code='BER' filter (H3 #237 scope
+        -- guard, now lifted -- see header note) to published_cities_filter, so
+        -- Hamburg (city_code='HH') is admitted into this mart using the SAME
+        -- #159 (docs/epic-h/159-hc2-geo-spike.md) cadence-normalized
+        -- trajectory_window_years=6 window and unmodified thresholds as
+        -- Berlin -- no Hamburg-specific re-derivation, per #159's finding that
+        -- the Berlin-calibrated thresholds transfer once the input window is
+        -- span-matched. Berlin rows are unaffected: published_cities currently
+        -- resolves to ["BER","HH"] (dbt_project.yml), a superset of the prior
+        -- literal 'BER' filter, so no Berlin row is newly excluded or altered.
+        where is_uninhabited = false and {{ published_cities_filter("city_code") }}
     ),
 
     -- H-C2 (#159): restrict the classification input to each

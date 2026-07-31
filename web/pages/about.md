@@ -42,8 +42,8 @@ The original thesis repository is left untouched, as the historical record. Gent
 from-scratch rebuild of the same idea on a modern, free, and open stack (dbt + DuckDB), extended
 with a full time-series of OpenStreetMap data back to 2008, open price/rent data, and — the part the
 thesis never had — a public website. What started as "reproduce a thesis" has grown into an ongoing
-public statistics project, Berlin first and other cities (Hamburg is next) added as the data model
-allows, without a rewrite. See the [methodology page](/methodology) for how the current index
+public statistics project, Berlin first, Hamburg since (2026-07), with further cities addable as the
+data model allows, without a rewrite. See the [methodology page](/methodology) for how the current index
 differs from, and stays honest about, the 2018 original.
 
 ## How it's built: a supervised, multi-agent workflow

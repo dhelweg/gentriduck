@@ -137,6 +137,11 @@ from totals as t cross join top cross join advanced as a
 ```
 
 <script>
+  // #308: for the drill-down mini map's geoJsonUrl/link base-path prefixing (#144 convention) --
+  // see this page's "## Where this area sits" section below. Hoisted into this page's single
+  // existing <script> block (Svelte allows only one instance-level <script> per component/page).
+  import { base } from '$app/paths';
+
   $: mssMix = stage_mix_summary?.[0];
   $: mssTakeaway = (!mssMix || mssMix.n_total == null || Number(mssMix.n_total) === 0)
     ? null
@@ -510,6 +515,43 @@ others, and makes no claim about whether it is a good or bad place to live.
 
 
 ## Where this area sits
+
+<!-- #308: shared per-area drill-down mini map (web/components/AreaDrilldownMap.svelte). This
+     Bezirksregion's own polygon highlighted, its neighbourhoods (Planungsräume, the finest LOR
+     grain) clickable -- see bezirk/[code].md's header comment for the general pattern this
+     follows. `base` is imported once, in this page's single existing `<script>` block above. -->
+
+```sql minimap_areas
+-- Self row's name resolved directly in SQL (not a JS-templated string literal) so a WFS-sourced
+-- name containing a quote character can never break this query's own SQL syntax.
+select
+    'bzr:' || '${params.code}' as feature_key,
+    coalesce(nullif(area_name, ''), '${params.code}') as area_name,
+    'This area' as role,
+    1 as sort_order,
+    cast(null as varchar) as link
+from gentriduck_marts.dim_area_geometry
+where city_code = 'BER' and area_level = 'bzr' and area_vintage = 'lor_2021'
+  and area_code = '${params.code}'
+union all
+select
+    'plr:' || area_code as feature_key,
+    coalesce(area_name, area_code) as area_name,
+    'Click to explore' as role,
+    2 as sort_order,
+    '${base}/berlin/area/' || area_code as link
+from gentriduck_marts.dim_area_geometry
+where city_code = 'BER' and area_level = 'plr' and area_vintage = 'lor_2021'
+  and area_code is not null and trim(area_code) <> ''
+  and substr(area_code, 1, 6) = '${params.code}'
+order by sort_order, area_name
+```
+
+<AreaDrilldownMap
+    data={minimap_areas}
+    geoJsonUrl={`${base}/geo/bzr_plr_drilldown.geojson`}
+    title="{bzr_name[0] ? bzr_name[0].area_name : 'This Bezirksregion'} and its neighbourhoods"
+/>
 
 ### Neighbourhoods (Planungsräume) in this Bezirksregion
 

@@ -60,6 +60,16 @@ is needed) and a single `variant='live_data'` (no `standard`/`improved`/`distanc
 Hamburg rows exist). Non-methodology-bearing, same class of change as the rest of this script
 (presentation plumbing reading already-published, already-signed-off `gentrification_index`
 values -- no new indicator/weight/aggregation).
+
+#308 addition: `export_area_drilldown_geometry()` / `export_ortsteil_self_geometry()` export the
+combined self+child-level (and, for Ortsteil, self-only) FeatureCollections consumed by the new
+`<AreaDrilldownMap>` component (web/components/AreaDrilldownMap.svelte) on every Berlin and Hamburg
+per-area profile page -- district/subarea_l1-level Hamburg geometry (previously not exported at all,
+only Hamburg's subarea_l2 was, via export_hamburg_geometry() above) is now exported too, since the
+mini map needs a district's/Stadtteil's own polygon and its children's. Same LGV Hamburg WFS
+geometry `dim_area_geometry` already ingests -- no new data source, geometry-only (no
+`gentrification_index` join, matching `export_oa_arealevel_geometry()`'s pattern above), so no
+architect gate. See `DRILLDOWN_LEVEL_PAIRS`' own comment for the per-pair vintage/level detail.
 """
 
 from __future__ import annotations
@@ -258,6 +268,57 @@ def export_oa_arealevel_geometry(con: duckdb.DuckDBPyConnection) -> None:
         )
 
 
+def export_hamburg_rollup_geometry(con: duckdb.DuckDBPyConnection) -> None:
+    """#310 (map granularity selector): plain geometry FeatureCollections for Hamburg's
+    subarea_l1 (Stadtteil) and district (Bezirk) levels -- the two new rollup levels
+    `/hamburg/maps`'s "Area level" dropdown adds. Same geometry-only pattern as
+    `export_oa_arealevel_geometry()` above (no `gentrification_index` join -- the OA-D7
+    precedent this mirrors -- the choropleth values are joined client-side from
+    `mart_area_rollup_stage_mix` by the Evidence page's own SQL query, geoId/areaCol =
+    `area_code`). Named `<area_level>_current.geojson` (Hamburg's single, un-split
+    geometry vintage -- see stg_hamburg_geo/dim_area_hierarchy's own "current" vintage
+    convention) rather than reusing the `<area_level>_<variant>` scheme, since Hamburg's
+    rollup levels have no `gentrification_index` variant of their own (mirrors
+    `export_oa_arealevel_geometry()`'s own naming rationale in this module's header).
+    Both subarea_l2 (via `export_hamburg_geometry()` above) and subarea_l1/district
+    (here) share the same LGV Hamburg WFS source `dim_area_geometry` already ingests --
+    no new data source.
+    """
+    for area_level in ("subarea_l1", "district"):
+        rows = con.execute(
+            """
+            select city_code, area_code, area_name, geometry_geojson
+            from dim_area_geometry
+            where city_code = 'HH' and area_level = ? and area_vintage = 'current'
+            order by area_code
+            """,
+            [area_level],
+        ).fetchall()
+
+        features = [
+            {
+                "type": "Feature",
+                "geometry": json.loads(geometry_geojson),
+                "properties": {
+                    "city_code": city_code,
+                    "area_code": area_code,
+                    "area_name": area_name,
+                },
+            }
+            for city_code, area_code, area_name, geometry_geojson in rows
+        ]
+
+        feature_collection = {"type": "FeatureCollection", "features": features}
+        out_path = OUT_DIR / f"{area_level}_current.geojson"
+        out_path.write_text(json.dumps(feature_collection))
+        logger.info(
+            "exported hamburg %s/current (%d features) -> %s",
+            area_level,
+            len(features),
+            out_path.relative_to(REPO_ROOT),
+        )
+
+
 def export_hamburg_geometry(con: duckdb.DuckDBPyConnection) -> None:
     """Hamburg `subarea_l2` (statistisches Gebiet) FeatureCollection, joined against
     `gentrification_index`'s `city_code='HH'` rows at their latest `period_yyyymm`. See this
@@ -355,6 +416,123 @@ def export_hamburg_geometry(con: duckdb.DuckDBPyConnection) -> None:
     )
 
 
+# #308: (parent_level, parent_vintage, child_level, child_vintage, output_name) tuples the
+# per-area drill-down mini map (<AreaDrilldownMap>, web/components/AreaDrilldownMap.svelte) needs --
+# one combined, WHOLE-CITY FeatureCollection per pair, containing BOTH that parent level's own
+# polygons (drawn as the "self" highlight on that level's own profile page) and that child level's
+# polygons (drawn as the clickable "next level down" set on the same page). Features are tagged with
+# a level-qualified `feature_key` (`<area_level>:<area_code>`), not a bare `area_code`, so the two
+# levels' code spaces can never collide within one file -- defence in depth, not reliance on
+# Berlin's/Hamburg's code schemes happening not to collide today. The web-layer SQL query on each
+# area page (not this script) decides, per request, which of these city-wide features are actually
+# "self" vs "child" for the CURRENT area (`${params.code}`) and colors/links them accordingly --
+# this export is role-agnostic, matching the same "static geometry, page-scoped SQL narrows what's
+# drawn" pattern already established by export_gentrification_index_geometry() /
+# export_oa_arealevel_geometry() above (Areas.svelte only ever draws geoJSON features present in the
+# page's own `data` query result -- see AreaDrilldownMap.svelte's own header comment).
+#
+# Berlin: uses the LOR ladder's 'lor_2021' (current, 542-PLR) vintage throughout, matching the
+# vintage already used for the live map/detail pages elsewhere on this site (never mixed with
+# 'lor_pre2021' -- see this module's own header "Vintage note").
+# Hamburg: single 'current' vintage at every level (no pre/post-reform split, unlike Berlin) --
+# same convention export_hamburg_geometry() above already uses.
+#
+# Berlin's Ortsteil level is deliberately NOT one of these pairs -- dim_area_hierarchy.sql resolves
+# no children for Ortsteil (Ortsteil<->PLR is a non-nesting area-overlap crosswalk, not a hierarchy
+# edge -- see that model's header), so per #308's issue text Ortsteil is grouped with PLR as one of
+# Berlin's two finest-grain, no-drill-down levels; see export_ortsteil_self_geometry() below.
+DRILLDOWN_LEVEL_PAIRS = (
+    ("bezirk", "lor_2021", "pgr", "lor_2021", "bezirk_pgr_drilldown"),
+    ("pgr", "lor_2021", "bzr", "lor_2021", "pgr_bzr_drilldown"),
+    ("bzr", "lor_2021", "plr", "lor_2021", "bzr_plr_drilldown"),
+    ("district", "current", "subarea_l1", "current", "district_subarea_l1_drilldown"),
+    ("subarea_l1", "current", "subarea_l2", "current", "subarea_l1_subarea_l2_drilldown"),
+)
+
+
+def export_area_drilldown_geometry(con: duckdb.DuckDBPyConnection) -> None:
+    """#308: per-area drill-down mini map geometry -- see DRILLDOWN_LEVEL_PAIRS' comment above for
+    the file shape, the `feature_key` join-key rationale, and why this is role-agnostic (no
+    self/child distinction baked in here; that is a per-page, per-request SQL decision).
+    """
+    for parent_level, parent_vintage, child_level, child_vintage, out_name in DRILLDOWN_LEVEL_PAIRS:
+        rows = con.execute(
+            """
+            select area_level, city_code, area_code, area_name, geometry_geojson
+            from dim_area_geometry
+            where (area_level = ? and area_vintage = ?)
+               or (area_level = ? and area_vintage = ?)
+            order by area_level, area_code
+            """,
+            [parent_level, parent_vintage, child_level, child_vintage],
+        ).fetchall()
+
+        features = [
+            {
+                "type": "Feature",
+                "geometry": json.loads(geometry_geojson),
+                "properties": {
+                    "feature_key": f"{area_level}:{area_code}",
+                    "area_level": area_level,
+                    "city_code": city_code,
+                    "area_code": area_code,
+                    "area_name": area_name,
+                },
+            }
+            for area_level, city_code, area_code, area_name, geometry_geojson in rows
+        ]
+
+        feature_collection = {"type": "FeatureCollection", "features": features}
+        out_path = OUT_DIR / f"{out_name}.geojson"
+        out_path.write_text(json.dumps(feature_collection))
+        logger.info(
+            "exported drilldown %s->%s (%d features) -> %s",
+            parent_level,
+            child_level,
+            len(features),
+            out_path.relative_to(REPO_ROOT),
+        )
+
+
+def export_ortsteil_self_geometry(con: duckdb.DuckDBPyConnection) -> None:
+    """#308: Ortsteil has no child level in `mart_area_hierarchy` (see DRILLDOWN_LEVEL_PAIRS'
+    comment above) -- a plain self-only FeatureCollection (one feature per Ortsteil), for the
+    Ortsteil profile page's orientation-only mini map (own polygon highlighted, no drill-down
+    affordance, same treatment as Berlin's PLR leaf page reusing bzr_plr_drilldown.geojson and
+    Hamburg's Gebiet leaf page reusing subarea_l1_subarea_l2_drilldown.geojson).
+    """
+    rows = con.execute(
+        """
+        select city_code, area_code, area_name, geometry_geojson
+        from dim_area_geometry
+        where area_level = 'ortsteil' and area_vintage = 'current'
+        order by area_code
+        """
+    ).fetchall()
+
+    features = [
+        {
+            "type": "Feature",
+            "geometry": json.loads(geometry_geojson),
+            "properties": {
+                "feature_key": f"ortsteil:{area_code}",
+                "area_level": "ortsteil",
+                "city_code": city_code,
+                "area_code": area_code,
+                "area_name": area_name,
+            },
+        }
+        for city_code, area_code, area_name, geometry_geojson in rows
+    ]
+
+    feature_collection = {"type": "FeatureCollection", "features": features}
+    out_path = OUT_DIR / "ortsteil_self.geojson"
+    out_path.write_text(json.dumps(feature_collection))
+    logger.info(
+        "exported ortsteil self (%d features) -> %s", len(features), out_path.relative_to(REPO_ROOT)
+    )
+
+
 def main() -> None:
     geometry_path = SERVING_DIR / "dim_area_geometry.parquet"
     index_path = SERVING_DIR / "gentrification_index.parquet"
@@ -370,6 +548,9 @@ def main() -> None:
     export_gentrification_index_geometry(con)
     export_oa_arealevel_geometry(con)
     export_hamburg_geometry(con)
+    export_hamburg_rollup_geometry(con)
+    export_area_drilldown_geometry(con)
+    export_ortsteil_self_geometry(con)
 
     con.close()
 

@@ -12,7 +12,7 @@ start* below.
 
 - **Stack:** [dbt](https://www.getdbt.com/) + [DuckDB](https://duckdb.org/) (local) · Python ([uv](https://docs.astral.sh/uv/)), analysis in scipy / scikit-learn · [Evidence.dev](https://evidence.dev/) static site reading published marts via in-browser DuckDB-WASM, hosted free on GitHub / Cloudflare Pages ([ADR-0012](docs/adr/0012-serving-and-hosting-stack.md))
 - **Data:** OpenStreetMap history (© OpenStreetMap contributors, ODbL) + Berlin and Hamburg open data — LOR/subarea geographies, population-register socio-economic indicators, Bodenrichtwerte / Mietspiegel price & rent — **free & open only**
-- **Status:** Epics **A–F** substantially complete; the Berlin statistics **website (Epic G) is built and soft-launched** (noindex) on GitHub Pages while the Cloudflare Pages primary host is finalised; **multi-city (Epic H) is live for Hamburg** — its city-specific methodology re-fits (OSM completeness-bias correction, trajectory thresholds, an independent annual-cadence lead-lag re-test) are dual-signed-off, and the city now has a public **`/hamburg` hub** (landing, maps, POI map) plus an area-hierarchy page ladder (I21-g/h); most per-area **statistics** sections on those hierarchy pages still show an honest not-yet-published placeholder, gated on **#303** (open, blocked pending a maintainer publish-scope decision); **public communication & storytelling (Epic I)** has revised every site page onto one shared narrative arc, added timeline/takeaways/open-data pages, and (I21, #284) consolidated the area-hierarchy pages onto one canonical template for both cities; the outward-comms machinery is built and its first six posts are drafted and dual-signed-off (ADR-0021, a `comms-strategist` agent + `comms-draft` skill), but **no post has been published yet** — every post is a manual, maintainer-initiated act, and that step hasn't happened. Most of the tracked backlog is done (as of 2026-07). See the roadmap below.
+- **Status:** Epics **A–F** substantially complete; the Berlin statistics **website (Epic G) is built and soft-launched** (noindex) on GitHub Pages while the Cloudflare Pages primary host is finalised; **multi-city (Epic H) is live for Hamburg** — its city-specific methodology re-fits (OSM completeness-bias correction, trajectory thresholds, an independent annual-cadence lead-lag re-test) are dual-signed-off, and the city now has a public **`/hamburg` hub** (landing, maps, POI map) plus an area-hierarchy page ladder (I21-g/h); Hamburg's price/rent (#303), commercial-mix/Offering-Advantage (#312), and status/trajectory (#314) data are now admitted and rendering on those pages, plus a new Bezirk/PGR/Ortsteil (Berlin) and Stadtteil/district (Hamburg) map granularity selector (#310); only the demographics/change composite — Hamburg's EWR-equivalent has 3 indicators vs Berlin's 5 — remains an honest not-yet-published placeholder, blocked on a maintainer presentation ruling (**#313**); **public communication & storytelling (Epic I)** has revised every site page onto one shared narrative arc, added timeline/takeaways/open-data pages, and (I21, #284) consolidated the area-hierarchy pages onto one canonical template for both cities; the outward-comms machinery is built and its first six posts are drafted and dual-signed-off (ADR-0021, a `comms-strategist` agent + `comms-draft` skill), but **no post has been published yet** — every post is a manual, maintainer-initiated act, and that step hasn't happened. Most of the tracked backlog is done (as of 2026-07). See the roadmap below.
 
 ## Where to start, depending on who you are
 
@@ -56,11 +56,12 @@ Project board. Epics (✓ = substantially complete): **A** foundations ✓ ·
 **B** revive the 2018 concept ✓ · **C** longitudinal OSM POI history ✓ · **D** price/rent dimension ✓ ·
 **E** analysis & ML ✓ · **F** serving layer ✓ · **G** public website ✓ (built, soft-launched) ·
 **H** multi-city (Hamburg is live — `/hamburg` hub with maps + a POI map, plus an area-hierarchy
-page ladder (I21-g/h); city-specific methodology re-fits dual-signed-off; most per-area statistics
-sections still show an honest not-yet-published placeholder, pending **#303**) ·
+page ladder (I21-g/h); city-specific methodology re-fits dual-signed-off; price/rent, commercial-mix,
+and status/trajectory data are admitted and live; only the demographics/change composite still shows
+an honest not-yet-published placeholder, pending a maintainer presentation ruling on **#313**) ·
 **I** public communication & storytelling (site revision wave — one narrative arc, city deep-dive
 navigation, timeline/takeaways/open-data pages, and the I21 (#284) area-hierarchy template
-consolidation for both cities — mostly done, #303 open; the outward-comms wave has an accepted ADR,
+consolidation for both cities — mostly done, #313 open; the outward-comms wave has an accepted ADR,
 a `comms-strategist` agent, and six signed-off draft posts, but the maintainer hasn't published one
 yet).
 
