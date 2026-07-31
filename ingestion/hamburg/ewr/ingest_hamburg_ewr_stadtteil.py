@@ -5,7 +5,33 @@ H1 (#40) / H2 (#125) — Hamburg EWR-equivalent socio-economic predictor
 ingestion (ADR-0014 Pillar 3, PRIMARY source only: "Regionalstatistische
 Daten der Stadtteile Hamburgs", Transparenzportal). Direct conceptual
 analogue of Berlin's EWR (ingestion/berlin/ewr/ingest_ewr.py, ADR-0003)
-— but at Stadtteil grain (~104-105 areas), not statistisches-Gebiet grain.
+— but at Stadtteil grain, not statistisches-Gebiet grain.
+
+GRAIN CORRECTION (#313 C-1, 2026-07-31): this source does NOT publish 104
+or "~104-105" individual Stadtteile, as earlier versions of this docstring
+claimed. It publishes 99 UNITS: 95 individual Stadtteile plus 4 MERGED
+Stadtteil pairs (ordinary German small-count disclosure control), whose
+`stadtteil_nr` is a slash-joined composite of the two constituent
+3-digit Stadtteil numbers (e.g. "117/118"), which this ingestor's
+`"02" + stadtteil_nr` transform (see below) renders verbatim as a
+slash-bearing `area_code` (e.g. "02117/118") — stable across all 12
+confirmed years (2013-2024):
+
+  | area_code   | Merged Stadtteile              | Bezirk (district)   |
+  |-------------|---------------------------------|----------------------|
+  | 02117/118   | Kleiner Grasbrook + Steinwerder | Hamburg-Mitte ('1')  |
+  | 02119/120   | Waltershof + Finkenwerder       | Hamburg-Mitte ('1')  |
+  | 02702/703   | Neuland + Gut Moor              | Harburg ('7')        |
+  | 02711/712   | Moorburg + Altenwerder          | Harburg ('7')        |
+
+These 4 composite codes have no counterpart in the WFS geo layer (which
+digitizes all 104 individual official Stadtteile separately, with no
+merged-pair feature) — they are resolved to their Bezirk downstream by an
+explicit hardcoded crosswalk in dim_area_hierarchy.sql
+(hh_l1_merged_to_district CTE), not by anything in this ingestor. See
+docs/epic-h/313-hh-area-demographics-geo-signoff.md (F1) and
+313-hh-area-demographics-domain-signoff.md (D-1) for how this was
+discovered and the full grounding for the Bezirk resolution.
 
 **Scope discipline (R-C1 — this slice is PLUMBING, not methodology):**
 This ingestor and its paired staging model (stg_hamburg_ewr_stadtteil)
@@ -78,6 +104,33 @@ here)**. 170 columns; the ones relevant to this slice's indicator set:
                                         column-name typo "ingesamt" for
                                         "insgesamt", preserved verbatim
                                         as the real header)
+
+  DENOMINATOR (#313 C-2, 2026-07-31): arb_arbeitslose_ingesamt_proz's own
+  denominator is NOT stated anywhere in the CKAN package_show metadata or
+  dialect.json sampled for this ingestor, and no Statistikamt Nord variable
+  definition document is linked from this dataset's Transparenzportal
+  listing. The column name itself ("Arbeitslose je 100 Einwohner"-style
+  naming, i.e. "insgesamt" = of the total) plus the internal arithmetic
+  (summing indicator_value * residents_total over all Stadtteile in a year
+  and comparing to Hamburg's actual registered-unemployed stock -- reproduced
+  2026-07-31 against the ingested data/raw/hamburg/ewr_stadtteil/
+  stadtteile.parquet: 70.6k in 2013, 61.3k in 2018, an 81.7k COVID-year spike
+  in 2020, 87.5k in 2024 -- only plausible against TOTAL residents, not the
+  working-age population) both indicate the denominator is TOTAL RESIDENT
+  POPULATION ("Arbeitslose je 100 Einwohner"), NOT the working-age
+  population and NOT the labour force. This means unemployment_share is
+  emphatically NOT the German *Arbeitslosenquote* (unemployment rate,
+  denominator = labour force / working-age population) and is NOT
+  comparable to Berlin's MSS `arbeitslose_anteil`
+  (ingestion/berlin/mss/ingest_mss_indicators.py) -- different numerator
+  (all registered unemployed here vs. SGB II recipients there) AND
+  different denominator (total population here vs. working-age population
+  there). This reading is population-denominator, consistent with the
+  arithmetic above; it is NOT independently confirmed from an authoritative
+  Statistikamt Nord source document -- state it as such (not as verified
+  fact) in any downstream description. See
+  docs/epic-h/313-hh-area-demographics-domain-signoff.md finding D-2 for the
+  full analysis.
 
 This supersedes the original UNCONFIRMED COLUMN_MAP (which guessed
 German-comma decimals and different column names entirely, e.g.
