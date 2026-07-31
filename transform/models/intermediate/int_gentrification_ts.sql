@@ -352,11 +352,13 @@ with
     -- macro
     -- (D1xD2 matrix, ADR-0008) applies unmodified -- the matrix logic operates
     -- purely on the shared numeric scale, not on any Berlin-specific column.
-    -- ewr_hamburg (int_ewr_socioeco_hamburg) carries a 3-indicator composite
+    -- ewr_hamburg (int_ewr_socioeco_hamburg) carries a 2-indicator composite
     -- (vs Berlin's 5-indicator) -- see that model's header for why migration_
     -- background_share and residence_duration_5y_share are NULL for Hamburg
     -- rows (not available in the ingested Hamburg source set, ADR-0014 open
-    -- question #3).
+    -- question #3) and why unemployment_share is excluded from the composite
+    -- entirely (#329: predictor/outcome conflation with Hamburg's D1
+    -- Sozialmonitoring Statusindex, ADR-0014 §2).
     -- is_uninhabited: Hamburg has no gesamtindex analogue; a Gebiet below the
     -- Sozialmonitoring's own >300-resident threshold is simply absent from
     -- mss_hamburg for that edition (row-absence, not a NULL flag -- see
