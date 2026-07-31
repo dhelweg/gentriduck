@@ -356,8 +356,9 @@ We would rather state these plainly than have you discover them by surprise.
   for the full reasoning.
 - **The [maps](/berlin/maps) area-level selector colours a rollup *typology stage*, never a rescored
   scalar — the #267 decline above still applies unmodified.** At Bezirk/PGR/Ortsteil (Berlin) and
-  Stadtteil/Bezirk (Hamburg) grain, the map colours by each area's population-weighted *plurality*
-  ("most widespread") gentrification stage among its constituent PLRs/Gebiete — always paired with
+  Stadtteil/Bezirk (Hamburg) grain, the map colours by each area's *plurality* ("most widespread")
+  gentrification stage among its constituent PLRs/Gebiete — population-weighted where an area's
+  population data is complete, equal-weighted as a flagged fallback otherwise — always paired with
   that stage's share, a small-sample flag, and a composition counterweight (the combined share of the
   area in an acute-pressure stage), never shown as a standalone label. `status_index`/`dynamism_index`
   are **not** offered as a map colour, and the table is **not** ranked by them, at any rollup grain —

@@ -72,16 +72,19 @@ than what #267 declined.
 ## The extension that *is* newly permitted: a coloured, citywide categorical rollup
 
 What #310 does newly ship — and what #267/I249-web-b did not previously cover at citywide grain —
-is the **categorical** `dominant_stage` (the population-weighted plurality typology stage among an
-area's children) as the map's fill colour at every rollup level, on both cities' main maps pages,
+is the **categorical** `dominant_stage` (the plurality typology stage among an area's children —
+weighted by population where an area's population data is complete, equal-weighted as a flagged
+fallback otherwise) as the map's fill colour at every rollup level, on both cities' main maps pages,
 not gated to a per-area profile. This is permitted under #267 Recommendation 2 ("close the #267 gap
-with a distributional headline … a compact child-typology distribution") and Recommendation 4 ("an
-explicitly-labelled dispersion/composition statistic … is acceptable"), but #310 is the first time
-that distributional construct is rendered as the primary citywide map fill rather than only as a
-supporting table. Three mitigations were required — and, per the final domain `Verdict: PASS`, are
-in place — because a plurality-vote choropleth of a frontier phenomenon (Dangschat 1988/2000 double
-invasion–succession cycle) is directionally biased toward the modal, least-acute stage, not
-neutrally noisy:
+with a distributional headline … a compact child-typology distribution") and Recommendation 4,
+which — under the heading "documented, not endorsed" — permits a coarse scalar *only* where it is an
+explicitly-labelled dispersion/composition statistic (its own example: "share of PLRs in
+active-gentrification typology") and is "never presented, coloured, or ordered" as the area's
+gentrification index, but #310 is the first time that distributional construct is rendered as the
+primary citywide map fill rather than only as a supporting table. Three mitigations were required —
+and, per the final domain `Verdict: PASS`, are in place — because a plurality-vote choropleth of a
+frontier phenomenon (Dangschat 1988/2000 double invasion–succession cycle) is directionally biased
+toward the modal, least-acute stage, not neutrally noisy:
 
 1. **Never a standalone label.** The plurality ("dominant") stage is always paired with
    `dominant_share` (so a reader sees it is a plurality, not a majority or a fact about the whole
