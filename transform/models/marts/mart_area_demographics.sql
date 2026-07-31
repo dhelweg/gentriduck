@@ -415,6 +415,12 @@ with
     -- aggregation formula, just a different constituent-area lookup
     -- mechanism (mirrors the Ortsteil rollup's own precedent for a
     -- non-code-prefix parent lookup).
+    -- inner join intentionally: a Stadtteil with no district parent edge in
+    -- dim_area_hierarchy (should not occur -- empirically all 99 Stadtteile
+    -- resolve to exactly one district, verified via
+    -- test_mart_area_demographics_hh_district_reconciliation.sql's row-count
+    -- reconciliation) is excluded rather than silently coalesced, same
+    -- discipline as the Ortsteil CTE above.
     hh_with_district as (
         select hb.*, dah.parent_area_code as district_code
         from hh_base as hb
