@@ -28,6 +28,9 @@ ADR before adopting a new tool, library, or data source** (no "first tool that w
 | [0021](0021-public-communication-surface-channel-policy.md) | Public communication surface & channel policy | Accepted (2026-07-11) |
 | [0022](0022-scoped-gh-api-graphql-allow-exception.md) | Scoped `gh api graphql` allow exception for community-triage (SEC-2 amendment) | Accepted (2026-07-11) |
 | [0023](0023-vendored-cc-by-ewr-fallback.md) | Vendor small CC-BY EWR source CSVs as a committed reproducibility fallback | Accepted (2026-07-11) |
+| [0024](0024-oa-calculation-modes-area-hierarchy-dominance.md) | OA calculation-method vocabulary, area-hierarchy roll-up, and within-group dominance | Proposed (D0 scope confirmed; downstream builds gate separately) |
+| [0025](0025-getis-ord-gistar-esda-mart-handoff.md) | Getis-Ord Gi* via PySAL (`esda`/`libpysal`) — analysis→mart handoff | Accepted (2026-07-18) |
+| [0026](0026-manual-ci-job-for-poe-refresh.md) | Manually-triggered CI job (`workflow_dispatch`) for `poe refresh` | Proposed (2026-08-01) |
 
 Format: each ADR has **Status**, **Context**, **Decision**, **Consequences**. Supersede rather
 than edit accepted ADRs.
