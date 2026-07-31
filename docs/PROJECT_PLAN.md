@@ -473,6 +473,25 @@ via I13 once content is revised and routes are frozen; the `/about` route never 
   recommendation: incubate in `docs/process/`, extract on second-adopter trigger; scoping doc only. ·
   *architect; maintainer decides* · after the Epic I revision wave.
 
+### Epic J — Address-level lookup & custom area query (scoping)
+*Triggered by a maintainer feature idea (2026-07-31): search an arbitrary address and get a
+custom, non-pre-aggregated result — weighted nearby-area context, nearby POIs with distances, and
+an optional natural-language area description, potentially a future paid data product. This sits
+in direct tension with ADR-0012 (static site, no backend, DuckDB-WASM client-side) and may require
+its own hosting ADR; it also raises new golden-rule-1 questions (geocoding, text generation,
+monetization) that need the maintainer's explicit direction before deep technical work proceeds.
+Full scoping in `docs/epic-j/`.*
+
+- **J1** **Scoping: architecture, spatial methodology, and tool/monetization questions** —
+  ticket-of-tickets assessing client-side-only feasibility vs. the ADR-0012 "deep query" escape
+  hatch, sizing what POI/address point exports would cost, framing the R-C1-gated distance-
+  weighting methodology question for geo-data-scientist, and flagging (not resolving) geocoder
+  choice, NL-generation approach, and monetization as maintainer-gated product-direction questions.
+  Proposes a phased sub-ticket breakdown. No implementation. · *system-architect (lead) +
+  geo-data-scientist (consulted on spatial methodology); maintainer is the explicit gate on tool
+  selection and monetization direction* · — · scoping doc committed; maintainer decision recorded
+  on whether/how far to proceed past a Phase 1 MVP.
+
 ### Remediation wave R — Methodology re-grounding & process hardening (2026-06-19 review)
 *Triggered by the PM+architect deep review (`docs/assessment/2026-06-19-pm-architect-review.md`; full
 SPECs in `docs/assessment/tickets/`). The review found the live index conflates POI activity with social
