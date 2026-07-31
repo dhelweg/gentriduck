@@ -66,17 +66,20 @@ sidebar_position: 2
   rollup Alert and Honest-caveats section now state the *direction* of the aggregation artefact:
   coarser levels resolve toward the most common AND LEAST ACUTE stage, so a "Stable, established"
   reading is not evidence pressure is absent. D4 (domain, blocking) -- a composition counterweight
-  (`acute_stage_share`, the combined population share of active-gentrification + pioneer-signal +
-  improving-vulnerable) is now computed page-side (sum over already-published mix rows, no mart
-  change) and shown next to the dominant-stage colour/label in both the tooltip and the table. C5
+  (`acute_stage_share`, the combined share -- population-weighted, or equal-weighted as a flagged
+  fallback -- of active-gentrification + pioneer-signal + improving-vulnerable) is now computed
+  page-side (sum over already-published mix rows, no mart change) and shown next to the
+  dominant-stage colour/label in both the tooltip and the table. C5
   (geo, blocking) -- the Ortsteil dominant-overlap approximation is now disclosed. R-310-1/R-310-5
   (both non-blocking, applied anyway) -- the Stage-mix table is de-jargoned and its row cap raised;
   reader-facing copy now prefers "most widespread stage" over "dominant stage" (internal column
   keys like `dominant_stage`/`dominant_share`/`is_dominant_fragile` are untouched -- this is a
   copy-only rename, not a mart or schema change).
 
-  #310 domain re-review fixes (2026-07-30, second round, PASS WITH CONCERNS on the D1 fix commit --
-  see docs/epic-e/310-map-granularity-domain-signoff.md, "Re-review after fix commit 18dfeda3"):
+  #310 domain re-review fixes (2026-07-30, second round -- domain verdict on the D1 fix commit was
+  `Verdict: CONCERNS (blocking -- D2 only)`, NOT a pass; see docs/epic-e/310-map-granularity-domain-signoff.md,
+  "Re-review after fix commit 18dfeda3" -- 18dfeda3 alone did not clear the domain gate, the D2 label
+  fix in dadcb721 below plus a third review round were still required):
   D1/D3/D4/C1/C5 were confirmed resolved on their own merits, but the D4 counterweight and the C1
   scalar-column relabelling each reintroduced the exact D2 label-overreach defect in two new
   places -- both now fixed here. D2-R1 (domain, blocking) -- `acute_stage_share` was labelled
@@ -729,7 +732,7 @@ order by area_name
     <Column id=dynamism_index title="Speed of change — mean ordinal class (mean rank), population-weighted where population data is complete and equal-weighted otherwise"/>
     <Column id=stage_label title="Most widespread gentrification stage"/>
     <Column id=dominant_share title="Most widespread stage's share (population-weighted, or equal-weighted — see the incomplete-data column)" fmt="pct0"/>
-    <Column id=acute_stage_share title="Share in an acute-pressure stage (active-gentrification + pioneer-signal + improving-vulnerable; population-weighted, or equal-weighted — see the incomplete-data column)" fmt="pct0"/>
+    <Column id=acute_stage_share title="Share in an acute-pressure stage (Active gentrification + Early pioneer signal + Improving, vulnerable area; population-weighted, or equal-weighted — see the incomplete-data column)" fmt="pct0"/>
     <Column id=n_habitable_children title="PLRs with data"/>
     <Column id=is_dominant_fragile title="Fragile (< 3 PLRs)?"/>
     <Column id=has_incomplete_population title="Population data incomplete (share above is equal-weighted, not population-weighted)?"/>

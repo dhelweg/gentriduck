@@ -241,9 +241,9 @@ sidebar_position: 1
 
 {#if isRollup}
 <Alert status="info">
-  <b>Stadtteil / Bezirk are population-weighted rollups of the Gebiet-level data</b> — never a
-  re-scored index at this grain (averaging the underlying MSS-equivalent ordinals into a single new
-  category would be statistically invalid; see the
+  <b>Stadtteil / Bezirk are population-weighted rollups, where possible, of the Gebiet-level
+  data</b> — never a re-scored index at this grain (averaging the underlying MSS-equivalent
+  ordinals into a single new category would be statistically invalid; see the
   <a href="https://github.com/dhelweg/gentriduck/issues/310">#310 design decision</a>, the same
   decision applied unmodified to Berlin's Bezirk/PGR/Ortsteil rollups). The map colours by the
   <b>most widespread ("dominant") stage</b> among that area's constituent Gebiete, weighted by
@@ -565,7 +565,7 @@ order by area_name
     <Column id=dynamism_index title="Speed of change — mean ordinal class (mean rank; 3-year window), population-weighted where population data is complete and equal-weighted otherwise"/>
     <Column id=stage_label title="Most widespread gentrification stage"/>
     <Column id=dominant_share title="Most widespread stage's share (population-weighted, or equal-weighted — see the incomplete-data column)" fmt="pct0"/>
-    <Column id=acute_stage_share title="Share in an acute-pressure stage (active-gentrification + pioneer-signal + improving-vulnerable; population-weighted, or equal-weighted — see the incomplete-data column)" fmt="pct0"/>
+    <Column id=acute_stage_share title="Share in an acute-pressure stage (Active gentrification + Early pioneer signal + Improving, vulnerable area; population-weighted, or equal-weighted — see the incomplete-data column)" fmt="pct0"/>
     <Column id=n_habitable_children title="Gebiete with data"/>
     <Column id=is_dominant_fragile title="Fragile (< 3 Gebiete)?"/>
     <Column id=has_incomplete_population title="Population data incomplete (share above is equal-weighted, not population-weighted)?"/>
@@ -647,11 +647,11 @@ Offering Advantage by domain — see the
 - **Hamburg's Dynamik window is 3 years, Berlin's is 2** — this is a qualitative difference in
   what "active-gentrification" means, not just a numeric-scale one; see
   [methodology §6](/methodology) point 1.
-- **Stadtteil / Bezirk are population-weighted rollups, never a re-scored index.** The map colours
-  by the *most widespread* ("dominant") stage among each area's constituent Gebiete — always shown
-  with its share (population-weighted where possible, equal-weighted as a flagged fallback
-  otherwise) and the full stage mix (see the "Stage mix" table), never as a standalone label. Areas
-  with fewer than 3 Gebiete contributing real data are flagged fragile.
+- **Stadtteil / Bezirk are population-weighted rollups, where possible, never a re-scored index.**
+  The map colours by the *most widespread* ("dominant") stage among each area's constituent
+  Gebiete — always shown with its share (population-weighted where possible, equal-weighted as a
+  flagged fallback otherwise) and the full stage mix (see the "Stage mix" table), never as a
+  standalone label. Areas with fewer than 3 Gebiete contributing real data are flagged fragile.
 - **A coarse-grain reading is directionally biased toward "calm", not neutral.** Plurality voting
   resolves an area to whichever stage is most widespread among its constituents, and the most
   widespread stage is, by construction, usually the least acute one — so coarser levels
