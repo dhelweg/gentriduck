@@ -91,20 +91,31 @@
 -- not part of the Stadtteil primary-source column set pulled in the #40 EWR
 -- staging slice). The 5-indicator Berlin composite therefore CANNOT be
 -- reproduced 1:1 -- this model uses the 2 comparable indicators that are both
--- (a) available in the ingested Hamburg source set and (b) genuinely
--- independent D4 predictors: age_under18_share and foreigners_share.
+-- (a) available in the ingested Hamburg source set and (b) the best available
+-- D4 predictors: age_under18_share and foreigners_share. This is accurate for
+-- age_under18_share as a genuinely independent D4 predictor; it is OVERSTATED
+-- for foreigners_share -- see the #329 note below (residual overlap
+-- disclosure) for why.
 --
 -- #329 (2026-07-31) -- unemployment_share EXCLUDED from the D4 composite
 -- (predictor/outcome conflation, mirrors ADR-0008's D1/predictor role
 -- discipline):
+-- Primary grounding (R-C2): ADR-0008's own D4 bullet already names
+-- unemployment as something D4 explicitly is NOT -- verbatim: "D4 is
+-- *demographic composition*, not a socio-economic-status (income /
+-- unemployment / transfer-recipient) measure" (ADR-0008, D4 dimension bullet).
+-- Including unemployment_share in this composite was therefore a
+-- dimension-membership violation of the conceptual model on its own terms,
+-- independent of the circularity argument below -- the circularity is what
+-- made it harmful; the dimension mismatch is why it was already out of place.
 -- Hamburg's D1 outcome variable, the Sozialmonitoring Statusindex/Gesamtindex
 -- (ADR-0014 §2, "Social outcome (MSS-equivalent)"), is itself constructed by
 -- the city from SEVEN "Aufmerksamkeitsindikatoren" that explicitly include
 -- unemployment (migration-background youth, single-parent children, SGB-II
 -- share, UNEMPLOYMENT, Mindestsicherung for children and for elderly,
 -- Schulabschluss -- see ADR-0014 §2). Including unemployment_share in Hamburg's
--- D4 predictor composite therefore makes D4 partly measure the same underlying
--- construct as D1 -- any Hamburg D4->D1 lead-lag/regression finding
+-- D4 predictor composite therefore also makes D4 partly measure the same
+-- underlying construct as D1 -- any Hamburg D4->D1 lead-lag/regression finding
 -- (int_hamburg_lead_lag, analysis/e5_hamburg_lead_lag.py) would be partly
 -- self-predicting rather than testing an independent predictor->outcome
 -- relationship. This is architecturally the SAME conflation ADR-0008 requires
@@ -123,6 +134,36 @@
 -- side-finding during #313 (independently flagged by both geo-data-scientist
 -- and gentrification-domain-expert in design consultation) and filed
 -- separately as #329 so it would not block #313's own scope.
+--
+-- RESIDUAL OVERLAP DISCLOSURE (geo-signoff C1 / domain-signoff D-C1, both
+-- 2026-07-31, docs/epic-h/329-hh-d4-conflation-*-signoff.md): removing
+-- unemployment_share does NOT make the two survivors fully independent of D1.
+-- Checked against the same seven Statusindex attention indicators (ADR-0014
+-- §2, line 83): "migration-background youth" is concept-adjacent to
+-- foreigners_share (foreign nationality is a coarse proxy for migration
+-- background), and "single-parent children" / "Mindestsicherung for children"
+-- are both under-18-conditioned populations whose area-level values covary
+-- mechanically with age_under18_share. This overlap is COMPOSITIONAL, not
+-- DEFINITIONAL like the unemployment case: the Statusindex indicators are
+-- benefit-receipt/status RATES within subpopulations, while D4's survivors are
+-- plain population-COMPOSITION shares of the whole population -- an area can
+-- have many under-18s with few of them on Mindestsicherung. It is an
+-- induced-correlation risk, not identity, and it does NOT justify further
+-- exclusions: dropping foreigners_share would leave a one-indicator
+-- "composite", which is not a composite. Two things follow from this that
+-- change how this composite's independence from D1 should be described: (1)
+-- #329 raises foreigners_share's share of ewr_composite from 1/3 to 1/2 (up
+-- from before this fix), concentrating the residual overlap in a single,
+-- now double-weighted term; and (2) the Berlin parallel drawn above is
+-- ASYMMETRIC, not a clean mirror -- per ADR-0006 (lines 20-22), Berlin's D1
+-- (MSS/Statusindex) index indicators contain NO origin/nationality measure
+-- (migration background sits among Berlin's context indicators, outside the
+-- index), whereas Hamburg's D1 Statusindex DOES include an origin/
+-- nationality-adjacent indicator ("migration-background youth"). Berlin's D4
+-- is therefore fully disjoint from D1 by construction; Hamburg's post-#329 D4
+-- is only substantially, not fully, disjoint. Read Hamburg D4->D1 findings
+-- accordingly as substantially-but-not-fully independent of D1, not as fully
+-- independent.
 --
 -- unemployment_share REMAINS in this model's SELECT list as a plain
 -- passthrough/display field (consumed by mart_area_demographics as a
