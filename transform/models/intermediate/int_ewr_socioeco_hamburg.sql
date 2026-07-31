@@ -90,31 +90,65 @@
 -- confirmed to exist openly at all for Hamburg; migration_background_share was
 -- not part of the Stadtteil primary-source column set pulled in the #40 EWR
 -- staging slice). The 5-indicator Berlin composite therefore CANNOT be
--- reproduced 1:1 -- this model uses the 3 comparable indicators that exist in
--- both cities' composites: age_under18_share, foreigners_share, and
--- unemployment_share (Hamburg's unemployment_share is a like-for-like
--- vulnerability indicator not present in Berlin's own composite set, added here
--- since it is directly available and Thesis Sec.4.2-consistent as a
--- socio-economic vulnerability marker).
+-- reproduced 1:1 -- this model uses the 2 comparable indicators that are both
+-- (a) available in the ingested Hamburg source set and (b) genuinely
+-- independent D4 predictors: age_under18_share and foreigners_share.
 --
--- hamburg_ewr_composite = mean(z_age_under18_share, z_foreigners_share,
--- z_unemployment_share), z-scored across all Hamburg Gebiete within a
--- (city_code, reference_year) partition (same NULLIF(stddev,0) degenerate-year
--- guard as int_ewr_socioeco). Higher composite = more socio-economically
--- vulnerable (same vulnerability-positive sign convention as Berlin's
--- ewr_composite; see int_ewr_socioeco header for the sign-flip note applied
--- downstream in int_gentrification_ts).
+-- #329 (2026-07-31) -- unemployment_share EXCLUDED from the D4 composite
+-- (predictor/outcome conflation, mirrors ADR-0008's D1/predictor role
+-- discipline):
+-- Hamburg's D1 outcome variable, the Sozialmonitoring Statusindex/Gesamtindex
+-- (ADR-0014 §2, "Social outcome (MSS-equivalent)"), is itself constructed by
+-- the city from SEVEN "Aufmerksamkeitsindikatoren" that explicitly include
+-- unemployment (migration-background youth, single-parent children, SGB-II
+-- share, UNEMPLOYMENT, Mindestsicherung for children and for elderly,
+-- Schulabschluss -- see ADR-0014 §2). Including unemployment_share in Hamburg's
+-- D4 predictor composite therefore makes D4 partly measure the same underlying
+-- construct as D1 -- any Hamburg D4->D1 lead-lag/regression finding
+-- (int_hamburg_lead_lag, analysis/e5_hamburg_lead_lag.py) would be partly
+-- self-predicting rather than testing an independent predictor->outcome
+-- relationship. This is architecturally the SAME conflation ADR-0008 requires
+-- D3/D4 predictors to stay free of relative to D1/D2 outcomes (ADR-0008 "four
+-- dimensions" table: D4 is a PREDICTOR, D1 is the OUTCOME; they "may only be
+-- fused at the composite/typology layer, never silently averaged into one
+-- input"). Berlin's own int_ewr_socioeco.sql composite never includes any
+-- unemployment/Arbeitslosigkeit indicator for the identical reason: Berlin's
+-- `arbeitslose_anteil` lives on the MSS (D1/D2 outcome) side
+-- (stg_berlin_mss_indicators, R-A4-geo-signoff.md), never in the EWR (D4
+-- predictor) indicator set consumed here -- so Berlin's composite was already
+-- structurally immune to this conflation without ever needing an explicit
+-- exclusion line; Hamburg's single combined EWR-equivalent source (which
+-- happens to publish unemployment_share alongside genuinely independent
+-- demographic fields) required this explicit fix instead. Found as a
+-- side-finding during #313 (independently flagged by both geo-data-scientist
+-- and gentrification-domain-expert in design consultation) and filed
+-- separately as #329 so it would not block #313's own scope.
+--
+-- unemployment_share REMAINS in this model's SELECT list as a plain
+-- passthrough/display field (consumed by mart_area_demographics as a
+-- standalone descriptive indicator per #313 -- that use is NOT circular, since
+-- mart_area_demographics never reads or derives from ewr_composite). Only its
+-- role as a D4 composite INPUT is removed; z_unemployment_share (the z-score
+-- column) is dropped entirely since nothing downstream should consume it.
+--
+-- hamburg_ewr_composite = mean(z_age_under18_share, z_foreigners_share),
+-- z-scored across all Hamburg Gebiete within a (city_code, reference_year)
+-- partition (same NULLIF(stddev,0) degenerate-year guard as int_ewr_socioeco).
+-- Higher composite = more socio-economically vulnerable (same
+-- vulnerability-positive sign convention as Berlin's ewr_composite; see
+-- int_ewr_socioeco header for the sign-flip note applied downstream in
+-- int_gentrification_ts).
 --
 -- Cross-city comparability caveat (binding, mirrors B7's cross-vintage z-score
 -- note): Hamburg's composite is z-scored within Hamburg's own ~941-945 Gebiet
 -- population; Berlin's is z-scored within Berlin's own PLR population. Both are
 -- unit-variance by construction WITHIN their own city, but the underlying
--- indicator SET differs (3 vs 5 indicators; Hamburg omits
--- migration_background_share/residence_duration_5y_share, includes
--- unemployment_share which Berlin's composite does not). Cross-city composite
--- MAGNITUDE comparison is not directly valid without accounting for this --
--- flagged for the G2 methodology page exactly as ADR-0014's Pillar-2
--- non-equivalence note requires for Sozialmonitoring.
+-- indicator SET differs (2 vs 5 indicators; Hamburg omits
+-- migration_background_share/residence_duration_5y_share/mean_age_years, and
+-- (post-#329) also excludes unemployment_share as a predictor-side conflation
+-- risk). Cross-city composite MAGNITUDE comparison is not directly valid
+-- without accounting for this -- flagged for the G2 methodology page exactly
+-- as ADR-0014's Pillar-2 non-equivalence note requires for Sozialmonitoring.
 --
 -- is_disaggregated_from_stadtteil: TRUE for all rows in this model (every row
 -- inherits its value from Stadtteil grain per the reconciliation method above).
@@ -152,16 +186,14 @@ with
             ) / nullif(
                 stddev(foreigners_share) over (partition by city_code, reference_year),
                 0
-            ) as z_foreigners_share,
-            (
-                unemployment_share
-                - avg(unemployment_share) over (partition by city_code, reference_year)
-            ) / nullif(
-                stddev(unemployment_share) over (
-                    partition by city_code, reference_year
-                ),
-                0
-            ) as z_unemployment_share
+            ) as z_foreigners_share
+        -- #329: z_unemployment_share intentionally NOT computed here.
+        -- unemployment_share
+        -- is an MSS/Sozialmonitoring D1-outcome attention-indicator (ADR-0014 §2),
+        -- not an
+        -- independent D4 predictor -- see model header. It stays available raw,
+        -- below, as
+        -- a passthrough display column only.
         from {{ ref("int_ewr_socioeco_hamburg_disagg") }}
         where reference_year is not null
     )
@@ -174,14 +206,19 @@ select
     residents_total,
     age_under18_share,
     foreigners_share,
+    -- unemployment_share: raw passthrough display field only (#313
+    -- mart_area_demographics
+    -- standalone indicator). Deliberately EXCLUDED from ewr_composite below -- #329,
+    -- see header (predictor/outcome conflation with Hamburg's D1 Sozialmonitoring
+    -- Statusindex, ADR-0014 §2, mirroring Berlin's arbeitslose_anteil exclusion,
+    -- ADR-0008).
     unemployment_share,
     is_disaggregated_from_stadtteil,
     z_age_under18_share,
     z_foreigners_share,
-    z_unemployment_share,
-    -- Hamburg EWR composite (3-indicator; see header for why this differs from
-    -- Berlin's 5-indicator composite). Higher = more socio-economically
-    -- vulnerable (same sign convention as int_ewr_socioeco.ewr_composite).
-    (z_age_under18_share + z_foreigners_share + z_unemployment_share)
-    / 3.0 as ewr_composite
+    -- Hamburg EWR composite (2-indicator, post-#329; see header for why this differs
+    -- from Berlin's 5-indicator composite and from this model's own pre-#329
+    -- 3-indicator composite). Higher = more socio-economically vulnerable (same sign
+    -- convention as int_ewr_socioeco.ewr_composite).
+    (z_age_under18_share + z_foreigners_share) / 2.0 as ewr_composite
 from with_z

@@ -9,7 +9,7 @@
 -- to admit Hamburg into the mart_area_demographics display mart ahead of
 -- H3's (#237) EWR-composite admission into gentrification_index. Both
 -- converged: individual EWR-equivalent indicators (this model) are safe to
--- display; the BLENDED 3-indicator composite is not (see
+-- display; the BLENDED composite (2-indicator as of #329) is not (see
 -- mart_area_demographics.sql header for the full rationale -- that
 -- composite is never read here or by the mart this feeds).
 --

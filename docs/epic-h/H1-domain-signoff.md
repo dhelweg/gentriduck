@@ -105,3 +105,27 @@ more precise than it is.
    (O4-style) must carry a one-line "not directly equivalent — see methodology" disclosure.
 
 **Verdict: PASS**
+
+---
+
+## Addendum (2026-07-31, #329) — superseding §2's unemployment_share endorsement
+
+§2 above endorsed `unemployment_share`'s inclusion in the Hamburg D4 composite, reasoning (correctly,
+as far as it went) that it is a literature-consistent vulnerability indicator and that Hamburg's own
+Sozialmonitoring methodology treats unemployment as a status marker. **That second observation —
+that Hamburg's own official methodology already uses unemployment as a status marker — is exactly
+what #329 subsequently identified as the problem, not a point in favour of inclusion**: Hamburg's D1
+outcome (the Sozialmonitoring Statusindex, ADR-0014 §2) is *itself* built from seven attention
+indicators that include unemployment. Including `unemployment_share` in the D4 *predictor* composite
+therefore does not add an independent vulnerability signal — it partly re-measures the D1 outcome on
+the predictor side, biasing any D4→D1 lead-lag/regression finding toward a spurious near-tautological
+relationship. This is the identical conflation ADR-0008's D1/D4 predictor-vs-outcome role discipline
+exists to prevent, and the same reason Berlin's own `int_ewr_socioeco` composite never included an
+unemployment/`arbeitslose_anteil` indicator (that field lives on Berlin's MSS/D1 side, never in the
+EWR/D4 predictor set). #329 (found independently, alongside `geo-data-scientist`, during #313 design
+consultation) removed `unemployment_share` from `int_ewr_socioeco_hamburg`'s `ewr_composite`,
+leaving a 2-indicator composite (`age_under18_share`, `foreigners_share`). `unemployment_share`
+itself was not dropped from the model or from Hamburg's data — it remains available as a raw,
+non-composite passthrough/display column (see `mart_area_demographics`, #313). This addendum
+supersedes §2's "No objection" as it applies to composite membership; §2's discussion of the
+migration-background-share loss is unaffected and still stands.

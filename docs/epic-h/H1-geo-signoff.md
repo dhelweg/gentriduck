@@ -127,3 +127,21 @@ publication-time gates, consistent with how B7/B9/C5's own signoffs handled synt
 review cycles.
 
 **Verdict: PASS**
+
+---
+
+## Addendum (2026-07-31, #329)
+
+The "3-indicator z-score mean" description in §3 above (and this file's original condition 3) is a
+**historical record of this ticket's composite as originally built** and is left as-is. It is now
+**stale as a description of the model's current behavior**: `int_ewr_socioeco_hamburg`'s
+`ewr_composite` was changed to a **2-indicator** composite (`age_under18_share`,
+`foreigners_share` only) by #329, which found (independently, alongside
+`gentrification-domain-expert`, during #313 design consultation) that `unemployment_share`'s
+inclusion conflated the D4 predictor with Hamburg's own D1 Sozialmonitoring Statusindex outcome
+(ADR-0014 §2 — unemployment is one of the Statusindex's seven attention indicators), mirroring the
+predictor/outcome role discipline ADR-0008 establishes and the reason Berlin's `int_ewr_socioeco`
+never included an unemployment indicator in its own composite. See
+`transform/models/intermediate/int_ewr_socioeco_hamburg.sql`'s header for the full #329 rationale.
+`unemployment_share` itself was NOT dropped from the model — it remains a raw, non-composite
+passthrough column, unaffected by this fix.

@@ -1517,11 +1517,17 @@ models:
       stg_hamburg_geo's Stadtteil area_name. Every Gebiet within a Stadtteil inherits
       identical indicator values (uniform disaggregation -- no population-weighted
       split; see SQL header for the full rationale and its documented resolution-loss
-      property). Composite is a 3-indicator z-score mean (age_under18_share,
-      foreigners_share, unemployment_share) -- narrower than Berlin's 5-indicator
+      property). Composite is a 2-indicator z-score mean (age_under18_share,
+      foreigners_share only, as of #329) -- narrower than Berlin's 5-indicator
       composite (Hamburg lacks migration_background_share/residence_duration_5y_share
-      in the ingested source set). NOT directly comparable in magnitude to Berlin's
-      ewr_composite; see SQL header for the full cross-city caveat.
+      in the ingested source set). #329 (2026-07-31) removed unemployment_share from
+      the composite: it is an MSS/Sozialmonitoring D1-outcome attention-indicator
+      (ADR-0014 §2), not an independent D4 predictor -- see SQL header for the full
+      rationale (mirrors ADR-0008's predictor/outcome role discipline and Berlin's own
+      arbeitslose_anteil exclusion). unemployment_share remains a raw passthrough
+      column on this model for display purposes only. NOT directly comparable in
+      magnitude to Berlin's ewr_composite; see SQL header for the full cross-city
+      caveat.
       geo-DS + domain-expert sign-off REQUIRED before this model may be used beyond
       the develop-integration slice (R-C1).
       Graceful degradation: returns zero rows when any upstream has no rows.
@@ -1569,10 +1575,19 @@ models:
           observations for iid-assuming statistical tests.
       - name: ewr_composite
         description: >
-          D4 baseline covariate: 3-indicator z-score mean (age_under18_share,
-          foreigners_share, unemployment_share). Higher = more socio-economically
+          D4 baseline covariate: 2-indicator z-score mean (age_under18_share,
+          foreigners_share only, as of #329 -- unemployment_share was removed as a
+          predictor/outcome conflation risk against Hamburg's own D1 Sozialmonitoring
+          Statusindex, ADR-0014 §2; see SQL header). Higher = more socio-economically
           vulnerable (same sign convention as Berlin's int_ewr_socioeco.ewr_composite).
           NOT directly comparable in magnitude to Berlin's 5-indicator composite.
+      - name: unemployment_share
+        description: >
+          Raw passthrough display field (NOT a composite input as of #329 -- see
+          ewr_composite description and SQL header). Hamburg-only; "Arbeitslose je 100
+          Einwohner" (denominator is total resident population, not working-age
+          population -- NOT the German Arbeitslosenquote, see mart_area_demographics
+          schema.yml for the full grounding).
 
   - name: int_hamburg_gebiet_osm_names
     description: >
@@ -2214,8 +2229,9 @@ models:
       Branch C — Hamburg 'current' (annual editions 2013-2025, #40 H1 integration slice,
       ADR-0014): int_hamburg_sozialmonitoring_index (outcome, numeric-mapped D1/D2) +
       int_poi_status_dynamism (POI, filtered city_code='HH') + int_ewr_socioeco_hamburg
-      (D4, two-grain-reconciled 3-indicator composite -- see that model's header for the
-      ADR-0014 open-question-#5 methodology). city_code='HH' throughout.
+      (D4, two-grain-reconciled 2-indicator composite as of #329 -- see that model's
+      header for the ADR-0014 open-question-#5 methodology and the #329
+      predictor/outcome conflation fix). city_code='HH' throughout.
 
       ADR-0008 architectural fix: the pre-R-A1 model averaged predictors and outcomes into
       a single gentrification_score (no theoretical grounding). R-A1 separates the dimensions:
@@ -3156,8 +3172,10 @@ models:
       - name: ewr_composite_t
         description: >
           D4 baseline vulnerability covariate at time t (cross-sectional LEVEL only;
-          3-indicator Hamburg composite, §4.3-equivalent). Higher = more
-          socio-economically vulnerable. NO D4 delta columns in this model.
+          2-indicator Hamburg composite as of #329, §4.3-equivalent -- unemployment_share
+          excluded as a predictor/outcome conflation risk against Hamburg's own D1
+          Sozialmonitoring Statusindex, ADR-0014 §2). Higher = more socio-economically
+          vulnerable. NO D4 delta columns in this model.
       - name: stadtteil_code
         description: >
           Stadtteil-grain SE-clustering key (#129, H1-geo-signoff.md Condition 2,

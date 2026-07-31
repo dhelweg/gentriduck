@@ -72,15 +72,17 @@
 -- converged that exposing Hamburg's individual, already-ingested indicators
 -- here is safe/additive/display-only (same class of finding as I19's own
 -- sign-off for Berlin foreigners_share/migration_background_share), while a
--- 3-indicator Hamburg composite would be a materially different construct
--- from Berlin's 5-indicator one and should not be shown publicly as if it
--- were a weaker version of the same thing -- see
--- docs/epic-h/H3-geo-signoff.md's D4 discussion for why the composite itself
--- is excluded from gentrification_index publication for Hamburg, and #329
--- for a separate, deeper (out-of-scope-here) finding about
--- unemployment_share's circularity against Hamburg's own D1 Statusindex
--- inside that composite -- neither is relevant to this display mart, which
--- never reads the composite.
+-- Hamburg composite would be a materially different construct from Berlin's
+-- 5-indicator one and should not be shown publicly as if it were a weaker
+-- version of the same thing -- see docs/epic-h/H3-geo-signoff.md's D4
+-- discussion for why the composite itself is excluded from
+-- gentrification_index publication for Hamburg, and #329 (RESOLVED,
+-- 2026-07-31) for a separate, deeper finding about unemployment_share's
+-- circularity against Hamburg's own D1 Statusindex inside that composite --
+-- #329 fixed int_ewr_socioeco_hamburg's ewr_composite to a 2-indicator
+-- (age_under18_share, foreigners_share only) composite; neither that
+-- pre-existing 3-indicator composite nor its #329 fix is relevant to this
+-- display mart, which never reads the composite.
 --
 -- GRAIN (domain-expert condition, #313): Hamburg indicators are exposed at
 -- STADTTEIL grain (subarea_l1, hh_base CTE below) and its district/Bezirk
