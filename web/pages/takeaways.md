@@ -40,8 +40,8 @@ page or document that has already been through this project's [methodology gate]
 **What the data shows:** the fast-food association (H1b) is the single most robust result across
 every re-test this project has run: it is correctly signed, statistically significant on both a
 raw business count and the thesis's own Offering-Advantage location-quotient, and it survives
-aggregation up to district scale. The broader lead-lag story — "today's commerce predicts
-tomorrow's social change" — reproduces cleanly on the same welfare-register data the original 2018
+aggregation up to district scale. The broader lead-lag story — "today's commerce tracks, at a
+lag, tomorrow's social change" — reproduces cleanly on the same welfare-register data the original 2018
 thesis used, and partially revives at a two-year lag under a better predictor on modern official
 data, but the same-time co-movement hypothesis (H3c) never revives. **Read as: watch commercial
 mix, especially fast-food turnover, as one signal among several — not as a stand-alone predictor.**
