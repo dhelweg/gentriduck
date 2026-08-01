@@ -79,17 +79,21 @@ limit 1
 select
     h.area_code as stadtteil_code,
     coalesce(g.area_name, h.area_code) as stadtteil_name,
-    -- #334: 4 Hamburg Stadtteile are disclosure-control MERGED pairs whose area_code
-    -- is itself slash-joined (e.g. "02117/118", see ingest_hamburg_ewr_stadtteil.py's docstring).
-    -- A literal "/" here would split into an extra path segment and 404 during prerender --
-    -- percent-encode it so it stays one route segment; subarea_l1/[code].md's params.code comes
-    -- back decoded by SvelteKit's per-segment decodeURIComponent, so the query there is unaffected.
-    '/hamburg/area/subarea_l1/' || replace(h.area_code, '/', '%2F') as stadtteil_link
+    '/hamburg/area/subarea_l1/' || h.area_code as stadtteil_link
 from gentriduck_marts.mart_area_hierarchy as h
 left join
     gentriduck_marts.dim_area_geometry as g
     on g.city_code = 'HH' and g.area_level = 'subarea_l1' and g.area_code = h.area_code
 where h.city_code = 'HH' and h.area_level = 'subarea_l1' and h.parent_area_code = '${params.code}'
+    -- #334: 4 Hamburg Stadtteile are disclosure-control MERGED pairs whose area_code is itself
+    -- slash-joined (e.g. "02117/118", see ingest_hamburg_ewr_stadtteil.py's docstring). They have
+    -- no dim_area_geometry row (no WFS geometry for a merged pair) and no children of their own
+    -- (no Gebiet has a merged code as parent_area_code), so linking to them ships a dead-end,
+    -- unnamed profile page -- and the raw "/" 404s during prerender besides (an earlier version of
+    -- this fix percent-encoded it, but that only fools the prerender crawler: GitHub Pages decodes
+    -- the URL once before file lookup, so the encoded link still 404s for real visitors). Simplest
+    -- correct fix: don't list/link them here at all.
+    and h.area_code not like '%/%'
 order by stadtteil_name
 ```
 
@@ -255,13 +259,15 @@ select
     coalesce(g.area_name, h.area_code) as area_name,
     'Click to explore' as role,
     2 as sort_order,
-    -- see the `children` query above for why this must be percent-encoded, not concatenated raw
-    '${base}/hamburg/area/subarea_l1/' || replace(h.area_code, '/', '%2F') as link
+    '${base}/hamburg/area/subarea_l1/' || h.area_code as link
 from gentriduck_marts.mart_area_hierarchy as h
 left join
     gentriduck_marts.dim_area_geometry as g
     on g.city_code = 'HH' and g.area_level = 'subarea_l1' and g.area_code = h.area_code
 where h.city_code = 'HH' and h.area_level = 'subarea_l1' and h.parent_area_code = '${params.code}'
+    -- #334: see the `children` query above -- merged-pair composite codes have no geometry (so
+    -- no drilldown map feature either) and no dead-end page worth linking to.
+    and h.area_code not like '%/%'
 order by sort_order, area_name
 ```
 
