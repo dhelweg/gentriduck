@@ -79,7 +79,12 @@ limit 1
 select
     h.area_code as stadtteil_code,
     coalesce(g.area_name, h.area_code) as stadtteil_name,
-    '/hamburg/area/subarea_l1/' || h.area_code as stadtteil_link
+    -- #334: 4 Hamburg Stadtteile are disclosure-control MERGED pairs whose area_code
+    -- is itself slash-joined (e.g. "02117/118", see ingest_hamburg_ewr_stadtteil.py's docstring).
+    -- A literal "/" here would split into an extra path segment and 404 during prerender --
+    -- percent-encode it so it stays one route segment; subarea_l1/[code].md's params.code comes
+    -- back decoded by SvelteKit's per-segment decodeURIComponent, so the query there is unaffected.
+    '/hamburg/area/subarea_l1/' || replace(h.area_code, '/', '%2F') as stadtteil_link
 from gentriduck_marts.mart_area_hierarchy as h
 left join
     gentriduck_marts.dim_area_geometry as g
@@ -250,7 +255,8 @@ select
     coalesce(g.area_name, h.area_code) as area_name,
     'Click to explore' as role,
     2 as sort_order,
-    '${base}/hamburg/area/subarea_l1/' || h.area_code as link
+    -- see the `children` query above for why this must be percent-encoded, not concatenated raw
+    '${base}/hamburg/area/subarea_l1/' || replace(h.area_code, '/', '%2F') as link
 from gentriduck_marts.mart_area_hierarchy as h
 left join
     gentriduck_marts.dim_area_geometry as g

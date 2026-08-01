@@ -28,7 +28,11 @@ sidebar_position: 2
 select
     area_code,
     area_name,
-    '/hamburg/area/subarea_l1/' || area_code as stadtteil_link
+    -- #334: 4 merged-pair Stadtteile have a slash-bearing area_code (e.g. "02117/118");
+    -- percent-encode so it stays one route segment (see district/[code].md's `children` query for
+    -- the full rationale). This page sources dim_area_geometry, which the merged pairs typically
+    -- lack (no WFS geometry for them), but encode defensively/consistently regardless.
+    '/hamburg/area/subarea_l1/' || replace(area_code, '/', '%2F') as stadtteil_link
 from gentriduck_marts.dim_area_geometry
 where city_code = 'HH' and area_level = 'subarea_l1'
 order by area_name
