@@ -9,10 +9,10 @@ fallback** under ADR-0023 (`docs/adr/0023-vendored-cc-by-ewr-fallback.md`).
 `data/raw/` is normally gitignored — raw data is expected to be rebuilt from source on a fresh
 checkout. For the EWR source that no longer holds: the Amt-für-Statistik-Berlin-Brandenburg
 opendata site now serves an HTML SPA shell instead of CSV for the old direct-download URLs
-(2015-2020, 2024), and CKAN discovery 404s for 2021-2023 (never published there). See #197 for the
-full breakage record. ADR-0023 carves a narrow, scoped exception (genuinely small + proven
-unfetchable + redistributable licence) to vendor these bytes so a fresh checkout can still rebuild
-the EWR pipeline without a live network dependency or a manual download.
+(2015-2020, 2024), and (until 2026-08-06, see below) CKAN discovery 404d unconditionally for every
+year. See #197 for the full breakage record. ADR-0023 carves a narrow, scoped exception (genuinely
+small + proven unfetchable + redistributable licence) to vendor these bytes so a fresh checkout can
+still rebuild the EWR pipeline without a live network dependency or a manual download.
 
 ## What's here
 
@@ -40,8 +40,33 @@ recognise them unchanged — no vendored-specific parsing logic.
 | WHNDAUER (residence duration) | 2008-2020 |
 
 **2021-2023 main-matrix years are absent** — upstream never published a CKAN-discoverable or
-direct-download CSV for that window (#197 tracks sourcing these; this vendoring mechanism is not
-blocked on that and lands with whatever partial set is on hand, per ADR-0023 Consequences).
+direct-download CSV for that window (#197 tracks this; this vendoring mechanism is not blocked on
+it and lands with whatever partial set is on hand, per ADR-0023 Consequences).
+
+### 2026-08-06 re-verification (#197)
+
+Re-checked 2021-2023 directly against the *current* CKAN backend before concluding they are still
+unrecoverable (the old check had silently rotted — see "CKAN endpoint migration" below, which was
+itself masking this question behind an unrelated transport error). Findings:
+
+- `daten.berlin.de` was rebuilt on Drupal 10 at some point after this vendored set was collected.
+  Its old CKAN API path (`daten.berlin.de/api/3/action/package_search`) now 404s
+  **unconditionally, for every year** — not just 2021-2023 — so the pre-2026-08-06 ingest code's
+  "CKAN discovery 404s for 2021-2023" symptom was actually "CKAN discovery is completely broken,
+  which happens to manifest as always-skip for the years with no VINTAGE_URLS fast-path entry."
+- The live CKAN backend moved to a separate host, `datenregister.berlin.de` (found via the new
+  frontend's own JS at `/datensaetze`: `drupalSettings.data_tunnel.datenregister_uri` resolves to
+  `"https://datenregister.berlin.de"`, used by the tag-autocomplete widget's
+  `.../api/3/action/tag_autocomplete` call). `ingest_ewr.py`'s `CKAN_API_BASE` now points there.
+- Against the working `datenregister.berlin.de` backend, paginating every `package_search` result
+  for `"einwohnerinnen einwohner LOR-Planungsräumen"` (147 unique dataset titles covering 2001-2025)
+  turns up **no** 2021, 2022, or 2023 edition of the main EWR per-PLR population series. The only
+  title hits containing those years are unrelated datasets (Monitoring Soziale Stadtentwicklung
+  WFS/WMS layers for 2021/2023; the Gesundheits-/Sozialstrukturatlas for 2022).
+- Conclusion stands: **2021-2023 are not an ingestion bug, there is genuinely nothing to ingest.**
+  If upstream ever publishes these editions, `discover_url_via_ckan()` will pick them up
+  automatically (it queries live, no code change needed); until then they are correctly skipped
+  (not failed) per run.
 
 ## Provenance / staleness audit
 
