@@ -1,76 +1,52 @@
 {
   "_schema": "gentriduck-session-state/v1",
-  "session": "2026-07-04-devmode-136",
-  "updated_at": "2026-07-04T12:50:00Z",
+  "session": "2026-08-06-devmode-pm-session-22",
+  "updated_at": "2026-08-06T09:31:00Z",
   "build_status": {
     "result": "PASS",
-    "pass": 593,
-    "warn": 2,
-    "error": 0,
-    "warn_detail": [
-      "brw_residential_coverage_frac (expected by design)",
-      "test_c5_poi_share_spike (expected by design)"
-    ],
-    "branch": "develop",
-    "note": "Only change this cycle: web/static/robots.txt + web/static/_headers (non-methodology config, verified via clean npm run build). No dbt model changes."
+    "note": "No dbt/model changes since last integration; nothing to rebuild this cycle."
   },
   "open_prs": [
     {
-      "number": 145,
-      "title": "Release: wrangler.toml for Cloudflare Pages build config",
+      "number": 332,
+      "title": "Weekly release: develop -> main (2026-08-01)",
       "base": "main",
       "head": "develop",
-      "note": "Small, out-of-cadence, non-blocking. OPEN, MERGEABLE, not yet merged. Adds wrangler.toml (pages_build_output_dir) + devmode-135 handoff doc."
+      "state": "OPEN",
+      "opened_at": "2026-07-31T23:49:34Z",
+      "note": "Awaiting maintainer merge in GitHub UI. One reminder ping already sent (session 17, 2026-08-02T19:05Z). Next reminder due at/after the ~1-week mark: 2026-08-07T23:49Z."
     }
   ],
-  "merged_this_session": [
-    {
-      "number": 137,
-      "title": "Weekly release: G4/G5 site work + handoff sync",
-      "base": "main",
-      "head": "develop",
-      "mergedAt": "2026-07-04T12:16:21Z",
-      "note": "Maintainer merged in the GitHub UI, mid-session. main now has the full web/ Evidence site (including the noindex robots.txt/_headers) for the first time -- required for Cloudflare Pages (production branch = main) to build a real deploy for #144."
-    }
-  ],
-  "pending_adr_branches": [
-    {
-      "branch": "feat/82-adr-0013-whitepaper-tool",
-      "issue": 82,
-      "title": "ADR-0013 Quarto + Typst whitepaper authoring tool",
-      "note": "ADR drafted, still 'Proposed'. Blocked on maintainer sign-off. No reply yet."
-    }
-  ],
+  "merged_this_session": [],
+  "pending_adr_branches": [],
   "completed_this_session": [],
-  "filed_this_session": [144],
-  "integrated_into_develop": ["web/static/robots.txt + _headers (soft-launch noindex)"],
+  "filed_this_session": [],
+  "integrated_into_develop": [],
   "in_progress": null,
   "board_status": {
-    "note": "105 Done, 7 Todo, 0 In Progress = 112 total. Reconciliation clean at end of cycle.",
+    "note": "12 open issues, all Todo, 0 In Progress. Reconciliation clean as of session 22.",
     "open_issues_by_dependency": {
       "next_unblocked": [],
       "blocked_on_maintainer": [
-        "#70 [B1] displacement data -- Milieuschutz ADR + scope questions",
-        "#80 [A10] scoping question posted, awaiting maintainer answer",
-        "#82 [O2] ADR-0013 whitepaper tool (Quarto) approval",
-        "#126 [H2b] Hamburg OSM POI -- Geofabrik OSM-contributor login",
-        "#125 [H2] transitively blocked on #126",
-        "#144 [F3] Cloudflare Pages deploy -- maintainer needs to finish dashboard build settings + trigger deploy"
+        "#333 [infra] Split ingestion: cache raw fetch separately from parse-to-parquet",
+        "#328 [J1] Address-level lookup scoping",
+        "#327 [epic-i] Rethink public presentation clarity",
+        "#283 [infra] Manually-triggered CI job for poe refresh (needs ADR)",
+        "#270 [I20-school-xcheck] Official-directory completeness cross-check",
+        "#234 [META-1] Extract operating model into open playbook",
+        "#230 [I13] Launch playbook",
+        "#229 [I12] Reach measurement loop"
       ],
       "parked_not_blocked": [
-        "#129 [H2-SE] standing requirement, no Hamburg regression ticket exists yet to attach it to"
+        "#277 [A10-P2-estimate] Milieuschutz DiD/event-study script (forward-binding, no consumer yet)",
+        "#276 [R-A8b-consume] Wire trajectory panel (forward-binding)",
+        "#275 [C-craft-artisanal] Curated artisanal-craft POI subset (parked)",
+        "#197 [bug][ingestion] EWR CSV parse failures + CKAN 404s (maintainer-accepted deferral)"
       ]
     }
   },
-  "still_blocked": [
-    {"issue": 70, "blocked_by": ["Maintainer ADR decision + scope questions"], "title": "[B1] Displacement data"},
-    {"issue": 80, "blocked_by": ["Maintainer scoping answer"], "title": "[A10] Causal/early-warning design"},
-    {"issue": 82, "blocked_by": ["Maintainer ADR-0013 approval"], "title": "[O2] Whitepaper"},
-    {"issue": 125, "blocked_by": ["#126 (transitively)"], "title": "[H2] Hamburg real-data ingestion remainder"},
-    {"issue": 126, "blocked_by": ["Maintainer's Geofabrik OSM-contributor login"], "title": "[H2b] Hamburg OSM POI ingestion"},
-    {"issue": 144, "blocked_by": ["Maintainer's Cloudflare Pages dashboard build settings + deploy trigger"], "title": "[F3] Cloudflare Pages deploy"}
-  ],
-  "next_session_decision": "Backlog is fully blocked/parked (7/7 open issues). #144: maintainer is troubleshooting a Cloudflare Pages dashboard UI issue (can't find build-settings fields) directly with the PM in chat -- tried sharing 4 screenshots but they didn't come through; PM asked for a resend. Not resolvable by the autonomous loop; resume the moment screenshots/description arrive. PR #145 (develop->main, wrangler.toml) is open and mergeable, small and non-blocking. Otherwise re-check #70/#80/#82/#126 for replies each cycle.",
-  "last_updated": "2026-07-04",
-  "current_session": "devmode-136"
+  "still_blocked": [],
+  "next_session_decision": "Backlog fully blocked/parked (12/12 open issues) -- no unblocked work exists to advance. PR #332 unmerged; send one fresh reminder ping once 2026-08-07T23:49Z is reached if still unmerged. Otherwise keep doing full re-scans (not just the blocked set) each cycle; only write a new handoff .md when something actually changes (per docs/handoff/README.md compaction policy) -- update this state.json each cycle regardless.",
+  "last_updated": "2026-08-06",
+  "current_session": "devmode-pm-session-22"
 }
