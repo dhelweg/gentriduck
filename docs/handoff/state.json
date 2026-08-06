@@ -1,7 +1,7 @@
 {
   "_schema": "gentriduck-session-state/v1",
-  "session": "2026-08-06-devmode-pm-session-29",
-  "updated_at": "2026-08-06T22:30:00Z",
+  "session": "2026-08-06-devmode-pm-session-30",
+  "updated_at": "2026-08-06T23:30:00Z",
   "build_status": {
     "result": "PASS",
     "note": "No dbt/model changes since #197/#335 integration (ingestion-only, non-methodology-bearing). Nothing to rebuild this cycle."
@@ -14,7 +14,7 @@
       "head": "develop",
       "state": "OPEN",
       "opened_at": "2026-07-31T23:49:34Z",
-      "note": "Awaiting maintainer merge in GitHub UI. mergeStateStatus CLEAN/MERGEABLE. Body already refreshed to include #197/#335. One reminder ping already sent (session 17, 2026-08-02T19:05Z). Weekly-cadence threshold (2026-08-07T23:49Z) not yet reached as of this cycle (system clock 2026-08-06T22:24Z) -- no fresh reminder sent; send one next cycle once the threshold passes if still unmerged."
+      "note": "Awaiting maintainer merge in GitHub UI. head==develop tip (e8289118a), still CLEAN/MERGEABLE, body already covers #197/#335. Weekly-cadence threshold (2026-08-07T23:49Z) not yet reached as of this cycle (system clock 2026-08-06T23:28Z, ~24h remaining) -- no fresh reminder sent; send one next cycle once the threshold passes if still unmerged."
     }
   ],
   "merged_this_session": [],
@@ -24,7 +24,7 @@
   "integrated_into_develop": [],
   "in_progress": null,
   "board_status": {
-    "note": "Reconciliation clean this cycle: gh project item-list (276 items, limit 500) confirms zero closed-but-not-Done drift and zero stray In Progress cards. All 11 open issues re-scanned individually (title/labels/body/last comment): 8 blocked-on-maintainer, 3 explicitly parked/forward-binding with no consumer. Re-checked every blocked issue's latest comment (#333, #328, #327, #283, #270, #230, #229, plus #234 body) -- no new maintainer decision since prior sessions (comments remain PM-authored scoping/status notes or recorded prior decisions). Re-read #276 and #275 bodies in full: both explicitly say 'do not pick up speculatively' / 'parked, no consumer yet' -- confirmed still not actionable. Community-triage: only discussion is #213 (guidelines, upvoteCount 1, no activity since 2026-07-09) -- 0 at threshold. No new tickets discovered against docs/PROJECT_PLAN.md this cycle.",
+    "note": "Found and fixed real drift this cycle: 8 open issues (#270, #275, #276, #277, #283, #327, #328, #333) existed on GitHub but were MISSING from the project board entirely (gh project item-list only returned 3 items: #229/#230/#234). Added all 8 via `gh project item-add` + set Status=Todo. Root cause not investigated further (predates this session's visibility); worth a spot-check next cycle that no other open issues are silently off-board. All 11 open issues re-scanned individually (title/labels/body/last comment): 8 blocked-on-maintainer, 3 explicitly parked/forward-binding with no consumer -- same substantive conclusion as session 29, just now correctly reflected on the board. Re-checked every blocked issue's latest comment (#333, #328, #327, #283, #270, #230, #229, plus #234 body) -- all last comments are PM-authored (dhelweg is the gh identity the PM posts as; verified by content, not just author login), no new maintainer decision. Re-read #276 and #275 bodies in full: both explicitly say 'do not pick up speculatively' / 'parked, no consumer yet' -- confirmed still not actionable. Community-triage: only discussion is #213 (guidelines, upvoteCount 1, no activity since 2026-07-09) -- 0 at threshold. No new tickets discovered against docs/PROJECT_PLAN.md this cycle.",
     "open_issues_by_dependency": {
       "next_unblocked": [],
       "blocked_on_maintainer": [
@@ -45,7 +45,7 @@
     }
   },
   "still_blocked": [],
-  "next_session_decision": "Backlog remains fully blocked/parked (11/11 open issues) -- unchanged from session 28. No unblocked work exists to advance this cycle. PR #332 still unmerged; weekly-cadence reminder threshold is 2026-08-07T23:49Z -- send a fresh PushNotification next cycle if still unmerged by then. Continue full re-scans (not just the blocked set) each cycle, checking each blocked issue's latest comment for a maintainer reply and the community-voting-board discussions; only write a new handoff .md when something actually changes (per docs/handoff/README.md compaction policy) -- update this state.json each cycle regardless.",
+  "next_session_decision": "Backlog remains fully blocked/parked (11/11 open issues), now correctly reflected on the board after this cycle's fix. No unblocked work exists to advance this cycle. PR #332 still unmerged; weekly-cadence reminder threshold is 2026-08-07T23:49Z -- send a fresh PushNotification next cycle if still unmerged by then. Continue full re-scans (not just the blocked set) each cycle, checking each blocked issue's latest comment for a maintainer reply and the community-voting-board discussions; also re-verify `gh project item-list` count matches `gh issue list --state open` count each cycle to catch any repeat of this session's off-board drift. Only write a new handoff .md when something actually changes (per docs/handoff/README.md compaction policy) -- update this state.json each cycle regardless.",
   "last_updated": "2026-08-06",
-  "current_session": "devmode-pm-session-29"
+  "current_session": "devmode-pm-session-30"
 }
