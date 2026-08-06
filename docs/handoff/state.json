@@ -1,7 +1,7 @@
 {
   "_schema": "gentriduck-session-state/v1",
-  "session": "2026-08-06-devmode-pm-session-22",
-  "updated_at": "2026-08-06T09:31:00Z",
+  "session": "2026-08-06-devmode-pm-session-23",
+  "updated_at": "2026-08-06T13:54:00Z",
   "build_status": {
     "result": "PASS",
     "note": "No dbt/model changes since last integration; nothing to rebuild this cycle."
@@ -46,7 +46,7 @@
     }
   },
   "still_blocked": [],
-  "next_session_decision": "Backlog fully blocked/parked (12/12 open issues) -- no unblocked work exists to advance. PR #332 unmerged; send one fresh reminder ping once 2026-08-07T23:49Z is reached if still unmerged. Otherwise keep doing full re-scans (not just the blocked set) each cycle; only write a new handoff .md when something actually changes (per docs/handoff/README.md compaction policy) -- update this state.json each cycle regardless.",
+  "next_session_decision": "Backlog fully blocked/parked (12/12 open issues) -- no unblocked work exists to advance. PR #332 still unmerged, still not at the ~1-week reminder threshold (2026-08-07T23:49Z as of this check, 2026-08-06T13:54Z) -- send one fresh reminder ping once that's reached if still unmerged. Otherwise keep doing full re-scans (not just the blocked set) each cycle; only write a new handoff .md when something actually changes (per docs/handoff/README.md compaction policy) -- update this state.json each cycle regardless.",
   "last_updated": "2026-08-06",
-  "current_session": "devmode-pm-session-22"
+  "current_session": "devmode-pm-session-23"
 }
