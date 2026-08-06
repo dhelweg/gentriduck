@@ -12,7 +12,7 @@ Source (ADR-0003, section "Socio-economic (EWR)"):
   https://www.statistik-berlin-brandenburg.de/"
 
 Processing:
-  For each target year a CSV URL is discovered via the daten.berlin.de CKAN API
+  For each target year a CSV URL is discovered via the Berlin open-data CKAN API
   (fallback: VINTAGE_URLS dict). The script computes 13 socio-economic indicators
   at PLR grain and outputs one Parquet file per year in WIDE format (one row per
   PLR) to data/raw/berlin/ewr/<year>.parquet (gitignored).
@@ -23,6 +23,14 @@ Processing:
   programmatically (see vendored/README.md). This restores a fresh-checkout's
   ability to rebuild the EWR pipeline without a live network dependency for the
   years vendored there.
+
+  #197 (2026-08-06): daten.berlin.de was rebuilt on Drupal 10 (dropping its old
+  CKAN-backed catalog at daten.berlin.de/api/3/...., which now 404s
+  unconditionally). The live CKAN API moved to a separate host,
+  datenregister.berlin.de (found via the new frontend's
+  `drupalSettings.data_tunnel.datenregister_uri`); dataset metadata there still
+  resolves to the same statistik-berlin-brandenburg.de/opendata/ CSV URLs as
+  before. See CKAN_API_BASE below and the "2021-2023" note on VINTAGE_URLS.
 
 Output schema (wide format, one row per PLR):
   city_code, reference_year, reference_date, area_code, area_vintage,
@@ -144,7 +152,16 @@ SOURCE_ATTRIBUTION = (
     " CC BY 3.0 DE — https://www.statistik-berlin-brandenburg.de/"
 )
 
-CKAN_API_BASE = "https://daten.berlin.de/api/3/action/package_search"
+# #197 (2026-08-06): daten.berlin.de migrated to a Drupal 10 frontend; its old
+# CKAN endpoint (daten.berlin.de/api/3/...) now 404s unconditionally, for every
+# year, not just 2021-2023 -- masking real "not published" misses behind a
+# broken-transport error. The live CKAN backend moved to datenregister.berlin.de
+# (surfaced by the new frontend's own JS: `/datensaetze`'s tag-autocomplete calls
+# `drupalSettings.data_tunnel.datenregister_uri + "/api/3/action/tag_autocomplete"`,
+# and `datenregister_uri` resolves to "https://datenregister.berlin.de"). Verified
+# 2026-08-06 that `package_search` still works there and returns the same
+# statistik-berlin-brandenburg.de/opendata/ resource URLs already in VINTAGE_URLS.
+CKAN_API_BASE = "https://datenregister.berlin.de/api/3/action/package_search"
 
 # Companion CSV URLs (12A suffix = Ausländische Einwohner) — contain E_A (foreigners
 # total) which is absent from the main 12E Matrix CSV.
@@ -191,7 +208,18 @@ VINTAGE_URLS: dict[int, str] = {
     2018: "https://www.statistik-berlin-brandenburg.de/opendata/EWR201812E_Matrix.csv",
     2019: "https://www.statistik-berlin-brandenburg.de/opendata/EWR201912E_Matrix.csv",
     2020: "https://www.statistik-berlin-brandenburg.de/opendata/EWR202012E_Matrix.csv",
-    # 2021-2023: not yet published on the open-data portal (CKAN API miss confirmed).
+    # 2021-2023: confirmed NOT published as an "Einwohnerinnen und Einwohner in Berlin in
+    # LOR-Planungsräumen am 31.12.YYYY" dataset anywhere in the Amt-für-Statistik-Berlin-
+    # Brandenburg catalog. Re-verified 2026-08-06 (#197) directly against the *current*
+    # CKAN backend (datenregister.berlin.de, see CKAN_API_BASE) by paginating every
+    # "einwohnerinnen einwohner LOR-Planungsräumen" package_search result (147 unique
+    # dataset titles) and confirming none carry a 2021, 2022, or 2023 edition of this
+    # series (the only 2021/2023 title hits are the unrelated MSS WFS/WMS layers, and the
+    # only 2022 hit is the unrelated Gesundheits-/Sozialstrukturatlas). This is not a
+    # discovery bug -- there is no dataset to discover. If upstream ever publishes these
+    # editions, discover_url_via_ckan() will pick them up automatically (no code change
+    # needed); until then they are skipped (not failed) per year, same as any other
+    # genuinely-unpublished vintage.
     2024: "https://www.statistik-berlin-brandenburg.de/opendata/EWR_L21_202412E_Matrix.csv",
     2025: "https://www.statistik-berlin-brandenburg.de/opendata/EWR_L21_202512E_Matrix.csv",
 }
@@ -287,15 +315,54 @@ def parse_years(spec: str) -> list[int]:
 # ---------------------------------------------------------------------------
 
 
+# Title must look like the *main* EWR per-PLR population series (the "12E Matrix" this
+# module parses), not merely mention the target year (#197 drift-guard hardening -- CKAN
+# full-text search is fuzzy and will otherwise surface unrelated datasets, e.g.
+# "Monitoring Soziale Stadtentwicklung 2021 - [WFS]" or "Pflege-Kernindikatoren ...
+# 2019-2023", that happen to contain the year string).
+_EWR_TITLE_MARKERS = ("einwohner", "planungsr")
+# Excluded even when the positive markers match: these are the companion series (12A
+# foreigners, Wohnlage, Migrationshintergrund, Wohndauer) which share the "Einwohner...
+# LOR-Planungsräumen" title stem but are a *different* CSV shape handled by the
+# dedicated companion loaders (load_companion_local_csv / load_whndauer_local_csv /
+# load_migra_local_csv), never by live CKAN discovery. Confirmed live 2026-08-06: the
+# "Ausländische Einwohnerinnen..." dataset title contains both positive markers and
+# CKAN search can rank it above the main-matrix dataset for the same year (e.g. 2025),
+# so without this exclusion discover_url_via_ckan() could silently return the wrong
+# (12A, not 12E) resource URL. The reviewer additionally confirmed live (2026-08-06)
+# that "Einwohnerinnen und Einwohner in Berlin in LOR-Planungsräumen nach Wohndauer"
+# (WHNDAUER<year>_Matrix.csv) is a 5th sibling series matching both positive markers;
+# it doesn't outrank the main series for any year checked live, but CKAN relevance
+# ranking is demonstrably unstable across time (that's how the 12A issue above was
+# found), so it's excluded pre-emptively for any future year.
+_EWR_TITLE_EXCLUDE_MARKERS = (
+    "ausländ",
+    "auslaend",
+    "wohnlage",
+    "migrationshintergrund",
+    "wohndauer",
+)
+
+
 def discover_url_via_ckan(year: int, timeout: int = 30) -> Optional[str]:
     """
-    Search daten.berlin.de CKAN API for the EWR CSV download URL for a given year.
+    Search the Berlin open-data CKAN API for the EWR CSV download URL for a given year.
 
-    Queries the package_search endpoint with the year-specific title fragment.
-    Returns the first CSV resource URL found, or None if no match.
+    Queries the package_search endpoint (CKAN_API_BASE -- datenregister.berlin.de, the
+    live backend behind the daten.berlin.de Drupal frontend, see #197) with the
+    year-specific title fragment. Returns a CSV resource URL only when both the dataset
+    title looks like the EWR per-PLR population series (_EWR_TITLE_MARKERS) AND the
+    resource/title carries the target year -- otherwise None.
 
-    On any network / parse error, logs a warning and returns None so the caller
-    can fall back gracefully (log warning + skip year).
+    #197 drift-guard: earlier versions of this function fell back to "the first CSV
+    resource in the first search result" when no year match was found. That is unsafe --
+    for a genuinely-unpublished year (e.g. 2021-2023) it could silently return an
+    unrelated CSV that then gets parsed and ingested as if it were EWR data. This
+    function now fails closed (returns None + a clear warning) instead, so an
+    unpublished/renamed edition is always visibly skipped, never silently substituted.
+
+    On any network / parse error, logs a warning and returns None so the caller can fall
+    back gracefully (vendored tier, then skip year).
     """
     query = f"einwohner planungsraum 31-12-{year}"
     params = urllib.parse.urlencode({"q": query, "rows": 10})
@@ -315,9 +382,17 @@ def discover_url_via_ckan(year: int, timeout: int = 30) -> Optional[str]:
         log.warning("CKAN API returned no datasets for year %d (query: %r)", year, query)
         return None
 
-    # Search all datasets for a CSV resource whose URL or title contains the target year.
+    # Search all datasets for a CSV resource whose URL or title contains the target year,
+    # restricted to datasets whose title actually looks like the EWR population series.
     for dataset in results:
         title = dataset.get("title", "")
+        title_lower = title.lower()
+        if not all(marker in title_lower for marker in _EWR_TITLE_MARKERS):
+            log.debug("  Skipping non-EWR dataset: %s", title)
+            continue
+        if any(marker in title_lower for marker in _EWR_TITLE_EXCLUDE_MARKERS):
+            log.debug("  Skipping EWR companion-series dataset (not the main matrix): %s", title)
+            continue
         log.debug("  Checking dataset: %s", title)
         for resource in dataset.get("resources", []):
             resource_url = resource.get("url", "")
@@ -327,16 +402,14 @@ def discover_url_via_ckan(year: int, timeout: int = 30) -> Optional[str]:
                     log.debug("  Found CSV resource: %s", resource_url)
                     return resource_url
 
-    # Fallback: return first CSV resource in first dataset.
-    for dataset in results:
-        for resource in dataset.get("resources", []):
-            resource_url = resource.get("url", "")
-            fmt = resource.get("format", "").upper()
-            if fmt == "CSV" or resource_url.lower().endswith(".csv"):
-                log.debug("  Fallback CSV resource (year match not found): %s", resource_url)
-                return resource_url
-
-    log.warning("CKAN API: no CSV resource found for year %d", year)
+    # #197: no unsafe "pick any CSV" fallback -- fail closed and let the caller try the
+    # vendored tier / skip the year with a clear, per-edition message.
+    log.warning(
+        "CKAN API: no matching EWR dataset/CSV resource found for year %d "
+        "(query: %r) -- likely genuinely unpublished for this year.",
+        year,
+        query,
+    )
     return None
 
 
@@ -1164,7 +1237,7 @@ def _write_manifest(out_dir: Path) -> None:
         source_class="pinned",
         city="berlin",
         upstream_url=(
-            "https://daten.berlin.de/api/3/action/package_search (CKAN) ; "
+            "https://datenregister.berlin.de/api/3/action/package_search (CKAN, see #197) ; "
             "https://www.statistik-berlin-brandenburg.de/opendata/"
         ),
         upstream_vintage=",".join(
