@@ -1,10 +1,10 @@
 {
   "_schema": "gentriduck-session-state/v1",
-  "session": "2026-08-06-devmode-pm-session-27",
-  "updated_at": "2026-08-06T18:03:00Z",
+  "session": "2026-08-06-devmode-pm-session-28",
+  "updated_at": "2026-08-06T21:20:00Z",
   "build_status": {
     "result": "PASS",
-    "note": "No dbt/model changes since last integration; nothing to rebuild this cycle."
+    "note": "No dbt/model changes since #197/#335 integration (ingestion-only, non-methodology-bearing). Nothing to rebuild this cycle."
   },
   "open_prs": [
     {
@@ -14,7 +14,7 @@
       "head": "develop",
       "state": "OPEN",
       "opened_at": "2026-07-31T23:49:34Z",
-      "note": "Awaiting maintainer merge in GitHub UI. One reminder ping already sent (session 17, 2026-08-02T19:05Z). Next reminder due at/after the ~1-week mark: 2026-08-07T23:49Z -- checked this cycle at 2026-08-06T18:03Z, still ~30h short, so no fresh reminder sent."
+      "note": "Awaiting maintainer merge in GitHub UI. One reminder ping already sent (session 17, 2026-08-02T19:05Z). Next reminder due at/after the ~1-week mark: 2026-08-07T23:49Z -- checked this cycle at 2026-08-06T21:20Z, still ~2.5h short, so no fresh reminder sent. mergeStateStatus still CLEAN/MERGEABLE."
     }
   ],
   "merged_this_session": [],
@@ -24,7 +24,7 @@
   "integrated_into_develop": [],
   "in_progress": null,
   "board_status": {
-    "note": "12 open issues, all Todo, 0 In Progress. Reconciliation clean as of session 27: full project item-list scan (275 items, limit 400) confirms all 12 open issue numbers present as Todo, zero closed-but-not-Done drift, zero In Progress cards. Checked latest comment on every blocked issue (#333, #328, #327, #283, #270, #234, #230, #229) plus #197 -- all latest comments are PM/architect-authored scoping, status-check, or label-hygiene notes; no new maintainer reply since session 26. Community-triage: only discussion is #213 (guidelines, upvoteCount 1, no activity since 2026-07-09) -- 0 at threshold.",
+    "note": "11 open issues, all Todo, 0 In Progress. Reconciliation clean: full project item-list scan (276 items, limit 500) confirms #197/#335 correctly landed as CLOSED+Done (verified via gh issue view state=CLOSED and board status=Done), and every remaining open issue number is present as Todo with zero closed-but-not-Done drift and zero stray In Progress cards. Re-checked latest comment on every blocked issue (#333, #328, #327, #283, #270, #234, #230, #229) -- all latest comments remain PM/architect-authored scoping or status-check notes, no new maintainer reply since prior sessions. #277 was momentarily claimed and un-claimed within this session window (20:17Z comment) after closer read showed it's explicitly Parked/low-priority with no consumer driver -- correctly returned to Todo, not a regression. Community-triage: only discussion is #213 (guidelines, upvoteCount 1, no activity since 2026-07-09) -- 0 at threshold. Disk headroom: ~832GB free, no capacity concern.",
     "open_issues_by_dependency": {
       "next_unblocked": [],
       "blocked_on_maintainer": [
@@ -38,15 +38,14 @@
         "#229 [I12] Reach measurement loop"
       ],
       "parked_not_blocked": [
-        "#277 [A10-P2-estimate] Milieuschutz DiD/event-study script (forward-binding, no consumer yet)",
+        "#277 [A10-P2-estimate] Milieuschutz DiD/event-study script (forward-binding, no consumer yet; re-confirmed parked this session)",
         "#276 [R-A8b-consume] Wire trajectory panel (forward-binding)",
-        "#275 [C-craft-artisanal] Curated artisanal-craft POI subset (parked)",
-        "#197 [bug][ingestion] EWR CSV parse failures + CKAN 404s (maintainer-accepted deferral, re-verified full comment thread this cycle)"
+        "#275 [C-craft-artisanal] Curated artisanal-craft POI subset (parked)"
       ]
     }
   },
   "still_blocked": [],
-  "next_session_decision": "Backlog fully blocked/parked (12/12 open issues) -- no unblocked work exists to advance. PR #332 still unmerged, still not at the ~1-week reminder threshold (2026-08-07T23:49Z; last checked 2026-08-06T18:03Z) -- send one fresh reminder ping once that's reached if still unmerged. Otherwise keep doing full re-scans (not just the blocked set) each cycle, including checking each blocked issue's latest comment for a maintainer reply and the community-voting-board discussions; only write a new handoff .md when something actually changes (per docs/handoff/README.md compaction policy) -- update this state.json each cycle regardless.",
+  "next_session_decision": "Backlog fully blocked/parked (11/11 open issues) -- #197's fix landed this session window (fix/197-ewr-format-drift + infra/335-ewr-ckan-discovery-tests, both merged to develop and closed+Done on the board), which is exactly why it dropped off the parked list. No other unblocked work exists to advance. PR #332 still unmerged, still short of the ~1-week reminder threshold (2026-08-07T23:49Z; last checked 2026-08-06T21:20Z) -- send one fresh reminder ping once that threshold is reached if still unmerged (should trigger next cycle if dated 2026-08-07 or later). Otherwise keep doing full re-scans (not just the blocked set) each cycle, including checking each blocked issue's latest comment for a maintainer reply and the community-voting-board discussions; only write a new handoff .md when something actually changes (per docs/handoff/README.md compaction policy) -- update this state.json each cycle regardless.",
   "last_updated": "2026-08-06",
-  "current_session": "devmode-pm-session-27"
+  "current_session": "devmode-pm-session-28"
 }
