@@ -1,7 +1,7 @@
 {
   "_schema": "gentriduck-session-state/v1",
-  "session": "2026-08-06-devmode-pm-session-28",
-  "updated_at": "2026-08-06T21:20:00Z",
+  "session": "2026-08-06-devmode-pm-session-29",
+  "updated_at": "2026-08-06T22:30:00Z",
   "build_status": {
     "result": "PASS",
     "note": "No dbt/model changes since #197/#335 integration (ingestion-only, non-methodology-bearing). Nothing to rebuild this cycle."
@@ -14,7 +14,7 @@
       "head": "develop",
       "state": "OPEN",
       "opened_at": "2026-07-31T23:49:34Z",
-      "note": "Awaiting maintainer merge in GitHub UI. One reminder ping already sent (session 17, 2026-08-02T19:05Z). Next reminder due at/after the ~1-week mark: 2026-08-07T23:49Z -- checked this cycle at 2026-08-06T21:20Z, still ~2.5h short, so no fresh reminder sent. mergeStateStatus still CLEAN/MERGEABLE."
+      "note": "Awaiting maintainer merge in GitHub UI. mergeStateStatus CLEAN/MERGEABLE. Body already refreshed to include #197/#335. One reminder ping already sent (session 17, 2026-08-02T19:05Z). Weekly-cadence threshold (2026-08-07T23:49Z) not yet reached as of this cycle (system clock 2026-08-06T22:24Z) -- no fresh reminder sent; send one next cycle once the threshold passes if still unmerged."
     }
   ],
   "merged_this_session": [],
@@ -24,28 +24,28 @@
   "integrated_into_develop": [],
   "in_progress": null,
   "board_status": {
-    "note": "11 open issues, all Todo, 0 In Progress. Reconciliation clean: full project item-list scan (276 items, limit 500) confirms #197/#335 correctly landed as CLOSED+Done (verified via gh issue view state=CLOSED and board status=Done), and every remaining open issue number is present as Todo with zero closed-but-not-Done drift and zero stray In Progress cards. Re-checked latest comment on every blocked issue (#333, #328, #327, #283, #270, #234, #230, #229) -- all latest comments remain PM/architect-authored scoping or status-check notes, no new maintainer reply since prior sessions. #277 was momentarily claimed and un-claimed within this session window (20:17Z comment) after closer read showed it's explicitly Parked/low-priority with no consumer driver -- correctly returned to Todo, not a regression. Community-triage: only discussion is #213 (guidelines, upvoteCount 1, no activity since 2026-07-09) -- 0 at threshold. Disk headroom: ~832GB free, no capacity concern.",
+    "note": "Reconciliation clean this cycle: gh project item-list (276 items, limit 500) confirms zero closed-but-not-Done drift and zero stray In Progress cards. All 11 open issues re-scanned individually (title/labels/body/last comment): 8 blocked-on-maintainer, 3 explicitly parked/forward-binding with no consumer. Re-checked every blocked issue's latest comment (#333, #328, #327, #283, #270, #230, #229, plus #234 body) -- no new maintainer decision since prior sessions (comments remain PM-authored scoping/status notes or recorded prior decisions). Re-read #276 and #275 bodies in full: both explicitly say 'do not pick up speculatively' / 'parked, no consumer yet' -- confirmed still not actionable. Community-triage: only discussion is #213 (guidelines, upvoteCount 1, no activity since 2026-07-09) -- 0 at threshold. No new tickets discovered against docs/PROJECT_PLAN.md this cycle.",
     "open_issues_by_dependency": {
       "next_unblocked": [],
       "blocked_on_maintainer": [
-        "#333 [infra] Split ingestion: cache raw fetch separately from parse-to-parquet",
+        "#333 [infra] Split ingestion: cache raw fetch separately from parse-to-parquet (ADR-0016 Amendment A drafted, awaiting accept/reject)",
         "#328 [J1] Address-level lookup scoping",
         "#327 [epic-i] Rethink public presentation clarity",
-        "#283 [infra] Manually-triggered CI job for poe refresh (needs ADR)",
-        "#270 [I20-school-xcheck] Official-directory completeness cross-check",
+        "#283 [infra] Manually-triggered CI job for poe refresh (ADR-0026 drafted, awaiting accept/reject)",
+        "#270 [I20-school-xcheck] Official-directory completeness cross-check (maintainer decided 2026-07-17: keep parked)",
         "#234 [META-1] Extract operating model into open playbook",
         "#230 [I13] Launch playbook",
         "#229 [I12] Reach measurement loop"
       ],
       "parked_not_blocked": [
-        "#277 [A10-P2-estimate] Milieuschutz DiD/event-study script (forward-binding, no consumer yet; re-confirmed parked this session)",
-        "#276 [R-A8b-consume] Wire trajectory panel (forward-binding)",
+        "#277 [A10-P2-estimate] Milieuschutz DiD/event-study script (forward-binding, no consumer yet)",
+        "#276 [R-A8b-consume] Wire trajectory panel (forward-binding, explicit 'do not pick up speculatively')",
         "#275 [C-craft-artisanal] Curated artisanal-craft POI subset (parked)"
       ]
     }
   },
   "still_blocked": [],
-  "next_session_decision": "Backlog fully blocked/parked (11/11 open issues) -- #197's fix landed this session window (fix/197-ewr-format-drift + infra/335-ewr-ckan-discovery-tests, both merged to develop and closed+Done on the board), which is exactly why it dropped off the parked list. No other unblocked work exists to advance. PR #332 still unmerged, still short of the ~1-week reminder threshold (2026-08-07T23:49Z; last checked 2026-08-06T21:20Z) -- send one fresh reminder ping once that threshold is reached if still unmerged (should trigger next cycle if dated 2026-08-07 or later). Otherwise keep doing full re-scans (not just the blocked set) each cycle, including checking each blocked issue's latest comment for a maintainer reply and the community-voting-board discussions; only write a new handoff .md when something actually changes (per docs/handoff/README.md compaction policy) -- update this state.json each cycle regardless.",
+  "next_session_decision": "Backlog remains fully blocked/parked (11/11 open issues) -- unchanged from session 28. No unblocked work exists to advance this cycle. PR #332 still unmerged; weekly-cadence reminder threshold is 2026-08-07T23:49Z -- send a fresh PushNotification next cycle if still unmerged by then. Continue full re-scans (not just the blocked set) each cycle, checking each blocked issue's latest comment for a maintainer reply and the community-voting-board discussions; only write a new handoff .md when something actually changes (per docs/handoff/README.md compaction policy) -- update this state.json each cycle regardless.",
   "last_updated": "2026-08-06",
-  "current_session": "devmode-pm-session-28"
+  "current_session": "devmode-pm-session-29"
 }
