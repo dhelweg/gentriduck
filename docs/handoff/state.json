@@ -1,30 +1,26 @@
 {
   "_schema": "gentriduck-session-state/v1",
-  "session": "2026-08-11-devmode-pm-session-141",
-  "updated_at": "2026-08-11T05:40:00Z",
+  "session": "2026-08-11-devmode-pm-session-142",
+  "updated_at": "2026-08-11T00:00:00Z",
   "build_status": {
     "result": "PASS",
-    "note": "No dbt/model changes this cycle. Nothing to rebuild."
+    "note": "No dbt/model changes this cycle. Nothing to rebuild. NOTE: a separate main-session job (post-release deploy: poe refresh -> poe web-build -> ops/deploy-gh-pages.sh) is running concurrently on this machine this cycle -- deliberately NOT touched/raced by this PM cycle."
   },
-  "open_prs": [
+  "open_prs": [],
+  "merged_this_session": [
     {
       "number": 332,
       "title": "Weekly release: develop -> main (2026-08-01)",
-      "base": "main",
-      "head": "develop",
-      "state": "OPEN",
-      "opened_at": "2026-07-31T23:49:34Z",
-      "note": "Still awaiting maintainer merge in GitHub UI. mergeable=MERGEABLE, mergeStateStatus=CLEAN. Body was stale -- develop had picked up #197 and #335 since the PR's last body edit; refreshed the summary this cycle to list both. ~11 days old. Escalation threshold ~2026-08-14 (~3 days out) not yet crossed -- pinged with a status-only PushNotification since new work was batched, not a hard escalation."
+      "note": "Maintainer merged develop -> main themselves via the GitHub UI just before this cycle (mergedAt 2026-08-11T07:46:00Z). main is now caught up through develop as of that point. No new standing release PR needed yet -- nothing has integrated into develop since #332 merged."
     }
   ],
-  "merged_this_session": [],
   "pending_adr_branches": [],
   "completed_this_session": [],
   "filed_this_session": [],
   "integrated_into_develop": [],
   "in_progress": null,
   "board_status": {
-    "note": "Session 141 re-scan: confirmed board clean -- 0 drift, 0 In Progress cards, all 11 open issues correctly in Todo/blocked. Re-checked comment content on all 8 blocked-on-maintainer issues (229,230,234,270,283,327,328,333) -- all last comments still PM-authored scoping/status updates (or empty for #234), no genuine new maintainer decision. Noticed develop had 2 new merges since PR #332's body was last written (#197 EWR CKAN discovery fix, #335 its unit-test coverage) that weren't reflected in the PR summary -- refreshed gh pr edit body to include them. No unblocked ticket found; nothing else mutated this cycle.",
+    "note": "Session 142 re-scan: board clean -- 0 drift, 0 In Progress cards, all 11 open issues correctly Todo/blocked, all 20 recently-closed issues (309-335) confirmed Done on the board. Re-checked comment content on all 8 blocked-on-maintainer issues (229,230,234,270,283,327,328,333) -- all last comments still PM-authored scoping/status updates (or empty for #234), no genuine new maintainer decision since prior session's read. No unblocked ticket found; nothing mutated this cycle besides this handoff refresh.",
     "open_issues_by_dependency": {
       "next_unblocked": [],
       "blocked_on_maintainer": [
@@ -45,7 +41,7 @@
     }
   },
   "still_blocked": [],
-  "next_session_decision": "Backlog remains fully blocked/parked (11/11 open issues), board confirmed clean, 0 drift. No unblocked work exists to advance this cycle. PR #332 still unmerged; body refreshed this cycle to include #197/#335. Not yet the ~2-week hard-escalation mark (~2026-08-14) -- escalate more insistently once crossed. Continue full re-scans each cycle, checking each blocked issue's actual last-comment CONTENT (not just label/updatedAt/author) for a genuine new maintainer decision. Other concurrent devmode sessions may claim/un-claim forward-binding tickets -- re-verify claim state before acting.",
+  "next_session_decision": "PR #332 is now MERGED (maintainer merged develop->main via GitHub UI). Backlog remains fully blocked/parked (11/11 open issues), board confirmed clean, 0 drift. No unblocked work exists to advance this cycle. Do NOT open a new develop->main release PR until new work has actually landed on develop since #332. A post-release deploy (refresh/web-build/gh-pages) is running concurrently on this machine this cycle -- next session should confirm it completed successfully rather than assuming. Continue full re-scans each cycle, checking each blocked issue's actual last-comment CONTENT (not just label/updatedAt/author) for a genuine new maintainer decision.",
   "last_updated": "2026-08-11",
-  "current_session": "devmode-pm-session-141"
+  "current_session": "devmode-pm-session-142"
 }
