@@ -1,76 +1,51 @@
 {
   "_schema": "gentriduck-session-state/v1",
-  "session": "2026-07-04-devmode-136",
-  "updated_at": "2026-07-04T12:50:00Z",
+  "session": "2026-08-11-devmode-pm-session-141",
+  "updated_at": "2026-08-11T05:40:00Z",
   "build_status": {
     "result": "PASS",
-    "pass": 593,
-    "warn": 2,
-    "error": 0,
-    "warn_detail": [
-      "brw_residential_coverage_frac (expected by design)",
-      "test_c5_poi_share_spike (expected by design)"
-    ],
-    "branch": "develop",
-    "note": "Only change this cycle: web/static/robots.txt + web/static/_headers (non-methodology config, verified via clean npm run build). No dbt model changes."
+    "note": "No dbt/model changes this cycle. Nothing to rebuild."
   },
   "open_prs": [
     {
-      "number": 145,
-      "title": "Release: wrangler.toml for Cloudflare Pages build config",
+      "number": 332,
+      "title": "Weekly release: develop -> main (2026-08-01)",
       "base": "main",
       "head": "develop",
-      "note": "Small, out-of-cadence, non-blocking. OPEN, MERGEABLE, not yet merged. Adds wrangler.toml (pages_build_output_dir) + devmode-135 handoff doc."
+      "state": "OPEN",
+      "opened_at": "2026-07-31T23:49:34Z",
+      "note": "Still awaiting maintainer merge in GitHub UI. mergeable=MERGEABLE, mergeStateStatus=CLEAN. Body was stale -- develop had picked up #197 and #335 since the PR's last body edit; refreshed the summary this cycle to list both. ~11 days old. Escalation threshold ~2026-08-14 (~3 days out) not yet crossed -- pinged with a status-only PushNotification since new work was batched, not a hard escalation."
     }
   ],
-  "merged_this_session": [
-    {
-      "number": 137,
-      "title": "Weekly release: G4/G5 site work + handoff sync",
-      "base": "main",
-      "head": "develop",
-      "mergedAt": "2026-07-04T12:16:21Z",
-      "note": "Maintainer merged in the GitHub UI, mid-session. main now has the full web/ Evidence site (including the noindex robots.txt/_headers) for the first time -- required for Cloudflare Pages (production branch = main) to build a real deploy for #144."
-    }
-  ],
-  "pending_adr_branches": [
-    {
-      "branch": "feat/82-adr-0013-whitepaper-tool",
-      "issue": 82,
-      "title": "ADR-0013 Quarto + Typst whitepaper authoring tool",
-      "note": "ADR drafted, still 'Proposed'. Blocked on maintainer sign-off. No reply yet."
-    }
-  ],
+  "merged_this_session": [],
+  "pending_adr_branches": [],
   "completed_this_session": [],
-  "filed_this_session": [144],
-  "integrated_into_develop": ["web/static/robots.txt + _headers (soft-launch noindex)"],
+  "filed_this_session": [],
+  "integrated_into_develop": [],
   "in_progress": null,
   "board_status": {
-    "note": "105 Done, 7 Todo, 0 In Progress = 112 total. Reconciliation clean at end of cycle.",
+    "note": "Session 141 re-scan: confirmed board clean -- 0 drift, 0 In Progress cards, all 11 open issues correctly in Todo/blocked. Re-checked comment content on all 8 blocked-on-maintainer issues (229,230,234,270,283,327,328,333) -- all last comments still PM-authored scoping/status updates (or empty for #234), no genuine new maintainer decision. Noticed develop had 2 new merges since PR #332's body was last written (#197 EWR CKAN discovery fix, #335 its unit-test coverage) that weren't reflected in the PR summary -- refreshed gh pr edit body to include them. No unblocked ticket found; nothing else mutated this cycle.",
     "open_issues_by_dependency": {
       "next_unblocked": [],
       "blocked_on_maintainer": [
-        "#70 [B1] displacement data -- Milieuschutz ADR + scope questions",
-        "#80 [A10] scoping question posted, awaiting maintainer answer",
-        "#82 [O2] ADR-0013 whitepaper tool (Quarto) approval",
-        "#126 [H2b] Hamburg OSM POI -- Geofabrik OSM-contributor login",
-        "#125 [H2] transitively blocked on #126",
-        "#144 [F3] Cloudflare Pages deploy -- maintainer needs to finish dashboard build settings + trigger deploy"
+        "#333 [infra] Split ingestion: cache raw fetch separately from parse-to-parquet (ADR-0016 Amendment A drafted, awaiting accept/reject)",
+        "#328 [J1] Address-level lookup scoping",
+        "#327 [epic-i] Rethink public presentation clarity",
+        "#283 [infra] Manually-triggered CI job for poe refresh (ADR-0026 drafted, awaiting accept/reject)",
+        "#270 [I20-school-xcheck] Official-directory completeness cross-check (maintainer decided 2026-07-17: keep parked)",
+        "#234 [META-1] Extract operating model into open playbook",
+        "#230 [I13] Launch playbook (all in-repo criteria met per 2026-08-01 status check; remains maintainer-gated on Zenodo DOI/noindex flip/announcement -- no code action possible)",
+        "#229 [I12] Reach measurement loop"
       ],
       "parked_not_blocked": [
-        "#129 [H2-SE] standing requirement, no Hamburg regression ticket exists yet to attach it to"
+        "#277 [A10-P2-estimate] Milieuschutz DiD/event-study script (explicit 'Priority: Parked/low -- no immediate driver', forward-binding, no consumer yet)",
+        "#276 [R-A8b-consume] Wire trajectory panel (forward-binding, explicit 'do not pick up speculatively')",
+        "#275 [C-craft-artisanal] Curated artisanal-craft POI subset (parked, 'if/when a concrete consumer needs it')"
       ]
     }
   },
-  "still_blocked": [
-    {"issue": 70, "blocked_by": ["Maintainer ADR decision + scope questions"], "title": "[B1] Displacement data"},
-    {"issue": 80, "blocked_by": ["Maintainer scoping answer"], "title": "[A10] Causal/early-warning design"},
-    {"issue": 82, "blocked_by": ["Maintainer ADR-0013 approval"], "title": "[O2] Whitepaper"},
-    {"issue": 125, "blocked_by": ["#126 (transitively)"], "title": "[H2] Hamburg real-data ingestion remainder"},
-    {"issue": 126, "blocked_by": ["Maintainer's Geofabrik OSM-contributor login"], "title": "[H2b] Hamburg OSM POI ingestion"},
-    {"issue": 144, "blocked_by": ["Maintainer's Cloudflare Pages dashboard build settings + deploy trigger"], "title": "[F3] Cloudflare Pages deploy"}
-  ],
-  "next_session_decision": "Backlog is fully blocked/parked (7/7 open issues). #144: maintainer is troubleshooting a Cloudflare Pages dashboard UI issue (can't find build-settings fields) directly with the PM in chat -- tried sharing 4 screenshots but they didn't come through; PM asked for a resend. Not resolvable by the autonomous loop; resume the moment screenshots/description arrive. PR #145 (develop->main, wrangler.toml) is open and mergeable, small and non-blocking. Otherwise re-check #70/#80/#82/#126 for replies each cycle.",
-  "last_updated": "2026-07-04",
-  "current_session": "devmode-136"
+  "still_blocked": [],
+  "next_session_decision": "Backlog remains fully blocked/parked (11/11 open issues), board confirmed clean, 0 drift. No unblocked work exists to advance this cycle. PR #332 still unmerged; body refreshed this cycle to include #197/#335. Not yet the ~2-week hard-escalation mark (~2026-08-14) -- escalate more insistently once crossed. Continue full re-scans each cycle, checking each blocked issue's actual last-comment CONTENT (not just label/updatedAt/author) for a genuine new maintainer decision. Other concurrent devmode sessions may claim/un-claim forward-binding tickets -- re-verify claim state before acting.",
+  "last_updated": "2026-08-11",
+  "current_session": "devmode-pm-session-141"
 }

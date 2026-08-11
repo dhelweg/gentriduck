@@ -85,6 +85,15 @@ left join
     gentriduck_marts.dim_area_geometry as g
     on g.city_code = 'HH' and g.area_level = 'subarea_l1' and g.area_code = h.area_code
 where h.city_code = 'HH' and h.area_level = 'subarea_l1' and h.parent_area_code = '${params.code}'
+    -- #334: 4 Hamburg Stadtteile are disclosure-control MERGED pairs whose area_code is itself
+    -- slash-joined (e.g. "02117/118", see ingest_hamburg_ewr_stadtteil.py's docstring). They have
+    -- no dim_area_geometry row (no WFS geometry for a merged pair) and no children of their own
+    -- (no Gebiet has a merged code as parent_area_code), so linking to them ships a dead-end,
+    -- unnamed profile page -- and the raw "/" 404s during prerender besides (an earlier version of
+    -- this fix percent-encoded it, but that only fools the prerender crawler: GitHub Pages decodes
+    -- the URL once before file lookup, so the encoded link still 404s for real visitors). Simplest
+    -- correct fix: don't list/link them here at all.
+    and h.area_code not like '%/%'
 order by stadtteil_name
 ```
 
@@ -256,6 +265,9 @@ left join
     gentriduck_marts.dim_area_geometry as g
     on g.city_code = 'HH' and g.area_level = 'subarea_l1' and g.area_code = h.area_code
 where h.city_code = 'HH' and h.area_level = 'subarea_l1' and h.parent_area_code = '${params.code}'
+    -- #334: see the `children` query above -- merged-pair composite codes have no geometry (so
+    -- no drilldown map feature either) and no dead-end page worth linking to.
+    and h.area_code not like '%/%'
 order by sort_order, area_name
 ```
 
