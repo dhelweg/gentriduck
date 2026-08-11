@@ -1,7 +1,7 @@
 {
   "_schema": "gentriduck-session-state/v1",
-  "session": "2026-08-10-devmode-pm-session-140",
-  "updated_at": "2026-08-10T20:28:00Z",
+  "session": "2026-08-11-devmode-pm-session-141",
+  "updated_at": "2026-08-11T05:40:00Z",
   "build_status": {
     "result": "PASS",
     "note": "No dbt/model changes this cycle. Nothing to rebuild."
@@ -14,7 +14,7 @@
       "head": "develop",
       "state": "OPEN",
       "opened_at": "2026-07-31T23:49:34Z",
-      "note": "Still awaiting maintainer merge in GitHub UI. mergeable=MERGEABLE, mergeStateStatus=CLEAN, develop head unchanged. ~10 days old. Escalation threshold ~2026-08-14 not yet crossed -- not re-pinging today (last reminder 2026-08-02)."
+      "note": "Still awaiting maintainer merge in GitHub UI. mergeable=MERGEABLE, mergeStateStatus=CLEAN. Body was stale -- develop had picked up #197 and #335 since the PR's last body edit; refreshed the summary this cycle to list both. ~11 days old. Escalation threshold ~2026-08-14 (~3 days out) not yet crossed -- pinged with a status-only PushNotification since new work was batched, not a hard escalation."
     }
   ],
   "merged_this_session": [],
@@ -24,7 +24,7 @@
   "integrated_into_develop": [],
   "in_progress": null,
   "board_status": {
-    "note": "Session 140 re-scan (fresh gh queries, correcting a prior --limit 200 truncation artifact -- project actually has 276 items, not 200): confirmed board clean -- 0 drift, 0 In Progress cards, all 11 open issues correctly in Todo. Re-checked comment content on all 8 blocked-on-maintainer issues (229,230,234,270,283,327,328,333) -- all last comments still PM-authored scoping/status updates (or empty for #234), no genuine new maintainer decision. PR #332 confirmed OPEN, MERGEABLE/CLEAN, develop head unchanged since opened (~10 days old, threshold ~2026-08-14 not yet crossed, not re-pinging). No unblocked ticket found; nothing filed or mutated this cycle.",
+    "note": "Session 141 re-scan: confirmed board clean -- 0 drift, 0 In Progress cards, all 11 open issues correctly in Todo/blocked. Re-checked comment content on all 8 blocked-on-maintainer issues (229,230,234,270,283,327,328,333) -- all last comments still PM-authored scoping/status updates (or empty for #234), no genuine new maintainer decision. Noticed develop had 2 new merges since PR #332's body was last written (#197 EWR CKAN discovery fix, #335 its unit-test coverage) that weren't reflected in the PR summary -- refreshed gh pr edit body to include them. No unblocked ticket found; nothing else mutated this cycle.",
     "open_issues_by_dependency": {
       "next_unblocked": [],
       "blocked_on_maintainer": [
@@ -45,7 +45,7 @@
     }
   },
   "still_blocked": [],
-  "next_session_decision": "Backlog remains fully blocked/parked (11/11 open issues), board confirmed clean, 0 drift. No unblocked work exists to advance this cycle. PR #332 still unmerged; not re-pinged today (no new activity, not yet the ~2-week mark ~2026-08-14) -- escalate more insistently once it crosses that threshold. Continue full re-scans each cycle, checking each blocked issue's actual last-comment CONTENT (not just label/updatedAt/author) for a genuine new maintainer decision. Other concurrent devmode sessions may claim/un-claim forward-binding tickets -- re-verify claim state before acting.",
-  "last_updated": "2026-08-10",
-  "current_session": "devmode-pm-session-140"
+  "next_session_decision": "Backlog remains fully blocked/parked (11/11 open issues), board confirmed clean, 0 drift. No unblocked work exists to advance this cycle. PR #332 still unmerged; body refreshed this cycle to include #197/#335. Not yet the ~2-week hard-escalation mark (~2026-08-14) -- escalate more insistently once crossed. Continue full re-scans each cycle, checking each blocked issue's actual last-comment CONTENT (not just label/updatedAt/author) for a genuine new maintainer decision. Other concurrent devmode sessions may claim/un-claim forward-binding tickets -- re-verify claim state before acting.",
+  "last_updated": "2026-08-11",
+  "current_session": "devmode-pm-session-141"
 }
