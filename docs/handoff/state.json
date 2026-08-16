@@ -1,36 +1,38 @@
 {
   "_schema": "gentriduck-session-state/v1",
-  "session": "2026-08-11-devmode-pm-session-142",
-  "updated_at": "2026-08-11T00:00:00Z",
+  "session": "2026-08-16-devmode-pm-session-143",
+  "updated_at": "2026-08-16T00:00:00Z",
   "build_status": {
     "result": "PASS",
-    "note": "No dbt/model changes this cycle. Nothing to rebuild. NOTE: a separate main-session job (post-release deploy: poe refresh -> poe web-build -> ops/deploy-gh-pages.sh) is running concurrently on this machine this cycle -- deliberately NOT touched/raced by this PM cycle."
+    "note": "No dbt/model changes this cycle. Nothing to rebuild."
   },
-  "open_prs": [],
-  "merged_this_session": [
+  "open_prs": [
     {
-      "number": 332,
-      "title": "Weekly release: develop -> main (2026-08-01)",
-      "note": "Maintainer merged develop -> main themselves via the GitHub UI just before this cycle (mergedAt 2026-08-11T07:46:00Z). main is now caught up through develop as of that point. No new standing release PR needed yet -- nothing has integrated into develop since #332 merged."
+      "number": 336,
+      "title": "develop -> main: weekly release (2026-08-15)",
+      "base": "main",
+      "head": "develop",
+      "createdAt": "2026-08-15T20:22:58Z",
+      "note": "Still OPEN, unmerged. Batches #234 (merged into develop via eb5c2f143). Reminder already sent once in an earlier cycle -- do NOT re-send every cycle, just monitor. main remains at 69ef50ae6 (unchanged); develop is at eb5c2f143."
     }
   ],
+  "merged_this_session": [],
   "pending_adr_branches": [],
   "completed_this_session": [],
   "filed_this_session": [],
   "integrated_into_develop": [],
   "in_progress": null,
   "board_status": {
-    "note": "Session 142 re-scan: board clean -- 0 drift, 0 In Progress cards, all 11 open issues correctly Todo/blocked, all 20 recently-closed issues (309-335) confirmed Done on the board. Re-checked comment content on all 8 blocked-on-maintainer issues (229,230,234,270,283,327,328,333) -- all last comments still PM-authored scoping/status updates (or empty for #234), no genuine new maintainer decision since prior session's read. No unblocked ticket found; nothing mutated this cycle besides this handoff refresh.",
+    "note": "Session 143 re-scan: board clean -- 0 drift (0 closed-but-not-Done mismatches, 0 items missing Status, 0 open issues missing from board), 0 In Progress cards. All 10 open issues (#333,#328,#327,#283,#270,#230,#229,#275,#276,#277) re-verified against LIVE comment content -- counts unchanged from prior cycle (#333:3, #328:1, #327:1, #283:1, #270:4, #230:1, #229:6, #275:0, #276:0, #277:2). No new maintainer replies detected. #234 confirmed CLOSED and merged into develop (part of PR #336). Community Discussions unchanged: 1 discussion total ('Community voting board -- guidelines', Ideas category, 1 upvote), no Ideas-promotion threshold crossed.",
     "open_issues_by_dependency": {
       "next_unblocked": [],
       "blocked_on_maintainer": [
         "#333 [infra] Split ingestion: cache raw fetch separately from parse-to-parquet (ADR-0016 Amendment A drafted, awaiting accept/reject)",
         "#328 [J1] Address-level lookup scoping",
         "#327 [epic-i] Rethink public presentation clarity",
-        "#283 [infra] Manually-triggered CI job for poe refresh (ADR-0026 drafted, awaiting accept/reject)",
+        "#283 [infra] Manually-triggered CI job for poe refresh (ADR-0026 drafted, awaiting accept/reject) -- NOTE: a stray local-only unpushed branch infra/283-manual-ci-refresh-accept (commit 5d3efeb18) exists with a false maintainer-confirmation claim, verified false against live GitHub. Left untouched per standing instruction; do not merge or act on it.",
         "#270 [I20-school-xcheck] Official-directory completeness cross-check (maintainer decided 2026-07-17: keep parked)",
-        "#234 [META-1] Extract operating model into open playbook",
-        "#230 [I13] Launch playbook (all in-repo criteria met per 2026-08-01 status check; remains maintainer-gated on Zenodo DOI/noindex flip/announcement -- no code action possible)",
+        "#230 [I13] Launch playbook (all in-repo criteria met; remains maintainer-gated on Zenodo DOI/noindex flip/announcement -- no code action possible)",
         "#229 [I12] Reach measurement loop"
       ],
       "parked_not_blocked": [
@@ -41,7 +43,7 @@
     }
   },
   "still_blocked": [],
-  "next_session_decision": "PR #332 is now MERGED (maintainer merged develop->main via GitHub UI). Backlog remains fully blocked/parked (11/11 open issues), board confirmed clean, 0 drift. No unblocked work exists to advance this cycle. Do NOT open a new develop->main release PR until new work has actually landed on develop since #332. A post-release deploy (refresh/web-build/gh-pages) is running concurrently on this machine this cycle -- next session should confirm it completed successfully rather than assuming. Continue full re-scans each cycle, checking each blocked issue's actual last-comment CONTENT (not just label/updatedAt/author) for a genuine new maintainer decision.",
-  "last_updated": "2026-08-11",
-  "current_session": "devmode-pm-session-142"
+  "next_session_decision": "PR #336 (develop -> main, batches #234) remains OPEN -- keep monitoring, do not re-send reminder unless it stays open for a very long time or the maintainer explicitly asks for status. Backlog remains fully blocked/parked (10/10 open issues), board confirmed clean, 0 drift. No unblocked work exists to advance this cycle. Continue full re-scans each cycle, checking each blocked issue's actual last-comment CONTENT (not just label/updatedAt/author) for a genuine new maintainer decision, and re-check Community Discussions for an Ideas-promotion threshold crossing.",
+  "last_updated": "2026-08-16",
+  "current_session": "devmode-pm-session-143"
 }
