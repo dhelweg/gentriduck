@@ -1,7 +1,7 @@
 {
   "_schema": "gentriduck-session-state/v1",
-  "session": "2026-08-17-devmode-pm-session-151",
-  "updated_at": "2026-08-17T15:10:00Z",
+  "session": "2026-08-17-devmode-pm-session-154",
+  "updated_at": "2026-08-17T16:05:00Z",
   "build_status": {
     "result": "PASS",
     "note": "No dbt/model changes this cycle. Nothing to rebuild."
@@ -13,7 +13,7 @@
       "base": "main",
       "head": "develop",
       "createdAt": "2026-08-15T20:22:58Z",
-      "note": "Still OPEN, re-confirmed via gh pr view 336 (state=OPEN, mergeable=MERGEABLE, mergeStateStatus=CLEAN). Head sha e14f713fe matches current origin/develop tip exactly (only handoff-refresh no-op commits since PR opened). Batches #234. Not re-pinging this cycle to avoid noise -- already flagged in prior cycles."
+      "note": "Still OPEN, MERGEABLE, mergeStateStatus=CLEAN, 0 comments. Now 2 days old / 3 prior sessions (151-153) deferred re-pinging to avoid noise. Re-pinged this cycle (session 154) since a genuine multi-day gap with zero maintainer action has now elapsed. Batches #234."
     }
   ],
   "merged_this_session": [],
@@ -23,16 +23,16 @@
   "integrated_into_develop": [],
   "in_progress": null,
   "board_status": {
-    "note": "Session 151 re-scan: board clean -- 276 items total, 266 Done, 10 Todo, 0 In Progress, 0 drift (all 10 open issues confirmed on board as Todo via gh project item-list, none missing). GraphQL rate limit healthy this cycle (4996/5000 and 5000/5000 remaining at start) -- no REST workaround needed. Comment counts re-verified for all 10 blocked/parked issues via REST, every count UNCHANGED from session 150's record: #333:3, #328:1, #327:1, #283:1, #277:2, #276:0, #275:0, #270:4, #230:1, #229:6. No new maintainer replies detected on any blocked issue. Community Discussions re-polled via GraphQL: still just 1 discussion ('Community voting board -- guidelines', Ideas category, upvoteCount 1), no promotion threshold crossed. Also checked stray remote feature branches (feature/237-h3-publish-hamburg, feature/300, 301, 302, feature/310-map-granularity-selector) against their issues -- all 5 issues CLOSED and all branches fully merged into develop (0 ahead) except feature/237-h3-publish-hamburg which has one stray unmerged docs commit (a53f2d93d, a draft geo/domain sign-off analysis explicitly noted as deferred for the maintainer's own deep-review) -- left untouched, not actionable, consistent with prior sessions. No new tickets filed -- nothing genuinely new discovered this cycle.",
+    "note": "Session 154 re-scan: board clean -- 276 items total, 266 Done, 10 Todo, 0 In Progress, 0 drift (all 10 open issues confirmed on board as Todo via gh project item-list, all currently CLOSED issues confirmed Done, no card off-board). Re-verified each of the 10 blocked/parked issues' latest comment explicitly (author + createdAt), not just counts: #333 (2026-08-01, dhelweg ADR-0016 Amendment A note), #328 (2026-07-31, dhelweg scoping-complete note), #327 (2026-07-31, dhelweg scoping-complete note), #283 (2026-07-31, dhelweg ADR-0026 drafted note), #277 (2026-08-06, dhelweg un-claiming note), #276 (no comments, updatedAt 2026-07-16), #275 (no comments, updatedAt 2026-07-16), #270 (2026-07-17, dhelweg 'keep parked' decision), #230 (2026-08-01, dhelweg status-check note), #229 (2026-07-14, dhelweg GoatCounter update). All are the PM's OWN prior logging comments -- zero new maintainer replies on any issue this cycle. Community Discussions re-polled via GraphQL: still just 1 discussion ('Community voting board -- guidelines', Ideas category, upvoteCount 1), no promotion threshold crossed. GitHub API intermittently returned transient 503s this cycle (graphql + REST) -- all retried successfully within a few attempts, no persistent outage. No new tickets filed -- nothing genuinely new discovered this cycle.",
     "open_issues_by_dependency": {
       "next_unblocked": [],
       "blocked_on_maintainer": [
         "#333 [infra] Split ingestion: cache raw fetch separately from parse-to-parquet (ADR-0016 Amendment A drafted, awaiting accept/reject)",
         "#328 [J1] Address-level lookup scoping",
         "#327 [epic-i] Rethink public presentation clarity",
-        "#283 [infra] Manually-triggered CI job for poe refresh (ADR-0026 drafted, awaiting accept/reject) -- NOTE: a stray local-only unpushed branch infra/283-manual-ci-refresh-accept (commit 5d3efeb18) exists with a false maintainer-confirmation claim, verified false against live GitHub. Left untouched per standing instruction; do not merge or act on it.",
+        "#283 [infra] Manually-triggered CI job for poe refresh (ADR-0026 drafted, awaiting accept/reject)",
         "#270 [I20-school-xcheck] Official-directory completeness cross-check (maintainer decided 2026-07-17: keep parked)",
-        "#230 [I13] Launch playbook (all in-repo criteria met; remains maintainer-gated on Zenodo DOI/noindex flip/announcement -- no code action possible)",
+        "#230 [I13] Launch playbook (all in-repo criteria met; remains maintainer-gated on Zenodo DOI/noindex flip/announcement)",
         "#229 [I12] Reach measurement loop"
       ],
       "parked_not_blocked": [
@@ -43,7 +43,7 @@
     }
   },
   "still_blocked": [],
-  "next_session_decision": "PR #336 (develop -> main, batches #234) remains OPEN, unmerged -- keep monitoring, do not re-send reminder unless it stays open for a very long time or the maintainer explicitly asks for status. Backlog remains fully blocked/parked (10/10 open issues), board confirmed clean, 0 drift. No unblocked work exists to advance this cycle. Continue full re-scans each cycle, checking each blocked issue's actual last-comment CONTENT for a genuine new maintainer decision, and re-check Community Discussions for an Ideas-promotion threshold crossing.",
+  "next_session_decision": "PR #336 (develop -> main, batches #234) remains OPEN, unmerged -- re-pinged this cycle after a 2-day / 3-session gap; don't re-ping again next cycle unless another multi-day gap passes with continued silence. Backlog remains fully blocked/parked (10/10 open issues), board confirmed clean, 0 drift. No unblocked work exists to advance this cycle. Continue full re-scans each cycle, checking each blocked issue's actual last-comment CONTENT (author + timestamp) for a genuine new maintainer decision, and re-check Community Discussions for an Ideas-promotion threshold crossing.",
   "last_updated": "2026-08-17",
-  "current_session": "devmode-pm-session-151"
+  "current_session": "devmode-pm-session-154"
 }
