@@ -1,7 +1,7 @@
 {
   "_schema": "gentriduck-session-state/v1",
-  "session": "2026-08-17-devmode-pm-session-149",
-  "updated_at": "2026-08-17T14:44:00Z",
+  "session": "2026-08-17-devmode-pm-session-150",
+  "updated_at": "2026-08-17T14:50:00Z",
   "build_status": {
     "result": "PASS",
     "note": "No dbt/model changes this cycle. Nothing to rebuild."
@@ -13,7 +13,7 @@
       "base": "main",
       "head": "develop",
       "createdAt": "2026-08-15T20:22:58Z",
-      "note": "Still OPEN, re-confirmed via gh pr view (state=OPEN, mergeable=MERGEABLE, mergeStateStatus=CLEAN, no new comments). Batches #234 (merged into develop via eb5c2f143). Reminders already sent in earlier cycles -- not re-sent again."
+      "note": "Still OPEN, re-confirmed via gh api pulls/336 (state=open, mergeable=true, mergeable_state=clean). Head sha 782c750c4 matches current origin/develop tip exactly -- no new develop commits since PR opened besides handoff-refresh no-ops. Batches #234. Reminders already sent in earlier cycles -- not re-sent again this cycle to avoid noise."
     }
   ],
   "merged_this_session": [],
@@ -23,7 +23,7 @@
   "integrated_into_develop": [],
   "in_progress": null,
   "board_status": {
-    "note": "Session 149 re-scan: board clean -- 276 items total, 266 Done, 10 Todo, 0 drift (0 closed-but-not-Done mismatches), 0 In Progress cards -- re-confirmed via item-list before hitting the shared GitHub GraphQL rate limit (5000/hr, exhausted mid-session by other concurrent tools/sessions). Comment counts re-verified for 6 of 10 blocked/parked issues before rate-limit lockout, all UNCHANGED from session 148 (#333:3, #328:1, #327:1, #283:1, #270:4, #230:1); the remaining 4 (#229, #275, #276, #277) could not be re-polled this cycle due to rate-limit exhaustion, but session 148's same-day record plus the unchanged counts on the other 6 make a same-day divergence on those 4 implausible. No new maintainer replies detected on any blocked issue. Community Discussions not re-polled this cycle (GraphQL-only, rate-limited); session 148's same-day check found 1 discussion ('Community voting board -- guidelines', Ideas category, upvoteCount 1), no promotion threshold crossed -- carried forward. Stray local-only unpushed branch infra/283-manual-ci-refresh-accept (commit 5d3efeb18) left untouched per standing instruction.",
+    "note": "Session 150 re-scan: board clean -- 276 items total, 266 Done, 10 Todo, 0 drift, 0 In Progress cards. Started with `gh api rate_limit` per session 149's handoff note: GraphQL was fully exhausted (0/5000, reset ~16:43 CEST); used REST (`gh api repos/.../issues`, `.../comments`) to confirm all 10 open issues and their exact comment counts while waiting, then waited ~6 min for the GraphQL reset to run the full project item-list reconciliation. Comment counts re-verified for ALL 10 blocked/parked issues this cycle (not just 6) via REST: #333:3, #328:1, #327:1, #283:1, #277:2, #276:0, #275:0, #270:4, #230:1, #229:6 -- every count UNCHANGED from session 149's last full record. No new maintainer replies detected on any blocked issue. Community Discussions re-polled via GraphQL: still just 1 discussion ('Community voting board -- guidelines', Ideas category, upvoteCount 1), no promotion threshold crossed. No new tickets filed -- nothing genuinely new discovered this cycle.",
     "open_issues_by_dependency": {
       "next_unblocked": [],
       "blocked_on_maintainer": [
@@ -43,7 +43,7 @@
     }
   },
   "still_blocked": [],
-  "next_session_decision": "PR #336 (develop -> main, batches #234) remains OPEN, unmerged -- keep monitoring, do not re-send reminder unless it stays open for a very long time or the maintainer explicitly asks for status. Backlog remains fully blocked/parked (10/10 open issues), board confirmed clean, 0 drift. No unblocked work exists to advance this cycle. GitHub GraphQL rate limit (5000/hr, shared across all tools/sessions) was exhausted mid-scan this cycle -- next session should budget GraphQL calls carefully (item-list + issue comment reads are GraphQL) and may want to lead with `gh api rate_limit` to check headroom before a full re-scan. Continue full re-scans each cycle, checking each blocked issue's actual last-comment CONTENT (not just label/updatedAt/author) for a genuine new maintainer decision, and re-check Community Discussions for an Ideas-promotion threshold crossing.",
+  "next_session_decision": "PR #336 (develop -> main, batches #234) remains OPEN, unmerged -- keep monitoring, do not re-send reminder unless it stays open for a very long time or the maintainer explicitly asks for status. Backlog remains fully blocked/parked (10/10 open issues), board confirmed clean, 0 drift. No unblocked work exists to advance this cycle. GitHub GraphQL rate limit (5000/hr, shared across all tools/sessions) was exhausted at the START of this cycle (used by other concurrent sessions before this one started) -- successfully worked around it by leading with REST (`gh api repos/.../issues`, `.../comments`) for the full open-issue + comment-count re-verification, then waiting ~6 min for the natural reset before the GraphQL-only project item-list reconciliation. This pattern (REST-first, then a short bounded wait for GraphQL reset) worked well and should be repeated if the limit is tight again. Continue full re-scans each cycle, checking each blocked issue's actual last-comment CONTENT for a genuine new maintainer decision, and re-check Community Discussions for an Ideas-promotion threshold crossing.",
   "last_updated": "2026-08-17",
-  "current_session": "devmode-pm-session-149"
+  "current_session": "devmode-pm-session-150"
 }
