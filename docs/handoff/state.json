@@ -1,7 +1,7 @@
 {
   "_schema": "gentriduck-session-state/v1",
-  "session": "2026-08-17-devmode-pm-session-148",
-  "updated_at": "2026-08-17T00:20:00Z",
+  "session": "2026-08-17-devmode-pm-session-149",
+  "updated_at": "2026-08-17T14:44:00Z",
   "build_status": {
     "result": "PASS",
     "note": "No dbt/model changes this cycle. Nothing to rebuild."
@@ -13,7 +13,7 @@
       "base": "main",
       "head": "develop",
       "createdAt": "2026-08-15T20:22:58Z",
-      "note": "Still OPEN, unmerged, re-confirmed via gh pr view (state=OPEN, mergedAt=null, mergeCommit=null). Batches #234 (merged into develop via eb5c2f143). Reminders already sent in earlier cycles -- do NOT re-send again unless something genuinely changes. main and origin/main both confirmed at 69ef50ae6 (unchanged); develop/origin/develop both at 9fcf40f30 (unchanged aside from prior sessions' own handoff-refresh commits)."
+      "note": "Still OPEN, re-confirmed via gh pr view (state=OPEN, mergeable=MERGEABLE, mergeStateStatus=CLEAN, no new comments). Batches #234 (merged into develop via eb5c2f143). Reminders already sent in earlier cycles -- not re-sent again."
     }
   ],
   "merged_this_session": [],
@@ -23,7 +23,7 @@
   "integrated_into_develop": [],
   "in_progress": null,
   "board_status": {
-    "note": "Session 148 re-scan: board clean -- 276 items total, 266 Done, 10 Todo, 0 drift (0 closed-but-not-Done mismatches), 0 In Progress cards. All 10 open issues (#333,#328,#327,#283,#270,#230,#229,#275,#276,#277) re-verified against LIVE comment content -- counts unchanged from prior cycle (#333:3, #328:1, #327:1, #283:1, #270:4, #230:1, #229:6, #275:0, #276:0, #277:2), and last-comment BODY re-read in full for #333, #283, #230 (still awaiting maintainer accept/reject / go-ahead, no new reply). No new maintainer replies detected on any blocked issue. Community Discussions unchanged: 1 discussion total ('Community voting board -- guidelines', Ideas category, upvoteCount 1), no Ideas-promotion threshold crossed. Stray local-only unpushed branch infra/283-manual-ci-refresh-accept (commit 5d3efeb18) left untouched per standing instruction.",
+    "note": "Session 149 re-scan: board clean -- 276 items total, 266 Done, 10 Todo, 0 drift (0 closed-but-not-Done mismatches), 0 In Progress cards -- re-confirmed via item-list before hitting the shared GitHub GraphQL rate limit (5000/hr, exhausted mid-session by other concurrent tools/sessions). Comment counts re-verified for 6 of 10 blocked/parked issues before rate-limit lockout, all UNCHANGED from session 148 (#333:3, #328:1, #327:1, #283:1, #270:4, #230:1); the remaining 4 (#229, #275, #276, #277) could not be re-polled this cycle due to rate-limit exhaustion, but session 148's same-day record plus the unchanged counts on the other 6 make a same-day divergence on those 4 implausible. No new maintainer replies detected on any blocked issue. Community Discussions not re-polled this cycle (GraphQL-only, rate-limited); session 148's same-day check found 1 discussion ('Community voting board -- guidelines', Ideas category, upvoteCount 1), no promotion threshold crossed -- carried forward. Stray local-only unpushed branch infra/283-manual-ci-refresh-accept (commit 5d3efeb18) left untouched per standing instruction.",
     "open_issues_by_dependency": {
       "next_unblocked": [],
       "blocked_on_maintainer": [
@@ -43,7 +43,7 @@
     }
   },
   "still_blocked": [],
-  "next_session_decision": "PR #336 (develop -> main, batches #234) remains OPEN, unmerged -- keep monitoring, do not re-send reminder unless it stays open for a very long time or the maintainer explicitly asks for status. Backlog remains fully blocked/parked (10/10 open issues), board confirmed clean, 0 drift. No unblocked work exists to advance this cycle. Continue full re-scans each cycle, checking each blocked issue's actual last-comment CONTENT (not just label/updatedAt/author) for a genuine new maintainer decision, and re-check Community Discussions for an Ideas-promotion threshold crossing.",
+  "next_session_decision": "PR #336 (develop -> main, batches #234) remains OPEN, unmerged -- keep monitoring, do not re-send reminder unless it stays open for a very long time or the maintainer explicitly asks for status. Backlog remains fully blocked/parked (10/10 open issues), board confirmed clean, 0 drift. No unblocked work exists to advance this cycle. GitHub GraphQL rate limit (5000/hr, shared across all tools/sessions) was exhausted mid-scan this cycle -- next session should budget GraphQL calls carefully (item-list + issue comment reads are GraphQL) and may want to lead with `gh api rate_limit` to check headroom before a full re-scan. Continue full re-scans each cycle, checking each blocked issue's actual last-comment CONTENT (not just label/updatedAt/author) for a genuine new maintainer decision, and re-check Community Discussions for an Ideas-promotion threshold crossing.",
   "last_updated": "2026-08-17",
-  "current_session": "devmode-pm-session-148"
+  "current_session": "devmode-pm-session-149"
 }
