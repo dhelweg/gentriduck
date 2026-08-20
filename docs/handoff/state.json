@@ -1,53 +1,16 @@
 {
-  "_schema": "gentriduck-session-state/v1",
-  "session": "2026-08-20-devmode-pm-session-245",
-  "updated_at": "2026-08-20T11:50:00Z",
-  "build_status": {
-    "result": "PASS",
-    "note": "No dbt/model changes this cycle. Nothing to rebuild."
-  },
-  "open_prs": [
-    {
-      "number": 336,
-      "title": "develop -> main: weekly release (2026-08-15)",
-      "base": "main",
-      "head": "develop",
-      "createdAt": "2026-08-15T20:22:58Z",
-      "note": "Still OPEN, mergeable. Only chore(handoff) commits have landed on develop since the last substantive ping (2026-08-19T00:56:48Z, session 194); no re-ping issued this cycle either -- consistent with sessions 236-244's decision to avoid duplicate no-op pings."
-    }
-  ],
-  "merged_this_session": [],
-  "pending_adr_branches": [],
-  "completed_this_session": [],
-  "filed_this_session": [],
-  "integrated_into_develop": [],
-  "in_progress": null,
-  "board_status": {
-    "note": "Session 245 independently re-verified: gh project item-list 1 --owner dhelweg --format json --limit 500 returns 276 items, 266 Done / 10 Todo / 0 In Progress -- exact 1:1 match with gh issue list --state open (10 open issues). No closed-but-not-Done, no open-but-Done, no off-board issues. Re-checked last comment on each of the 7 blocked issues (#333, #328, #327, #283, #270, #230, #229) -- all last comments are still the PM's own scoping/status posts, no new maintainer reply since session 244's check. Checked GitHub Discussions via GraphQL -- only the 2026-07-09 guidelines post, no community-voting activity to triage. Read issue bodies of #275/#276/#277 in full -- all three explicitly self-scope as 'Priority: Parked/low -- do not pick up speculatively', no concrete consumer/driver exists yet, so not treated as unblocked work. No unblocked work exists this cycle; no new tickets filed.",
-    "open_issues_by_dependency": {
-      "next_unblocked": [],
-      "blocked_on_maintainer": [
-        "#333 [infra] Split ingestion: cache raw fetch separately from parse-to-parquet (ADR-0016 Amendment A drafted, awaiting accept/reject)",
-        "#328 [J1] Address-level lookup scoping",
-        "#327 [epic-i] Rethink public presentation clarity",
-        "#283 [infra] Manually-triggered CI job for poe refresh (ADR-0026 drafted, awaiting accept/reject; only comment is the architect's 2026-07-31 recommendation, no distinguishable separate maintainer reply)",
-        "#270 [I20-school-xcheck] Official-directory completeness cross-check (maintainer decided 2026-07-17: keep parked)",
-        "#230 [I13] Launch playbook (all in-repo criteria met; remains maintainer-gated on Zenodo DOI/noindex flip/announcement)",
-        "#229 [I12] Reach measurement loop"
-      ],
-      "parked_not_blocked": [
-        "#277 [A10-P2-estimate] Milieuschutz DiD/event-study script (explicit 'Priority: Parked/low -- no immediate driver', forward-binding, no consumer yet)",
-        "#276 [R-A8b-consume] Wire trajectory panel (forward-binding, explicit 'do not pick up speculatively')",
-        "#275 [C-craft-artisanal] Curated artisanal-craft POI subset (parked, 'if/when a concrete consumer needs it')"
-      ]
-    }
-  },
-  "still_blocked": [],
-  "anomalies": [
-    "Local (not pushed, not merged) branch `infra/283-manual-ci-refresh-accept` still exists in the working tree with commit 5d3efeb18 'docs(adr): #283 -- accept ADR-0026 (manual CI job for poe refresh)', whose message claims 'Maintainer confirmed all four scoping points'. This claim is still NOT corroborated: issue #283's comment thread has only the architect's own recommendation-to-accept comment (dated 2026-07-31) and no distinguishable separate maintainer reply, and issue #283 is still open/labeled blocked as of this session. Do NOT merge this branch or treat #283 as accepted based on it -- carried forward unchanged.",
-    "Stale remote branch `origin/feature/237-h3-publish-hamburg` (issue #237, closed) is not merged and diverges from an old point in develop -- likely abandoned/superseded, non-blocking, left untouched pending maintainer confirmation it's safe to delete."
-  ],
-  "next_session_decision": "PR #336 still OPEN, batches accumulated work through session 194 plus chore-only commits since. Do not re-ping again until genuinely new substantive work merges. Backlog fully blocked/parked (10/10) -- no unblocked work exists this cycle. Continue re-scans each cycle in case a maintainer reply lands on any of the 7 blocked-on-maintainer issues. IMPORTANT: always call `gh project item-list 1 --owner dhelweg --format json --limit 500` (or higher) -- the board has 276+ items and the tool's default limit silently truncates. Anomalies carried forward unchanged: stray local branch infra/283-manual-ci-refresh-accept, and stray remote branch feature/237-h3-publish-hamburg -- both uninvestigated/undiscarded.",
-  "last_updated": "2026-08-20",
-  "current_session": "devmode-pm-session-245"
+  "session": 246,
+  "date": "2026-08-20",
+  "summary": "devmode PM re-scan, no changes",
+  "board": {"done": 266, "todo": 10, "in_progress": 0, "total": 276},
+  "open_issues": [333, 328, 327, 283, 277, 276, 275, 270, 230, 229],
+  "blocked_on_maintainer": [333, 328, 327, 283, 230, 229],
+  "last_substantive_ping": "2026-08-19T00:56:48Z (session 194)",
+  "pr_336": {"state": "OPEN", "mergeable": "UNKNOWN", "unchanged_since": "session 238/239"},
+  "community_voting": {"threshold_crossings": 0},
+  "project_plan_scan": "no new epics/tickets since Epic J (#328) already on backlog",
+  "anomalies_carried_forward": [
+    "local branch infra/283-manual-ci-refresh-accept (5d3efeb18) claims unconfirmed maintainer decision for #283 -- do NOT merge",
+    "stale remote branch origin/feature/237-h3-publish-hamburg (issue #237, closed) -- likely abandoned"
+  ]
 }
