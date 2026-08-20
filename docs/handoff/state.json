@@ -1,7 +1,7 @@
 {
-  "session": 248,
+  "session": 249,
   "date": "2026-08-20",
-  "summary": "devmode PM re-scan, no changes",
+  "summary": "devmode PM re-scan, no changes -- confirmed remaining unblocked tickets (275/276/277) are self-scoped forward-binding/parked with no driver, per their own bodies and #277's un-claim comment",
   "board": {"done": 266, "todo": 10, "in_progress": 0, "total": 276},
   "open_issues": [333, 328, 327, 283, 277, 276, 275, 270, 230, 229],
   "blocked_on_maintainer": [333, 328, 327, 283, 230, 229],
