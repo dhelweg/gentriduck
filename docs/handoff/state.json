@@ -1,12 +1,12 @@
 {
-  "session": 249,
+  "session": 250,
   "date": "2026-08-20",
-  "summary": "devmode PM re-scan, no changes -- confirmed remaining unblocked tickets (275/276/277) are self-scoped forward-binding/parked with no driver, per their own bodies and #277's un-claim comment",
+  "summary": "devmode PM re-scan, no changes -- board reconciliation clean (0 drift), all 10 open issues unchanged (6 blocked-on-maintainer, 4 self-parked forward-binding), no new maintainer replies on any blocked issue, no community-voting threshold crossings, no new PROJECT_PLAN.md-driven tickets to file",
   "board": {"done": 266, "todo": 10, "in_progress": 0, "total": 276},
   "open_issues": [333, 328, 327, 283, 277, 276, 275, 270, 230, 229],
   "blocked_on_maintainer": [333, 328, 327, 283, 230, 229],
   "last_substantive_ping": "2026-08-19T00:56:48Z (session 194)",
-  "pr_336": {"state": "OPEN", "mergeable": "MERGEABLE", "unchanged_since": "session 238/239"},
+  "pr_336": {"state": "OPEN", "mergeable": "UNKNOWN", "unchanged_since": "session 238/239"},
   "community_voting": {"threshold_crossings": 0},
   "project_plan_scan": "no new epics/tickets since Epic J (#328) already on backlog",
   "anomalies_carried_forward": [
