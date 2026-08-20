@@ -1,7 +1,7 @@
 {
   "_schema": "gentriduck-session-state/v1",
-  "session": "2026-08-20-devmode-pm-session-237",
-  "updated_at": "2026-08-20T07:05:00Z",
+  "session": "2026-08-20-devmode-pm-session-238",
+  "updated_at": "2026-08-20T06:27:42Z",
   "build_status": {
     "result": "PASS",
     "note": "No dbt/model changes this cycle. Nothing to rebuild."
@@ -13,7 +13,7 @@
       "base": "main",
       "head": "develop",
       "createdAt": "2026-08-15T20:22:58Z",
-      "note": "Still OPEN, MERGEABLE/CLEAN (session 237 re-check via gh pr view). No new substantive commits to batch since prior sessions (only handoff chore commits landed on develop). Last maintainer ping was 2026-08-19T00:56:48Z (session 194); skipped duplicate re-ping this cycle per 'no duplicate/no-new-content' guidance."
+      "note": "Still OPEN. No new substantive commits landed on develop since prior sessions (only handoff chore commits). Last maintainer ping was 2026-08-19T00:56:48Z (session 194); skipped duplicate re-ping this cycle per explicit 'no re-ping unless something materially new merged' instruction."
     }
   ],
   "merged_this_session": [],
@@ -23,7 +23,7 @@
   "integrated_into_develop": [],
   "in_progress": null,
   "board_status": {
-    "note": "Session 237 re-verified session 236's reconciliation: `gh project item-list 1 --owner dhelweg --format json --limit 500` returns 276 items, 266 Done / 10 Todo / 0 In Progress -- exact 1:1 match with `gh issue list --state open` (10 open issues, same set as prior sessions). No closed-but-not-Done, no open-but-Done, no off-board issues. Re-checked last comment on each of the 7 blocked issues (#333, #328, #327, #283, #270, #230, #229) -- all still self-posted architect/PM status comments, no distinguishable new maintainer reply since prior sessions. Checked GitHub Discussions Ideas category via GraphQL -- only the 2026-07-09 guidelines post, no new community-voting activity to triage. No unblocked work exists this cycle; no new tickets filed (no genuinely new work discovered).",
+    "note": "Session 238 re-verified session 237's reconciliation: `gh project item-list 1 --owner dhelweg --format json --limit 500` returns 276 items, 266 Done / 10 Todo / 0 In Progress -- exact 1:1 match with `gh issue list --state open` (10 open issues, same set as prior sessions). No closed-but-not-Done, no open-but-Done, no off-board issues. Re-checked last comment on each of the 7 blocked issues (#333, #328, #327, #283, #270, #230, #229) -- all still self-posted architect/PM status comments, no distinguishable new maintainer reply since prior sessions. Checked GitHub Discussions Ideas category via GraphQL -- only the 2026-07-09 guidelines post, no new community-voting activity to triage. No unblocked work exists this cycle; no new tickets filed (no genuinely new work discovered). PROJECT_PLAN.md epics A-J + remediation/security waves spot-checked -- all covered by existing backlog.",
     "open_issues_by_dependency": {
       "next_unblocked": [],
       "blocked_on_maintainer": [
@@ -45,9 +45,9 @@
   "still_blocked": [],
   "anomalies": [
     "Local (not pushed, not merged) branch `infra/283-manual-ci-refresh-accept` still exists in the working tree with commit 5d3efeb18 'docs(adr): #283 -- accept ADR-0026 (manual CI job for poe refresh)', whose message claims 'Maintainer confirmed all four scoping points'. This claim is still NOT corroborated: issue #283's comment thread has only the architect's own recommendation-to-accept comment (dated 2026-07-31) and no distinguishable separate maintainer reply, and issue #283 is still open/labeled blocked as of this session. Do NOT merge this branch or treat #283 as accepted based on it -- carried forward unchanged.",
-    "Stale remote branch `origin/feature/237-h3-publish-hamburg` (issue #237, closed) is not merged and diverges 379 files from develop -- likely abandoned/superseded, non-blocking, left untouched pending maintainer confirmation it's safe to delete."
+    "Stale remote branch `origin/feature/237-h3-publish-hamburg` (issue #237, closed) is not merged and diverges from an old point in develop -- likely abandoned/superseded, non-blocking, left untouched pending maintainer confirmation it's safe to delete."
   ],
-  "next_session_decision": "PR #336 still OPEN, batches #234. Do not re-ping again until a further day rollover or genuinely new work merges. Backlog fully blocked/parked (10/10) -- no unblocked work exists this cycle. Continue re-scans each cycle in case a maintainer reply lands on any of the 7 blocked-on-maintainer issues. IMPORTANT: always call `gh project item-list 1 --owner dhelweg --format json --limit 500` (or higher) -- the board has 276+ items and the tool's default limit silently truncates. Anomalies carried forward unchanged: stray local branch infra/283-manual-ci-refresh-accept, and stray remote branch feature/237-h3-publish-hamburg -- both uninvestigated/undiscarded.",
+  "next_session_decision": "PR #336 still OPEN, batches #234. Do not re-ping again until a further day rollover AND genuinely new work merges. Backlog fully blocked/parked (10/10) -- no unblocked work exists this cycle. Continue re-scans each cycle in case a maintainer reply lands on any of the 7 blocked-on-maintainer issues. IMPORTANT: always call `gh project item-list 1 --owner dhelweg --format json --limit 500` (or higher) -- the board has 276+ items and the tool's default limit silently truncates. Anomalies carried forward unchanged: stray local branch infra/283-manual-ci-refresh-accept, and stray remote branch feature/237-h3-publish-hamburg -- both uninvestigated/undiscarded.",
   "last_updated": "2026-08-20",
-  "current_session": "devmode-pm-session-237"
+  "current_session": "devmode-pm-session-238"
 }
