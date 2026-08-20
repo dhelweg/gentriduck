@@ -1,12 +1,12 @@
 {
-  "session": 252,
+  "session": 253,
   "date": "2026-08-20",
-  "summary": "devmode PM re-scan, no changes -- board reconciliation clean (0 drift, 266 Done/10 Todo/0 In Progress), all 10 open issues unchanged since session 251 (6 blocked-on-maintainer, 1 maintainer-parked indefinitely (#270), 3 self-parked forward-binding/parked), no new maintainer replies on any blocked issue, no community-voting threshold crossings (0 discussions >= 10), no new PROJECT_PLAN.md-driven tickets to file (Epic J already on backlog as #328). PR #336 still open (now shows mergeable=MERGEABLE, just a lazy GitHub recompute, not a maintainer action); already re-pinged last cycle (session 251), not re-pinged again to avoid notification spam.",
+  "summary": "devmode PM re-scan, no changes -- board reconciliation clean (0 drift, 266 Done/10 Todo/0 In Progress), all 10 open issues unchanged since session 251/252 (6 blocked-on-maintainer, 1 maintainer-parked indefinitely (#270), 3 self-parked forward-binding/parked), no new maintainer replies on any blocked issue, no community-voting threshold crossings (0 discussions >= 10), no new PROJECT_PLAN.md-driven tickets to file (Epic J already on backlog as #328). PR #336 still open, unmerged; already re-pinged session 251, not re-pinged again to avoid notification spam.",
   "board": {"done": 266, "todo": 10, "in_progress": 0, "total": 276},
   "open_issues": [333, 328, 327, 283, 277, 276, 275, 270, 230, 229],
   "blocked_on_maintainer": [333, 328, 327, 283, 230, 229],
   "last_substantive_ping": "2026-08-19T00:56:48Z (session 194)",
-  "pr_336": {"state": "OPEN", "mergeable": "MERGEABLE", "unchanged_since": "session 238/239", "last_pinged": "session 251 (2026-08-20T20:53Z)"},
+  "pr_336": {"state": "OPEN", "mergeable": "UNKNOWN", "unchanged_since": "session 238/239", "last_pinged": "session 251 (2026-08-20T20:53Z)"},
   "community_voting": {"threshold_crossings": 0},
   "project_plan_scan": "no new epics/tickets since Epic J (#328) already on backlog",
   "anomalies_carried_forward": [
