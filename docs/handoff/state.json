@@ -1,7 +1,7 @@
 {
-  "session": 284,
-  "date": "2026-08-21",
-  "summary": "devmode PM re-scan, no changes -- board reconciliation clean (0 drift, 266 Done/10 Todo/0 In Progress, matches session 283 exactly; verified via full item-list --limit 500). Re-verified all 10 open issues via gh issue list: same 7 carry blocked label (#333, #328, #327, #283, #270, #230, #229), updatedAt timestamps identical to session 283's read -- no new maintainer reply, correctly left un-reprompted. 3 self-parked forward-binding tickets (#275, #276, #277) still parked with no driver, unchanged. No unblocked non-parked ticket exists in the backlog, so nothing advanced through implement->review->integrate this cycle. No new PROJECT_PLAN.md-driven work discovered, no tickets filed. PR #336 (develop->main weekly release, open since 2026-08-15) unchanged since session 281's re-ping -- still not re-pinged this cycle (no new info to add, avoiding ping spam); will re-ping if it remains stale by a later cycle.",
+  "session": 285,
+  "date": "2026-08-22",
+  "summary": "devmode PM re-scan, no board changes -- 266 Done/10 Todo/0 In Progress, matches session 284 exactly. Re-verified all 10 open issues via gh issue list: same 7 carry blocked label (#333, #328, #327, #283, #270, #230, #229), updatedAt timestamps identical to session 284's read -- no new maintainer reply, correctly left un-reprompted. 3 self-parked forward-binding tickets (#275, #276, #277) still parked with no driver, unchanged. No unblocked non-parked ticket exists in the backlog, so nothing advanced through implement->review->integrate this cycle. No new PROJECT_PLAN.md-driven work discovered, no tickets filed. PR #336 (develop->main weekly release, open since 2026-08-15, now ~7 days old) re-pinged this cycle via PR comment (new day since session 281's ping, and a full week has now elapsed) -- 127 commits ahead of main, mergeable/clean.",
   "board": {
     "done": 266,
     "todo": 10,
@@ -29,13 +29,13 @@
     230,
     229
   ],
-  "last_substantive_ping": "2026-08-21 (session 281, PR comment)",
+  "last_substantive_ping": "2026-08-22 (session 285, PR comment)",
   "pr_336": {
     "state": "OPEN",
-    "mergeable": "UNKNOWN (GitHub not yet computed)",
-    "commits_ahead_of_main": 123,
+    "mergeable": "MERGEABLE",
+    "commits_ahead_of_main": 127,
     "opened": "2026-08-15",
-    "last_pinged": "session 281 (2026-08-21, PR comment posted); prior PR-comment ping was session 194 (2026-08-19T00:56Z) -- note: session 280 handoff cited a session 251 push-notification ping that is not reflected in PR comment history, so PR-comment cadence and push-notification cadence may have diverged; treat PR comments as ground truth going forward"
+    "last_pinged": "session 285 (2026-08-22, PR comment posted); prior PR-comment ping was session 281 (2026-08-21T18:56:53Z)"
   },
   "community_voting": {
     "threshold_crossings": 0
