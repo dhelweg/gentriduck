@@ -1,7 +1,7 @@
 {
-  "session": 280,
+  "session": 281,
   "date": "2026-08-21",
-  "summary": "devmode PM re-scan, no changes -- board reconciliation clean (0 drift, 266 Done/10 Todo/0 In Progress, matches session 279 exactly). Re-verified all 10 open issues via gh issue list: 7 carry blocked label (#333, #328, #327, #283, #270, #230, #229) -- last comment timestamps unchanged since 2026-07-31/08-01/08-06, no genuinely new maintainer reply since last check, correctly left un-reprompted. 3 self-parked forward-binding tickets reconfirmed still parked with no driver (#275, #276, #277). No unblocked non-parked ticket exists in the backlog, so nothing advanced through implement->review->integrate this cycle. Checked GitHub Discussions Ideas category: only the guidelines post (1 upvote), well under threshold -- nothing to triage. No new PROJECT_PLAN.md-driven work discovered, no tickets filed. PR #336 (develop->main weekly release, open since 2026-08-15, now ~6d) unchanged in substance -- last pinged session 251 (2026-08-20T20:53Z, <24h ago), not re-pinged this cycle per instructions.",
+  "summary": "devmode PM re-scan, no changes -- board reconciliation clean (0 drift, 266 Done/10 Todo/0 In Progress, matches session 280 exactly; verified via full item-list --limit 500, no truncation this time). Re-verified all 10 open issues via gh issue list: 7 carry blocked label (#333, #328, #327, #283, #270, #230, #229) -- last comment timestamps unchanged since 2026-07-31/08-01/08-06, no genuinely new maintainer reply since last check, correctly left un-reprompted. 3 self-parked forward-binding tickets reconfirmed still parked with no driver (#275, #276, #277) -- re-read #277's own un-claim comment confirming it is explicitly scoped Priority: Parked/low with no immediate driver. No unblocked non-parked ticket exists in the backlog, so nothing advanced through implement->review->integrate this cycle. Checked GitHub Discussions Ideas category: only the guidelines post, nothing to triage. No new PROJECT_PLAN.md-driven work discovered, no tickets filed. PR #336 (develop->main weekly release, open since 2026-08-15, now ~6 days) re-pinged this cycle (last ping was session 194 at 2026-08-19T00:56Z per actual PR comment history, i.e. ~2.5 days stale, and PR is now 123 commits ahead of main) -- posted a fresh re-ping comment; PushNotification tool was not present in this session's toolset so only the PR comment was posted (flagging for a future session to also push-notify if the tool becomes available).",
   "board": {
     "done": 266,
     "todo": 10,
@@ -29,12 +29,13 @@
     230,
     229
   ],
-  "last_substantive_ping": "2026-08-20T20:53:00Z (session 251)",
+  "last_substantive_ping": "2026-08-21 (session 281, PR comment)",
   "pr_336": {
     "state": "OPEN",
     "mergeable": "UNKNOWN (GitHub not yet computed)",
-    "unchanged_since": "session 238/239",
-    "last_pinged": "session 251 (2026-08-20T20:53Z), re-flagged sessions 275, 276 -- now ~6-7 days open, not re-pinged this cycle (no new content since last ping)"
+    "commits_ahead_of_main": 123,
+    "opened": "2026-08-15",
+    "last_pinged": "session 281 (2026-08-21, PR comment posted); prior PR-comment ping was session 194 (2026-08-19T00:56Z) -- note: session 280 handoff cited a session 251 push-notification ping that is not reflected in PR comment history, so PR-comment cadence and push-notification cadence may have diverged; treat PR comments as ground truth going forward"
   },
   "community_voting": {
     "threshold_crossings": 0
