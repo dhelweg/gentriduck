@@ -1,7 +1,7 @@
 {
-  "session": 299,
+  "session": 300,
   "date": "2026-08-22",
-  "summary": "devmode PM re-scan, no material changes since session 298 (same day). Reconciliation confirmed: board 266 Done/10 Todo/0 In Progress (276 total), matches exactly; all 10 open issues (#333,#328,#327,#283,#277,#276,#275,#270,#230,#229) present on board and correctly in Todo (none stuck In Progress). Re-checked all 7 blocked-labeled issues -- no new maintainer (dhelweg) reply since last check; last comment on each remains the PM's own scoping-pass/status post from Jul-Aug 2026. Re-confirmed 3 self-parked forward-binding tickets (#275,#276,#277) explicitly say 'Priority: Parked/low -- do not pick up speculatively'; correctly left in Todo, not advanced. No unblocked pick-up-worthy ticket exists in the backlog this cycle. Ran `uv run poe triage-community`: 0 discussions crossed the promotion threshold. PR #336 (develop->main weekly release) still OPEN, MERGEABLE, opened 2026-08-15 -- NOT re-pinged this cycle (already pinged today per session 297/298, no material change, avoiding notification spam). docs/PROJECT_PLAN.md re-scanned, no new epics/tickets discovered beyond what's already filed.",
+  "summary": "devmode PM re-scan, no material changes since session 299 (same day). Reconciliation confirmed: board 266 Done/10 Todo/0 In Progress (276 total), matches exactly; all 10 open issues (#333,#328,#327,#283,#277,#276,#275,#270,#230,#229) present on board and correctly in Todo (none stuck In Progress, none off-board). Re-checked all 7 blocked-labeled issues -- no new maintainer (dhelweg) reply since last check; last comment on each remains the PM's own scoping-pass/status post from Jul-Aug 2026. Re-confirmed 3 self-parked forward-binding tickets (#275,#276,#277) explicitly say 'Priority: Parked/low -- do not pick up speculatively'; correctly left in Todo, not advanced. No unblocked pick-up-worthy ticket exists in the backlog this cycle -- nothing integrated, nothing filed. Ran `uv run poe triage-community`: 0 discussions crossed the promotion threshold. PR #336 (develop->main weekly release) still OPEN, opened 2026-08-15, now 142 commits ahead of origin/main -- NOT re-pinged this cycle (already pinged today per session 297, same calendar day, no material change, avoiding notification spam). docs/PROJECT_PLAN.md re-scanned, no new epics/tickets discovered beyond what's already filed.",
   "board": {
     "done": 266,
     "todo": 10,
@@ -29,12 +29,12 @@
     230,
     229
   ],
-  "last_substantive_ping": "2026-08-22 (session 297 -- not re-pinged sessions 298/299, no material change same day)",
+  "last_substantive_ping": "2026-08-22 (session 297 -- not re-pinged sessions 298/299/300, no material change same day)",
   "pr_336": {
     "state": "OPEN",
-    "mergeable": "MERGEABLE",
     "opened": "2026-08-15",
-    "last_pinged": "session 297; still open, no new commits observed"
+    "commits_ahead_of_main": 142,
+    "last_pinged": "session 297; still open, commit count creeping up from handoff commits, no merge yet"
   },
   "community_voting": {
     "threshold_crossings": 0
