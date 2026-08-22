@@ -1,7 +1,7 @@
 {
-  "session": 307,
+  "session": 308,
   "date": "2026-08-22",
-  "summary": "devmode PM re-scan, no material changes since session 306 (same day). Reconciliation confirmed: board 266 Done/10 Todo/0 In Progress (276 total), matches exactly against gh issue list --state open/closed counts. All 10 open issues (#333,#328,#327,#283,#277,#276,#275,#270,#230,#229) present on board and correctly in Todo (none stuck In Progress, none off-board). Re-checked all 7 blocked-labeled issues' last 3 comments -- no new maintainer reply since prior check (all last-comment createdAt timestamps dated 2026-07-12 through 2026-08-01, none today); the dhelweg author.login on these comments is the PM's own gh CLI posting identity, not a genuine maintainer reply -- verified content matches session-306 record exactly, no new text. Re-confirmed 3 self-parked forward-binding tickets (#275,#276,#277) explicitly carry 'Priority: Parked/low -- no known consumer, do not pick up speculatively' in their issue bodies; left in Todo, not advanced. No unblocked pick-up-worthy ticket exists in the backlog this cycle -- nothing integrated, nothing filed (checked docs/PROJECT_PLAN.md + duplicate-searched open issues via gh issue list --search, no new epics/tickets discovered). Checked GitHub Discussions Ideas category via GraphQL: only the guidelines post (#213, 1 upvote) exists, 0 community-voting threshold crossings. PR #336 (develop->main weekly release) still OPEN, opened 2026-08-15, mergeable MERGEABLE, batching only #234, no new commits landed on develop this cycle. NOT re-pinged this cycle -- already pinged today (session 297, 08:31 UTC), same calendar day, no material change, avoiding notification spam. Anomalies re-verified present via git branch -r and gh issue view, unchanged, not acted on.",
+  "summary": "devmode PM re-scan, no material changes since session 307 (same day). Reconciliation confirmed: board 266 Done/10 Todo/0 In Progress (276 total), matches gh issue list --state open/closed counts exactly. All 10 open issues (#333,#328,#327,#283,#277,#276,#275,#270,#230,#229) present on board and correctly in Todo (none stuck In Progress, none off-board). Re-checked all 7 blocked-labeled issues (#333,#328,#327,#283,#270,#230,#229) -- latest comment on each is still the PM's own prior posting (dhelweg gh identity), unchanged since session 307, no genuine new maintainer reply. Noticed #277 updatedAt today (2026-08-22T16:00:05Z) -- inspected: a prior cycle's PM session had prematurely claimed this explicitly-parked forward-binding ticket, then self-corrected same cycle, posting a revert comment and returning the card to Todo; not a maintainer action, no follow-up needed. Re-confirmed 3 self-parked forward-binding tickets (#275,#276,#277) still carry 'Priority: Parked/low -- do not pick up speculatively' in their bodies; left in Todo. No unblocked pick-up-worthy ticket exists in the backlog this cycle -- nothing integrated, nothing filed (grepped docs/PROJECT_PLAN.md epics, duplicate-searched open issues, no new epics/tickets discovered). PR #336 (develop->main weekly release) still OPEN, opened 2026-08-15, state OPEN (mergeStateStatus transiently UNKNOWN on this fetch, historically MERGEABLE/CLEAN), no new commits landed on develop this cycle beyond routine handoff refreshes. NOT re-pinged this cycle -- already pinged today (session 297, 08:31 UTC), same calendar day, no material change, avoiding notification spam. Anomalies re-verified present via git branch -r and gh issue view, unchanged, not acted on.",
   "board": {
     "done": 266,
     "todo": 10,
@@ -29,12 +29,12 @@
     230,
     229
   ],
-  "last_substantive_ping": "2026-08-22 08:31 UTC (session 297 -- not re-pinged sessions 298-307, no material change same day)",
+  "last_substantive_ping": "2026-08-22 08:31 UTC (session 297 -- not re-pinged sessions 298-308, no material change same day)",
   "pr_336": {
     "state": "OPEN",
     "opened": "2026-08-15",
-    "mergeable": "MERGEABLE",
-    "mergeStateStatus": "CLEAN",
+    "mergeable": "UNKNOWN (transient on this fetch; historically MERGEABLE)",
+    "mergeStateStatus": "UNKNOWN (transient on this fetch; historically CLEAN)",
     "note": "No maintainer merge yet.",
     "last_pinged": "session 297 (2026-08-22 08:31 UTC); still open, no merge yet"
   },
