@@ -1,7 +1,7 @@
 {
-  "session": 302,
+  "session": 303,
   "date": "2026-08-22",
-  "summary": "devmode PM re-scan, no material changes since session 301 (same day). Reconciliation confirmed: board 266 Done/10 Todo/0 In Progress (276 total), matches exactly; all 10 open issues (#333,#328,#327,#283,#277,#276,#275,#270,#230,#229) present on board and correctly in Todo (none stuck In Progress, none off-board). Re-checked all 7 blocked-labeled issues -- no new maintainer (dhelweg) reply since last check; last comment on each remains the PM's own scoping-pass/status post from Jul-Aug 2026. Re-confirmed 3 self-parked forward-binding tickets (#275,#276,#277) explicitly say 'Priority: Parked/low -- do not pick up speculatively'; correctly left in Todo, not advanced. No unblocked pick-up-worthy ticket exists in the backlog this cycle -- nothing integrated, nothing filed. Ran `uv run poe triage-community`: 0 discussions crossed the promotion threshold. PR #336 (develop->main weekly release) still OPEN, opened 2026-08-15, updatedAt 2026-08-22T13:22:33Z (mergeable), gh pr view commits field shows 100 (API cap) -- NOT re-pinged this cycle (already pinged today per session 297, same calendar day, no material change, avoiding notification spam). docs/PROJECT_PLAN.md re-scanned (git log confirms last change was Epic J addition, already reflected as #328), no new epics/tickets discovered.",
+  "summary": "devmode PM re-scan, no material changes since session 302 (same day). Reconciliation confirmed: board 266 Done/10 Todo/0 In Progress (276 total), matches exactly; all 10 open issues (#333,#328,#327,#283,#277,#276,#275,#270,#230,#229) present on board and correctly in Todo (none stuck In Progress, none off-board). Re-checked all 7 blocked-labeled issues -- no new maintainer (dhelweg) reply since last check; last comment timestamps unchanged from session 302 (last comments range Jul 14 - Aug 1 2026, all authored by dhelweg, no new activity). Re-confirmed 3 self-parked forward-binding tickets (#275,#276,#277) explicitly say 'Priority: Parked/low -- do not pick up speculatively'; correctly left in Todo, not advanced. No unblocked pick-up-worthy ticket exists in the backlog this cycle -- nothing integrated, nothing filed. Ran `uv run poe triage-community`: 0 discussions crossed the promotion threshold. PR #336 (develop->main weekly release) still OPEN, opened 2026-08-15, updatedAt 2026-08-22T13:54:18Z, state OPEN, commits field reports 100 (API pagination cap, real count higher). NOT re-pinged this cycle -- already pinged today (session 297), same calendar day, no material change, avoiding notification spam. docs/PROJECT_PLAN.md re-scanned, no new epics/tickets discovered.",
   "board": {
     "done": 266,
     "todo": 10,
@@ -29,11 +29,11 @@
     230,
     229
   ],
-  "last_substantive_ping": "2026-08-22 (session 297 -- not re-pinged sessions 298-302, no material change same day)",
+  "last_substantive_ping": "2026-08-22 (session 297 -- not re-pinged sessions 298-303, no material change same day)",
   "pr_336": {
     "state": "OPEN",
     "opened": "2026-08-15",
-    "updated_at": "2026-08-22T13:22:33Z",
+    "updated_at": "2026-08-22T13:54:18Z",
     "note": "gh pr view commits field caps at 100 (API pagination default); actual commit count is higher per prior sessions (~142+). No maintainer merge yet.",
     "last_pinged": "session 297; still open, no merge yet"
   },
