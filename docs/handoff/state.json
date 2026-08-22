@@ -1,7 +1,7 @@
 {
-  "session": 310,
+  "session": 311,
   "date": "2026-08-23",
-  "summary": "devmode PM re-scan cycle (2026-08-23, session 310). Reconciliation confirmed: board 266 Done/10 Todo/0 In Progress (276 total), matches gh issue list exactly, no drift. Re-checked all 10 open issues and PROJECT_PLAN.md epic list (A-J) -- no new epics/gaps found, no new tickets filed. Re-verified all 7 blocked-labeled issues (#333,#328,#327,#283,#270,#230,#229) -- latest comment on each is still the PMs own prior posting (author dhelweg via bot token), unchanged since session 309, no genuine new maintainer reply. 3 self-parked forward-binding tickets (#275,#276,#277) still carry Priority: Parked/low, left in Todo. No unblocked pick-up-worthy ticket exists in the backlog this cycle -- nothing integrated, nothing filed. PR #336 (develop->main weekly release) still OPEN, opened 2026-08-15 (~8 days), mergeable MERGEABLE, mergeStateStatus CLEAN, 151 commits ahead of main (100 commits per PR API pagination cap). Already pinged once today (session 309, comment + PushNotification at 2026-08-22T22:18 UTC / 2026-08-23 local) -- per once-per-day-max cadence, did NOT re-ping again this cycle.",
+  "summary": "devmode PM re-scan cycle (2026-08-23, session 311). Reconciliation confirmed: board 266 Done/10 Todo/0 In Progress (276 total), matches gh project item-list exactly, no drift. Re-checked all 10 open issues and PROJECT_PLAN.md epic list -- no new epics/gaps found, no new tickets filed. Re-verified all 7 blocked-labeled issues (#333,#328,#327,#283,#270,#230,#229) -- latest comment on each is still the PM's own prior posting (author dhelweg via bot token), unchanged since session 309/310, no genuine new maintainer reply. 3 self-parked forward-binding tickets (#275,#276,#277) still carry Priority: Parked/low, left in Todo. No unblocked pick-up-worthy ticket exists in the backlog this cycle -- nothing integrated, nothing filed. PR #336 (develop->main weekly release) still OPEN, opened 2026-08-15 (~8 days), mergeable MERGEABLE, mergeStateStatus CLEAN. Last pinged 2026-08-22T22:18 UTC (session 309); current cycle ran 2026-08-22T23:51 UTC, same UTC day -- per once-per-day-max cadence, did NOT re-ping again.",
   "board": {
     "done": 266,
     "todo": 10,
@@ -29,15 +29,14 @@
     230,
     229
   ],
-  "last_substantive_ping": "2026-08-23 (session 309) -- PR #336 re-ping comment + PushNotification sent; session 310 confirmed no re-ping needed (already done today)",
+  "last_substantive_ping": "2026-08-22T22:18 UTC (session 309) -- PR #336 re-ping comment + PushNotification sent; sessions 310 and 311 confirmed no re-ping needed (same UTC day / already done)",
   "pr_336": {
     "state": "OPEN",
     "opened": "2026-08-15",
     "mergeable": "MERGEABLE",
     "mergeStateStatus": "CLEAN",
-    "commits_ahead_of_main": 151,
     "note": "No maintainer merge yet.",
-    "last_pinged": "session 309 (2026-08-23); comment https://github.com/dhelweg/gentriduck/pull/336#issuecomment-5382892671"
+    "last_pinged": "session 309 (2026-08-22T22:18 UTC); comment https://github.com/dhelweg/gentriduck/pull/336#issuecomment-5382892671"
   },
   "community_voting": {
     "threshold_crossings": 0
