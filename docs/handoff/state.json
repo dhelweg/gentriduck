@@ -1,7 +1,7 @@
 {
-  "session": 308,
-  "date": "2026-08-22",
-  "summary": "devmode PM re-scan, no material changes since session 307 (same day). Reconciliation confirmed: board 266 Done/10 Todo/0 In Progress (276 total), matches gh issue list --state open/closed counts exactly. All 10 open issues (#333,#328,#327,#283,#277,#276,#275,#270,#230,#229) present on board and correctly in Todo (none stuck In Progress, none off-board). Re-checked all 7 blocked-labeled issues (#333,#328,#327,#283,#270,#230,#229) -- latest comment on each is still the PM's own prior posting (dhelweg gh identity), unchanged since session 307, no genuine new maintainer reply. Noticed #277 updatedAt today (2026-08-22T16:00:05Z) -- inspected: a prior cycle's PM session had prematurely claimed this explicitly-parked forward-binding ticket, then self-corrected same cycle, posting a revert comment and returning the card to Todo; not a maintainer action, no follow-up needed. Re-confirmed 3 self-parked forward-binding tickets (#275,#276,#277) still carry 'Priority: Parked/low -- do not pick up speculatively' in their bodies; left in Todo. No unblocked pick-up-worthy ticket exists in the backlog this cycle -- nothing integrated, nothing filed (grepped docs/PROJECT_PLAN.md epics, duplicate-searched open issues, no new epics/tickets discovered). PR #336 (develop->main weekly release) still OPEN, opened 2026-08-15, state OPEN (mergeStateStatus transiently UNKNOWN on this fetch, historically MERGEABLE/CLEAN), no new commits landed on develop this cycle beyond routine handoff refreshes. NOT re-pinged this cycle -- already pinged today (session 297, 08:31 UTC), same calendar day, no material change, avoiding notification spam. Anomalies re-verified present via git branch -r and gh issue view, unchanged, not acted on.",
+  "session": 309,
+  "date": "2026-08-23",
+  "summary": "devmode PM re-scan, new calendar day (2026-08-23). Reconciliation confirmed: board 266 Done/10 Todo/0 In Progress (276 total), matches gh issue list --state open/closed counts exactly. All 10 open issues (#333,#328,#327,#283,#277,#276,#275,#270,#230,#229) present on board and correctly in Todo. Re-checked all 7 blocked-labeled issues (#333,#328,#327,#283,#270,#230,#229) -- latest comment on each is still the PM's own prior posting, unchanged since session 308, no genuine new maintainer reply (last real activity dates unchanged: 2026-07-14 through 2026-08-01). 3 self-parked forward-binding tickets (#275,#276,#277) still carry 'Priority: Parked/low -- do not pick up speculatively'; left in Todo. No unblocked pick-up-worthy ticket exists in the backlog this cycle -- nothing integrated, nothing filed. Checked GitHub Discussions Ideas category via GraphQL: only the guidelines post (1 upvote) exists, 0 community-voting threshold crossings. PR #336 (develop->main weekly release) still OPEN, opened 2026-08-15 (~8 days), mergeable MERGEABLE, mergeStateStatus CLEAN, now 151 commits ahead of main. Since this is a new calendar day and the PR/blocked-tickets state is materially unchanged from the prior week, posted a friendly re-ping comment on PR #336 and sent a PushNotification to the maintainer (first ping this calendar day, per the once-per-day-max cadence). Anomalies re-verified present via git branch -r and gh issue view, unchanged, not acted on.",
   "board": {
     "done": 266,
     "todo": 10,
@@ -29,14 +29,15 @@
     230,
     229
   ],
-  "last_substantive_ping": "2026-08-22 08:31 UTC (session 297 -- not re-pinged sessions 298-308, no material change same day)",
+  "last_substantive_ping": "2026-08-23 (session 309) -- PR #336 re-ping comment + PushNotification sent, first ping this calendar day",
   "pr_336": {
     "state": "OPEN",
     "opened": "2026-08-15",
-    "mergeable": "UNKNOWN (transient on this fetch; historically MERGEABLE)",
-    "mergeStateStatus": "UNKNOWN (transient on this fetch; historically CLEAN)",
+    "mergeable": "MERGEABLE",
+    "mergeStateStatus": "CLEAN",
+    "commits_ahead_of_main": 151,
     "note": "No maintainer merge yet.",
-    "last_pinged": "session 297 (2026-08-22 08:31 UTC); still open, no merge yet"
+    "last_pinged": "session 309 (2026-08-23); comment https://github.com/dhelweg/gentriduck/pull/336#issuecomment-5382892671"
   },
   "community_voting": {
     "threshold_crossings": 0
