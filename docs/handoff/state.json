@@ -1,7 +1,7 @@
 {
-  "session": 325,
+  "session": 326,
   "date": "2026-08-23",
-  "summary": "devmode PM re-scan cycle (2026-08-23, session 325, ~30min after session 324). Reconciliation confirmed: board 266 Done/10 Todo/0 In Progress (276 total), matches gh project item-list (limit 300) exactly, no drift, no CLOSED-but-not-Done mismatches. Re-checked all 10 open issues -- no new epics/gaps found, no new tickets filed. Re-verified all 7 blocked-labeled issues (#333,#328,#327,#283,#270,#230,#229) -- no new maintainer reply on any since prior sessions; latest comment on each is still the PM's own prior posting (latest overall 2026-08-01T09:33:23Z on #333). Self-parked #275/#276/#277 re-checked, no new comments, correctly left in Todo. Community voting triage run (poe triage-community) -- 0 discussions crossed threshold. PROJECT_PLAN.md unchanged since 2026-07-31 -- no new epics/tickets found. No unblocked pick-up-worthy ticket exists in the backlog this cycle -- nothing implemented, reviewed, sign-off-gated, or merged into develop this cycle. PR #336 (develop->main weekly release) still OPEN, opened 2026-08-15 (~8 days), mergeable=MERGEABLE / mergeStateStatus=CLEAN this check, 100 commits ahead of main (unchanged). Last ping was session 312 (2026-08-23T00:23 UTC), still same UTC day as this cycle (2026-08-23T07:31 UTC) -- no re-ping sent (would be same-day noise). Flagged 'over 1 week open, stronger escalation' trigger is keyed to the next distinct UTC day, which has not arrived yet this cycle -- deferred again to the next cycle landing on 2026-08-24 or later.",
+  "summary": "devmode PM re-scan cycle (2026-08-23, session 326, ~30min after session 325). Reconciliation confirmed: board 266 Done/10 Todo/0 In Progress (276 total), matches gh project item-list (limit 300) exactly, no drift, no CLOSED-but-not-Done mismatches. Re-checked all 10 open issues -- no new epics/gaps found, no new tickets filed. Re-verified all 7 blocked-labeled issues (#333,#328,#327,#283,#270,#230,#229) -- no new maintainer reply on any since prior sessions; latest comment on each is still the PM's own prior posting (latest overall 2026-08-01T09:33:23Z on #333). Self-parked #275/#276/#277 re-checked, no new comments, correctly left in Todo. Community voting triage run (poe triage-community) -- 0 discussions crossed threshold (only discussion #213 has 1 upvote). PROJECT_PLAN.md unchanged since 2026-07-31 -- no new epics/tickets found. No unblocked pick-up-worthy ticket exists in the backlog this cycle -- nothing implemented, reviewed, sign-off-gated, or merged into develop this cycle. PR #336 (develop->main weekly release) still OPEN, opened 2026-08-15 (~8 days), mergeable=MERGEABLE / mergeStateStatus=CLEAN this check, 100 commits ahead of main (unchanged). Last ping was session 312 (2026-08-23T00:23 UTC), still same UTC day as this cycle (2026-08-23T08:01 UTC) -- no re-ping sent (would be same-day noise). Flagged 'over 1 week open, stronger escalation' trigger is keyed to the next distinct UTC day, which has not arrived yet this cycle -- deferred again to the next cycle landing on 2026-08-24 or later.",
   "board": {
     "done": 266,
     "todo": 10,
@@ -29,13 +29,13 @@
     230,
     229
   ],
-  "last_substantive_ping": "2026-08-23T00:23 UTC (session 312) -- PR #336 re-ping comment sent; session 325 confirmed still same UTC day, no re-ping needed; next distinct UTC day should carry a stronger 'over 1 week open' escalation wording",
+  "last_substantive_ping": "2026-08-23T00:23 UTC (session 312) -- PR #336 re-ping comment sent; session 326 confirmed still same UTC day, no re-ping needed; next distinct UTC day should carry a stronger 'over 1 week open' escalation wording",
   "pr_336": {
     "state": "OPEN",
     "opened": "2026-08-15",
     "mergeable": "MERGEABLE (CLEAN mergeStateStatus this check)",
     "mergeStateStatus": "CLEAN",
-    "note": "No maintainer merge yet. 14 ping comments sent since 2026-08-17, no reply yet. Now ~8 days open, past nominal weekly cadence. Next distinct UTC day should get a distinctly-worded 'over 1 week open' escalation rather than routine daily-cadence wording.",
+    "note": "No maintainer merge yet. Now ~8 days open, past nominal weekly cadence. Next distinct UTC day should get a distinctly-worded 'over 1 week open' escalation rather than routine daily-cadence wording.",
     "last_pinged": "session 312 (2026-08-23T00:23 UTC); comment https://github.com/dhelweg/gentriduck/pull/336#issuecomment-5383355584"
   },
   "community_voting": {
