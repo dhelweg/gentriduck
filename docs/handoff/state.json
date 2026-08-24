@@ -1,7 +1,7 @@
 {
-    "session": 403,
+    "session": 404,
     "date": "2026-08-25",
-    "summary": "devmode PM re-scan cycle (session 403), run at 2026-08-24T23:03 UTC (~30min after session 402). Reconciliation confirmed: board 266 Done/10 Todo/0 In Progress (276 total), matches gh project item-list (limit 300) and gh issue list --state open exactly (board Todo set == open-issue set), no drift, no CLOSED-but-not-Done mismatches. Re-checked all 10 open issues -- all unchanged from session 402 (stale updatedAt timestamps, old self-authored PM comments), no new maintainer reply, no new tickets filed. All 7 blocked-labeled issues (#333,#328,#327,#283,#270,#230,#229) confirmed unchanged. Self-parked #275/#276/#277 re-checked, no new comments, correctly left in Todo. Community voting checked via triage_community.py (threshold >=10, apply=False) -- 0 discussions screened, no threshold crossings. PROJECT_PLAN.md unchanged since Epic J addition, already reflected as #328. No unblocked pick-up-worthy ticket exists in the backlog this cycle -- nothing implemented, reviewed, sign-off-gated, or merged into develop this cycle. PR #336 (develop->main weekly release) still OPEN, opened 2026-08-15 (~10 days); no new comment or commit since session 357's daily re-ping (2026-08-23T23:55:01Z). Verified with date -u that actual UTC was 2026-08-24T23:03, ~52min before the 23:55 UTC re-ping threshold -- correctly held cadence and skipped an early re-ping.",
+    "summary": "devmode PM re-scan cycle (session 404), run at 2026-08-24T23:34 UTC (~31min after session 403). Reconciliation confirmed: board 266 Done/10 Todo/0 In Progress (276 total), matches gh project item-list (limit 300) and gh issue list --state open exactly (board Todo set == open-issue set), no drift, no CLOSED-but-not-Done mismatches. Re-checked all 10 open issues -- all unchanged from session 403 (stale updatedAt timestamps, old self-authored PM comments), no new maintainer reply, no new tickets filed. All 7 blocked-labeled issues (#333,#328,#327,#283,#270,#230,#229) confirmed unchanged. Self-parked #275/#276/#277 re-checked, no new comments, correctly left in Todo. Community voting checked via GraphQL discussions query (Ideas category) -- only the guidelines post exists (upvoteCount 1), no threshold crossings. PROJECT_PLAN.md unchanged since Epic J addition, already reflected as #328. No unblocked pick-up-worthy ticket exists in the backlog this cycle -- nothing implemented, reviewed, sign-off-gated, or merged into develop this cycle. PR #336 (develop->main weekly release) still OPEN, opened 2026-08-15 (~10 days); no new comment or commit since session 357's daily re-ping (2026-08-23T23:55:01Z). Verified with date -u twice (23:34:28Z, 23:35:04Z) that actual UTC was ~20min before the 23:55 UTC re-ping threshold -- correctly held cadence and skipped an early re-ping; gap is now small enough the next cycle should clear it.",
     "board": {
         "done": 266,
         "todo": 10,
@@ -29,14 +29,14 @@
         230,
         229
     ],
-    "last_substantive_ping": "2026-08-23 (session 354) -- distinctly-worded overdue-escalation comment sent on PR #336 (~9 days open, past weekly cadence); session 357 confirmed no maintainer reply yet and sent a routine (non-escalation) daily re-ping; sessions 358-403 confirmed still no reply and correctly skipped an additional re-ping (too soon since session 357's) -- next ping due on/after 2026-08-24T23:55 UTC",
+    "last_substantive_ping": "2026-08-23 (session 354) -- distinctly-worded overdue-escalation comment sent on PR #336 (~9 days open, past weekly cadence); session 357 confirmed no maintainer reply yet and sent a routine (non-escalation) daily re-ping; sessions 358-404 confirmed still no reply and correctly skipped an additional re-ping (too soon since session 357's) -- next ping due on/after 2026-08-24T23:55 UTC",
     "pr_336": {
         "state": "OPEN",
         "opened": "2026-08-15",
-        "mergeable": "MERGEABLE",
-        "mergeStateStatus": "CLEAN",
+        "mergeable": "MERGEABLE (last confirmed session 403; session 404 fetch returned transient UNKNOWN/UNKNOWN while GitHub recomputed)",
+        "mergeStateStatus": "CLEAN (as of session 403)",
         "note": "No maintainer merge yet. ~10 days open, past nominal weekly cadence. Confirmed stable this session.",
-        "last_pinged": "session 357 (2026-08-23T23:55:01Z) -- routine daily re-ping https://github.com/dhelweg/gentriduck/pull/336#issuecomment-5389189798 (no maintainer reply as of session 403; next ping due on/after 2026-08-24T23:55 UTC)"
+        "last_pinged": "session 357 (2026-08-23T23:55:01Z) -- routine daily re-ping https://github.com/dhelweg/gentriduck/pull/336#issuecomment-5389189798 (no maintainer reply as of session 404; next ping due on/after 2026-08-24T23:55 UTC, ~20min away at session 404's check)"
     },
     "community_voting": {
         "threshold_crossings": 0
