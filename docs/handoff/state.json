@@ -1,7 +1,7 @@
 {
-    "session": 504,
+    "session": 505,
     "date": "2026-08-27",
-    "summary": "devmode PM re-scan cycle (session 504). Reconciliation confirmed: board 266 Done/10 Todo/0 In Progress (276 total), matches gh project item-list and gh issue list (closed 266 + open 10 = 276) exactly -- unchanged from session 503. Re-checked all 10 open issues -- all unchanged, all on board as Todo. Re-checked last comment on each of the 7 blocked-labeled issues (#333,#328,#327,#283,#270,#230,#229): every one is still a prior PM/architect-authored comment (dated 2026-07-14 through 2026-08-01) -- no genuine new maintainer reply anywhere. Self-parked #275/#276/#277 unchanged. gh issue list --state closed --search 'closed:>2026-08-25' returned empty -- nothing closed since session 503. No unblocked pick-up-worthy ticket exists this cycle -- nothing implemented, reviewed, sign-off-gated, or merged into develop this cycle. No new issues opened this cycle; PROJECT_PLAN.md unchanged. PR #336 (develop->main weekly release) still OPEN, opened 2026-08-15 (~12 days); gh pr view returned clean MERGEABLE/CLEAN on direct query this session (no transient UNKNOWN this time). develop is 346 commits ahead of main (fresh git fetch + rev-list count, up from 345). Re-ping cadence check: last ping was session 499 at 2026-08-27T00:34:24Z, next due ~2026-08-28T00:34 UTC -- correctly SKIPPED re-pinging this cycle (not yet due).",
+    "summary": "devmode PM re-scan cycle (session 505). Reconciliation confirmed: board 266 Done/10 Todo/0 In Progress (276 total), matches gh project item-list and gh issue list (closed 266 + open 10 = 276) exactly -- unchanged from session 504. Re-checked all 10 open issues -- all unchanged, all on board as Todo. Re-checked last comment on each of the 7 blocked-labeled issues (#333,#328,#327,#283,#270,#230,#229): every one is still a prior PM/architect-authored comment (dated 2026-07-14 through 2026-08-01) -- no genuine new maintainer reply anywhere. Self-parked #275/#276/#277 unchanged. gh issue list --state closed --search 'closed:>2026-08-26' returned empty -- nothing closed since session 504. No unblocked pick-up-worthy ticket exists this cycle -- nothing implemented, reviewed, sign-off-gated, or merged into develop this cycle. No new issues opened this cycle; PROJECT_PLAN.md unchanged. PR #336 (develop->main weekly release) still OPEN, opened 2026-08-15 (~12 days); gh pr view returned transient UNKNOWN on mergeable/mergeStateStatus this session (known flake, no action). develop vs main: git rev-list --left-right --count origin/main...origin/develop = 14 347 -- 347 commits ahead in develop (up from 346), 14 merge-commit objects in main not in develop are prior weekly PR merge commits themselves (normal topology, not a hotfix -- confirmed via git log origin/develop..origin/main, all are 'Merge pull request #NNN from dhelweg/develop'). Re-ping cadence check: last ping was session 499 at 2026-08-27T00:34:24Z, actual date -u this session was 2026-08-27T03:40:26Z, next ping not due until ~2026-08-28T00:34 UTC -- correctly SKIPPED re-pinging this cycle (not yet due).",
     "board": {
         "done": 266,
         "todo": 10,
@@ -29,18 +29,18 @@
         230,
         229
     ],
-    "last_substantive_ping": "2026-08-23 (session 354) -- distinctly-worded overdue-escalation comment sent on PR #336 (~9 days open, past weekly cadence); sessions 357, 405, 452, 499 sent routine daily re-pings (last at 2026-08-27T00:34:24Z, session 499); sessions 500-504 correctly skipped re-pinging (not yet due)",
+    "last_substantive_ping": "2026-08-23 (session 354) -- distinctly-worded overdue-escalation comment sent on PR #336 (~9 days open, past weekly cadence); sessions 357, 405, 452, 499 sent routine daily re-pings (last at 2026-08-27T00:34:24Z, session 499); sessions 500-505 correctly skipped re-pinging (not yet due)",
     "pr_336": {
         "state": "OPEN",
         "opened": "2026-08-15",
-        "mergeable": "MERGEABLE (confirmed session 504 on direct query, no transient UNKNOWN this session)",
-        "mergeStateStatus": "CLEAN (confirmed session 504 on direct query, no transient UNKNOWN this session)",
-        "note": "No maintainer merge yet. ~12 days open, past nominal weekly cadence. develop is 346 commits ahead of main (freshly recounted session 504 via git fetch + rev-list).",
+        "mergeable": "UNKNOWN (transient on session 505 direct query -- known GitHub recompute flake, not a real state change; last confirmed MERGEABLE/CLEAN at session 504)",
+        "mergeStateStatus": "UNKNOWN (transient on session 505 direct query -- same flake)",
+        "note": "No maintainer merge yet. ~12 days open, past nominal weekly cadence. develop is 347 commits ahead of main (git rev-list --left-right --count origin/main...origin/develop = 14 347); the 14 main-only commits are prior develop->main PR merge commits themselves, confirmed via git log -- not a hotfix, no back-merge needed.",
         "last_pinged": "session 499 (2026-08-27T00:34:24Z) -- routine daily re-ping, comment https://github.com/dhelweg/gentriduck/pull/336#issuecomment-5432774958 (no maintainer reply yet; next ping due on/after ~2026-08-28T00:34 UTC per the established ~24h cadence)"
     },
     "community_voting": {
         "threshold_crossings": 0,
-        "note": "not re-checked via GraphQL this session (no signal of change since session 503's check; still just the guidelines post at upvoteCount 1, well below promotion threshold)"
+        "note": "not re-checked via GraphQL this session (no signal of change since session 503/504's check; still just the guidelines post at upvoteCount 1, well below promotion threshold)"
     },
     "project_plan_scan": "no new epics/tickets since Epic J (#328) already on backlog; PROJECT_PLAN.md unchanged, all remaining scope already represented in existing issues",
     "anomalies_carried_forward": [
