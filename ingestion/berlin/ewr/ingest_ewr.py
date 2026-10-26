@@ -105,6 +105,7 @@ Runtime expectations:
 from __future__ import annotations
 
 import argparse
+import codecs
 import datetime
 import io
 import json
@@ -653,7 +654,10 @@ def _parse_csv_bytes(raw_bytes: bytes, year: int) -> pd.DataFrame:
     # answers every old /opendata/*.csv URL with HTTP 200 and its HTML app shell. That
     # decodes fine and then fails every separator, which used to surface as the
     # misleading "check separator/encoding" error below. Name the real cause instead.
-    head = raw_bytes[:512].lstrip().lower()
+    head = raw_bytes[:512].lstrip()
+    if head.startswith(codecs.BOM_UTF8):  # a UTF-8 BOM in front of the markup
+        head = head[len(codecs.BOM_UTF8) :].lstrip()
+    head = head.lower()
     if head.startswith((b"<!doctype html", b"<html")):
         raise ValueError(
             f"EWR {year} URL returned an HTML page, not CSV -- the file has moved or been "

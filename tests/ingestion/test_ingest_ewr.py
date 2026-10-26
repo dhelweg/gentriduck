@@ -12,6 +12,8 @@ no live network, no dependency on datenregister.berlin.de's current catalog cont
 
 from __future__ import annotations
 
+import codecs
+
 import json
 
 from berlin.ewr import ingest_ewr as ewr
@@ -203,9 +205,12 @@ def test_parse_csv_bytes_names_an_html_soft_404() -> None:
     )
     with pytest.raises(ValueError, match="returned an HTML page"):
         ewr._parse_csv_bytes(shell, 2016)
-    # Leading whitespace / BOM-less uppercase variants are still caught.
+    # Leading whitespace and uppercase variants are still caught...
     with pytest.raises(ValueError, match="returned an HTML page"):
         ewr._parse_csv_bytes(b"\r\n  <HTML><body></body></HTML>", 2016)
+    # ...and so is a UTF-8 BOM in front of the markup.
+    with pytest.raises(ValueError, match="returned an HTML page"):
+        ewr._parse_csv_bytes(codecs.BOM_UTF8 + b"<!DOCTYPE html><html></html>", 2016)
 
 
 def test_parse_csv_bytes_still_parses_a_real_matrix_csv() -> None:
