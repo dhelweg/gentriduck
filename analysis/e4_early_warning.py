@@ -660,7 +660,7 @@ def fit_and_evaluate(
 
 def write_findings(results: dict) -> None:
     OUTPUT_MD.parent.mkdir(parents=True, exist_ok=True)
-    with open(OUTPUT_MD, "w") as f:
+    with open(OUTPUT_MD, "w", encoding="utf-8") as f:
         f.write("# E4 Early-Warning Displacement-Risk Findings (A10-P1, #80)\n\n")
         f.write("- **Task:** out-of-time-validated early-warning indicator: precursors now -> ")
         f.write("elevated displacement-pressure signal at t+k\n")

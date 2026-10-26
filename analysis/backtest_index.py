@@ -996,7 +996,7 @@ def write_backtest_md(
     overall = all(overall_tests)
     overall_str = "ALL PASS" if overall else "ONE OR MORE FAIL"
 
-    with open(OUTPUT_MD, "w") as f:
+    with open(OUTPUT_MD, "w", encoding="utf-8") as f:
         f.write("# B2 Back-Test Harness: Live Index vs Ground Truth\n\n")
         f.write(f"**Last run:** {run_date}\n")
         f.write(f"**Overall result:** {overall_str}\n\n")

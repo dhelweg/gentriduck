@@ -729,7 +729,7 @@ def print_results(all_results: list[dict]) -> None:
 
 def write_findings(all_results: list[dict], results_bzr: list[dict] | None = None) -> None:
     OUTPUT_MD.parent.mkdir(parents=True, exist_ok=True)
-    with open(OUTPUT_MD, "w") as f:
+    with open(OUTPUT_MD, "w", encoding="utf-8") as f:
         f.write("# E2 Classification Findings -- Per-hypothesis AUC Comparison\n\n")
         f.write("- **Task:** scikit-learn classification with POI features, per-hypothesis AUCs\n")
         f.write("- **Issue:** #65\n")
