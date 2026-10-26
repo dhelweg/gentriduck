@@ -5,7 +5,7 @@
   "upstream": {
     "url": "https://gdi.berlin.de/services/wfs/brw{year} (brw_{year}_vector feature type)",
     "vintage": "2017,2018,2019,2020,2021,2022,2023,2024",
-    "retrieved_at": "2026-07-09T16:06:02Z"
+    "retrieved_at": "2026-10-25T11:37:59Z"
   },
   "outputs": [
     {
@@ -59,7 +59,7 @@
   ],
   "ingest_script": {
     "module": "ingestion.berlin.price_rent.ingest_bodenrichtwerte",
-    "git_sha": "f879e422e41c1a0d457bff01c41b6eb9baa08c94"
+    "git_sha": "69ef50ae6daa232764d706843fb18917f4deaf29"
   },
   "manifest_schema_version": 1
 }
