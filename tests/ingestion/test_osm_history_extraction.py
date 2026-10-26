@@ -149,3 +149,79 @@ def test_partial_years_still_renames_but_warns(history_pbf, tmp_path, monkeypatc
         assert bosm.main(argv) == 0
     assert (out / "2012-partial.parquet").exists()
     assert "deprecated" in caplog.text
+
+
+def _write_pbf(path: Path, nodes: list) -> Path:
+    header = osmium.io.Header()
+    header.has_multiple_object_versions = True
+    writer = osmium.SimpleWriter(str(path), 4096, header)
+    for n in nodes:
+        writer.add_node(n)
+    writer.close()
+    return path
+
+
+@pytest.fixture()
+def lifecycle_pbf(tmp_path: Path) -> Path:
+    """Deletion edge cases (review of 13fb28ef, 2026-10-26), in both cities.
+
+    node 1 (Berlin):  created 2009, deleted mid-2011, re-created mid-2013
+    node 2 (Berlin):  created 2009, deleted at EXACTLY 2012-01-01T00:00Z (the snapshot instant)
+    node 3 (Hamburg): created 2009, deleted mid-2011
+    """
+    cafe = {"amenity": "cafe"}
+    return _write_pbf(
+        tmp_path / "lifecycle.osh.pbf",
+        [
+            _node(1, 1, (2009, 6, 1), _BERLIN, cafe),
+            _node(1, 2, (2011, 6, 1), _BERLIN, {}, visible=False),
+            _node(1, 3, (2013, 6, 1), _BERLIN, cafe),
+            _node(2, 1, (2009, 6, 1), _BERLIN, cafe),
+            _node(2, 2, (2012, 1, 1), _BERLIN, {}, visible=False),
+            _node(3, 1, (2009, 6, 1), _HAMBURG, cafe),
+            _node(3, 2, (2011, 6, 1), _HAMBURG, {}, visible=False),
+        ],
+    )
+
+
+def test_deletion_recreation_and_snapshot_instant(lifecycle_pbf, tmp_path, monkeypatch) -> None:
+    """A deletion removes the node from every snapshot at/after its timestamp (inclusive of
+    a deletion exactly at the snapshot instant), never from earlier ones, and a later
+    visible version restores it."""
+    monkeypatch.setattr(bosm, "_write_manifest", lambda *a, **k: None)
+    out = tmp_path / "berlin"
+    argv = ["--osh-pbf", str(lifecycle_pbf), "--out-dir", str(out), "--years", "2010,2012,2014"]
+    assert bosm.main(argv) == 0
+    years = _years(out)
+    assert sorted(years["2010"].osm_id) == ["node/1", "node/2"]
+    assert list(years["2012"].osm_id) == []  # node/1 deleted 2011; node/2 deleted AT 2012-01-01
+    assert list(years["2014"].osm_id) == ["node/1"]  # node/1 re-created 2013
+
+
+def test_hamburg_applies_deletions(lifecycle_pbf, tmp_path, monkeypatch) -> None:
+    for name in _PATCHED_GLOBALS:
+        monkeypatch.setattr(bosm, name, getattr(bosm, name))
+    monkeypatch.setattr(hosm, "_write_manifest", lambda *a, **k: None)
+    out = tmp_path / "hamburg"
+    argv = ["--osh-pbf", str(lifecycle_pbf), "--out-dir", str(out), "--years", "2010,2012"]
+    assert hosm.main(argv) == 0
+    years = _years(out)
+    assert list(years["2010"].osm_id) == ["node/3"]
+    assert list(years["2012"].osm_id) == []
+
+
+def test_workers_path_matches_single_pass(lifecycle_pbf, tmp_path, monkeypatch) -> None:
+    """--workers > 1 (one full read per year, multiprocessing) must produce exactly what the
+    default single-pass path produces -- same handler, different driver."""
+    monkeypatch.setattr(bosm, "_write_manifest", lambda *a, **k: None)
+    single, multi = tmp_path / "single", tmp_path / "multi"
+    base = ["--osh-pbf", str(lifecycle_pbf), "--years", "2010,2012,2014"]
+    assert bosm.main([*base, "--out-dir", str(single)]) == 0
+    assert bosm.main([*base, "--out-dir", str(multi), "--workers", "2"]) == 0
+    a, b = _years(single), _years(multi)
+    assert sorted(a) == sorted(b)
+    for year in a:
+        pd.testing.assert_frame_equal(
+            a[year].sort_values("osm_id").reset_index(drop=True),
+            b[year].sort_values("osm_id").reset_index(drop=True),
+        )
