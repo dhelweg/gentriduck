@@ -240,6 +240,19 @@ def build_steps(repo_root: Path) -> list[IngestStep]:
             source_id="berlin__mietspiegel",
             blocking=False,
         ),
+        # Berlin Milieuschutz (ADR-0019) -- a leaf dimension per the rationale above.
+        # Was manifest-tracked but missing from this list, so `poe ingest` never
+        # refreshed it (a missing leaf source yields zero rows, not an error, #94).
+        IngestStep(
+            "Berlin Milieuschutz",
+            _py(
+                "ingestion/berlin/displacement/ingest_milieuschutz.py",
+                "--out-dir",
+                "data/raw/berlin/displacement",
+            ),
+            source_id="berlin__milieuschutz",
+            blocking=False,
+        ),
         # Hamburg — second-city adapters (ADR-0014); OSM (Pillar 6) excluded, see ingest-osm-hamburg.
         # All non-blocking here (see BLOCKING_SOURCE_IDS rationale above).
         IngestStep(

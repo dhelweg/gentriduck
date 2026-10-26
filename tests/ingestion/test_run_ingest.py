@@ -19,6 +19,7 @@ from run_ingest import (
     BLOCKING_SOURCE_IDS,
     IngestStep,
     StepResult,
+    build_steps,
     is_fresh,
     main,
     render_summary,
@@ -159,3 +160,19 @@ def test_main_only_filters_to_named_sources(tmp_path: Path, monkeypatch) -> None
     exit_code = main(["--repo-root", str(tmp_path), "--only", "berlin__ewr"])
     assert exit_code == 0
     assert ran == ["berlin__ewr"]
+
+
+def test_every_manifest_source_has_an_ingest_step() -> None:
+    """Regression guard (2026-10-26): `berlin__milieuschutz` was tracked in the committed
+    ADR-0016 manifest but absent from build_steps, so `poe ingest` silently never refreshed
+    it -- a missing leaf source yields zero rows, not an error (#94).
+
+    Deliberately outside the driver: OSM (rolling, login-gated .osh.pbf -- the separate
+    `ingest-osm-*` tasks, ADR-0002) and shared__seeds (committed files, not ingested).
+    """
+    repo_root = Path(__file__).resolve().parents[2]
+    out_of_driver = {"berlin__osm", "hamburg__osm", "shared__seeds"}
+    manifest_ids = {p.stem for p in (repo_root / "ingestion" / "manifest").glob("*.json")}
+    step_ids = {s.source_id for s in build_steps(repo_root) if s.source_id}
+    missing = sorted(manifest_ids - out_of_driver - step_ids)
+    assert not missing, f"manifest-tracked sources with no `poe ingest` step: {missing}"
