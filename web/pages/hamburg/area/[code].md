@@ -281,7 +281,137 @@ displacement as easily as incumbent social mobility.
 
 ## Amenities & everyday infrastructure
 
-<NotYetPublished what="everyday-infrastructure counts for this area" />
+<!--
+  Hamburg parity for I20-web (#254), 2026-10-26: same block as the Berlin PLR page
+  (web/pages/berlin/area/[code].md, "Amenities & everyday infrastructure"), reading the now
+  city-agnostic `mart_area_amenities` (HH levels: subarea_l2 / subarea_l1 / district). The five
+  binding framing conditions of docs/epic-i/I20-domain-signoff.md carry over verbatim:
+  (1) "most common cuisine", never "dominant", in reader-facing copy; (2) the district comparison
+  renders as co-equal counts, no colour/sort/highlight; (3) no ranking, "livability",
+  investment-adjacent or recommending language; (4) the OSM completeness caveat sits directly
+  next to the table; (5) a most-common-cuisine line only renders when
+  gastro_poi_with_cuisine_count >= 8 AND dominant_cuisine_share >= 0.15
+  (docs/epic-i/I20-poi-curation-rules.md §2), else an honest null state.
+  Hamburg codes do not nest by prefix, so the district comes from mart_area_hierarchy
+  (the district_row subquery below), not Berlin's substr(). The district row is LEFT-joined so a missing
+  parent leaves its column empty instead of blanking the whole table.
+-->
+
+```sql amenities_current
+select
+    snapshot_year,
+    n_schools, n_kindergartens, n_doctors, n_dentists, n_pharmacies, n_supermarkets,
+    n_playgrounds, n_transit_stops,
+    gastro_poi_count, gastro_poi_with_cuisine_count,
+    dominant_cuisine, dominant_cuisine_share
+from gentriduck_marts.mart_area_amenities
+where city_code = 'HH' and area_level = 'subarea_l2' and area_code = '${params.code}'
+order by snapshot_year desc
+limit 1
+```
+
+```sql amenities_table
+-- One row per infrastructure fact: this area vs. its district (already summed by the mart's own
+-- rollup -- extensive counts). Values pre-formatted as text, as on the Berlin page.
+with
+    latest as (
+        select max(snapshot_year) as snapshot_year
+        from gentriduck_marts.mart_area_amenities
+        where city_code = 'HH' and area_level = 'subarea_l2' and area_code = '${params.code}'
+    ),
+    area_row as (
+        select *
+        from gentriduck_marts.mart_area_amenities
+        where
+            city_code = 'HH' and area_level = 'subarea_l2' and area_code = '${params.code}'
+            and snapshot_year = (select snapshot_year from latest)
+    ),
+    district_row as (
+        select *
+        from gentriduck_marts.mart_area_amenities
+        where
+            city_code = 'HH' and area_level = 'district'
+            and area_code = (select h2.parent_area_code
+                from gentriduck_marts.mart_area_hierarchy as h1
+                join gentriduck_marts.mart_area_hierarchy as h2
+                    on h2.city_code = 'HH' and h2.area_level = 'subarea_l1'
+                    and h2.area_code = h1.parent_area_code
+                where h1.city_code = 'HH' and h1.area_level = 'subarea_l2'
+                    and h1.area_code = '${params.code}'
+                limit 1)
+            and snapshot_year = (select snapshot_year from latest)
+    ),
+    facts as (
+        select 1 as sort_order, 'Schools' as indicator, a.n_schools as area_n, d.n_schools as district_n
+        from area_row as a left join district_row as d on true
+        union all
+        select 2, 'Kindergartens', a.n_kindergartens, d.n_kindergartens
+        from area_row as a left join district_row as d on true
+        union all
+        select 3, 'Doctors', a.n_doctors, d.n_doctors
+        from area_row as a left join district_row as d on true
+        union all
+        select 4, 'Dentists', a.n_dentists, d.n_dentists
+        from area_row as a left join district_row as d on true
+        union all
+        select 5, 'Pharmacies', a.n_pharmacies, d.n_pharmacies
+        from area_row as a left join district_row as d on true
+        union all
+        select 6, 'Supermarkets', a.n_supermarkets, d.n_supermarkets
+        from area_row as a left join district_row as d on true
+        union all
+        select 7, 'Playgrounds', a.n_playgrounds, d.n_playgrounds
+        from area_row as a left join district_row as d on true
+        union all
+        select 8, 'Transit stops', a.n_transit_stops, d.n_transit_stops
+        from area_row as a left join district_row as d on true
+    )
+select sort_order, indicator, cast(area_n as varchar) as area_value, cast(district_n as varchar) as district_value
+from facts
+order by sort_order
+```
+
+<p>
+{#if amenities_current[0]}
+Based on OpenStreetMap tagging as of <b>{amenities_current[0].snapshot_year}</b>, this area has the
+everyday-infrastructure counts below, shown alongside its district (Bezirk) total for context.
+{:else}
+No amenity data is available for this area yet.
+{/if}
+</p>
+
+<DataTable data={amenities_table} rows=8 emptySet="warn" emptyMessage="No amenity data for this area.">
+    <Column id=indicator title="Infrastructure"/>
+    <Column id=area_value title="This area"/>
+    <Column id=district_value title="District total"/>
+</DataTable>
+
+<Alert status="info">
+  These figures come from OpenStreetMap tagging, not an official registry. A <b>0</b> may mean
+  "none here" or "not yet mapped" — better-mapped areas (typically denser, more central) will show
+  more complete counts than less-mapped ones. See the <a href="/open-data">open-data</a> page for
+  more on this project's data-completeness caveats generally.
+</Alert>
+
+<p>
+{#if amenities_current[0] && amenities_current[0].gastro_poi_with_cuisine_count >= 8 && amenities_current[0].dominant_cuisine_share >= 0.15}
+Among <b>{amenities_current[0].gastro_poi_with_cuisine_count}</b> restaurants/cafes with cuisine
+data tagged in this area, the <b>most common cuisine</b> is
+<b>{amenities_current[0].dominant_cuisine}</b>
+({Math.round(amenities_current[0].dominant_cuisine_share * 100)}% of tagged gastronomy POIs).
+{:else if amenities_current[0] && amenities_current[0].gastro_poi_with_cuisine_count >= 8}
+Cuisine is tagged for <b>{amenities_current[0].gastro_poi_with_cuisine_count}</b> restaurants/cafes
+here, but no single cuisine stands out — none reaches 15% of them, so none is named.
+{:else}
+There isn't enough tagged cuisine data in this area yet to identify a most-common cuisine (OpenStreetMap
+tagging of restaurant/cafe cuisine is incomplete for smaller or less-mapped areas).
+{/if}
+</p>
+
+<p>
+This block is a plain inventory, not a recommendation — it never ranks or scores this area against
+others, and makes no claim about whether it is a good or bad place to live.
+</p>
 
 ## Land value & estimated rent
 
