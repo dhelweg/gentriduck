@@ -167,12 +167,13 @@ def test_every_manifest_source_has_an_ingest_step() -> None:
     ADR-0016 manifest but absent from build_steps, so `poe ingest` silently never refreshed
     it -- a missing leaf source yields zero rows, not an error (#94).
 
-    Deliberately outside the driver: OSM (rolling, login-gated .osh.pbf -- the separate
-    `ingest-osm-*` tasks, ADR-0002) and shared__seeds (committed files, not ingested).
+    Deliberately outside the driver: every OSM source (`*__osm*` -- rolling, read from the
+    login-gated .osh.pbf by the separate `ingest-osm-*` tasks, ADR-0002) and shared__seeds
+    (committed files, not ingested).
     """
     repo_root = Path(__file__).resolve().parents[2]
-    out_of_driver = {"berlin__osm", "hamburg__osm", "shared__seeds"}
     manifest_ids = {p.stem for p in (repo_root / "ingestion" / "manifest").glob("*.json")}
+    out_of_driver = {m for m in manifest_ids if "__osm" in m} | {"shared__seeds"}
     step_ids = {s.source_id for s in build_steps(repo_root) if s.source_id}
     missing = sorted(manifest_ids - out_of_driver - step_ids)
     assert not missing, f"manifest-tracked sources with no `poe ingest` step: {missing}"
