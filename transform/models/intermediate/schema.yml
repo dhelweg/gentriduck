@@ -1228,6 +1228,11 @@ models:
       - name: city_code
         description: City identifier (ADR-0005).
         data_tests:
+          # Leak guard (2026-10-26): this Berlin adapter must only ever hold Berlin
+          # rows -- both the legacy 'berlin' value and canonical 'BER' (ADR-0005).
+          - accepted_values:
+              arguments:
+                values: ["berlin", "BER"]
 
           - not_null:
               config:
