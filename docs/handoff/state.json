@@ -1,51 +1,50 @@
 {
-  "_schema": "gentriduck-session-state/v1",
-  "session": "2026-08-11-devmode-pm-session-141",
-  "updated_at": "2026-08-11T05:40:00Z",
-  "build_status": {
-    "result": "PASS",
-    "note": "No dbt/model changes this cycle. Nothing to rebuild."
-  },
-  "open_prs": [
-    {
-      "number": 332,
-      "title": "Weekly release: develop -> main (2026-08-01)",
-      "base": "main",
-      "head": "develop",
-      "state": "OPEN",
-      "opened_at": "2026-07-31T23:49:34Z",
-      "note": "Still awaiting maintainer merge in GitHub UI. mergeable=MERGEABLE, mergeStateStatus=CLEAN. Body was stale -- develop had picked up #197 and #335 since the PR's last body edit; refreshed the summary this cycle to list both. ~11 days old. Escalation threshold ~2026-08-14 (~3 days out) not yet crossed -- pinged with a status-only PushNotification since new work was batched, not a hard escalation."
-    }
-  ],
-  "merged_this_session": [],
-  "pending_adr_branches": [],
-  "completed_this_session": [],
-  "filed_this_session": [],
-  "integrated_into_develop": [],
-  "in_progress": null,
-  "board_status": {
-    "note": "Session 141 re-scan: confirmed board clean -- 0 drift, 0 In Progress cards, all 11 open issues correctly in Todo/blocked. Re-checked comment content on all 8 blocked-on-maintainer issues (229,230,234,270,283,327,328,333) -- all last comments still PM-authored scoping/status updates (or empty for #234), no genuine new maintainer decision. Noticed develop had 2 new merges since PR #332's body was last written (#197 EWR CKAN discovery fix, #335 its unit-test coverage) that weren't reflected in the PR summary -- refreshed gh pr edit body to include them. No unblocked ticket found; nothing else mutated this cycle.",
-    "open_issues_by_dependency": {
-      "next_unblocked": [],
-      "blocked_on_maintainer": [
-        "#333 [infra] Split ingestion: cache raw fetch separately from parse-to-parquet (ADR-0016 Amendment A drafted, awaiting accept/reject)",
-        "#328 [J1] Address-level lookup scoping",
-        "#327 [epic-i] Rethink public presentation clarity",
-        "#283 [infra] Manually-triggered CI job for poe refresh (ADR-0026 drafted, awaiting accept/reject)",
-        "#270 [I20-school-xcheck] Official-directory completeness cross-check (maintainer decided 2026-07-17: keep parked)",
-        "#234 [META-1] Extract operating model into open playbook",
-        "#230 [I13] Launch playbook (all in-repo criteria met per 2026-08-01 status check; remains maintainer-gated on Zenodo DOI/noindex flip/announcement -- no code action possible)",
-        "#229 [I12] Reach measurement loop"
-      ],
-      "parked_not_blocked": [
-        "#277 [A10-P2-estimate] Milieuschutz DiD/event-study script (explicit 'Priority: Parked/low -- no immediate driver', forward-binding, no consumer yet)",
-        "#276 [R-A8b-consume] Wire trajectory panel (forward-binding, explicit 'do not pick up speculatively')",
-        "#275 [C-craft-artisanal] Curated artisanal-craft POI subset (parked, 'if/when a concrete consumer needs it')"
-      ]
-    }
-  },
-  "still_blocked": [],
-  "next_session_decision": "Backlog remains fully blocked/parked (11/11 open issues), board confirmed clean, 0 drift. No unblocked work exists to advance this cycle. PR #332 still unmerged; body refreshed this cycle to include #197/#335. Not yet the ~2-week hard-escalation mark (~2026-08-14) -- escalate more insistently once crossed. Continue full re-scans each cycle, checking each blocked issue's actual last-comment CONTENT (not just label/updatedAt/author) for a genuine new maintainer decision. Other concurrent devmode sessions may claim/un-claim forward-binding tickets -- re-verify claim state before acting.",
-  "last_updated": "2026-08-11",
-  "current_session": "devmode-pm-session-141"
+    "session": 547,
+    "date": "2026-08-28",
+    "summary": "devmode PM re-scan cycle (session 547). Reconciliation confirmed: board 266 Done/10 Todo/0 In Progress (276 total), matches gh project item-list and gh issue list (closed 266 + open 10 = 276) exactly -- unchanged from session 546. Zero mismatches between issue state and board column. Re-checked all 10 open issues -- all unchanged, all on board as Todo. Re-checked last comment on each of the 7 blocked-labeled issues (#333,#328,#327,#283,#270,#230,#229): every one is still a prior PM/architect-authored dhelweg comment (dated 2026-07-14 through 2026-08-01) -- no genuine new maintainer reply anywhere. Self-parked #275/#276/#277 re-verified against issue bodies, unchanged (still forward-binding/no-known-consumer scope, not pickup-worthy). No unblocked pick-up-worthy ticket exists this cycle -- nothing implemented, reviewed, sign-off-gated, or merged into develop this cycle. No new issues opened this cycle; PROJECT_PLAN.md scope already fully represented in existing issues. PR #336 (develop->main weekly release) still OPEN, opened 2026-08-15 (~13 days). develop vs main: git rev-list --count origin/main..origin/develop = 389 (develop 389 commits ahead of main, up from 388, one new develop-only commit -- the session 546 handoff refresh); no new hotfix on main. Re-ping cadence check: last ping was session 546 at 2026-08-28T00:44:19Z, actual date -u this session was 2026-08-28T01:15:43Z (~31 minutes after last ping, well inside ~24h threshold) -- no re-ping sent this cycle per explicit instruction to wait until ~2026-08-29T00:44 UTC. PushNotification-worthy: no. Two known anomaly branches (infra/283-manual-ci-refresh-accept, origin/feature/237-h3-publish-hamburg) confirmed still present and untouched. Disk headroom not re-checked this session (no capacity concern reported in prior sessions).",
+    "board": {
+        "done": 266,
+        "todo": 10,
+        "in_progress": 0,
+        "total": 276
+    },
+    "open_issues": [
+        333,
+        328,
+        327,
+        283,
+        277,
+        276,
+        275,
+        270,
+        230,
+        229
+    ],
+    "blocked_on_maintainer": [
+        333,
+        328,
+        327,
+        283,
+        270,
+        230,
+        229
+    ],
+    "last_substantive_ping": "2026-08-23 (session 354) -- distinctly-worded overdue-escalation comment sent on PR #336 (~9 days open, past weekly cadence); sessions 357, 405, 452, 499, 546 sent routine daily re-pings (last at 2026-08-28T00:44:19Z, session 546); session 547 sent no re-ping (not due yet)",
+    "pr_336": {
+        "state": "OPEN",
+        "opened": "2026-08-15",
+        "mergeable": "MERGEABLE",
+        "mergeStateStatus": "CLEAN",
+        "note": "No maintainer merge yet. ~13 days open, past nominal weekly cadence. develop is 389 commits ahead of main (git rev-list --count origin/main..origin/develop = 389); no new hotfix on main.",
+        "last_pinged": "session 546 (2026-08-28T00:44:19Z) -- routine daily re-ping, comment https://github.com/dhelweg/gentriduck/pull/336#issuecomment-5446957366 (no maintainer reply yet; next ping due on/after ~2026-08-29T00:44 UTC per the established ~24h cadence; session 547 confirmed not yet due and sent no ping)"
+    },
+    "community_voting": {
+        "threshold_crossings": 0,
+        "note": "not re-checked this session (checked session 546: only the guidelines post, updatedAt 2026-07-09, unchanged)"
+    },
+    "project_plan_scan": "no new epics/tickets since Epic J (#328) already on backlog; PROJECT_PLAN.md unchanged, all remaining scope already represented in existing issues",
+    "anomalies_carried_forward": [
+        "local branch infra/283-manual-ci-refresh-accept claims unconfirmed maintainer decision for #283 -- do NOT merge without a real dhelweg reply on the issue",
+        "stale remote branch origin/feature/237-h3-publish-hamburg (issue #237, closed) -- likely abandoned, still present, not acted on"
+    ]
 }
