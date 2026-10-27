@@ -26,11 +26,10 @@ sidebar_position: 2
     properties and only reads geometry + area_code, the same "geometry vehicle, values joined
     client-side" pattern /berlin/poi-map.md already uses against plr_live_data.geojson).
   - #352: the tooltip leads with the Gebiet's derived label (area_name, '<Stadtteil> · <OSM place
-    name>' or '<Stadtteil> · Gebiet <code>'), read by <PolygonMap> from the GeoJSON's own
-    area_name property (nameCol fallback), so poi_map_data needs no name join. Code stays as a
-    small last line.
-  - No click-through link -- no /hamburg/area/[code] profile page exists (see
-    pages/hamburg/index.md).
+    name>' or '<Stadtteil> · Gebiet <code>', joined from dim_area_geometry in poi_map_data). The
+    code is a small last line only where the label doesn't already contain it (code_note).
+  - No click-through link -- the /hamburg/area/[code] profile pages exist (I21-g/#301) but this
+    map doesn't link to them; the closing paragraph points to the area-profiles list.
   - Separate <PolygonMap> instance (#351; formerly <AreaMap>)/route from Berlin's, per the H3-domain-signoff.md structural guard
     (no shared cross-city component instance) -- same principle as pages/hamburg/maps.md.
 -->
@@ -54,7 +53,7 @@ sidebar_position: 2
       fmt: 'num1'
     },
     { id: 'poi_count', title: 'Mapped places (this domain)', fmt: 'num0' },
-    { id: 'area_code', title: 'Gebiet code', valueClass: 'text-xs opacity-60', fmt: 'id' }
+    { id: 'code_note', title: 'Gebiet code', valueClass: 'text-xs opacity-60', fmt: 'id' }
   ];
 
   const divergingPalette = ['#e66101', '#fdb863', '#f7f7f7', '#b2abd2', '#5e3c99'];
@@ -194,9 +193,20 @@ with
             and weight_variant = 'standard'
             and methodology_variant = 'faithful'
             and poi_domain_h = '${inputs.domain.value}'
+    ),
+    -- #352: Gebiet labels (single 'current' vintage for Hamburg).
+    names as (
+        select area_code, area_name
+        from gentriduck_marts.dim_area_geometry
+        where city_code = 'HH' and area_level = 'subarea_l2'
     )
 select
     b.area_code,
+    n.area_name,
+    -- #352 review: the Gebiet code as a separate tooltip line, only where the label doesn't
+    -- already contain it (the '<Stadtteil> · Gebiet <code>' fallback labels do).
+    case when strpos(n.area_name, 'Gebiet ' || b.area_code) > 0 then null else b.area_code end
+        as code_note,
     b.poi_density_per_km2,
     b.poi_count,
     case when b.oa_domain_min_base_flag then null else b.oa_domain_raw end as oa_domain,
@@ -204,6 +214,7 @@ select
     case when b.oa_domain_min_base_flag then null else b.oa_delta_raw end as oa_delta,
     b.oa_domain_min_base_flag
 from base as b
+left join names as n on b.area_code = n.area_code
 where b.snapshot_year = ${inputs.year.value}
 ```
 
@@ -246,8 +257,9 @@ where b.snapshot_year = ${inputs.year.value}
     emptyMessage="No data for this domain/year combination."
 />
 
-There is no per-area drill-down page for Hamburg yet — see the [Hamburg data hub](/hamburg) for
-what is and isn't built.
+Every Gebiet has its own profile page — find it in the [area profiles list](/hamburg/area)
+(this map doesn't link to it), or see the [Hamburg data hub](/hamburg) for what is and isn't
+published there yet.
 
 ---
 

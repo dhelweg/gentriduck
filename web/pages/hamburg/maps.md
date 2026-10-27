@@ -15,12 +15,10 @@ sidebar_position: 1
 
   Differences from /berlin/maps, all deliberate (not oversights):
   - No `variant` dropdown -- Hamburg only has `live_data` (see pages/hamburg/index.md).
-  - No click-through link -- there is no /hamburg/area/[code] per-area profile page (Berlin's
-    version needs fct_gentrification_change/mart_price_rent_dimension, both Berlin-only). #310's
-    new subarea_l1/district rollup levels DO have profile-page routes
-    (/hamburg/area/subarea_l1/[code], /hamburg/area/district/[code]) but this page still doesn't
-    link to them, for the same "no click-through anywhere on this page" consistency Berlin's own
-    page doesn't have to worry about.
+  - No click-through link. Every level now has a profile-page route (/hamburg/area/[code] since
+    I21-g/#301, /hamburg/area/subarea_l1/[code], /hamburg/area/district/[code]), but this page
+    doesn't link to them; the Alert below points readers to the area-profiles list instead (#352
+    copy fix -- it previously said no Gebiet page existed).
   - Uses the `subarea_l2_live_data.geojson`/`subarea_l1_current.geojson`/`district_current.geojson`
     exports (web/scripts/export_area_geojson.py), not a variant of the existing plr_*/bzr_* files.
 
@@ -210,7 +208,8 @@ sidebar_position: 1
           title: indicatorShortLabel[effectiveIndicator],
           fmt: effectiveIndicator === 'status_class' ? 'id' : 'num1'
         },
-        { id: 'area_code', title: 'Gebiet code', valueClass: 'text-xs opacity-60', fmt: 'id' }
+        // #352 review: code_note is null (line skipped) when the label already holds the code.
+        { id: 'code_note', title: 'Gebiet code', valueClass: 'text-xs opacity-60', fmt: 'id' }
       ];
 </script>
 
@@ -234,9 +233,9 @@ sidebar_position: 1
   carry only a numeric code in the source geodata (unlike Berlin's named Planungsräume or
   Hamburg's own Stadtteile/Bezirke), so each one is shown as its Stadtteil plus an OpenStreetMap
   neighbourhood name that lies inside it, or its code where there is none — hover any Gebiet for
-  its label, value and code. There is no per-area drill-down page for Hamburg's Gebiet level yet (Berlin's equivalent needs data — a
-  trajectory history, price/rent — that does not yet exist for Hamburg; see
-  <a href="/hamburg">the Hamburg data hub</a> for the full inventory of what is and isn't built).
+  its label and value. Every Gebiet also has its own profile page (the map doesn't link to it;
+  find it in <a href="/hamburg/area">the area profiles list</a>, or see
+  <a href="/hamburg">the Hamburg data hub</a> for what is and isn't published there yet).
   <b>This map is never shown alongside, or blended with, Berlin's own map</b> — Hamburg and Berlin
   each have their own route, their own colour-scale computation, and are never offered as a
   side-by-side or subtracted comparison (see <a href="/methodology">methodology §6</a>).
@@ -307,6 +306,10 @@ select
     city_code,
     area_code,
     area_name,
+    -- #352 review: the Gebiet code as a separate tooltip line, only where the label doesn't
+    -- already contain it (the '<Stadtteil> · Gebiet <code>' fallback labels do).
+    case when strpos(area_name, 'Gebiet ' || area_code) > 0 then null else area_code end
+        as code_note,
     status_index,
     dynamism_index,
     status_class,
