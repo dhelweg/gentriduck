@@ -453,7 +453,9 @@ same-outcome comparison possible for the first time:
 
 - **Faithful** (all business types, uncurated) against the 2018 golden data:
   **statistically significant but wrong-signed** (n=435 areas — same result as before,
-  repeated here as the left side of the comparison).
+  repeated here as the left side of the comparison). This comparison was run in July 2026,
+  before the October 2026 OpenStreetMap deletion fix; the re-run on corrected data gives the
+  same wrong-signed result (rho +0.15, n=433 — see the [thesis re-check](/thesis-recheck)).
 - **Improved** (the curated, theory-weighted basket), now computed *natively* for 2018
   thesis-era boundaries, against the *same* 2018 golden data: **essentially no
   correlation** (rho ≈ 0.007, n=436, not statistically significant) — numerically

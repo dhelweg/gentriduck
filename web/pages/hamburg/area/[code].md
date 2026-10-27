@@ -303,7 +303,8 @@ select
     n_schools, n_kindergartens, n_doctors, n_dentists, n_pharmacies, n_supermarkets,
     n_playgrounds, n_transit_stops,
     gastro_poi_count, gastro_poi_with_cuisine_count,
-    dominant_cuisine, dominant_cuisine_share
+    replace(replace(dominant_cuisine, chr(59), ' / '), '_', ' ') as dominant_cuisine,
+    dominant_cuisine_share
 from gentriduck_marts.mart_area_amenities
 where city_code = 'HH' and area_level = 'subarea_l2' and area_code = '${params.code}'
 order by snapshot_year desc
@@ -366,13 +367,13 @@ with
         select 8, 'Transit stops', a.n_transit_stops, d.n_transit_stops
         from area_row as a left join district_row as d on true
     )
-select sort_order, indicator, cast(area_n as varchar) as area_value, cast(district_n as varchar) as district_value
+select sort_order, indicator, cast(cast(area_n as bigint) as varchar) as area_value, cast(cast(district_n as bigint) as varchar) as district_value
 from facts
 order by sort_order
 ```
 
 <p>
-{#if amenities_current[0]}
+{#if amenities_current[0]?.snapshot_year}
 Based on OpenStreetMap tagging as of <b>{amenities_current[0].snapshot_year}</b>, this area has the
 everyday-infrastructure counts below, shown alongside its district (Bezirk) total for context.
 {:else}
@@ -394,12 +395,12 @@ No amenity data is available for this area yet.
 </Alert>
 
 <p>
-{#if amenities_current[0] && amenities_current[0].gastro_poi_with_cuisine_count >= 8 && amenities_current[0].dominant_cuisine_share >= 0.15}
+{#if amenities_current[0]?.snapshot_year && amenities_current[0].gastro_poi_with_cuisine_count >= 8 && amenities_current[0].dominant_cuisine_share >= 0.15}
 Among <b>{amenities_current[0].gastro_poi_with_cuisine_count}</b> restaurants/cafes with cuisine
 data tagged in this area, the <b>most common cuisine</b> is
 <b>{amenities_current[0].dominant_cuisine}</b>
 ({Math.round(amenities_current[0].dominant_cuisine_share * 100)}% of cuisine-tagged restaurants/cafes).
-{:else if amenities_current[0] && amenities_current[0].gastro_poi_with_cuisine_count >= 8}
+{:else if amenities_current[0]?.snapshot_year && amenities_current[0].gastro_poi_with_cuisine_count >= 8}
 Cuisine is tagged for <b>{amenities_current[0].gastro_poi_with_cuisine_count}</b> restaurants/cafes
 here, but no single cuisine reaches 15% of them, so none is named.
 {:else}
