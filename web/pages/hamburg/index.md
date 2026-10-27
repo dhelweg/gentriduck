@@ -105,8 +105,9 @@ where variant = 'live_data' and area_level = 'subarea_l2' and city_code = 'HH'
 | Socio-demographic baseline composite (D4/EWR) | ✅ 5 indicators, PLR grain | ⛔ not published in this mart (`own_idx_class` is NULL for every Hamburg row) — see methodology §6.2/§6.3 for what the underlying composite looks like where it *is* disclosed |
 | Land value & estimated rent (Bodenrichtwert/Mietspiegel) | ✅ | ⚠️ narrower in kind, not missing — `mart_price_rent_dimension` carries Hamburg's Wohnlage tier composition + modelled Mietenspiegel rent (I21-i/#303): no BRW/land-value equivalent, 2-tier not 3-tier Wohnlage, current-state-only. No Hamburg display section is built from it here yet |
 | Milieuschutz / displacement-zone flag | ✅ | disclosed separately (Hamburg's *soziale Erhaltungsverordnung*, C5/#203) but not yet surfaced as a site page |
-| Named neighbourhoods / district browse | ✅ (542 PLRs, all named) | ⛔ Hamburg's finest grain (943 Gebiete) has **no name** in the source data — only a numeric code (see the map below). A [structural area-hierarchy scaffold](/hamburg/area) exists (I21-g, #301) — routes and page layout only, no real per-area figures published yet |
-| Per-area trajectory / time-series page | ✅ | ⛔ needs `fct_gentrification_change` (still Berlin-only by design, H3 sign-off condition 4) and a web wiring pass for `fct_gentrification_trajectory` (admits Hamburg rows as of #314, but no page section reads them yet — gated behind `<NotYetPublished>`) |
+| Named neighbourhoods / district browse | ✅ (542 PLRs, all named) | ⛔ Hamburg's finest grain (943 Gebiete) has **no name** in the source data — only a numeric code (see the map below). [Area profiles](/hamburg/area) (district → Stadtteil → Gebiet, I21-g/#301) publish the social-status trajectory (#317) and everyday amenities; other sections are still deferred |
+| Per-area trajectory / time-series page | ✅ | ⚠️ the 2019–2025 social-status trajectory is published on every Gebiet and Stadtteil page (#314/#317); the edition-to-edition change table still needs `fct_gentrification_change` (Berlin-only by design, H3 sign-off condition 4) |
+| Everyday amenities (schools, doctors, transit, most common cuisine; OSM) | ✅ | ✅ on every Gebiet and Stadtteil page (I20) |
 
 ## Where to go next
 
@@ -119,9 +120,9 @@ where variant = 'live_data' and area_level = 'subarea_l2' and city_code = 'HH'
     Where shops, cafés, and other mapped places are concentrated across Hamburg — raw density or
     Offering Advantage — plus the same signal added up across the whole city.
   </LinkCard>
-  <LinkCard href="/hamburg/area" icon="🧭" title="Area profiles (scaffold)" cta="See the structure →">
-    A structural preview of the district → Stadtteil → Gebiet drill-down template (I21-g, #301) —
-    routes and page layout only; no real per-area figures are published here yet.
+  <LinkCard href="/hamburg/area" icon="🧭" title="Area profiles" cta="Browse the areas →">
+    The district → Stadtteil → Gebiet drill-down (I21-g, #301): each page shows its social-status
+    trajectory and everyday amenities; other sections are still marked as not yet published.
   </LinkCard>
 </LinkCards>
 
@@ -135,11 +136,11 @@ where variant = 'live_data' and area_level = 'subarea_l2' and city_code = 'HH'
 - **Only one data variant.** Unlike Berlin (which offers a 2018-thesis-reproduction `standard`
   variant alongside `live_data`), Hamburg only ever appears in the `live_data` variant — there is
   no Hamburg equivalent of the frozen 2018 snapshot.
-- **The [area-profile scaffold](/hamburg/area) shows structure only.** I21-g (#301) introduced the
+- **The [area profiles](/hamburg/area) are only partly filled.** I21-g (#301) introduced the
   `/hamburg/area/…` route tree (district → Stadtteil → Gebiet) on the same canonical template as
-  Berlin's area pages, but every page in it renders an explicit "not yet published for Hamburg"
-  state rather than a real figure — publishing real content there is its own, separately-gated
-  ticket (I21-i, #303).
+  Berlin's area pages. They now publish the social-status trajectory (#317) and everyday
+  amenities; the other sections (commercial mix, demographics, portrait) still render an explicit
+  "not yet published for Hamburg" state rather than a figure.
 - **Every other caveat on this page is a pointer, not a repeat.** The specific, load-bearing
   differences from Berlin — the Dynamik window's qualitative meaning, the missing D4 indicators,
   the Stadtteil grain ceiling, and the same-named-stage disclosure rule — are stated once, in full,
