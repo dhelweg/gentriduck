@@ -165,12 +165,12 @@ def build_steps(repo_root: Path) -> list[IngestStep]:
             _py(
                 "ingestion/berlin/mss/ingest_mss_2013_excel.py", "--out-dir", "data/raw/berlin/mss"
             ),
-            # Shares a manifest source_id with ingest_mss.py above (existing,
-            # pre-#251 quirk — both write "berlin__mss"). Skip-if-fresh treats
-            # this conservatively: the shared entry only reads "ok" once both
-            # scripts' outputs are on disk and unchanged, so neither is ever
-            # skipped on the strength of the *other's* manifest write alone
-            # unless a full run already confirmed both are fresh.
+            # Shares a manifest source_id with ingest_mss.py above (both write
+            # "berlin__mss"). Freshness is decided ONCE per source before any step
+            # runs (main()), so the WFS step's manifest write can no longer make this
+            # step look fresh -- it did, and mss_2013 silently disappeared (fixed
+            # 2026-10-27). Known quirk: the manifest's ingest_script.module is the
+            # last writer's, so an edit to ingest_mss.py alone is not seen as stale.
             source_id="berlin__mss",
             blocking=True,
         ),

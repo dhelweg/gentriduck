@@ -76,7 +76,7 @@
 -- int_berlin_ewr_plr2021.
 --
 -- brw_residential_coverage_frac (geo condition 4):
--- = SUM(intersection_area_m2) / ST_Area(plr_geom) per PLR.
+-- = AREA(UNION of residential-zone pieces) / ST_Area(plr_geom) per PLR (2026-10-27).
 -- A PLR with zero residential BRW coverage yields NULL brw_weighted_avg_eur_m2 and
 -- NULL brw_residential_coverage_frac; never 0.
 -- Consumers use this to identify pure park/water/industrial/airport PLRs where the

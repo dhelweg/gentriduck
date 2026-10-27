@@ -3359,7 +3359,9 @@ models:
             where: "brw_weighted_avg_eur_m2 is not null"
       - dbt_utils.expression_is_true:
           arguments:
-            expression: "brw_residential_coverage_frac <= 1.05"
+            # Tightened 1.05 -> 1.0001 (2026-10-27): coverage is now the area of the
+            # UNION of zone pieces, so it cannot exceed 1 except by float noise.
+            expression: "brw_residential_coverage_frac <= 1.0001"
           config:
             where: "brw_residential_coverage_frac is not null"
             severity: warn
@@ -3414,14 +3416,15 @@ models:
           industrial/airport PLR). Never 0 — zero EUR/m² is a false statement (geo cond 4).
       - name: n_brw_zones
         description: >
-          Count of distinct residential BRW zones contributing to this PLR's weighted mean.
+          Count of distinct residential BRW zone POLYGONS contributing to this PLR's
+          weighted mean (stacked records on one polygon count once since 2026-10-27).
           Always >= 1 when brw_weighted_avg_eur_m2 is not null.
       - name: brw_residential_coverage_frac
         description: >
           Fraction of the PLR area covered by residential (nutzung LIKE 'W%') BRW zones:
-          SUM(intersection_area_m2) / ST_Area(plr_geom) per PLR.
-          Expected range: (0, 1]. Values > 1.0 indicate topological artefacts post-makevalid
-          — flag in QA; do not treat > 1.0 as valid coverage. A warn-severity test guards this.
+          AREA(UNION of zone pieces) / ST_Area(plr_geom) per PLR. Range (0, 1] by
+          construction (was a SUM of pieces before 2026-10-27, which double-counted
+          overlapping zones up to 2.0). A warn-severity test guards <= 1.0001.
           NULL when no W% BRW zones overlap this PLR (pure park/water/industrial).
           Consumers: use to identify where the BRW signal is thin or absent. Zero-residential
           PLRs yield NULL brw_weighted_avg_eur_m2 and NULL here — transparent, not silently 0.
