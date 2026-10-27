@@ -25,10 +25,11 @@ sidebar_position: 2
     pages/hamburg/maps.md uses -- this page ignores that file's baked-in gentrification-index
     properties and only reads geometry + area_code, the same "geometry vehicle, values joined
     client-side" pattern /berlin/poi-map.md already uses against plr_live_data.geojson).
-  - Tooltip/table lead with the Gebiet CODE, not a name (see pages/hamburg/maps.md's header
-    comment for why -- area_name is genuinely blank at this grain).
-  - No click-through link -- no /hamburg/area/[code] profile page exists (see
-    pages/hamburg/index.md).
+  - #352: the tooltip leads with the Gebiet's derived label (area_name, '<Stadtteil> · <OSM place
+    name>' or '<Stadtteil> · Gebiet <code>', joined from dim_area_geometry in poi_map_data). The
+    code is a small last line only where the label doesn't already contain it (code_note).
+  - No click-through link -- the /hamburg/area/[code] profile pages exist (I21-g/#301) but this
+    map doesn't link to them; the closing paragraph points to the area-profiles list.
   - Separate <PolygonMap> instance (#351; formerly <AreaMap>)/route from Berlin's, per the H3-domain-signoff.md structural guard
     (no shared cross-city component instance) -- same principle as pages/hamburg/maps.md.
 -->
@@ -41,6 +42,7 @@ sidebar_position: 2
   $: poiView = inputs.view === 'development' ? 'development' : 'stock';
 
   $: areaTooltip = [
+    { id: 'area_name', showColumnName: false, valueClass: 'font-bold text-sm', fmt: 'id' },
     {
       id: inputs.metric.value === 'density'
         ? (poiView === 'stock' ? 'poi_density_per_km2' : 'density_delta')
@@ -51,7 +53,7 @@ sidebar_position: 2
       fmt: 'num1'
     },
     { id: 'poi_count', title: 'Mapped places (this domain)', fmt: 'num0' },
-    { id: 'area_code', title: 'Gebiet code', valueClass: 'text-xs opacity-60', fmt: 'id' }
+    { id: 'code_note', title: 'Gebiet code', valueClass: 'text-xs opacity-60', fmt: 'id' }
   ];
 
   const divergingPalette = ['#e66101', '#fdb863', '#f7f7f7', '#b2abd2', '#5e3c99'];
@@ -87,9 +89,10 @@ city-agnostic mart that has carried real Hamburg rows since H1 (#40).
 </Alert>
 
 <Alert status="warning">
-  <b>This map has no neighbourhood names, and thinly-mapped Gebiete are hatched grey.</b> Hamburg's
-  statistische Gebiete carry only a numeric code (see the <a href="/hamburg/maps">gentrification
-  map</a> for why); hover any area for its code. Offering Advantage is a compositional ratio (a
+  <b>Gebiet names are labels, and thinly-mapped Gebiete are hatched grey.</b> Hamburg's
+  statistische Gebiete carry only a numeric code, so each is labelled by its Stadtteil plus an
+  OpenStreetMap neighbourhood name or its code (see the <a href="/hamburg/maps">gentrification
+  map</a>); hover any area for its label. Offering Advantage is a compositional ratio (a
   location quotient) — in a Gebiet-year with very few mapped places overall, a single new or
   removed business can swing its Offering Advantage value disproportionately, so Gebiet-years
   below the same minimum-mapped-place threshold used for Berlin are shown as a hatched grey "No data" area rather
@@ -190,9 +193,20 @@ with
             and weight_variant = 'standard'
             and methodology_variant = 'faithful'
             and poi_domain_h = '${inputs.domain.value}'
+    ),
+    -- #352: Gebiet labels (single 'current' vintage for Hamburg).
+    names as (
+        select area_code, area_name
+        from gentriduck_marts.dim_area_geometry
+        where city_code = 'HH' and area_level = 'subarea_l2'
     )
 select
     b.area_code,
+    n.area_name,
+    -- #352 review: the Gebiet code as a separate tooltip line, only where the label doesn't
+    -- already contain it (the '<Stadtteil> · Gebiet <code>' fallback labels do).
+    case when strpos(n.area_name, 'Gebiet ' || b.area_code) > 0 then null else b.area_code end
+        as code_note,
     b.poi_density_per_km2,
     b.poi_count,
     case when b.oa_domain_min_base_flag then null else b.oa_domain_raw end as oa_domain,
@@ -200,6 +214,7 @@ select
     case when b.oa_domain_min_base_flag then null else b.oa_delta_raw end as oa_delta,
     b.oa_domain_min_base_flag
 from base as b
+left join names as n on b.area_code = n.area_code
 where b.snapshot_year = ${inputs.year.value}
 ```
 
@@ -242,8 +257,9 @@ where b.snapshot_year = ${inputs.year.value}
     emptyMessage="No data for this domain/year combination."
 />
 
-There is no per-area drill-down page for Hamburg yet — see the [Hamburg data hub](/hamburg) for
-what is and isn't built.
+Every Gebiet has its own profile page — find it in the [area profiles list](/hamburg/area)
+(this map doesn't link to it), or see the [Hamburg data hub](/hamburg) for what is and isn't
+published there yet.
 
 ---
 
@@ -317,7 +333,9 @@ limit 15
 
 - **OSM early-year completeness bias** — the citywide POI-growth chart's early years should be
   read cautiously, for the same reason as Berlin's (see [methodology §6](/methodology)).
-- **No neighbourhood names** — Hamburg's statistische Gebiete are shown by numeric code only.
+- **Gebiet names are labels, not official names** — Hamburg's statistische Gebiete have only a
+  numeric code, so each is shown as its Stadtteil plus an OpenStreetMap neighbourhood name or its
+  code (see the [Hamburg data hub](/hamburg)).
 - **No land value or rent chart on this page (yet)** — Hamburg's price/rent mart now carries
   narrower-in-kind data than Berlin's (Wohnlage tier composition + modelled Mietenspiegel rent,
   I21-i/#303: no BRW/land-value equivalent, 2-tier not 3-tier Wohnlage, current-state-only), but no

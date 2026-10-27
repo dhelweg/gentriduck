@@ -89,12 +89,11 @@ limit 1
 ```
 
 ```sql name_info
--- #307: best-effort OSM-derived Gebiet name, now that this page HAS a name to derive from a mart
--- (unlike when this page was first scaffolded, #301) -- dim_area_geometry.area_name for subarea_l2
--- rows is populated by int_hamburg_gebiet_osm_names' point-in-polygon match against OSM
--- place=neighbourhood|suburb|quarter nodes (see that model's header for the method). Coverage is
--- PARTIAL by design (943 official Gebiete vs informal OSM tagging) -- area_name may be null/blank,
--- which the script fallback below degrades gracefully to the numeric code label for.
+-- #307/#352: the Gebiet's display label. The source has no Gebiet names, so
+-- dim_area_geometry.area_name for subarea_l2 is derived (int_hamburg_gebiet_names):
+-- '<Stadtteil> · <OSM place name>' where an OSM neighbourhood/quarter point lies inside the
+-- Gebiet, else '<Stadtteil> · Gebiet <code>'. Every Gebiet has one; the script fallback below
+-- only covers a route with no geometry row at all.
 select area_name
 from gentriduck_marts.dim_area_geometry
 where city_code = 'HH' and area_level = 'subarea_l2' and area_code = '${params.code}'
@@ -129,13 +128,15 @@ limit 1
   // Computing the fallback here once avoids embedding any quote character in markdown prose.
   $: codeLabel = code_info[0] ? code_info[0].area_code : '';
 
-  // #307: OSM-derived Gebiet name, when a match exists (partial coverage by design -- see
-  // name_info's own comment). Falls back to the plain "Statistisches Gebiet {code}" label used
-  // before this ticket whenever no OSM match was found, so the page never shows a blank/empty
-  // name -- computed here (not inline in markdown) for the same smart-quote-avoidance reason as
-  // codeLabel above.
-  $: osmName = name_info?.[0]?.area_name ? name_info[0].area_name : null;
-  $: nameLabel = osmName ? `${osmName} (Gebiet ${codeLabel})` : `Statistisches Gebiet ${codeLabel}`;
+  // #352: the Gebiet label leads (see name_info's comment); the code moves to the eyebrow as
+  // secondary text, and only when the label doesn't already contain it (the code-fallback labels
+  // do). "Statistisches Gebiet {code}" remains only for a route with no geometry row. Computed here
+  // (not inline in markdown) for the same smart-quote-avoidance reason as codeLabel above.
+  $: areaName = name_info?.[0]?.area_name ? name_info[0].area_name : null;
+  $: nameLabel = areaName ?? `Statistisches Gebiet ${codeLabel}`;
+  $: heroEyebrow =
+    'Chapter 3 — The Evidence · most granular' +
+    (areaName && !areaName.includes(codeLabel) ? ` · Gebiet ${codeLabel}` : '');
 
   // #317: pace/comparison sentence for the "Social status & trajectory" section, computed the same
   // way as pages/berlin/area/[code].md's own speedSentence -- a display-layer heuristic over
@@ -166,7 +167,7 @@ limit 1
   })();
 </script>
 
-<Hero compact eyebrow="Chapter 3 — The Evidence · most granular" title="{nameLabel}" lede="Hamburg's finest published small-area grain — the same scale Berlin's Planungsraum profile page covers, scaffolded here (I21-g, #301). Its social-status trajectory (2019–2025) is now published below (#317); most other sections remain deferred." />
+<Hero compact eyebrow={heroEyebrow} title="{nameLabel}" lede="Hamburg's finest published small-area grain — the same scale Berlin's Planungsraum profile page covers, scaffolded here (I21-g, #301). Its social-status trajectory (2019–2025) is now published below (#317); most other sections remain deferred." />
 
 <!-- #302 (I21-h): real "Up:" link, same #255-precedent value-guarded static-prefix-href pattern
      as pages/berlin/area/[code].md's own Up-link (see that page's comment for the "undefined"-
@@ -189,7 +190,7 @@ limit 1
 <NotYetPublished what="a plain-language portrait for this area (equivalent to the PLR page's 'at a glance' summary)" />
 
 This area's current gentrification-stage classification is already public on
-[Hamburg's map](/hamburg/maps) (hover the Gebiet's shape or search its code) — this page does not
+[Hamburg's map](/hamburg/maps) (hover the Gebiet's shape or search its name) — this page does not
 repeat that figure yet; see the header comment above for why.
 
 ## Social status & trajectory
@@ -429,9 +430,9 @@ others, and makes no claim about whether it is a good or bad place to live.
   geometry export needed for this leaf level.
 -->
 ```sql minimap_areas
--- Name resolved directly in SQL (not via a JS-templated string literal) so an OSM-derived name
--- (#307) containing a quote character can never break this query's own SQL syntax -- same
--- coalesce-to-code fallback as name_info/nameLabel above, re-expressed in SQL only.
+-- Name resolved directly in SQL (not via a JS-templated string literal) so a label containing an
+-- OSM name (#307/#352) with a quote character can never break this query's own SQL syntax. The
+-- coalesce-to-code is a no-op since #352 (every Gebiet has a label), kept as a guard.
 select
     'subarea_l2:' || '${params.code}' as feature_key,
     coalesce(nullif(area_name, ''), '${params.code}') as area_name,
@@ -456,12 +457,11 @@ until it is refreshed, I21-j).
 
 ## Honest caveats
 
-- **This Gebiet's name, when shown, is a best-effort OSM match, not an official designation
-  (#307).** Hamburg's own statistisches-Gebiet source has no name field; where shown, the name
-  above is derived by matching this Gebiet's polygon against OpenStreetMap
-  `place=neighbourhood`/`suburb`/`quarter` points. Coverage is partial by design — many Gebiete
-  have no OSM match and fall back to the plain numeric code label ("Statistisches Gebiet
-  {'{code}'}").
+- **This Gebiet's name is a label, not an official designation (#307, #352).** Hamburg's own
+  statistisches-Gebiet source has no name field, so the name above is this Gebiet's Stadtteil
+  plus either an OpenStreetMap `place=neighbourhood`/`quarter` name whose point lies inside the
+  Gebiet (41 of 943 Gebiete) or, where there is none, the Gebiet's code. An OSM name marks a
+  point inside this Gebiet; the neighbourhood it names may be larger or smaller than the Gebiet.
 - **This page is mostly still a structural scaffold (I21-g, #301).** Every section except "Social
   status & trajectory" (below) and the "Up: Stadtteil" link shows a fixed deferred-state placeholder
   rather than a real Hamburg figure, even where an underlying mart already has real Hamburg rows for

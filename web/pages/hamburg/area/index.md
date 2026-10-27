@@ -36,18 +36,20 @@ sidebar_position: 3
   dim_area_geometry (already Evidence-source-registered, web/sources/gentriduck_marts/
   dim_area_geometry.sql) is used here for names/codes ONLY -- structural plumbing (which areas
   exist), not a statistic -- consistent with the ticket's "no real Hamburg per-area numbers" scope.
-  Hamburg's subarea_l2 rows carry a genuinely blank area_name in the source data (not a bug -- see
-  pages/hamburg/index.md's header comment and reference/area-hierarchy.md), so this table is codes
-  only, same honest framing pages/hamburg/index.md already uses for why no full-list page was built
-  there.
+  #352: Hamburg's subarea_l2 rows have no name in the source data, so dim_area_geometry.area_name
+  carries a derived label ('<Stadtteil> · <OSM place name>' or '<Stadtteil> · Gebiet <code>', see
+  transform/models/intermediate/int_hamburg_gebiet_names.sql). The table leads with that label and
+  keeps the code as a secondary column; sorting by label groups the Gebiete by Stadtteil.
 -->
 
-<Hero compact eyebrow="Chapter 3 — The Evidence" title="Area profiles" lede="Hamburg's statistische Gebiete, by code — the crawl-anchor for each Gebiet's own scaffolded profile page. This list exists to make every area reachable, not as a polished browse experience (see the caveat below)." />
+<Hero compact eyebrow="Chapter 3 — The Evidence" title="Area profiles" lede="Hamburg's statistische Gebiete, by Stadtteil — the crawl-anchor for each Gebiet's own scaffolded profile page. This list exists to make every area reachable, not as a polished browse experience (see the caveat below)." />
 
 <Alert status="info">
-  <b>No neighbourhood names at this grain.</b> Hamburg's statistische Gebiete carry only a numeric
-  code in the source geodata — see the <a href="/hamburg">Hamburg data hub</a> for the full data
-  inventory. Prefer <a href="/hamburg/area/district">browsing by district</a> or
+  <b>Gebiet names are labels, not official names.</b> Hamburg's statistische Gebiete carry only a
+  numeric code in the source geodata, so each one is listed as its Stadtteil plus an
+  OpenStreetMap neighbourhood name that lies inside it, or its code where there is none — see the
+  <a href="/hamburg">Hamburg data hub</a> for the full data inventory. Prefer
+  <a href="/hamburg/area/district">browsing by district</a> or
   <a href="/hamburg/maps">the map</a> as a friendlier way in; this table is the technical crawl root
   that makes every Gebiet's own page buildable at all.
 </Alert>
@@ -61,15 +63,17 @@ sidebar_position: 3
 
 ```sql gebiete
 select
+    area_name,
     area_code,
     '/hamburg/area/' || area_code as area_link
 from gentriduck_marts.dim_area_geometry
 where city_code = 'HH' and area_level = 'subarea_l2'
-order by area_code
+order by area_name
 ```
 
 <DataTable data={gebiete} rows=20 search=true link=area_link emptySet="warn" emptyMessage="No Hamburg Gebiet geometry available.">
-    <Column id=area_code title="Gebiet code"/>
+    <Column id=area_name title="Statistisches Gebiet"/>
+    <Column id=area_code title="Code"/>
 </DataTable>
 
 ---

@@ -356,11 +356,10 @@ others, and makes no claim about whether it is a good or bad place to live.
      Stadtteil's own polygon highlighted, its statistische Gebiete (the next level down, OA-D1b/#240
      ST_Within spatial crosswalk, published via mart_area_hierarchy) clickable -- see
      pages/hamburg/area/district/[code].md's own drill-down mini map comment for the general
-     pattern. Uses area_name (OSM-derived Gebiet name, #307) as the visible child label, not the raw
-     numeric area_code -- names are now available (see stg_hamburg_osm_places.sql /
-     int_hamburg_gebiet_osm_names.sql / dim_area_geometry.sql's #307 CTE), falling back to the code
-     for the Gebiete that OSM's informal neighbourhood tagging doesn't cover (partial coverage by
-     design). `base` is imported once, in this page's single existing `<script>` block above. -->
+     pattern. Uses area_name (the derived Gebiet label, #307/#352: '<Stadtteil> · <OSM place
+     name>' or '<Stadtteil> · Gebiet <code>', see int_hamburg_gebiet_names.sql) as the visible
+     child label, not the raw numeric area_code; every Gebiet has one since #352. `base` is
+     imported once, in this page's single existing `<script>` block above. -->
 
 ```sql minimap_areas
 -- Self row's name resolved directly in SQL (not a JS-templated string literal) so a WFS-sourced
@@ -376,9 +375,8 @@ where city_code = 'HH' and area_level = 'subarea_l1' and area_code = '${params.c
 union all
 select
     'subarea_l2:' || h.area_code as feature_key,
-    -- #307: OSM-derived Gebiet name where matched, falling back to the numeric code where OSM's
-    -- informal tagging has no coverage -- same coalesce already used by this page's own `children`
-    -- query above (gebiet_name).
+    -- #307/#352: the derived Gebiet label (every Gebiet has one); the coalesce-to-code is a
+    -- guard only -- same coalesce as this page's own `children` query above (gebiet_name).
     coalesce(nullif(g.area_name, ''), h.area_code) as area_name,
     'Click to explore' as role,
     2 as sort_order,
