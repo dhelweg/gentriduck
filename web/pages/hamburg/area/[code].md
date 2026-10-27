@@ -1,5 +1,6 @@
 ---
 breadcrumb: "select coalesce((select nullif(area_name, '') from gentriduck_marts.dim_area_geometry where city_code = 'HH' and area_level = 'subarea_l2' and area_code = '${params.code}' limit 1), '${params.code}') as breadcrumb"
+hide_breadcrumbs: true
 ---
 
 <!--
@@ -72,6 +73,38 @@ breadcrumb: "select coalesce((select nullif(area_name, '') from gentriduck_marts
   must disclose (1) the classification describes a recent ~6-year window (2019-2025), not Hamburg's
   full 13-edition history, and (2) it is a status-only classification, never a displacement verdict
   -- both stated in the Alert immediately below this heading, not buried in a footnote.
+
+  #353 (Hamburg-Berlin parity review): this page now follows the Berlin Planungsraum profile
+  (pages/berlin/area/[code].md) section by section, filling every section that existing sign-offs
+  already cover and saying plainly, with the reason, where they don't. The full gap list, with the
+  sign-off or missing data behind each decision, is docs/epic-g/353-hamburg-berlin-parity-audit.md.
+  The rule applied: show a Hamburg figure here only if the same figure for the same Gebiet is
+  already public elsewhere on the site under a sign-off; add no new Hamburg aggregate beyond
+  counts and sums of such figures (no averages of indices, no new comparisons).
+  - Current stage + pressure trend (`gentrification_index`, latest live_data period): the same row
+    /hamburg/maps already shows for this Gebiet (H3/#237, docs/epic-h/H3-geo-signoff.md,
+    H3-domain-signoff.md). H3 domain condition 1(iv) is honoured: the stage is labelled "not
+    directly equivalent" to a same-named Berlin stage, linking to methodology §6. The I21-g
+    "reserved for I21-i" note above is superseded here: #303 (I21-i) closed after admitting only
+    price/rent rows to the mart, and the stage figure itself was already public on the map.
+  - Commercial mix over time (`fct_poi_development`, HH/current) and the Offering Advantage radar
+    (`mart_poi_offering_advantage_map`, HH, standard/faithful, the same rows /hamburg/poi-map
+    colours its map by; #312/#318 dual sign-offs): same charts and I14/I15 framing conditions as
+    the Berlin page, with Hamburg's own baseline. Rows with the mart's minimum-base flag are left
+    out of the radar and disclosed (same suppression as /hamburg/poi-map); the Berlin page's
+    per-domain "fewer than 5 places" dagger is kept. NOT carried over: Berlin's district-average
+    radar line and district/city status-chart lines (averages never computed or reviewed for
+    Hamburg), and the Offering-Advantage-as-index-input sentence (false for Hamburg, whose stage is
+    the Sozialmonitoring D1/D2 outcome only).
+  - Up-link / hierarchy: the parent Stadtteil (OA-D1b/#240 crosswalk via mart_area_hierarchy,
+    #302) and, one hop further, its district (source-provided edge).
+  - Still not shown, each with its reason on the page: a written portrait (Berlin's wording is
+    I14-reviewed for Berlin areas only), status over time (fct_gentrification_change is BER-only,
+    H3 condition 4; #314 asks for any long-run Hamburg view to be a separately labelled product),
+    within-group dominance (source layer restricted to BER, web/sources/.../mart_poi_dominance.sql),
+    people & structure (Hamburg demographics exist only at Stadtteil/district grain and their web
+    slice has its own forward conditions, docs/epic-h/313-hh-area-demographics-domain-signoff.md
+    C-5..C-8), land value & rent (docs/epic-h/303-price-rent-hamburg-domain-signoff.md Condition 2).
 -->
 
 ```sql code_info
@@ -94,7 +127,11 @@ limit 1
 -- '<Stadtteil> · <OSM place name>' where an OSM neighbourhood/quarter point lies inside the
 -- Gebiet, else '<Stadtteil> · Gebiet <code>'. Every Gebiet has one; the script fallback below
 -- only covers a route with no geometry row at all.
-select area_name
+-- #353 (#352 review follow-up): `label_has_code` is the ONE label-contains-code test used site-wide
+-- (same expression as the code_note columns on /hamburg/maps, /hamburg/poi-map and the Gebiet
+-- lists), replacing a JS `areaName.includes(code)` check that could also match a code appearing
+-- inside an OSM name.
+select area_name, strpos(area_name, 'Gebiet ' || area_code) > 0 as label_has_code
 from gentriduck_marts.dim_area_geometry
 where city_code = 'HH' and area_level = 'subarea_l2' and area_code = '${params.code}'
 limit 1
@@ -105,111 +142,53 @@ limit 1
 -- dim_area_hierarchy's hh_l2_to_l1 CTE, the OA-D1b/#240 spatial crosswalk -- see that model's
 -- header for the method; this query re-derives nothing). Joined against dim_area_geometry for the
 -- display name (structural lookup, not a statistic -- same framing as area_exists above).
+-- #353: plus the Stadtteil's own parent district (hh_l1_to_district, source-provided), for the
+-- breadcrumb/Up line and the district-total amenity column's label.
 select
     h.parent_area_code as stadtteil_code,
-    g.area_name as stadtteil_name
+    g.area_name as stadtteil_name,
+    h2.parent_area_code as district_code,
+    gd.area_name as district_name
 from gentriduck_marts.mart_area_hierarchy as h
 left join
     gentriduck_marts.dim_area_geometry as g
     on g.city_code = 'HH' and g.area_level = 'subarea_l1' and g.area_code = h.parent_area_code
+left join
+    gentriduck_marts.mart_area_hierarchy as h2
+    on h2.city_code = 'HH' and h2.area_level = 'subarea_l1' and h2.area_code = h.parent_area_code
+left join
+    gentriduck_marts.dim_area_geometry as gd
+    on gd.city_code = 'HH' and gd.area_level = 'district' and gd.area_code = h2.parent_area_code
 where h.city_code = 'HH' and h.area_level = 'subarea_l2' and h.area_code = '${params.code}'
 limit 1
 ```
 
-<script>
-  // #308: for the drill-down mini map's geoJsonUrl base-path prefixing (#144 convention) -- see
-  // this page's "## Where this area sits" section below.
-  import { base } from '$app/paths';
-
-  // Plain script-computed fallback, kept out of markdown text/attribute strings -- mdsvex's
-  // smart-quote pass rewrites straight `'…'` quotes inside markdown text (including heading text
-  // containing a mustache expression) into curly typographic quotes, which then breaks the Svelte
-  // expression parser (confirmed: build failed on the equivalent inline ternary in a `##` heading).
-  // Computing the fallback here once avoids embedding any quote character in markdown prose.
-  $: codeLabel = code_info[0] ? code_info[0].area_code : '';
-
-  // #352: the Gebiet label leads (see name_info's comment); the code moves to the eyebrow as
-  // secondary text, and only when the label doesn't already contain it (the code-fallback labels
-  // do). "Statistisches Gebiet {code}" remains only for a route with no geometry row. Computed here
-  // (not inline in markdown) for the same smart-quote-avoidance reason as codeLabel above.
-  $: areaName = name_info?.[0]?.area_name ? name_info[0].area_name : null;
-  $: nameLabel = areaName ?? `Statistisches Gebiet ${codeLabel}`;
-  $: heroEyebrow =
-    'Chapter 3 — The Evidence · most granular' +
-    (areaName && !areaName.includes(codeLabel) ? ` · Gebiet ${codeLabel}` : '');
-
-  // #317: pace/comparison sentence for the "Social status & trajectory" section, computed the same
-  // way as pages/berlin/area/[code].md's own speedSentence -- a display-layer heuristic over
-  // already-published fct_gentrification_trajectory columns, no new statistic.
-  $: traj = trajectory_summary?.[0];
-  $: siblingRows = Array.isArray(sibling_trajectory_mix) ? sibling_trajectory_mix : Array.from(sibling_trajectory_mix ?? []);
-  $: trajectorySentence = (() => {
-    if (!traj || traj.n_editions == null) return null;
-    if (traj.n_editions <= 1) {
-      return "Only one annual Sozialmonitoring reading is on record for this Gebiet within the 2019–2025 window, so its pace of change can't be assessed yet.";
-    }
-    const delta = traj.status_delta != null ? Math.abs(Number(traj.status_delta)) : null;
-    const pace = delta == null ? 'at an unclear pace' : delta < 0.4 ? 'only gradually' : delta < 1.2 ? 'at a moderate pace' : 'quickly, moving several status steps';
-    const direction = {
-      improving: 'become less deprived',
-      declining: 'become more deprived',
-      'stable-established': 'stayed consistently low-deprivation',
-      'persistently-deprived': 'stayed consistently high-deprivation',
-      mixed: 'shown no single clear direction'
-    }[traj.trajectory_type] ?? 'shown an unclassified pattern';
-    let sentence = `Within the 2019–2025 window (editions ${traj.first_edition}–${traj.last_edition} on record), it has ${direction}, ${pace} (trajectory confidence: ${traj.trajectory_confidence}).`;
-    const total = siblingRows.reduce((s, r) => s + Number(r.n || 0), 0);
-    const same = siblingRows.find((r) => r.trajectory_type === traj.trajectory_type);
-    if (total > 0 && same) {
-      sentence += ` ${same.n} of ${total} other Gebiete in this Stadtteil with a usable trajectory show this same "${traj.trajectory_type}" pattern.`;
-    }
-    return sentence;
-  })();
-</script>
-
-<Hero compact eyebrow={heroEyebrow} title="{nameLabel}" lede="Hamburg's finest published small-area grain — the same scale Berlin's Planungsraum profile page covers, scaffolded here (I21-g, #301). Its social-status trajectory (2019–2025) is now published below (#317); most other sections remain deferred." />
-
-<!-- #302 (I21-h): real "Up:" link, same #255-precedent value-guarded static-prefix-href pattern
-     as pages/berlin/area/[code].md's own Up-link (see that page's comment for the "undefined"-
-     cascade rationale this guards against). -->
-<p>Up: {#if parent_info[0]?.stadtteil_code}<a href="/hamburg/area/subarea_l1/{parent_info[0].stadtteil_code}">{parent_info[0].stadtteil_name ?? 'Stadtteil profile'}</a>{:else}<a href="/hamburg/area/subarea_l1">Stadtteil profile</a>{/if} · <a href="/hamburg/area">all Gebiete</a> · <a href="/hamburg/area/subarea_l1">all Stadtteile</a></p>
-
-{#if area_exists.length === 0}
-<Alert status="warning">
-  No Hamburg Gebiet geometry found for code <b>{codeLabel}</b> —
-  this route should only be reachable via a real crawled link from
-  <a href="/hamburg/area">the Gebiet list</a>; if you landed here another way, that list is the
-  reliable starting point.
-</Alert>
-{/if}
-
-<NotYetPublished pageLevel what="this Gebiet's status, commercial mix, and demographic profile (its social-status trajectory is now published below, #317)" />
-
-## {nameLabel} at a glance
-
-<NotYetPublished what="a plain-language portrait for this area (equivalent to the PLR page's 'at a glance' summary)" />
-
-This area's current gentrification-stage classification is already public on
-[Hamburg's map](/hamburg/maps) (hover the Gebiet's shape or search its name) — this page does not
-repeat that figure yet; see the header comment above for why.
-
-## Social status & trajectory
-
-<Alert status="warning">
-  <b>Two things to know before reading this section (#317):</b><br/>
-  <b>1. Recent window, not full history.</b> These labels describe a bounded <b>~6-year window
-  (2019–2025)</b> of Hamburg's own annual Sozialmonitoring panel, not the full 13-edition
-  (2013–2025) series on record — the same cadence-normalized window already used for Berlin
-  (H-C2, #159), applied here to Hamburg's annual cadence for the first time (#314). A Gebiet
-  classified <b>persistently-deprived</b> or <b>stable-established</b> below reflects only the last
-  ~6 years, not necessarily this area's full history — don't read it with the same long-run framing
-  Berlin's own multi-decade biennial figures might imply.<br/>
-  <b>2. Status-only, not a displacement verdict.</b> <code>stable-established</code>,
-  <code>persistently-deprived</code>, <code>improving</code>, <code>declining</code>, and
-  <code>mixed</code> describe how this Gebiet's <i>officially-measured social status</i> moved over
-  that window — never a claim about who moved, why, or whether any resident was displaced. See
-  <a href="/methodology">methodology</a> for what this classification does and doesn't claim.
-</Alert>
+```sql current_stage
+-- #353: this Gebiet's current stage and pressure trend -- the exact row /hamburg/maps' `areas_leaf`
+-- query colours this Gebiet by (live_data, subarea_l2, latest Hamburg period; H3/#237). Re-shown
+-- here, not re-derived.
+select
+    period_yyyymm,
+    status_class as stage,
+    dynamism_class as pressure_trend,
+    status_index,
+    case status_class
+        when 'active-gentrification' then 'Active gentrification'
+        when 'pioneer-signal' then 'Early pioneer signal'
+        when 'improving-vulnerable' then 'Improving, vulnerable area'
+        when 'pre-gentrification' then 'Pre-gentrification watch'
+        when 'consolidation-pressure' then 'Consolidated, still intensifying'
+        when 'stable-established' then 'Stable, established'
+    end as stage_label
+from gentriduck_marts.gentrification_index
+where variant = 'live_data' and area_level = 'subarea_l2' and city_code = 'HH'
+  and area_code = '${params.code}'
+  and period_yyyymm = (
+      select max(period_yyyymm)
+      from gentriduck_marts.gentrification_index
+      where variant = 'live_data' and area_level = 'subarea_l2' and city_code = 'HH'
+  )
+```
 
 ```sql trajectory_summary
 -- #317: real Hamburg trajectory data, via fct_gentrification_trajectory (Hamburg admitted #314,
@@ -251,13 +230,200 @@ where
 group by all
 ```
 
+```sql gebiet_label_stats
+-- #353 (#352 review follow-up): how many Gebiet labels carry an OSM place name, computed instead of
+-- the hard-coded "41 of 943" -- same label_has_code test as name_info above.
+select
+    count(*) filter (where strpos(area_name, 'Gebiet ' || area_code) = 0) as n_osm_named,
+    count(*) as n_gebiete
+from gentriduck_marts.dim_area_geometry
+where city_code = 'HH' and area_level = 'subarea_l2'
+```
+
+<script>
+  // #308: for the drill-down mini map's geoJsonUrl base-path prefixing (#144 convention) -- see
+  // this page's "## Where this area sits" section below.
+  import { base } from '$app/paths';
+
+  // Plain script-computed fallback, kept out of markdown text/attribute strings -- mdsvex's
+  // smart-quote pass rewrites straight `'…'` quotes inside markdown text (including heading text
+  // containing a mustache expression) into curly typographic quotes, which then breaks the Svelte
+  // expression parser (confirmed: build failed on the equivalent inline ternary in a `##` heading).
+  // Computing the fallback here once avoids embedding any quote character in markdown prose.
+  $: codeLabel = code_info[0] ? code_info[0].area_code : '';
+
+  // #352: the Gebiet label leads (see name_info's comment); the code moves to the eyebrow as
+  // secondary text, and only when the label doesn't already contain it (the code-fallback labels
+  // do). "Statistisches Gebiet {code}" remains only for a route with no geometry row.
+  // #353: `label_has_code` comes from SQL (name_info), the one site-wide test.
+  $: areaName = name_info?.[0]?.area_name ? name_info[0].area_name : null;
+  $: nameLabel = areaName ?? `Statistisches Gebiet ${codeLabel}`;
+  $: heroEyebrow =
+    'Chapter 3 — The Evidence · most granular' +
+    (areaName && !name_info[0].label_has_code ? ` · Gebiet ${codeLabel}` : '');
+
+  // #353: breadcrumb trail + browser-tab title, same shape as the Berlin PLR page
+  // ("Home › <City> › <full list> › <this area>").
+  $: crumbs = [
+    { label: 'Hamburg', href: '/hamburg' },
+    { label: 'All Gebiete', href: '/hamburg/area' },
+    { label: nameLabel }
+  ];
+  $: pageTitle = areaName ? `${areaName} — Gebiet profile · Hamburg` : null;
+  $: parent = parent_info?.[0];
+  $: labelStats = gebiet_label_stats?.[0];
+  // Pre-formatted here, not inline in the markdown caveat list (smart-quote note above).
+  $: osmLabelCount = labelStats ? `${labelStats.n_osm_named} of ${labelStats.n_gebiete} Gebiete` : 'a minority of Gebiete';
+
+  // #353: plain-language stage line for "at a glance" -- the stage label is the same plain label
+  // /hamburg/maps shows for this Gebiet; the "not directly equivalent" clause is H3 domain
+  // condition 1(iv). No portrait wording beyond that (see this page's header comment).
+  $: cur = current_stage?.[0];
+  $: stageSentence = cur && cur.stage_label
+    ? `In Hamburg's latest Sozialmonitoring edition on this site (${String(cur.period_yyyymm).slice(0, 4)}), this Gebiet is in the stage <b>${cur.stage_label}</b>, with a <b>${cur.pressure_trend}</b> pressure trend. This is a Hamburg-coded stage: it is <b>not directly equivalent</b> to a Berlin stage of the same name (Hamburg's Dynamik window is 3 years, Berlin's 2; see <a href="${base}/methodology">methodology §6</a>).`
+    : 'No current Sozialmonitoring stage is on record for this Gebiet in the latest Hamburg edition on this site.';
+
+  // #317: pace/comparison sentence for the "Social status & trajectory" section, computed the same
+  // way as pages/berlin/area/[code].md's own speedSentence -- a display-layer heuristic over
+  // already-published fct_gentrification_trajectory columns, no new statistic.
+  $: traj = trajectory_summary?.[0];
+  $: siblingRows = Array.isArray(sibling_trajectory_mix) ? sibling_trajectory_mix : Array.from(sibling_trajectory_mix ?? []);
+  $: trajectorySentence = (() => {
+    if (!traj || traj.n_editions == null) return null;
+    if (traj.n_editions <= 1) {
+      return "Only one annual Sozialmonitoring reading is on record for this Gebiet within the 2019–2025 window, so its pace of change can't be assessed yet.";
+    }
+    const delta = traj.status_delta != null ? Math.abs(Number(traj.status_delta)) : null;
+    const pace = delta == null ? 'at an unclear pace' : delta < 0.4 ? 'only gradually' : delta < 1.2 ? 'at a moderate pace' : 'quickly, moving several status steps';
+    const direction = {
+      improving: 'become less deprived',
+      declining: 'become more deprived',
+      'stable-established': 'stayed consistently low-deprivation',
+      'persistently-deprived': 'stayed consistently high-deprivation',
+      mixed: 'shown no single clear direction'
+    }[traj.trajectory_type] ?? 'shown an unclassified pattern';
+    let sentence = `Within the 2019–2025 window (editions ${traj.first_edition}–${traj.last_edition} on record), it has ${direction}, ${pace} (trajectory confidence: ${traj.trajectory_confidence}).`;
+    const total = siblingRows.reduce((s, r) => s + Number(r.n || 0), 0);
+    const same = siblingRows.find((r) => r.trajectory_type === traj.trajectory_type);
+    if (total > 0 && same) {
+      sentence += ` ${same.n} of ${total} other Gebiete in this Stadtteil with a usable trajectory show this same "${traj.trajectory_type}" pattern.`;
+    }
+    return sentence;
+  })();
+
+  $: glanceParagraphs = [stageSentence, trajectorySentence].filter(Boolean);
+
+  // #353: commercial-mix charts, same client-side helpers as the Berlin PLR page (I14 #231):
+  // stacked-bar segments ordered by total count, largest first.
+  $: poiTrendRows = Array.isArray(poi_trend) ? poi_trend : Array.from(poi_trend ?? []);
+  $: poiCategoryOrder = Array.from(
+    poiTrendRows.reduce((totals, row) => {
+      totals.set(row.poi_category_h, (totals.get(row.poi_category_h) || 0) + Number(row.poi_count || 0));
+      return totals;
+    }, new Map())
+  )
+    .sort((a, b) => b[1] - a[1])
+    .map(([category]) => category);
+  $: poiMixCtx = poi_mix_context?.[0];
+
+  // #353: Offering Advantage radar, the Berlin PLR page's I14/I15 display transform
+  // (pct_vs_baseline = (oa_domain - 1) * 100) over Hamburg's own rows. Minimum-base-flagged rows
+  // are already dropped in SQL (poi_oa_radar); the per-domain "fewer than 5 mapped places" dagger
+  // is the Berlin page's display-only guard, unchanged. No district-average series (see header).
+  const OA_LOW_BASE_THRESHOLD = 5;
+  $: radarSourceRows = Array.isArray(poi_oa_radar) ? poi_oa_radar : Array.from(poi_oa_radar ?? []);
+  $: radarRows = radarSourceRows.map((r) => ({
+    domain: r.poi_domain_h,
+    pct: (Number(r.oa_domain) - 1) * 100,
+    lowBase: Number(r.poi_count || 0) < OA_LOW_BASE_THRESHOLD,
+    poiCount: r.poi_count
+  }));
+  $: radarMaxScale = Math.max(100, ...radarRows.map((r) => r.pct)) * 1.1;
+  const radarMinScale = -100; // oa_domain >= 0, so pct_vs_baseline can never go below -100%.
+  $: radarConfig = {
+    tooltip: {},
+    radar: {
+      indicator: radarRows.map((r) => ({
+        name: r.lowBase ? `${r.domain} †` : r.domain,
+        max: radarMaxScale,
+        min: radarMinScale
+      })),
+      splitNumber: 4,
+      axisName: { fontSize: 10 }
+    },
+    series: [
+      {
+        type: 'radar',
+        data: [
+          { value: radarRows.map((r) => r.pct), name: nameLabel, areaStyle: { opacity: 0.15 } },
+          {
+            value: radarRows.map(() => 0),
+            name: 'Citywide baseline (0% = Hamburg average)',
+            lineStyle: { type: 'dashed', width: 1 },
+            areaStyle: { opacity: 0 },
+            symbol: 'none'
+          }
+        ]
+      }
+    ]
+  };
+</script>
+
+<AreaBreadcrumbs {crumbs} />
+<PageTitle title={pageTitle} />
+
+<Hero compact eyebrow={heroEyebrow} title="{nameLabel}" lede="Stage, social-status trajectory, commercial mix, Offering Advantage, and everyday amenities for one Hamburg statistisches Gebiet — Hamburg's finest published small-area grain, the same scale as a Berlin Planungsraum." />
+
+<!-- #302 (I21-h): real "Up:" link, same #255-precedent value-guarded static-prefix-href pattern
+     as pages/berlin/area/[code].md's own Up-link (see that page's comment for the "undefined"-
+     cascade rationale this guards against). #353: same three-part shape as the Berlin PLR line
+     ("Up: parent profile · district browse · all districts"). -->
+<p>Up: {#if parent_info[0]?.stadtteil_code}<a href="/hamburg/area/subarea_l1/{parent_info[0].stadtteil_code}">{parent_info[0].stadtteil_name ?? 'Stadtteil profile'}</a>{:else}<a href="/hamburg/area/subarea_l1">Stadtteil profile</a>{/if} · <a href="/hamburg/area-detail">district browse</a> · <a href="/hamburg/area/district">all districts</a></p>
+
+{#if area_exists.length === 0}
+<Alert status="warning">
+  No Hamburg Gebiet geometry found for code <b>{codeLabel}</b> —
+  this route should only be reachable via a real crawled link from
+  <a href="/hamburg/area">the Gebiet list</a>; if you landed here another way, that list is the
+  reliable starting point.
+</Alert>
+{/if}
+
+## {nameLabel} at a glance
+
+{#each glanceParagraphs as para}
+<p>{@html para}</p>
+{/each}
+
+## Social status & trajectory
+
+<Alert status="info">
+  <b>How to read this section:</b> Hamburg's official status runs <b>1 = least deprived</b> to
+  <b>4 = most deprived</b>, so a status that <b>falls</b> means the Gebiet became <b>less</b>
+  deprived (its status rose) — which is also the signature of gentrification, not automatically good
+  news for existing residents. A <b>negative</b> pressure trend is the reading this project treats as
+  <b>higher</b> gentrification pressure. Figures come from Hamburg's own annual Sozialmonitoring —
+  see the <a href="/methodology">methodology & data sources</a> page, §6 for how it differs from
+  Berlin's.
+</Alert>
+
+<HamburgTrajectoryNote subject="this Gebiet" />
+
+{#if cur && cur.stage}
+<BigValue data={current_stage} value=stage title="Current stage"/>
+{:else}
+<Alert status="info">
+  No current Sozialmonitoring stage is on record for this Gebiet in the latest Hamburg edition on
+  this site, so no current stage applies here.
+</Alert>
+{/if}
 <BigValue data={trajectory_summary} value=trajectory_type title="Overall trajectory" emptySet="warn"/>
 <BigValue data={trajectory_summary} value=dominant_stage title="Most common stage" emptySet="warn"/>
 <BigValue data={trajectory_summary} value=trajectory_confidence title="Confidence" emptySet="warn"/>
 
-{#if trajectorySentence}
-<p>{@html trajectorySentence}</p>
-{:else if trajectory_summary.length === 0}
+<!-- #353: the pace sentence now leads the "at a glance" section (as Berlin's speedSentence does)
+     and is not repeated here; only the empty state remains. -->
+{#if !trajectorySentence && trajectory_summary.length === 0}
 <Alert status="info">
   No trajectory classification is available yet for this Gebiet within the 2019–2025 window (e.g.
   no usable Sozialmonitoring reading on record for this area in that span).
@@ -268,17 +434,219 @@ Trajectory labels are explained on the [methodology page](/methodology) — an "
 not by itself mean the change was good for existing residents; rising status can reflect
 displacement as easily as incumbent social mobility.
 
+<NotYetPublished what="A status-over-time chart (Berlin's profile pages draw one, with district and city lines)">
+  Berlin's chart reads <code>fct_gentrification_change</code>, which is Berlin-only by design
+  (H3 sign-off, scope-guard condition 4). Hamburg's 13 annual editions are not charted as a time
+  series anywhere on this site yet: the Hamburg trajectory sign-off (#314) asks for any long-run
+  Hamburg view to be a separately labelled product, not a reuse of the 2019–2025 labels above.
+</NotYetPublished>
+
 ## Commercial mix & Offering Advantage
 
-<NotYetPublished what="this area's commercial-mix breakdown and Offering Advantage profile" />
+### How its commercial mix has developed
+
+Shops, cafés and other businesses tend to *follow* — not lead — social change (see
+[methodology](/methodology) for the theory). This shows how the mix of mapped places here has
+evolved.
+
+```sql poi_trend
+-- #353: same query as the Berlin PLR page's poi_trend, Hamburg's single 'current' vintage. The
+-- per-Gebiet counts are the ones /hamburg/poi-map's density and tooltip figures are built from.
+select
+    snapshot_year,
+    poi_category_h,
+    sum(poi_count) as poi_count
+from gentriduck_marts.fct_poi_development
+where city_code = 'HH' and area_vintage = 'current' and area_code = '${params.code}'
+group by all
+order by snapshot_year
+```
+
+```sql poi_mix_context
+-- Latest-year top category here vs. this Gebiet's Stadtteil vs. Hamburg -- textual context for the
+-- stacked bar below, same shape as the Berlin PLR page's poi_mix_context (plain sums of counts;
+-- the Stadtteil set is the mart_area_hierarchy subarea_l2 -> subarea_l1 edge, OA-D1b/#240).
+with
+    area_latest as (
+        select max(snapshot_year) as snapshot_year
+        from gentriduck_marts.fct_poi_development
+        where city_code = 'HH' and area_vintage = 'current' and area_code = '${params.code}'
+    ),
+    area_mix as (
+        select poi_category_h, sum(poi_count) as poi_count
+        from gentriduck_marts.fct_poi_development
+        where
+            city_code = 'HH' and area_vintage = 'current' and area_code = '${params.code}'
+            and snapshot_year = (select snapshot_year from area_latest)
+        group by poi_category_h
+    ),
+    stadtteil_mix as (
+        select f.poi_category_h, sum(f.poi_count) as poi_count
+        from gentriduck_marts.fct_poi_development as f
+        join
+            gentriduck_marts.mart_area_hierarchy as h
+            on h.city_code = 'HH' and h.area_level = 'subarea_l2' and h.area_code = f.area_code
+        where
+            f.city_code = 'HH' and f.area_vintage = 'current'
+            and h.parent_area_code = (
+                select parent_area_code
+                from gentriduck_marts.mart_area_hierarchy
+                where city_code = 'HH' and area_level = 'subarea_l2' and area_code = '${params.code}'
+                limit 1
+            )
+            and f.snapshot_year = (select snapshot_year from area_latest)
+        group by f.poi_category_h
+    ),
+    city_mix as (
+        select poi_category_h, sum(poi_count) as poi_count
+        from gentriduck_marts.fct_poi_development
+        where
+            city_code = 'HH' and area_vintage = 'current'
+            and snapshot_year = (select snapshot_year from area_latest)
+        group by poi_category_h
+    )
+select
+    (select snapshot_year from area_latest) as snapshot_year,
+    (select poi_category_h from area_mix order by poi_count desc limit 1) as area_top_category,
+    (select poi_category_h from stadtteil_mix order by poi_count desc limit 1) as stadtteil_top_category,
+    (select poi_category_h from city_mix order by poi_count desc limit 1) as city_top_category
+```
+
+<BarChart
+    data={poi_trend}
+    x=snapshot_year
+    y=poi_count
+    series=poi_category_h
+    seriesOrder={poiCategoryOrder}
+    title="Mapped places by category, {nameLabel} (largest segment first)"
+    yAxisTitle="Number of mapped places"
+    emptySet="warn"
+/>
+
+{#if poiMixCtx && poiMixCtx.area_top_category}
+<p>The most common kind of mapped place here in {poiMixCtx.snapshot_year} is <b>{poiMixCtx.area_top_category}</b>;
+across {parent?.stadtteil_name ?? 'its Stadtteil'} it's <b>{poiMixCtx.stadtteil_top_category ?? '—'}</b>, and across
+Hamburg as a whole it's <b>{poiMixCtx.city_top_category ?? '—'}</b>.</p>
+{/if}
+
+<Alert status="info">
+  These are OpenStreetMap-derived counts. Mapper coverage grew fastest in Hamburg's earliest years
+  (the citywide coverage curve stabilizes only around ~2014–2015, see the
+  <a href="/hamburg/poi-map">Hamburg POI map</a>), so early-year growth can reflect new mappers
+  catching up rather than real commercial change. OSM coverage is also not spatially neutral:
+  poorer or peripheral areas tend to be less thoroughly mapped (Haklay 2010), so a low count can be
+  a coverage gap rather than a real absence.
+</Alert>
+
+### Offering Advantage profile
+
+**Offering Advantage (OA)** compares each POI domain's share of this Gebiet's mapped places
+(shops, cafés, and other points of interest) to that domain's share across Hamburg as a whole — a
+compositional read on the local place *mix*, not a count, and not a value judgment: being
+over-represented in a domain doesn't mean an area is "better" or "worse," only that its commercial
+mix is more specialised in that direction than the city as a whole. The chart below shows each
+domain as a **percentage above or below Hamburg's citywide average share** for that domain — e.g.
+"+30%" means this domain makes up about 30% more of the local mix here than it does citywide on
+average; a **negative** percentage means the opposite, under-representation, shown the same way.
+The baseline is Hamburg's own, never pooled with Berlin's. For Hamburg, OA is commercial-side
+context only: Hamburg's published stage above comes from its own Sozialmonitoring, not from OA (see
+[methodology §6](/methodology)). See the [POI & Offering Advantage map](/hamburg/poi-map) to explore
+this across all of Hamburg.
+
+```sql poi_oa_radar
+-- #353: the same mart rows /hamburg/poi-map colours its map by (HH, standard/faithful), this
+-- Gebiet, latest snapshot_year with a value. Rows carrying the mart's minimum-base flag are
+-- dropped here -- /hamburg/poi-map shows the same Gebiet-years as hatched "No data" -- and their
+-- count is disclosed below via poi_oa_suppressed.
+select
+    poi_domain_h,
+    oa_domain,
+    poi_count
+from gentriduck_marts.mart_poi_offering_advantage_map
+where
+    city_code = 'HH'
+    and weight_variant = 'standard'
+    and methodology_variant = 'faithful'
+    and area_code = '${params.code}'
+    and not oa_domain_min_base_flag
+    and snapshot_year = (
+        select max(snapshot_year)
+        from gentriduck_marts.mart_poi_offering_advantage_map
+        where
+            city_code = 'HH'
+            and weight_variant = 'standard'
+            and methodology_variant = 'faithful'
+            and area_code = '${params.code}'
+            and oa_domain is not null
+    )
+order by oa_domain desc
+```
+
+```sql poi_oa_suppressed
+select count(*) as n_flagged
+from gentriduck_marts.mart_poi_offering_advantage_map
+where
+    city_code = 'HH'
+    and weight_variant = 'standard'
+    and methodology_variant = 'faithful'
+    and area_code = '${params.code}'
+    and oa_domain_min_base_flag
+    and snapshot_year = (
+        select max(snapshot_year)
+        from gentriduck_marts.mart_poi_offering_advantage_map
+        where
+            city_code = 'HH'
+            and weight_variant = 'standard'
+            and methodology_variant = 'faithful'
+            and area_code = '${params.code}'
+    )
+```
+
+{#if radarRows.length > 0}
+<ECharts config={radarConfig} data={poi_oa_radar} height="360px" downloadableData downloadableImage />
+{:else}
+<Alert status="warning">
+  No Offering Advantage value is shown for this Gebiet — too few mapped places are recorded here to
+  compute a stable ratio. That means "too thinly observed to characterize", never "commercially
+  dead".
+</Alert>
+{/if}
+
+{#if poi_oa_suppressed[0] && Number(poi_oa_suppressed[0].n_flagged) > 0 && radarRows.length > 0}
+<Alert status="info">
+  Some domains are left out of the chart because this Gebiet has too few mapped places overall for
+  a stable ratio in the latest year (the same minimum-base rule the Hamburg POI map uses) — "too
+  thinly observed", never "commercially dead".
+</Alert>
+{/if}
+
+{#if radarRows.some((r) => r.lowBase)}
+<Alert status="warning">
+  Domains marked <b>†</b> are based on very few mapped places here (fewer than {OA_LOW_BASE_THRESHOLD}) —
+  treat their percentage cautiously, since a single new or closed business can swing a small base
+  sharply. Counts: {radarRows.filter((r) => r.lowBase).map((r) => `${r.domain} (${r.poiCount ?? 0})`).join(', ')}.
+</Alert>
+{/if}
+
+Berlin's version of this chart also draws a district-average line. That average has not been
+computed or reviewed for Hamburg, so only the citywide baseline is drawn here.
 
 ## Within-group dominance
 
-<NotYetPublished what="within-group dominance figures for this area" />
+<NotYetPublished what="Within-group dominance (is one business type crowding out the rest of its group?)">
+  The underlying mart (<code>mart_poi_dominance</code>) carries Hamburg rows, but the site's data
+  source deliberately restricts it to Berlin, and no sign-off has yet reviewed a Hamburg public view
+  of it (the dominance ethics conditions, OA-D0 domain sign-off, were checked for Berlin only).
+</NotYetPublished>
 
 ## People & structure
 
-<NotYetPublished what="demographic figures for this area" />
+<NotYetPublished what="A population and composition table">
+  Hamburg's population-register figures are only published at Stadtteil and district level, not
+  for single Gebiete (methodology §6, point 3). Even at Stadtteil level, the Hamburg demographics
+  sign-off (#313) sets conditions that bind a future Hamburg web page of its own, which has not been
+  built or reviewed yet.
+</NotYetPublished>
 
 ## Amenities & everyday infrastructure
 
@@ -296,6 +664,7 @@ displacement as easily as incumbent social mobility.
   Hamburg codes do not nest by prefix, so the district comes from mart_area_hierarchy
   (the district_row subquery below), not Berlin's substr(). The district row is LEFT-joined so a missing
   parent leaves its column empty instead of blanking the whole table.
+  #353: block unchanged (I20-hamburg-parity-domain-signoff.md reviewed this exact copy).
 -->
 
 ```sql amenities_current
@@ -417,7 +786,12 @@ others, and makes no claim about whether it is a good or bad place to live.
 
 ## Land value & estimated rent
 
-<NotYetPublished what="land value / estimated rent figures for this area" />
+<NotYetPublished what="Land value and estimated rent">
+  Hamburg has no land-value (Bodenrichtwert) series on this site at all. Its rent signal is
+  narrower in kind than Berlin's (Wohnlage tier composition plus a modelled Mietenspiegel rent, at
+  Stadtteil level, current state only), and its sign-off (#303) requires a Hamburg-specific
+  methodology disclosure before any of it is shown publicly — that has not been done yet.
+</NotYetPublished>
 
 ## Where this area sits
 
@@ -448,45 +822,39 @@ where city_code = 'HH' and area_level = 'subarea_l2' and area_code = '${params.c
     title={nameLabel ?? codeLabel}
 />
 
-This Gebiet's parent Stadtteil is {#if parent_info[0]?.stadtteil_code}<a href="/hamburg/area/subarea_l1/{parent_info[0].stadtteil_code}">{parent_info[0].stadtteil_name ?? parent_info[0].stadtteil_code}</a>{:else}linked above{/if}
-(see the "Up:" link above) — resolved via the OA-D1b (#240) spatial crosswalk, now published to the
-web layer through <code>mart_area_hierarchy</code> (#302, I21-h). See
-<a href="/reference/area-hierarchy">the area-hierarchy reference page</a> for the general concept
-(note: that page's own text predates OA-D1b and should be treated as stale on this specific point
-until it is refreshed, I21-j).
+This is Hamburg's finest published small-area grain (statistisches Gebiet) — there is no further
+level to drill into. Its parent Stadtteil is {#if parent_info[0]?.stadtteil_code}<a href="/hamburg/area/subarea_l1/{parent_info[0].stadtteil_code}">{parent_info[0].stadtteil_name ?? parent_info[0].stadtteil_code}</a>{:else}linked above{/if}
+(see "Up:" above), resolved by a spatial crosswalk (each Gebiet assigned to the Stadtteil that
+contains it; OA-D1b, #240) — see the [area-hierarchy reference](/reference/area-hierarchy).
 
 ## Honest caveats
 
 - **This Gebiet's name is a label, not an official designation (#307, #352).** Hamburg's own
   statistisches-Gebiet source has no name field, so the name above is this Gebiet's Stadtteil
   plus either an OpenStreetMap `place=neighbourhood`/`quarter` name whose point lies inside the
-  Gebiet (41 of 943 Gebiete) or, where there is none, the Gebiet's code. An OSM name marks a
+  Gebiet ({osmLabelCount}) or, where there is none, the Gebiet's code. An OSM name marks a
   point inside this Gebiet; the neighbourhood it names may be larger or smaller than the Gebiet.
-- **This page is mostly still a structural scaffold (I21-g, #301).** Every section except "Social
-  status & trajectory" (below) and the "Up: Stadtteil" link shows a fixed deferred-state placeholder
-  rather than a real Hamburg figure, even where an underlying mart already has real Hamburg rows for
-  some other public page (e.g. this Gebiet's current stage is already shown on
-  [the map](/hamburg/maps)) — publishing the rest of this page's content is a separately-gated
-  follow-up (I21-i, #303), not assumed here.
-- **The "Social status & trajectory" section above is real, not a placeholder (#317).** It reads
-  Hamburg's own admitted rows in `fct_gentrification_trajectory` (#314, dual-signed-off PASS) — a
-  recent **~6-year (2019–2025) window**, not this area's full 13-edition history, and a
-  **status-only classification**, never a displacement verdict (see the disclosure directly above
-  that section's chart).
-- **The "Up: Stadtteil" hierarchy link is real, not a placeholder (#302, I21-h).** The underlying
-  spatial crosswalk was resolved and signed off under OA-D1b/#240; this ticket only publishes it to
-  the web layer, without re-deciding the method.
-- See [Hamburg's data hub](/hamburg) for the full, current inventory of what is and isn't published
-  for Hamburg, and [methodology & data sources §6](/methodology) for how Hamburg's data differs from
-  Berlin's generally.
+- **A falling status means the area became *less* deprived** (its status rose) — which is also the
+  signature of gentrification, not automatically good news for existing residents.
+- **Hamburg's stage is not directly equivalent to a same-named Berlin stage** — Hamburg's Dynamik
+  window is 3 years, Berlin's 2 ([methodology §6](/methodology), point 1 and 4).
+- **The trajectory labels describe a recent ~6-year (2019–2025) window**, not this area's full
+  13-edition history, and are a **status-only classification**, never a displacement verdict (see
+  the disclosure above that section).
+- **Offering Advantage is descriptive, not causal, and multi-signed** — over- or under-representation
+  in a domain is a mix/specialization signal, never a standalone claim about gentrification.
+  Domains flagged † above rest on fewer than 5 mapped places here and should be read cautiously.
+- **Some Berlin sections are not shown for Hamburg** — the written portrait, the status-over-time
+  chart, within-group dominance, people & structure, and land value & rent — each with its reason
+  in its own section above. See the [Hamburg data hub](/hamburg) for the full inventory and
+  [methodology & data sources §6](/methodology) for how Hamburg's data differs from Berlin's.
 
 ## Further reading
 
 See the [Hamburg data hub](/hamburg) for what's published today, [Hamburg's map](/hamburg/maps) for
-this area's already-public gentrification-stage figure, the
-[POI & Offering Advantage map](/hamburg/poi-map) for its commercial-mix signal, or
-[the area-hierarchy reference](/reference/area-hierarchy) for how Hamburg's small-area geography is
-structured.
+every Gebiet's stage at a glance, the [POI & Offering Advantage map](/hamburg/poi-map) for the
+commercial-mix signal citywide, [browse by district](/hamburg/area-detail) for other Gebiete, or
+the [time-series view](/hamburg/time-series) for how Hamburg's Gebiete have moved since 2019.
 
 ---
 
