@@ -1,5 +1,6 @@
 ---
 breadcrumb: "select area_name as breadcrumb from gentriduck_marts.dim_area_geometry where city_code = 'BER' and area_level = 'ortsteil' and area_code = '${params.code}' limit 1"
+hide_breadcrumbs: true
 ---
 
 <!--
@@ -274,6 +275,15 @@ limit 15
   // see this section's own "## Where this area sits" comment below.
   import { base } from '$app/paths';
 
+  // #353: breadcrumb trail + browser-tab title (see web/components/AreaBreadcrumbs.svelte).
+  $: ortsteilLabel = ortsteil_name?.[0]?.area_name ?? null;
+  $: crumbs = [
+    { label: 'Berlin', href: '/berlin' },
+    { label: 'Ortsteile', href: '/berlin/area/ortsteil' },
+    { label: ortsteilLabel ?? 'Ortsteil' }
+  ];
+  $: pageTitle = ortsteilLabel ? `${ortsteilLabel} — Ortsteil profile · Berlin` : null;
+
   $: hasChildren = child_count?.[0] && Number(child_count[0].n) > 0;
   $: childrenRows = Array.isArray(children) ? children : Array.from(children ?? []);
   $: anyLowConfidence = childrenRows.some((r) => Number(r.overlap_frac_of_plr) < 0.8);
@@ -295,6 +305,10 @@ limit 15
         return `<b>${nAdvanced}</b> of <b>${nTotal}</b> neighbourhoods (Planungsräume) here are classified <b>active-gentrification</b> or <b>pioneer-signal</b>; ${majorityClause} — a distribution across this Ortsteil's own (dominantly-assigned) neighbourhoods, never a single re-scored gentrification-index value for the Ortsteil itself.`;
       })();
 </script>
+
+<!-- #353: city-aware breadcrumb trail + per-page <title>, computed in the <script> block above. -->
+<AreaBreadcrumbs {crumbs} />
+<PageTitle title={pageTitle} />
 
 <Hero compact eyebrow="Chapter 3 — The Evidence" title="{ortsteil_name[0] ? ortsteil_name[0].area_name : 'Ortsteil'} — Ortsteil profile" lede="Population, composition, and neighbourhood-stage mix for this Ortsteil (Stadtteil), rolled up from its dominantly-assigned constituent Planungsräume — never a re-scored index at this grain." />
 

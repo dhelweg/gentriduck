@@ -1,5 +1,6 @@
 ---
 breadcrumb: "select area_name as breadcrumb from gentriduck_marts.dim_area_geometry where city_code = 'BER' and area_level = 'pgr' and area_code = '${params.code}' limit 1"
+hide_breadcrumbs: true
 ---
 
 <!--
@@ -47,6 +48,10 @@ from (
 ) t
 where bezirk_code = substr('${params.code}', 1, 2)
 ```
+
+<!-- #353: city-aware breadcrumb trail + per-page <title>, computed in the <script> block below. -->
+<AreaBreadcrumbs {crumbs} />
+<PageTitle title={pageTitle} />
 
 <Hero compact eyebrow="Chapter 3 — The Evidence" title="{pgr_name[0] && pgr_name[0].area_name} — Prognoseraum profile" lede="Population, composition, and neighbourhood-stage mix for this Prognoseraum, summed and recomputed from its constituent Bezirksregionen — never a re-scored index at this grain." />
 
@@ -134,6 +139,16 @@ from totals as t cross join top cross join advanced as a
   // see this page's "## Where this area sits" section below. Hoisted into this page's single
   // existing <script> block (Svelte allows only one instance-level <script> per component/page).
   import { base } from '$app/paths';
+
+  // #353: breadcrumb trail + browser-tab title (see web/components/AreaBreadcrumbs.svelte).
+  $: pgrLabel = pgr_name?.[0]?.area_name ?? null;
+  $: crumbs = [
+    { label: 'Berlin', href: '/berlin' },
+    { label: 'District & area profiles', href: '/berlin/area/bezirk' },
+    ...(bezirk_name?.[0]?.bezirk_code ? [{ label: bezirk_name[0].bezirk_name, href: '/berlin/area/bezirk/' + bezirk_name[0].bezirk_code }] : []),
+    { label: pgrLabel ?? 'Prognoseraum' }
+  ];
+  $: pageTitle = pgrLabel ? `${pgrLabel} — Prognoseraum profile · Berlin` : null;
 
   $: mssMix = stage_mix_summary?.[0];
   $: mssTakeaway = (!mssMix || mssMix.n_total == null || Number(mssMix.n_total) === 0)
