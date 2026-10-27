@@ -9,7 +9,7 @@ sidebar_position: 1
   full data inventory). Deliberately NOT a shared/toggled page with Berlin's /berlin/maps -- per
   the H3-domain-signoff.md structural guard (condition 2: "no pooled cross-city ranking or numeric
   status_index/dynamism_index differencing in any Hamburg-vs-Berlin UI"), Hamburg gets its own
-  route, its own AreaMap instance, and its own colour-scale computation, never a shared component
+  route, its own map instance (<PolygonMap> since #351, formerly <AreaMap>), and its own colour-scale computation, never a shared component
   instance that could invite a side-by-side/subtracted reading. See /methodology §6's "No pooled
   Berlin<->Hamburg ranking" bullet for the site-wide statement of this rule.
 
@@ -26,7 +26,7 @@ sidebar_position: 1
 
   The stage color palette and dropdown/indicator options are otherwise the same convention as
   /berlin/maps (RdYlBu-6 for the six-stage typology, single-hue sequential for the raw ordinals) --
-  same D1xD2 matrix, same colour semantics -- but this is a SEPARATE <AreaMap> instance/data query,
+  same D1xD2 matrix, same colour semantics -- but this is a SEPARATE <PolygonMap> instance/data query,
   not the same component instance reused across cities, so there is no shared legend/colour-scale
   object a reader could misread as asserting Berlin/Hamburg equivalence.
 
@@ -91,6 +91,11 @@ sidebar_position: 1
   // many/which stages are present at the selected area_level. (The `areas_leaf`/`areas_rollup`
   // queries below stay ordered by `stage_sort` -- most-acute-first -- purely so first-occurrence
   // order is deterministic/readable.)
+  //
+  // #351: the map is now drawn by web/components/PolygonMap.svelte (SVG, no Leaflet/tile basemap)
+  // instead of <AreaMap>; PolygonMap keeps exactly this positional first-occurrence colour rule.
+  // It is still a separate map instance and query from Berlin's (the H3 structural guard above);
+  // only the drawing component is shared, as every Evidence chart component already is.
   const stageColorByLabel = {
     'Active gentrification': '#d73027',
     'Early pioneer signal': '#fc8d59',
@@ -148,7 +153,11 @@ sidebar_position: 1
     subarea_l1: 'Stadtteil',
     district: 'Bezirk'
   };
-  $: geoJsonUrl = `${base}/geo/${geoJsonByLevel[inputs.area_level.value]}`;
+  // #351: undefined (PolygonMap waits) until the Dropdown has a value, instead of requesting
+  // "/geo/undefined" (a 404) for the one tick before the input store initializes.
+  $: geoJsonUrl = geoJsonByLevel[inputs.area_level.value]
+    ? `${base}/geo/${geoJsonByLevel[inputs.area_level.value]}`
+    : undefined;
 
   // No area_name to lead with at the Gebiet grain (genuinely blank, see header comment) --
   // tooltip leads with the Gebiet code instead of a name there; subarea_l1/district (#310) DO
@@ -218,7 +227,7 @@ sidebar_position: 1
   deprived</b>, not more prosperous. "Dynamism" — higher means the area's status is improving
   <b>faster</b>, over Hamburg's own <b>3-year</b> observation window (Berlin's is 2 years) — see
   <a href="/methodology">methodology §6</a> for why that is a qualitative difference in what
-  "active" means, not just a numeric-scale one. Areas without a value are drawn but left blank.
+  "active" means, not just a numeric-scale one. Areas without a value are drawn with grey hatching ("No data").
 </Alert>
 
 <Alert status="warning">
@@ -449,7 +458,7 @@ qualify row_number() over (partition by m.area_code order by m.typology_stage) =
 order by stage_sort
 ```
 
-<AreaMap
+<PolygonMap
     data={isRollup ? areas_rollup : areas_leaf}
     geoJsonUrl={geoJsonUrl}
     geoId="area_code"
@@ -458,9 +467,6 @@ order by stage_sort
     legendType={effectiveIndicator === 'status_class' ? 'categorical' : 'scalar'}
     colorPalette={effectiveIndicator === 'status_class' ? presentStagePalette(isRollup ? areas_rollup : areas_leaf) : undefined}
     title="Hamburg {areaLevelLabel[inputs.area_level.value]} — {effectiveIndicatorLabel}, latest period"
-    startingLat={53.5511}
-    startingLong={9.9937}
-    startingZoom={10}
     tooltip={areaTooltip}
 />
 

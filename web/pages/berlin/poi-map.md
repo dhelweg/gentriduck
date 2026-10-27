@@ -78,15 +78,22 @@ sidebar_position: 5
   // PLR-year) is now always shown too -- both so a blank/suppressed Offering Advantage cell is
   // self-explanatory (its own raw count is right there) and as general transparency for
   // near-threshold PLRs that aren't suppressed but are still low.
+  // #351 review: Evidence's <ButtonGroup defaultValue=...> only reaches preset/query-generated
+  // items, never hand-written <ButtonGroupItem> children, so "stock" was never selected and
+  // `inputs.view` held Evidence's placeholder for an unset input (not null). Every read then fell
+  // through to the "change" column with the diverging palette and an off-centre domain. Fix: the
+  // stock item carries `default` (see the <ButtonGroup> below), and every read goes through
+  // `poiView`, which is 'stock' unless the reader has picked 'development'.
+  $: poiView = inputs.view === 'development' ? 'development' : 'stock';
   $: areaTooltip = [
     { id: 'area_name', showColumnName: false, valueClass: 'font-bold text-sm', fmt: 'id' },
     {
       id: inputs.metric.value === 'density'
-        ? (inputs.view === 'stock' ? 'poi_density_per_km2' : 'density_delta')
-        : (inputs.view === 'stock' ? 'oa_domain' : 'oa_delta'),
+        ? (poiView === 'stock' ? 'poi_density_per_km2' : 'density_delta')
+        : (poiView === 'stock' ? 'oa_domain' : 'oa_delta'),
       title:
         (inputs.metric.value === 'density' ? 'POI density / km²' : 'Offering Advantage')
-        + (inputs.view === 'development' ? ' (change vs. previous year)' : ''),
+        + (poiView === 'development' ? ' (change vs. previous year)' : ''),
       fmt: 'num1'
     },
     { id: 'poi_count', title: 'Mapped places (this domain)', fmt: 'num0' },
@@ -96,7 +103,7 @@ sidebar_position: 5
   // #233 (I16): diverging color domain, symmetric around each metric's true baseline, computed
   // from the current filtered `poi_map_data` (recomputed reactively as the dropdowns change) --
   // see the header comment for why a symmetric client-computed domain is needed instead of
-  // AreaMap's plain min/max. ColorBrewer PuOr-5 (colorblind-safe).
+  // the map component's plain data min/max. ColorBrewer PuOr-5 (colorblind-safe).
   const divergingPalette = ['#e66101', '#fdb863', '#f7f7f7', '#b2abd2', '#5e3c99'];
 
   function symmetricDomain(rows, col, baseline) {
@@ -134,13 +141,13 @@ for the full method, or the [methodology page](/methodology) for a plain-languag
 </Alert>
 
 <Alert status="warning">
-  <b>Thinly-mapped PLRs are left blank.</b> Offering Advantage is a compositional ratio (a location
+  <b>Thinly-mapped PLRs are hatched grey.</b> Offering Advantage is a compositional ratio (a location
   quotient) -- in a PLR-year with very few mapped places overall, a single new or removed business
   can swing its Offering Advantage value disproportionately. PLR-years with fewer than 10 total
-  mapped places (across every domain) are shown as an unshaded gap on the map rather than a
+  mapped places (across every domain) are shown as a hatched grey "No data" area on the map rather than a
   potentially misleading Offering Advantage value; the raw mapped-place count for the selected
-  domain is always visible in the tooltip so you can judge borderline cases yourself. <b>A blank
-  cell means only "too thinly observed to compute a stable ratio" -- never "commercially dead."</b>
+  domain is always visible in the tooltip so you can judge borderline cases yourself. <b>A hatched
+  area means only "too thinly observed to compute a stable ratio" -- never "commercially dead."</b>
   OSM's mapping coverage is not spatially neutral: besides the early-year effect on the citywide
   chart below, completeness also varies *within* a given year and tends to correlate with area
   advantage -- poorer/peripheral areas are typically less thoroughly mapped than richer/central ones
@@ -209,7 +216,7 @@ for the full method, or the [methodology page](/methodology) for a plain-languag
 </Dropdown>
 
 <ButtonGroup name="view" title="Stock vs. development" display="tabs" defaultValue="stock">
-  <ButtonGroupItem value="stock" valueLabel="Stock (this year's value)"/>
+  <ButtonGroupItem value="stock" valueLabel="Stock (this year's value)" default/>
   <ButtonGroupItem value="development" valueLabel="Change since previous year"/>
 </ButtonGroup>
 
@@ -279,8 +286,8 @@ select
     b.density_delta,
     case when b.oa_domain_min_base_flag then null else b.oa_delta_raw end as oa_delta,
     b.oa_domain_min_base_flag,
-    -- basePath-aware click-through (see /berlin/maps' `<script>` header comment): AreaMap's link
-    -- column does a raw `window.location.href = link` (EvidenceMap.js), unlike Evidence's own
+    -- basePath-aware click-through (see /berlin/maps' `<script>` header comment): the map's link
+    -- column is rendered as a plain SVG <a href> by PolygonMap (#351; AreaMap did a raw window.location.href), unlike Evidence's own
     -- nav/DataTable links, so `${base}` (SvelteKit's deployment.basePath) must be interpolated
     -- into the link literal here, or click-through 404s on the GitHub Pages project site.
     '${base}/berlin/area/' || b.area_code as link
@@ -292,50 +299,46 @@ where b.snapshot_year = ${inputs.year.value}
 <!--
   #233 (I16): diverging (baseline-centered) vs sequential scale, matched to each metric/view's
   semantics -- see this file's header comment. "density" + "stock" is the only combination with
-  no natural center, so it alone falls through to AreaMap's default sequential scale
+  no natural center, so it alone falls through to PolygonMap's default sequential scale
   (colorPalette/min/max all undefined).
 -->
-<AreaMap
+<PolygonMap
     data={poi_map_data}
     geoJsonUrl={`${base}/geo/plr_live_data.geojson`}
     geoId="area_code"
     areaCol="area_code"
     value={
         inputs.metric.value === 'density'
-            ? (inputs.view === 'stock' ? 'poi_density_per_km2' : 'density_delta')
-            : (inputs.view === 'stock' ? 'oa_domain' : 'oa_delta')
+            ? (poiView === 'stock' ? 'poi_density_per_km2' : 'density_delta')
+            : (poiView === 'stock' ? 'oa_domain' : 'oa_delta')
     }
     legendType="scalar"
     colorPalette={
-        inputs.metric.value === 'density' && inputs.view === 'stock'
+        inputs.metric.value === 'density' && poiView === 'stock'
             ? undefined
             : divergingPalette
     }
     min={
         inputs.metric.value === 'oa'
-            ? (inputs.view === 'stock'
+            ? (poiView === 'stock'
                 ? symmetricDomain(poi_map_data, 'oa_domain', 1)[0]
                 : symmetricDomain(poi_map_data, 'oa_delta', 0)[0])
-            : inputs.view === 'development'
+            : poiView === 'development'
                 ? symmetricDomain(poi_map_data, 'density_delta', 0)[0]
                 : undefined
     }
     max={
         inputs.metric.value === 'oa'
-            ? (inputs.view === 'stock'
+            ? (poiView === 'stock'
                 ? symmetricDomain(poi_map_data, 'oa_domain', 1)[1]
                 : symmetricDomain(poi_map_data, 'oa_delta', 0)[1])
-            : inputs.view === 'development'
+            : poiView === 'development'
                 ? symmetricDomain(poi_map_data, 'density_delta', 0)[1]
                 : undefined
     }
-    title="Berlin Planungsraum (PLR) — {inputs.metric.value === 'density' ? 'POI density' : 'Offering Advantage'}, {inputs.domain.value}, {inputs.year.value}{inputs.view === 'development' ? ' (change vs. previous year)' : ''}"
-    startingLat={52.52}
-    startingLong={13.405}
-    startingZoom={9}
+    title="Berlin Planungsraum (PLR) — {inputs.metric.value === 'density' ? 'POI density' : 'Offering Advantage'}, {inputs.domain.value}, {inputs.year.value}{poiView === 'development' ? ' (change vs. previous year)' : ''}"
     link="link"
     tooltip={areaTooltip}
-    emptySet="warn"
     emptyMessage="No data for this domain/year combination."
 />
 
@@ -465,7 +468,6 @@ order by snapshot_year
     y=avg_brw_eur_m2
     title="Citywide average land value (Bodenrichtwert), residential zones (EUR/m²)"
     yAxisTitle="EUR/m²"
-    emptySet="warn"
     emptyMessage="No residential land-value zones matched for any year."
 />
 
