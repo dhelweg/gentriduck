@@ -29,10 +29,12 @@
       show their name from the GeoJSON `area_name` property.
     - `link` names a column holding an already `${base}`-prefixed URL (#144, the caller adds
       the prefix, as before). It is rendered as a real SVG <a>, so SvelteKit navigates on the
-      client, keyboard users can tab to it, and a touch tap first shows the tooltip and a second
-      tap follows the link.
+      client, and a touch tap first shows the tooltip and a second tap follows the link.
+      Keyboard: the map is a single tab stop (roving tabindex); arrow keys move to the nearest
+      linked area in that direction, Home/End jump to the first/last, Enter opens it. The SVG
+      is role="group" when it holds links and role="img" when it does not.
   Additions for the per-area profile maps (see AreaDrilldownMap.svelte):
-    - `unmatched`: 'nodata' (default; choropleth: features without a value are drawn grey and
+    - `unmatched`: 'nodata' (default; choropleth: features without a value get a grey hatch and
       the legend gets a "No data" swatch) or 'context' (profile: faint, unlabelled background).
     - `contextFilter(feature)`: which unmatched features to draw at all (a drill-down file holds
       two levels; only one of them should form the background).
@@ -64,6 +66,8 @@
 	const modelCache = new WeakMap();
 
 	const VIEW_W = 1000;
+	/** Per-instance counter for unique SVG pattern ids (several maps can share one page). */
+	let instanceCounter = 0;
 	const round2 = (v) => Math.round(v * 100) / 100;
 
 	function ringArea(ring) {
@@ -219,7 +223,7 @@
 </script>
 
 <script>
-	import { onDestroy } from 'svelte';
+	import { onDestroy, tick } from 'svelte';
 	import { browser } from '$app/environment';
 	import { Query } from '@evidence-dev/sdk/usql';
 
@@ -276,7 +280,13 @@
 		'#46a485'
 	];
 	const DEFAULT_SCALAR = ['#ADD8E6', '#00008B'];
-	const NO_DATA_FILL = 'color-mix(in srgb, var(--base-content) 20%, var(--base-100))';
+	// "No data" = a diagonal hatch (SVG pattern, unique id per map instance; the legend swatch uses
+	// the same two colours as a CSS gradient). A flat grey was too close to the dark-mode page
+	// background (#351 review).
+	const hatchId = `pm-nodata-${++instanceCounter}`;
+	const NO_DATA_FILL = `url(#${hatchId})`;
+	const NO_DATA_SWATCH =
+		'repeating-linear-gradient(45deg, var(--pm-hatch-line) 0 1.6px, var(--pm-hatch-bg) 1.6px 4px)';
 	const CONTEXT_FILL = 'color-mix(in srgb, var(--base-content) 7%, var(--base-100))';
 
 	// ---- data loading (same subscribe pattern as Evidence's own QueryLoad.svelte) ----
@@ -470,6 +480,8 @@
 
 	$: hovered = hoverKey ? drawnByKey.get(hoverKey) : null;
 	$: unitsToPx = viewBox[2] ? Math.min(frameWidth / viewBox[2], frameHeight / viewBox[3]) : 0;
+	// Hatch period ~4.5 screen px, in viewBox units (so it looks the same zoomed in or out).
+	$: hatchSize = unitsToPx ? 4.5 / unitsToPx : viewBox[2] / 200;
 
 	function keyFromEvent(e) {
 		const el = e.target?.closest?.('[data-key]');
@@ -512,8 +524,73 @@
 		const key = keyFromEvent(e);
 		if (!key) return;
 		hoverKey = key;
+		if (linkKeys.includes(key)) activeKey = key;
 		const r = e.target.getBoundingClientRect();
 		placeTip(r.left + r.width / 2, r.top + r.height / 2);
+	}
+
+	// ---- keyboard: roving tabindex (#351 review) ----
+	// The whole map is ONE tab stop: only the active linked area has tabindex=0, every other link
+	// has -1. Arrow keys move to the nearest linked area in that direction (by bbox centre),
+	// Home/End jump to the first/last, Enter follows the link (native <a> behaviour), Escape hides
+	// the tooltip. Without this, /berlin/maps alone had 541 tab stops.
+	$: linkKeys = layers.filled.filter((d) => d.href).map((d) => d.key);
+	let activeKey = null;
+	$: if (!linkKeys.includes(activeKey)) activeKey = linkKeys[0] ?? null;
+
+	const ARROWS = {
+		ArrowRight: [1, 0],
+		ArrowLeft: [-1, 0],
+		ArrowDown: [0, 1],
+		ArrowUp: [0, -1]
+	};
+
+	function centreOf(key) {
+		const b = drawnByKey.get(key)?.f?.bbox;
+		return b ? [(b[0] + b[2]) / 2, (b[1] + b[3]) / 2] : null;
+	}
+
+	function nextKey(fromKey, eventKey) {
+		if (eventKey === 'Home') return linkKeys[0];
+		if (eventKey === 'End') return linkKeys[linkKeys.length - 1];
+		const dir = ARROWS[eventKey];
+		const from = centreOf(fromKey);
+		if (!dir || !from) return null;
+		let best = null;
+		let bestScore = Infinity;
+		for (const k of linkKeys) {
+			if (k === fromKey) continue;
+			const c = centreOf(k);
+			if (!c) continue;
+			const dx = c[0] - from[0];
+			const dy = c[1] - from[1];
+			const along = dx * dir[0] + dy * dir[1];
+			if (along <= 0) continue;
+			// Favour areas straight ahead over ones far off to the side.
+			const score = along + 2 * Math.abs(dx * dir[1] - dy * dir[0]);
+			if (score < bestScore) {
+				bestScore = score;
+				best = k;
+			}
+		}
+		return best;
+	}
+
+	async function onKeyDown(e) {
+		if (e.key === 'Escape') {
+			hoverKey = null;
+			return;
+		}
+		if (!(e.key in ARROWS) && e.key !== 'Home' && e.key !== 'End') return;
+		const key = keyFromEvent(e);
+		if (!key || !linkKeys.includes(key)) return;
+		e.preventDefault();
+		const next = nextKey(key, e.key);
+		if (!next) return;
+		activeKey = next;
+		await tick();
+		const sel = `a[data-key="${CSS.escape(next)}"]`;
+		frameEl?.querySelector(sel)?.focus();
 	}
 
 	// ---- tooltip content ----
@@ -621,14 +698,40 @@
 			on:click={onClick}
 			on:focusin={onFocusIn}
 			on:focusout={() => (hoverKey = null)}
-			on:keydown={(e) => e.key === 'Escape' && (hoverKey = null)}
+			on:keydown={onKeyDown}
 		>
+			<!-- role="group" when the map holds focusable links (so assistive tech exposes them),
+			     role="img" when it is a picture only. -->
 			<svg
 				viewBox={viewBox.join(' ')}
 				preserveAspectRatio="xMidYMid meet"
-				role="img"
-				aria-label={ariaLabel ?? title ?? 'Map'}
+				role={linkKeys.length ? 'group' : 'img'}
+				aria-label={(ariaLabel ?? title ?? 'Map') +
+					(linkKeys.length
+						? '. Arrow keys move between areas, Enter opens the selected area.'
+						: '')}
 			>
+				<defs>
+					<!-- Hatch for "No data": readable against the page background in both themes,
+					     and never mistaken for a colour on the scale. Sized in screen pixels. -->
+					<pattern
+						id={hatchId}
+						patternUnits="userSpaceOnUse"
+						width={hatchSize}
+						height={hatchSize}
+						patternTransform="rotate(45)"
+					>
+						<rect width={hatchSize} height={hatchSize} class="pm-hatch-bg" />
+						<line
+							x1="0"
+							y1="0"
+							x2="0"
+							y2={hatchSize}
+							class="pm-hatch-line"
+							style="stroke-width: {hatchSize * 0.4}"
+						/>
+					</pattern>
+				</defs>
 				{#if model.inset}
 					<rect
 						class="pm-inset"
@@ -647,7 +750,12 @@
 				<g class="pm-data">
 					{#each layers.filled as d (d.key)}
 						{#if d.href}
-							<a href={d.href} data-key={d.key} aria-label={displayName(d)}>
+							<a
+								href={d.href}
+								data-key={d.key}
+								aria-label={displayName(d)}
+								tabindex={d.key === activeKey ? 0 : -1}
+							>
 								<path d={d.f.d} style="fill: {d.fill}" class="pm-area pm-link" />
 							</a>
 						{:else}
@@ -703,7 +811,7 @@
 				{/if}
 				{#if layers.anyNoData}
 					<span class="pm-legend-item">
-						<span class="pm-swatch" style="background: {NO_DATA_FILL}" />
+						<span class="pm-swatch" style="background: {NO_DATA_SWATCH}" />
 						No data
 					</span>
 				{/if}
@@ -715,6 +823,14 @@
 <style>
 	.pm-root {
 		margin: 0.5rem 0 1rem;
+		--pm-hatch-bg: color-mix(in srgb, var(--base-content) 10%, var(--base-100));
+		--pm-hatch-line: color-mix(in srgb, var(--base-content) 45%, var(--base-100));
+	}
+	.pm-hatch-bg {
+		fill: var(--pm-hatch-bg);
+	}
+	.pm-hatch-line {
+		stroke: var(--pm-hatch-line);
 	}
 	.pm-frame {
 		position: relative;

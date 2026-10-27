@@ -51,9 +51,14 @@
 		unsub = data.subscribe((v) => (loadedQuery = v));
 	}
 	onDestroy(() => unsub());
-	$: loaded = !Query.isQuery(data) || Boolean(loadedQuery && loadedQuery.dataLoaded);
+	// #351 review: a failed query counts as "loaded" too, so the panels render and PolygonMap
+	// (handed the query itself in that case, see `panelData`) shows its "Map could not be drawn"
+	// message instead of "Loading map…" forever.
+	$: queryFailed = Query.isQuery(data) && Boolean(loadedQuery?.error);
+	$: loaded =
+		!Query.isQuery(data) || queryFailed || Boolean(loadedQuery && loadedQuery.dataLoaded);
 	$: rows = Query.isQuery(data)
-		? loaded
+		? loaded && !queryFailed
 			? Array.from(loadedQuery)
 			: []
 		: Array.from(data ?? []);
@@ -86,6 +91,8 @@
 			.filter((r) => r !== selfRow)
 			.map((r) => ({ ...r, role: 'Click to explore', hint: r?.link ? 'Click to open' : '' }))
 	];
+	// On a query error the panels get the failed query itself, so PolygonMap reports the error.
+	$: panelData = queryFailed ? data : tipRows;
 </script>
 
 <div class="adm">
@@ -99,7 +106,7 @@
 		<figure class="adm-panel">
 			<figcaption>In the city</figcaption>
 			<PolygonMap
-				data={tipRows}
+				data={panelData}
 				{geoJsonUrl}
 				geoId="feature_key"
 				areaCol="feature_key"
@@ -121,7 +128,7 @@
 		<figure class="adm-panel">
 			<figcaption>Close-up</figcaption>
 			<PolygonMap
-				data={tipRows}
+				data={panelData}
 				{geoJsonUrl}
 				geoId="feature_key"
 				areaCol="feature_key"
