@@ -151,7 +151,7 @@ def test_main_only_filters_to_named_sources(tmp_path: Path, monkeypatch) -> None
             ),
         ]
 
-    def fake_run_step(step, repo_root, force):
+    def fake_run_step(step, repo_root, force, freshness=None):
         ran.append(step.source_id)
         return StepResult(step, "ok")
 
@@ -177,3 +177,36 @@ def test_every_manifest_source_has_an_ingest_step() -> None:
     step_ids = {s.source_id for s in build_steps(repo_root) if s.source_id}
     missing = sorted(manifest_ids - out_of_driver - step_ids)
     assert not missing, f"manifest-tracked sources with no `poe ingest` step: {missing}"
+
+
+def test_multi_step_source_steps_share_one_freshness_decision(tmp_path: Path, monkeypatch) -> None:
+    """Regression (2026-10-27): berlin__mss has two steps (WFS editions, then the 2013 Excel
+    edition). The WFS step rewrote the manifest with only its own outputs, so a per-step
+    freshness check found the source "fresh" and skipped the Excel step -- mss_2013 vanished.
+    Simulated here: the source is stale at the first check and "fresh" at every later one."""
+    calls = []
+
+    def fake_is_fresh(source_id, repo_root):
+        calls.append(source_id)
+        return (len(calls) > 1, "fresh" if len(calls) > 1 else "stale")
+
+    def fake_build_steps(repo_root):
+        return [
+            IngestStep("mss-wfs", [sys.executable, "-c", "pass"], source_id="berlin__mss"),
+            IngestStep("mss-2013-excel", [sys.executable, "-c", "pass"], source_id="berlin__mss"),
+        ]
+
+    monkeypatch.setattr("run_ingest.build_steps", fake_build_steps)
+    monkeypatch.setattr("run_ingest.is_fresh", fake_is_fresh)
+    seen = []
+    real_run_step = run_step
+
+    def spy(step, repo_root, force, freshness=None):
+        r = real_run_step(step, repo_root, force, freshness)
+        seen.append((step.label, r.outcome))
+        return r
+
+    monkeypatch.setattr("run_ingest.run_step", spy)
+    assert main(["--repo-root", str(tmp_path)]) == 0
+    assert seen == [("mss-wfs", "ok"), ("mss-2013-excel", "ok")]  # both ran
+    assert calls == ["berlin__mss"]  # decided once, before any step

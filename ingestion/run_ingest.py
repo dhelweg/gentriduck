@@ -340,9 +340,17 @@ class StepResult:
     findings: list[str] = field(default_factory=list)
 
 
-def run_step(step: IngestStep, repo_root: Path, force: bool) -> StepResult:
+def run_step(
+    step: IngestStep,
+    repo_root: Path,
+    force: bool,
+    freshness: Optional[dict[str, tuple[bool, str]]] = None,
+) -> StepResult:
     if step.source_id and not force:
-        fresh, reason = is_fresh(step.source_id, repo_root)
+        if freshness is not None and step.source_id in freshness:
+            fresh, reason = freshness[step.source_id]
+        else:
+            fresh, reason = is_fresh(step.source_id, repo_root)
         if fresh:
             return StepResult(step, "skipped", detail=reason)
 
@@ -428,7 +436,20 @@ def main(argv: Optional[list[str]] = None) -> int:
             )
             return 2
 
-    results = [run_step(step, repo_root, force) for step in steps]
+    # Freshness is decided ONCE per source, before any step runs (2026-10-27). Some sources
+    # have several steps -- berlin__mss: the WFS editions, then the 2013 Excel edition that
+    # WFS lacks. Checking per step let the WFS step's own manifest write (covering only what
+    # it produced) make the Excel step look fresh, so it was skipped and mss_2013 silently
+    # disappeared. All steps of a source now share one decision.
+    freshness = (
+        {}
+        if force
+        else {
+            sid: is_fresh(sid, repo_root)
+            for sid in dict.fromkeys(s.source_id for s in steps if s.source_id)
+        }
+    )
+    results = [run_step(step, repo_root, force, freshness) for step in steps]
 
     print()
     print(render_summary(results))
