@@ -1,13 +1,43 @@
 # B2 Back-Test Harness: Live Index vs Ground Truth
 
-**Last run:** 2026-07-16
-**Overall result:** ALL PASS
+**Last run:** 2026-10-27
+**Gate result (pipeline integrity + label consistency):** ALL PASS
+**Independent check (Test F, Milieuschutz, non-gating):** SUPPORTED
+
+## What these tests do and do not show
+
+> **The gate is not evidence that the index measures gentrification.** The live index's `status_index` *is* the MSS D1 class and `dynamism_index` *is* the MSS D2 class (R-A1, #64). Tests A and D therefore compare the MSS class with itself via two pipeline paths (rho = 1.0 by construction), and Tests B/C score labels that are partly or wholly MSS class assignments themselves -- see Label provenance below. They catch pipeline breakage (a vintage mismatch, a polarity flip), which is why they stay as a gate. Until 2026-10-26 this page called them validation "against two independent references"; they are not independent. **Test F** is the one check against an instrument the index is not built from.
+
+### Label provenance
+
+- `status_index` takes **4 distinct values**, so the "top decile" (>= 3.0) actually covers **17% of PLRs** and the "bottom decile" (<= 1.0) **16%**. Recall against these bands is far easier than the word "decile" suggests.
+- hotspots, MSS-sourced: n = 2, recall 1.00
+- hotspots, literature-sourced: n = 6, recall 1.00
+- coldspots, MSS-sourced: n = 6, recall 1.00
+- coldspots, literature-sourced: n = 0, no labels
+
+MSS-sourced labels can only confirm the MSS class they were copied from. There are **no independent coldspot labels**.
+
+### Test F -- independent external check: Milieuschutz (non-gating)
+
+Are PLRs the index places in an upgrading stage (pioneer-signal, active-gentrification, consolidation-pressure; index-definition.md §1.3) more often under a Milieuschutz (soziale Erhaltungsverordnung) designation? Milieuschutz is designated by the districts from their own displacement-pressure studies, not from this index. A valid index should give OR > 1.
+
+| | under Milieuschutz | not | share under Milieuschutz |
+|---|---|---|---|
+| upgrading stage | 29 | 22 | 57% |
+| other stages | 202 | 282 | 42% |
+
+- **Odds ratio 1.84**, 95% cluster-bootstrap CI [1.02, 3.41] (143 Bezirksregionen); Fisher p = 0.0525; n = 535 PLRs, MSS edition 2025.
+- **Verdict: SUPPORTED** (SUPPORTED = OR > 1 with a CI excluding 1).
+- **Borderline -- read as weak support.** The cluster-bootstrap CI just excludes 1 but Fisher's exact test does not reach 0.05 (p = 0.0525). With 42% of other-stage PLRs also under Milieuschutz, the index discriminates designation only modestly.
+
+Caveats: designation studies use social indicators that partly overlap MSS inputs (independence is partial, not total); designation also varies with district policy, a confounder this test does not remove; the overlay is time-invariant (§1.8) while stages are read at the latest edition. Non-gating until the methodology sign-offs promote it.
 
 ---
 
 ## Overview
 
-This document records the results of the B2 ground-truth back-test harness, which validates the live gentrification index (`gentrification_index`, `live_data` variant, latest period) against two independent references:
+This document records the results of the B2 back-test harness for the live gentrification index (`gentrification_index`, `live_data` variant, latest period). The gating Tests A-D use two references that are NOT independent of the index (see "What these tests do and do not show" above):
 
 1. **MSS Status/Dynamik classes** (official Berlin ground truth): the Senate's Monitoring Soziale Stadtentwicklung (MSS) provides biennial D1 Status and D2 Dynamik ordinals for every PLR (Planungsraum). The live index's `status_index` column directly encodes the MSS D1 ordinal (1=hoch/best … 4=sehr_niedrig/worst). Test A cross-validates `gentrification_index.status_index` (live_data variant) against `int_gentrification_ts.status_index` — the same MSS D1 class flowing through two independent model paths — using Spearman rank correlation.
 
@@ -48,7 +78,7 @@ This polarity is **inverse** relative to the 2018 thesis `status_summe` (where h
 
 ## Latest Results
 
-**Run date:** 2026-07-16
+**Run date:** 2026-10-27
 **Index period:** latest available `live_data` PLR period
 **PLRs in index:** 535 (status_index not null: 535)
 

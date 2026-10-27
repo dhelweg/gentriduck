@@ -23,55 +23,55 @@ The per-hypothesis thesis AUC reference values are reconstructed from thesis p.9
 
 | Task | N | Thesis AUC | Revival AUC | AUC std | F1w | F1w std | Leakage | Features |
 |---|---|---|---|---|---|---|---|---|
-| H1 | 436 | 0.87 | 0.7262 | 0.0320 | 0.6387 | 0.0468 | None — POI counts are independent of status_class_bi | total_poi_count, poi_cafe, poi_bar, poi_restaurant, poi_fast_food, poi_nightlife |
-| H2 (k=1) | 1071 | 0.77 | 0.7519 | 0.0510 | 0.9113 | 0.0146 | None — POI at t predicts status transition from t to t+k | poi_count_t, poi_cafe_t, poi_bar_t, poi_restaurant_t, poi_fast_food_t |
-| H2 (k=2) | 535 | 0.77 | 0.7312 | 0.0894 | 0.8785 | 0.0278 | None — POI at t predicts status transition from t to t+k | poi_count_t, poi_cafe_t, poi_bar_t, poi_restaurant_t, poi_fast_food_t |
-| H3a (k=1) | 535 | 0.72 | 0.6282 | 0.1012 | 0.9434 | 0.0183 | None — C5-corrected dynamism at t precedes status transition from t to t+k | delta_dynamism_t (C5-corrected), dynamism_score_t |
-| H3b (k=1) | 535 | 0.81 | 0.4320 | 0.0478 | 0.3970 | 0.0601 | None — status change at t precedes C5-corrected dynamism change | delta_status_ordinal (ordinal proxy), status_index_t |
-| H3c (k=1) | 1071 | 0.71 | 0.7058 | 0.0341 | 0.9113 | 0.0146 | None — contemporaneous dynamism vs status trajectory | dynamism_score_t, poi_count_t |
-| H3c (k=2) | 535 | 0.71 | 0.6952 | 0.1083 | 0.8785 | 0.0278 | None — contemporaneous dynamism vs status trajectory | dynamism_score_t, poi_count_t |
+| H1 | 436 | 0.87 | 0.7218 | 0.0194 | 0.6171 | 0.0203 | None — POI counts are independent of status_class_bi | total_poi_count, poi_cafe, poi_bar, poi_restaurant, poi_fast_food, poi_nightlife |
+| H2 (k=1) | 1071 | 0.77 | 0.7426 | 0.0408 | 0.9113 | 0.0146 | None — POI at t predicts status transition from t to t+k | poi_count_t, poi_cafe_t, poi_bar_t, poi_restaurant_t, poi_fast_food_t |
+| H2 (k=2) | 535 | 0.77 | 0.7286 | 0.0775 | 0.8785 | 0.0278 | None — POI at t predicts status transition from t to t+k | poi_count_t, poi_cafe_t, poi_bar_t, poi_restaurant_t, poi_fast_food_t |
+| H3a (k=1) | 535 | 0.72 | 0.6290 | 0.1066 | 0.9443 | 0.0196 | None — C5-corrected dynamism at t precedes status transition from t to t+k | delta_dynamism_t (C5-corrected), dynamism_score_t |
+| H3b (k=1) | 535 | 0.81 | 0.4506 | 0.0625 | 0.4167 | 0.0145 | None — status change at t precedes C5-corrected dynamism change | delta_status_ordinal (ordinal proxy), status_index_t |
+| H3c (k=1) | 1071 | 0.71 | 0.6998 | 0.0454 | 0.9113 | 0.0146 | None — contemporaneous dynamism vs status trajectory | dynamism_score_t, poi_count_t |
+| H3c (k=2) | 535 | 0.71 | 0.6924 | 0.1142 | 0.8785 | 0.0278 | None — contemporaneous dynamism vs status trajectory | dynamism_score_t, poi_count_t |
 
 ## Per-hypothesis Interpretation
 
 ### H1
 
-**H1**: AUC = 0.7262 ± 0.0320 (thesis: 0.87) — below thesis by -0.1438. F1w = 0.6387. n=436.
+**H1**: AUC = 0.7218 ± 0.0194 (thesis: 0.87) — below thesis by -0.1482. F1w = 0.6171. n=436.
 
 Partial agreement: AUC > 0.5 confirms above-chance classification; below thesis 0.87 likely reflects narrower feature set.
 
 ### H2
 
-**H2 (k=1)**: AUC = 0.7519 ± 0.0510 (thesis: 0.77) — within ±0.05 of thesis (-0.0181). F1w = 0.9113. n=1071.
+**H2 (k=1)**: AUC = 0.7426 ± 0.0408 (thesis: 0.77) — within ±0.05 of thesis (-0.0274). F1w = 0.9113. n=1071.
 
-**H2 (k=2)**: AUC = 0.7312 ± 0.0894 (thesis: 0.77) — within ±0.05 of thesis (-0.0388). F1w = 0.8785. n=535.
+**H2 (k=2)**: AUC = 0.7286 ± 0.0775 (thesis: 0.77) — within ±0.05 of thesis (-0.0414). F1w = 0.8785. n=535.
 
 ### H3a
 
-**H3a (k=1)**: AUC = 0.6282 ± 0.1012 (thesis: 0.72) — below thesis by -0.0918. F1w = 0.9434. n=535.
+**H3a (k=1)**: AUC = 0.6290 ± 0.1066 (thesis: 0.72) — below thesis by -0.0910. F1w = 0.9443. n=535.
 
 Diverges from thesis rejection: higher-than-expected AUC. Check for data leakage or panel period effects.
 
 ### H3b
 
-**H3b (k=1)**: AUC = 0.4320 ± 0.0478 (thesis: 0.81) — below thesis by -0.3780. F1w = 0.3970. n=535.
+**H3b (k=1)**: AUC = 0.4506 ± 0.0625 (thesis: 0.81) — below thesis by -0.3594. F1w = 0.4167. n=535.
 
 **WARNING: one or more k values yield AUC < 0.5 (sub-chance).** Results must be reported per k, not as a single best:
 
-- k=1: AUC = 0.4320 — Diverges from thesis (sub-chance AUC).
+- k=1: AUC = 0.4506 — Diverges from thesis (sub-chance AUC).
 
 Diverges from thesis (H3b was confirmed in thesis). Possible cause: MSS panel covers only 2021-2025 (3 editions); thesis used 2010-2018 (longer panel).
 
 ### H3c
 
-**H3c (k=1)**: AUC = 0.7058 ± 0.0341 (thesis: 0.71) — within ±0.05 of thesis (-0.0042). F1w = 0.9113. n=1071.
+**H3c (k=1)**: AUC = 0.6998 ± 0.0454 (thesis: 0.71) — within ±0.05 of thesis (-0.0102). F1w = 0.9113. n=1071.
 
-**H3c (k=2)**: AUC = 0.6952 ± 0.1083 (thesis: 0.71) — within ±0.05 of thesis (-0.0148). F1w = 0.8785. n=535.
+**H3c (k=2)**: AUC = 0.6924 ± 0.1142 (thesis: 0.71) — within ±0.05 of thesis (-0.0176). F1w = 0.8785. n=535.
 
 ## Results — Section 2: H1 at BZR Scale (Bezirksregion, ~137 units, B10 #120)
 
 | Task | N | Thesis AUC | Revival AUC | AUC std | F1w | F1w std | Leakage | Features |
 |---|---|---|---|---|---|---|---|---|
-| H1 (BZR scale) | 137 | 0.87 | 0.7567 | 0.0555 | 0.6985 | 0.0493 | None — POI counts are independent of status_class_bi | total_poi_count, poi_cafe, poi_bar, poi_restaurant, poi_fast_food, poi_nightlife |
+| H1 (BZR scale) | 137 | 0.87 | 0.7520 | 0.0773 | 0.6545 | 0.0399 | None — POI counts are independent of status_class_bi | total_poi_count, poi_cafe, poi_bar, poi_restaurant, poi_fast_food, poi_nightlife |
 
 > MAUP note (B10): BZR AUC reflects spatial smoothing (~4-6 PLRs per BZR). Higher AUC expected vs PLR due to within-BZR variance cancellation (thesis §3.2; index-definition.md §8). Not an independent confirmation.
 

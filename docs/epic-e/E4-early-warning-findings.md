@@ -6,7 +6,7 @@
 
 ## NOT A CAUSAL EFFECT
 
-Every number below is a **predictive association** from an out-of-time classifier. This is the R-A10-P1 response to thesis finding **W3** ("causal/temporal inference is suggestive, not identified", docs/assessment/2018-thesis-critical-assessment.md): it upgrades the *validation discipline* (strictly-later held-out wave, not in-sample fit) but does **not** claim a causally identified displacement-causing effect. Part 2 of #80 (difference-in-differences / event-study on Milieuschutz designation, #70) is explicitly out of scope here and remains parked. **(Follow-up now tracked: #259 (A10-P2) — see `docs/planning/deferred-work-audit-2026-07.md`.)**
+Every number below is a **predictive association** from an out-of-time classifier. This is the R-A10-P1 response to thesis finding **W3** ("causal/temporal inference is suggestive, not identified", docs/assessment/2018-thesis-critical-assessment.md): it upgrades the *validation discipline* (strictly-later held-out wave, not in-sample fit) but does **not** claim a causally identified displacement-causing effect. Part 2 of #80 (difference-in-differences / event-study on Milieuschutz designation, #70) is explicitly out of scope here and remains parked.
 
 ## Target definition
 
@@ -31,35 +31,35 @@ Features (see module docstring for full R-C2 citations):
 
 | | Train (edition_t=2015) | Test (edition_t=2017, held out, later) |
 |---|---|---|
-| n | 426 | 432 |
+| n | 426 | 431 |
 | positive (`y_elevated_risk=1`) | 31 (7.3%) | 14 (3.2%) |
-| AUC | 0.7832 (in-sample, NOT the headline result) | **0.4445** (out-of-time, headline) |
-| Brier score (test only) | -- | 0.0381 |
-| Permutation p-value (test AUC vs label-shuffled null, 999 perms, seed=42) | -- | 0.7810 |
+| AUC | 0.7967 (in-sample, NOT the headline result) | **0.4591** (out-of-time, headline) |
+| Brier score (test only) | -- | 0.0384 |
+| Permutation p-value (test AUC vs label-shuffled null, 999 perms, seed=42) | -- | 0.6810 |
 
-**Verdict:** Out-of-time AUC is BELOW chance -- the model performs worse than random on the held-out wave. This is reported as observed, not tuned away; see Limitations for candidate explanations (rare positive class, single-wave train, only 2 editions of history).
+**Verdict:** Out-of-time AUC is essentially at chance -- these precursors do NOT reliably rank areas by future elevated-risk status on this panel.
 
-**Overfitting note:** in-sample AUC (0.7832) exceeds out-of-time AUC (0.4445) by more than 0.15 -- the in-sample fit substantially overstates genuine predictive power, exactly the failure mode out-of-time validation exists to catch (cf. thesis W2, overfitting; docs/assessment/2018-thesis-critical-assessment.md).
+**Overfitting note:** in-sample AUC (0.7967) exceeds out-of-time AUC (0.4591) by more than 0.15 -- the in-sample fit substantially overstates genuine predictive power, exactly the failure mode out-of-time validation exists to catch (cf. thesis W2, overfitting; docs/assessment/2018-thesis-critical-assessment.md).
 
 ### Calibration (test fold, tercile bins)
 
 | Bin | Mean predicted P(elevated risk) | Observed rate |
 |---|---|---|
-| 1 | 0.0247 | 0.0347 |
-| 2 | 0.0514 | 0.0417 |
-| 3 | 0.1392 | 0.0208 |
+| 1 | 0.0228 | 0.0347 |
+| 2 | 0.0521 | 0.0420 |
+| 3 | 0.1478 | 0.0208 |
 
 ### Standardized logistic coefficients (direction/magnitude, NOT causal)
 
 | Feature | Coefficient |
 |---|---|
-| `status_index_t` | +0.5462 |
-| `dynamism_score_t` | +0.3533 |
-| `delta_dynamism_t` | -0.0256 |
-| `ewr_composite_t` | -0.8471 |
-| `delta_oa_mean_annual_t` | -0.2115 |
-| `w_lag_status_t` | -0.0021 |
-| `w_lag_dynamism_t` | -0.1796 |
+| `status_index_t` | +0.5858 |
+| `dynamism_score_t` | +0.4702 |
+| `delta_dynamism_t` | -0.2010 |
+| `ewr_composite_t` | -0.8478 |
+| `delta_oa_mean_annual_t` | -0.3342 |
+| `w_lag_status_t` | -0.0261 |
+| `w_lag_dynamism_t` | -0.0373 |
 
 ## Judgment calls flagged for geo-DS / domain-expert review
 
