@@ -212,7 +212,11 @@ sidebar_position: 2
     bezirk: 'Bezirk',
     ortsteil: 'Ortsteil'
   };
-  $: geoJsonUrl = `${base}/geo/${geoJsonByLevel[inputs.area_level.value]}`;
+  // #351: undefined (PolygonMap waits) until the Dropdown has a value, instead of requesting
+  // "/geo/undefined" (a 404) for the one tick before the input store initializes.
+  $: geoJsonUrl = geoJsonByLevel[inputs.area_level.value]
+    ? `${base}/geo/${geoJsonByLevel[inputs.area_level.value]}`
+    : undefined;
 
   // #310: rollup rows carry dominant_share/is_dominant_fragile/n_habitable_children alongside the
   // usual indicator value -- always shown together (design point 3: never a standalone label).

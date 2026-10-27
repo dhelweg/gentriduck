@@ -276,7 +276,7 @@
 		'#46a485'
 	];
 	const DEFAULT_SCALAR = ['#ADD8E6', '#00008B'];
-	const NO_DATA_FILL = 'color-mix(in srgb, var(--base-content) 16%, var(--base-100))';
+	const NO_DATA_FILL = 'color-mix(in srgb, var(--base-content) 20%, var(--base-100))';
 	const CONTEXT_FILL = 'color-mix(in srgb, var(--base-content) 7%, var(--base-100))';
 
 	// ---- data loading (same subscribe pattern as Evidence's own QueryLoad.svelte) ----
@@ -309,6 +309,9 @@
 	function startGeoLoad(url) {
 		const token = ++loadToken;
 		geoError = null;
+		// Drop the previous file's geometry so a level switch never paints the new rows onto the
+		// old level's polygons (they would all read as "No data" for a moment).
+		geo = null;
 		loadGeo(url).then(
 			(fc) => {
 				if (token === loadToken) geo = fc;

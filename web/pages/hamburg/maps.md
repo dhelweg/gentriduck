@@ -153,7 +153,11 @@ sidebar_position: 1
     subarea_l1: 'Stadtteil',
     district: 'Bezirk'
   };
-  $: geoJsonUrl = `${base}/geo/${geoJsonByLevel[inputs.area_level.value]}`;
+  // #351: undefined (PolygonMap waits) until the Dropdown has a value, instead of requesting
+  // "/geo/undefined" (a 404) for the one tick before the input store initializes.
+  $: geoJsonUrl = geoJsonByLevel[inputs.area_level.value]
+    ? `${base}/geo/${geoJsonByLevel[inputs.area_level.value]}`
+    : undefined;
 
   // No area_name to lead with at the Gebiet grain (genuinely blank, see header comment) --
   // tooltip leads with the Gebiet code instead of a name there; subarea_l1/district (#310) DO
