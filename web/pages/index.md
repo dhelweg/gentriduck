@@ -77,9 +77,12 @@ agent definition, every architecture decision, and every line of SQL that produc
 The original thesis asked whether the churn of shops, cafés and restaurants in a Berlin
 neighbourhood tracks its social change. Its clearest finding still holds: **more fast-food outlets go
 with lower social status**. Its timing claim — that a neighbourhood's social change comes *before*
-its commercial change — holds on Berlin's official social monitor for 2021–2025, but not for
-2015–2019; on the welfare-register data the thesis used, commerce and status move together with
-neither clearly leading. The relationship is real, but fragile — sensitive to which social measure
+its commercial change — holds on Berlin's official social monitor for 2021–2025, but not on its
+2013–2019 editions, which include the thesis's own and so are the like-for-like re-test (a
+lower-powered one: it counts moves between four status classes, not the thesis's finer Dynamik
+index). On Berlin's resident register, which measures population composition rather than social
+status, commerce and composition move together with neither clearly leading. The relationship is
+real, but fragile — sensitive to which social measure
 you use and to the period you look at. We show that tension openly rather than papering over it.
 
 **→ [The 2018 thesis, re-checked hypothesis by hypothesis](/thesis-recheck)** — the full comparison
@@ -218,30 +221,33 @@ because they started from a position with less room to fall.
 
 ### Does this agree with what we already know?
 
-Before trusting a headline like the one above, it is worth asking: does this index actually
-recognise the Berlin neighbourhoods that housing researchers and the Senate's own monitoring
-already agree are under gentrification pressure — or coasting along as stable, affluent areas?
-The project runs a dedicated back-test against both kinds of independently sourced ground truth
-(`docs/methodology/backtest.md`), and re-runs it whenever the index changes:
+Before trusting a headline like the one above, it is worth asking: does this index recognise
+the Berlin neighbourhoods that housing researchers describe as under gentrification pressure — or as
+stable, affluent areas? The project runs a back-test whenever the index changes
+(`docs/methodology/backtest.md`). It is worth reading for what it is, and what it is not:
 
-- **8 literature-documented gentrification hotspots** — Neukölln's Rollberg, Wartheplatz and
-  Silbersteinstraße (the Reuterkiez/Schillerkiez area), Mitte's Koloniestraße and Soldiner Straße
-  (Wedding/Gesundbrunnen), and Friedrichshain-Kreuzberg's Wassertorplatz and Prinzenstraße — drawn
-  from Döring & Ulbricht (2016), Holm & Schulz (2016), and official MSS 2023 status classes.
-  **All 8 of 8 (100% recall)** land in the index's top decile of gentrification-pressure status,
-  well above the 50% pass bar.
-- **6 stable, affluent outer-city PLRs** — Alt-Gatow, Wannsee, Nikolassee, Dahlem, and similar
-  areas — used as a negative control. **All 6 of 6 (100% recall)** land in the bottom decile, where
-  a stable area should sit.
-- A third, independent cross-check compares the index's own status column against the raw MSS
-  ordinal it is built from (Spearman rho = 1.00): the pipeline is not silently drifting from the
-  official source it claims to encode.
+- **Pipeline-integrity checks, not validation.** The index's status column *is* the official MSS
+  status class, so comparing the two gives Spearman rho = 1.00 by construction. That check catches
+  pipeline breakage (a vintage mismatch, a flipped sign); it says nothing about whether the index
+  measures gentrification.
+- **Label consistency.** 8 literature-documented gentrification hotspots — Neukölln's Rollberg,
+  Wartheplatz and Silbersteinstraße (the Reuterkiez/Schillerkiez area), Mitte's Koloniestraße and
+  Soldiner Straße (Wedding/Gesundbrunnen), and Friedrichshain-Kreuzberg's Wassertorplatz and
+  Prinzenstraße — all land in the most-deprived MSS status band, and 6 stable, affluent outer-city
+  PLRs (Alt-Gatow, Wannsee, Nikolassee, Dahlem and similar) all land in the least-deprived band. But
+  2 of the 8 hotspot labels and all 6 stable-area labels were themselves taken from MSS status
+  classes, and because the status column takes only four values, the "top decile" they are scored
+  against actually covers 17% of PLRs. These recalls are far easier than they look.
+- **The one partially independent check.** Areas the index places in an upgrading stage are more
+  often under Milieuschutz (social preservation) designation, which the districts decide from their
+  own studies of upgrading and displacement pressure: 57% against 42% for other areas (odds ratio
+  1.84, interval 1.02–3.41). The exact test just misses significance (p = 0.0525), so this is weak
+  support. It is only partly independent: the designation studies use some of the same social
+  indicators, and district policy varies a lot.
 
-In short: run the index today and it puts the Reuterkiez/Schillerkiez area's well-documented
-gentrification hotspots — plus Wedding and Kreuzberg PLRs the housing-research literature and the
-Senate's own monitoring flag the same way — exactly where those independent sources say they
-belong, and it does not mistake Wannsee for a hotspot. That is the credibility check behind the
-headline numbers on this page; the full methodology, thresholds, and PLR-by-PLR detail are in
+In short: the index is internally consistent, it does not mistake Wannsee for a hotspot, and the one
+external check points weakly in the expected direction. That is not proof that it measures
+gentrification. The full methodology, thresholds, and PLR-by-PLR detail are in
 [`docs/methodology/backtest.md`](https://github.com/dhelweg/gentriduck/blob/main/docs/methodology/backtest.md).
 
 ---

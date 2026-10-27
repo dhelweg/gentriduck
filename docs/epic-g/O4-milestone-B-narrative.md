@@ -8,7 +8,10 @@
 > both directions and scored sign-only "passes"; (2) the OSM extraction kept deleted POIs in
 > every later year (up to ~21% ghosts) and had silently switched multi-tag classification; (3) it
 > overstated the thesis's own verdicts (Tabelle 6-16: H3b only tentatively supported, H2/H3c
-> inconclusive). It is kept unedited below as the historical record. For current results see
+> inconclusive); and (4) it calls EWR a "welfare register" and "the data the thesis used" --
+> EWR is Berlin's resident register (population composition, not social status), and the
+> thesis's outcome was MSS Status/Dynamik (editions 2013-2017; thesis §6.2.3, Tabelle 6-1).
+> It is kept unedited below as the historical record. For current results see
 > docs/epic-e/E1-regression-findings.md and the /thesis-recheck page.
 
 ---

@@ -53,9 +53,12 @@ where these 2018 hypotheses matter less than the live picture.
   social status (H1b) — replicates robustly, and most strongly with the thesis's own commercial
   predictor, the <b>Offering Advantage</b>. Its timing claim — social change comes <i>before</i>
   commercial change (H3b), which the thesis itself rated only "rather confirmed" — holds on Berlin's
-  official social monitor for 2021–2025, but not on the same monitor for 2015–2019. On the
-  welfare-register data the thesis used, commerce and social status move together with neither clearly
-  leading. The original "more businesses, higher status" link (H1) does not replicate. The relationship
+  official social monitor for 2021–2025, but not on its 2013–2019 editions. Those include the thesis's
+  own 2013, 2015 and 2017 editions, so they are the like-for-like re-test, and there H2, H3a and H3b are
+  all not significant — though the re-check measures change as a move between the four status classes, while the thesis used the finer MSS Dynamik index, so this is a lower-powered test, not a clean refutation. On Berlin's resident register (EWR), which measures
+  population composition rather than social status, commerce and composition move together with neither
+  clearly leading. The thesis's claim that social status is related to the local mix of businesses (H1)
+  was only re-tested with single-number proxies, which do not reproduce it. The relationship
   between commerce and social change is real, but fragile — it depends on how you measure both and on
   the period you look at. Earlier editions of this page called it a clean replication; see the
   caveats for why that was wrong.
@@ -67,7 +70,7 @@ where these 2018 hypotheses matter less than the live picture.
 |---|---|---|
 | **Question** | Does commercial activity track & predict neighbourhood social change in Berlin? | The same — re-checked, then extended |
 | **Commercial signal** | OpenStreetMap points of interest, expressed as an *Offering Advantage* (a location quotient: a PLR's local share of a business category relative to Berlin overall) | Same OSM sources and same Offering-Advantage construct, full annual history back to 2008 |
-| **Social measure** | Berlin welfare register (EWR), 2014–2020 | EWR *and* the official social monitor (MSS), 2013–2025 |
+| **Social measure** | Berlin's official social monitor (MSS Status and Dynamik indices, editions 2013–2017); resident-register (EWR) data as context inputs | The official social monitor (MSS), editions 2013–2025; the resident register (EWR, 2014–2020) as a population-composition context panel |
 | **Stack** | Hadoop · Hive SQL · Java · R · Weka | dbt · DuckDB · Python (scipy, scikit-learn) — free, open, local-first |
 | **Grain** | Planungsraum (≈2,000–5,000 residents) | Same, plus coarser scales for robustness checks |
 | **Scope** | One-shot analysis | Ongoing public statistics site, Berlin now, more cities later |
@@ -94,12 +97,12 @@ table (Tabelle 6-16).
 
 | # | The hypothesis | 2018 thesis (Tabelle 6-16) | Our re-check | Verdict |
 |---|---|---|---|---|
-| **H1** | More businesses → higher social standing | Proven | Raw POI count: not significant (rho −0.05). The thesis's own OA quotient: significant in the **opposite** direction (rho +0.15, n=433) | ❌ Does not replicate |
+| **H1** | Social status is related to the local mix of businesses | Proven (a multi-feature model plus category correlations of mixed sign) | Only single-number proxies were tested, not the thesis's multi-feature model: total POI count not significant (rho −0.05); a four-domain OA basket significant in the **opposite** direction (rho +0.15, n=433) | ⚠️ Not reproduced by a single-number proxy; the thesis's multi-feature test was not re-run |
 | **H1b** | More fast-food outlets → lower status | Proven | Supported on raw counts (rho 0.13) and clearly stronger on the OA quotient (rho 0.35, n=341); also holds at Bezirksregion scale | ✅ Replicates robustly |
-| **H2** | Today's commerce predicts tomorrow's social change | Inconclusive ("kein klares Bild") | Supported on the official monitor 2021–2025 (rho −0.10 to −0.19) and on the welfare register (rho −0.26 to −0.39, but small effects: R² ≤ 0.04); not significant on the official monitor 2015–2019 | ⚠️ Mostly supported, small effects |
-| **H3a** | Commercial change comes first, status change follows | Rejected | Welfare register: supported. Official monitor 2021–2025: **contradicted** on raw counts, not significant on OA. Official monitor 2015–2019: not significant | ⚠️ Panel-dependent |
-| **H3b** | Status change comes first, commercial change follows | Only tentatively supported ("eher bestätigt") | Official monitor 2021–2025: supported on both predictors (partial rho −0.13 and −0.16). Welfare register: supported — but so is the reverse (H3a), at about the same strength. Official monitor 2015–2019: not significant | ⚠️ Holds on the recent official monitor only |
-| **H3c** | Commercial and social change co-occur | Inconclusive | Welfare register: supported (rho −0.42). Official monitor: not significant, or significant in the opposite direction | ⚠️ Data-dependent |
+| **H2** | Today's commerce predicts tomorrow's social change | Inconclusive ("kein klares Bild") | Not significant on the official monitor 2013–2019 (the thesis's own editions). Supported on the official monitor 2021–2025 (rho −0.10 to −0.19) and on the resident-register composition series (rho −0.26 to −0.39, small effects: R² ≤ 0.04, and its pooled area-year p-values overstate significance) | ⚠️ Panel-dependent, small effects |
+| **H3a** | Commercial change comes first, status change follows | Rejected | Official monitor 2013–2019: not significant. Official monitor 2021–2025: a borderline result in the opposite direction on the dynamism measure (interval only just excludes zero; p ≈ 0.06), not significant on OA. Resident register: supported | ⚠️ Panel-dependent |
+| **H3b** | Status change comes first, commercial change follows | Only tentatively supported ("eher bestätigt") | Official monitor 2013–2019: not significant. Official monitor 2021–2025: supported on both predictors (partial rho −0.13 and −0.16), but this panel's test runs without the baseline-susceptibility (D4) control, which is unavailable at the 2023 pivot, and its windows span the pandemic and its aftermath. Resident register: supported — but so is the reverse (H3a), at similar strength — at the two-year lag commerce-first is, if anything, the larger | ⚠️ Holds on the recent official monitor only |
+| **H3c** | Commercial and social change co-occur | Inconclusive | Official monitor (both eras): not significant on the dynamism measure, significant in the opposite direction on OA. Resident register: rho −0.42, but not a like-for-like test (same-year levels, not co-occurring changes) | ⚠️ Not supported |
 
 ## The 2018 snapshot, mapped
 
@@ -181,19 +184,26 @@ pages, which are built on today's boundaries. Hover an area for its name and dyn
 The verdicts hinge on **two things at once: which data measures "social status," and which
 predictor measures "commerce."**
 
-- **On the welfare register the thesis used (EWR, 2014–2020, raw POI count):** every test is
-  significant — but that includes **both** timing directions at about the same strength, so commerce
-  and status move together here without one clearly leading. Effects are small (the lead–lag
-  correlations explain at most about 4% of the variation), and this panel has not yet been re-tested
-  with the OA predictor (a documented scope boundary — see caveats).
-- **On Berlin's *official* social monitor, same era (MSS, 2015–2019):** nothing in the lead–lag
-  family is significant, under either predictor. MSS is coarser and biennial; it is harder to move with
-  any commercial signal, and it measures a related-but-distinct thing.
+- **On Berlin's *official* social monitor, thesis era (MSS, editions 2013–2019):** this includes
+  the thesis's own 2013, 2015 and 2017 editions, so it is the like-for-like re-test. H2, H3a and H3b
+  are all not significant, under either predictor. But the re-check measures change as a move between the four status classes, while the thesis used the finer MSS Dynamik index, so this is a lower-powered test, not a clean refutation.
+- **On Berlin's resident register (EWR, 2014–2020, raw POI count):** this series measures population
+  composition (residence duration, age structure, nationality / migration background), not social
+  status, and it was not the thesis's outcome. Both timing directions are significant at similar
+  strength — at the two-year lag commerce-first is, if anything, the larger — so commerce and
+  composition move together without one clearly leading. This panel uses raw OSM count changes without
+  the completeness correction, so mapping growth may contribute to both directions. Effects are small
+  (at most about 4% of the variation explained), and it has not yet been re-tested with the OA
+  predictor (a documented scope boundary — see caveats).
 - **On the official monitor, modern era (2021–2025):** fast food (H1b) and the predictive link (H2)
   hold, and the timing test favours the thesis's direction — status change first (H3b), on both
   predictors, with commerce-first (H3a) not supported. With three editions this is a single
-  comparison window, so whether it reflects a real shift, a better-measured outcome or chance cannot be
-  settled from this data alone.
+  comparison window (pivot 2023); this panel's test runs without the baseline-susceptibility (D4)
+  control, which is unavailable at the 2023 pivot, and its windows span the pandemic and its aftermath.
+  Whether it reflects a real shift, a better-measured outcome, the type of area, a period-specific shock
+  or chance cannot be settled from this data alone. The MSS status index tracks concentrations of
+  disadvantage, so "status first" here means a fall in measured disadvantage comes before commercial
+  change — it is not evidence that anyone was displaced.
 - **In Hamburg** (annual Sozialmonitoring, an independent re-test), neither timing direction shows up
   at any lag from one to three years.
 
@@ -209,22 +219,24 @@ For the **current** picture the six hypotheses take a back seat to the live typo
   indicator that behaves consistently as a status marker.
 - **The timing question is open, not settled (H3a/H3b).** With a test that actually separates the
   two directions, "status first, commerce second" shows up on Berlin's official monitor for 2021–2025,
-  but not for 2015–2019, not in Hamburg, and on the thesis's own welfare-register data the two move
-  together with neither leading. That is weaker than the thesis's own tentative verdict suggested, and
+  but not for 2013–2019 (the thesis's own editions), not in Hamburg, and on the resident-register
+  composition series the two move together with neither leading. That is weaker than the thesis's own tentative verdict suggested, and
   much weaker than the "clean replication" earlier editions of this page reported.
-- **Same-time co-movement (H3c) is data-dependent.** It holds on the welfare register but not on
-  the official monitor, where it is not significant or points the other way — a reminder that the two
-  social measures capture different things.
+- **Same-time co-movement (H3c) is not supported.** On the official monitor it is not significant
+  on the dynamism measure and points the other way on OA. The one significant result, on the resident
+  register, correlates same-year levels rather than co-occurring changes, so it is not a like-for-like
+  test of H3c.
 
 ## Honest caveats
 
 - No multiple-comparison correction was applied; these are **directional indicators, consistent with
-  a hypothesis, not confirmatory proof.**
+  a hypothesis, not confirmatory proof.** Across the roughly 40 tests behind this table, about two would
+  come out significant by chance alone, so a single isolated result is weak evidence.
 - All analysis is at the aggregate planning-area level. Nothing here says anything about an individual
   person, household, or building (the ecological fallacy).
 - EWR, MSS, and OSM measure different things on different schedules; a difference between the two
   social measures is a measurement story as much as a real-world one.
-- **The EWR same-era panel (thesis-era welfare register, 2014–2020) has not yet been re-tested with
+- **The EWR panel (resident register, 2014–2020) has not yet been re-tested with
   the OA predictor** — it still uses the raw POI count/dynamism measures from earlier editions of this
   page. This is a documented scope boundary for Run 1 (OA is currently built at PLR scale only), not a
   result — a future run may close this gap.
@@ -243,7 +255,8 @@ For the **current** picture the six hypotheses take a back seat to the live typo
   (n=92 instead of the correct n=435) by an area-code join bug that silently dropped most PLRs;
   fixing it changed the H1 (OA) result from "not significant either way" to "statistically
   significant, in the direction opposite the thesis's prior" — a more decisive, not a more
-  favourable, finding. No other hypothesis in this table was affected.
+  favourable, finding. No other hypothesis in this table was affected. (After the October 2026
+  deletion fix the sample is n=433.)
 
 ## Further reading
 

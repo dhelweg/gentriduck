@@ -701,9 +701,10 @@ live query:
 - **Only nested LQ is validated against the 2018 thesis's own computation:** recomputed from open
   data, it agrees with the thesis's own Offering-Advantage values at ρ = 0.84 by domain (0.78 by
   category, 0.54 by business type; 2016 snapshot). That is a check that the *construct* is rebuilt
-  faithfully — not that the thesis's hypotheses hold: as a test of H1 ("more commerce, higher
-  status") the same quotient is significant in the *opposite* direction (see the
-  [thesis re-check page](/thesis-recheck)). The other eight methods, including density/per-capita,
+  faithfully — not that the thesis's hypotheses hold: used as a single-number proxy for H1 (social
+  status is related to the local mix of businesses), a four-domain basket of the same quotient is
+  significant in the *opposite* direction; the thesis's own multi-feature test was not re-run (see
+  the [thesis re-check page](/thesis-recheck)). The other eight methods, including density/per-capita,
   have no 2018 precedent to validate against by design — see §2 above.
 - **Getis-Ord Gi\* remains unavailable, verified directly against the seed registry.**
   `seed_oa_calculation_methods.csv` has no `getis_ord` row yet — #285 checked this directly rather

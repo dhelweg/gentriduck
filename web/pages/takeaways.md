@@ -42,20 +42,24 @@ every re-test this project has run: it is correctly signed, statistically signif
 raw business count and the thesis's own Offering-Advantage location-quotient, and it survives
 aggregation up to Bezirksregion scale. The timing story — does social change come before commercial
 change? — is mixed: the thesis's direction holds on Berlin's official monitor for 2021–2025 but not
-for 2015–2019 or in Hamburg, and on the welfare-register data the original 2018 thesis used, commerce
-and status move together with neither clearly leading. **Read as: watch commercial
-mix, especially fast-food turnover, as one signal among several — not as a stand-alone predictor.**
+on its 2013–2019 editions (the thesis's own, a lower-powered re-test) or in Hamburg. On Berlin's
+resident register, which measures population composition rather than social status, commerce and
+composition move together with neither clearly leading. Areas with more fast-food outlets tend to
+have lower official status scores — an area-level pattern, not a statement about any business or its
+owners. **Read as: watch commercial mix, especially fast-food presence, as one signal among several —
+not as a stand-alone predictor.**
 → [The 2018 thesis, re-checked](/thesis-recheck) — the full hypothesis-by-hypothesis comparison.
 
 ### 2. Small-area (PLR-level) monitoring catches what district averages hide
 
 **What the data shows:** the live index and its back-test both operate at the Planungsraum (PLR)
 grain — roughly 2,000–5,000 residents — because that is the smallest grain at which Berlin's
-official social monitor (MSS) and this project's commercial-activity data both exist. Both the
-literature-documented gentrification hotspots (Reuterkiez/Schillerkiez, Wedding, Kreuzberg) and the
-stable, affluent negative controls (Wannsee, Nikolassee, Dahlem) are correctly recovered at this
-grain, at the top and bottom deciles respectively — a pattern that a Bezirk-level (district)
-average would flatten out, since a hotspot PLR usually sits inside an otherwise-mixed district.
+official social monitor (MSS) and this project's commercial-activity data both exist. The
+literature-documented gentrification hotspots (Reuterkiez/Schillerkiez, Wedding, Kreuzberg) sit in the
+most-deprived MSS status band and the stable, affluent controls (Wannsee, Nikolassee, Dahlem) in the
+least-deprived one at this grain — a label-consistency check, not independent validation, since some
+of those labels come from MSS itself. A Bezirk-level (district) average would flatten that pattern
+out, since a hotspot PLR usually sits inside an otherwise-mixed district.
 **Read as: a city that only publishes district-level statistics cannot see this — the small-area
 grain is doing the work.** → [Home page — back-test detail](/#does-this-agree-with-what-we-already-know)
 and [the back-test methodology](https://github.com/dhelweg/gentriduck/blob/main/docs/methodology/backtest.md).
@@ -77,8 +81,9 @@ and its cut-points.
 
 **What the data shows:** this entire project — OSM history, official socio-economic registers, the
 social monitor, price/rent references — runs on free, open, official data with no paid or
-proprietary source, and produces a monitoring view that passes its own back-test against
-independent, literature-documented ground truth. A harder ask — predicting *which* areas will move
+proprietary source, and produces a monitoring view that passes its own pipeline-integrity and
+label-consistency back-test; its one partially independent check, against Berlin's Milieuschutz
+designations, gives only weak support. A harder ask — predicting *which* areas will move
 into elevated-pressure stages before they do, using only openly-available precursor signals — was
 tested out-of-time (train on one wave, test strictly later) and came back **below chance** on the
 held-out data. That is reported as a genuine negative result, not tuned away. **Read as: open data

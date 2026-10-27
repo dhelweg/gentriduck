@@ -43,8 +43,8 @@ processes with an order to them:
 - a **commercial cycle** — the mix of shops, cafés, and services turns over to serve the new
   residents.
 
-Döring & Ulbricht (2016) confirmed this pattern specifically for Berlin, and the 2018 thesis
-tentatively found (its summary table rates it "rather confirmed") that the **social cycle leads the
+Döring & Ulbricht (2016) operationalised gentrification susceptibility for Berlin's planning
+areas, and the 2018 thesis tentatively found (its summary table rates it "rather confirmed") that the **social cycle leads the
 commercial cycle**: a neighbourhood's social composition tends to change *before* its commercial
 landscape visibly follows. This project's re-check supports that ordering only on recent official
 data — see [the thesis re-check](/thesis-recheck). "Gentrification pressure," in this
@@ -206,7 +206,7 @@ difference between them matters for how you should read a number:
 
 - **`standard`** is the **2018 thesis reproduction**, frozen at its original December 2016 snapshot.
   It is anchored to Berlin's pre-2021 area boundaries (447 Planungsräume) and computed against the
-  demographic (EWR) data the thesis itself used, using the thesis's own single-blended-score
+  resident-register (EWR) data the thesis used as inputs, using the thesis's own single-blended-score
   definition (§3, point 4). Use it to compare against the original findings, not as a current picture
   of Berlin.
 - **`live_data`** is the actively re-grounded index (§3): official MSS/Sozialmonitoring editions from
@@ -252,6 +252,12 @@ We would rather state these plainly than have you discover them by surprise.
   excluded from the hotspot significance testing
   ([#290](https://github.com/dhelweg/gentriduck/issues/290)) so a coverage gap cannot masquerade as a
   finding.
+- **Only points are counted.** Only places mapped as points are counted, as in the 2018 thesis. When
+  a mapper redraws a shop as a building outline it drops out of the count, so a fall in an area's
+  count is not evidence that businesses closed. Such redrawing is likelier in well-mapped inner-city
+  areas, so it can pull their commercial dynamism down. Nothing on this site treats a disappearing
+  point of interest as a closure or as commercial displacement. Measuring how much of this happens is
+  tracked in [#337](https://github.com/dhelweg/gentriduck/issues/337).
 - **Ecological fallacy — aggregate, not individual, statistics.** Every number on this site describes
   a small-area aggregate of thousands of residents. It is not, and cannot be, a statement about any
   specific person, household, or building. Inferring an individual's situation from an area-level

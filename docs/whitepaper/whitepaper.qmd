@@ -39,7 +39,9 @@ definition (`docs/methodology/index-definition.md` §0.4):
   thesis tentatively supported (Tabelle 6-16, hypothesis H3b: "eher bestätigt") that the social cycle
   **leads** the commercial cycle, which is why the index is architected as a lead-lag model rather
   than a contemporaneous one (ADR-0008 §2). The revival's cross-lagged re-test supports that ordering
-  only on the 2021–2025 official monitor (docs/epic-e/E1-regression-findings.md).
+  only on the 2021–2025 official monitor -- a single comparison window (pivot 2023) without the D4
+  control -- and not on the 2013–2019 editions that contain the thesis's own, which are the
+  like-for-like (if lower-powered) re-test (docs/epic-e/E1-regression-findings.md).
 - **D\"oring & Ulbricht's (2016) Berlin-specific reading** [@doeringulbricht2016]: a high share of
   welfare recipients, young adults, and migrants, and a low share of long-tenure residents, marks
   a Planungsraum (PLR) as susceptible to gentrification -- a *precondition*, not an ongoing outcome
@@ -134,7 +136,7 @@ H3a (POI leads status -- thesis REJECTED, tested anyway): Δstatus[t+k] ~ Δamen
 H3b (status leads POI -- thesis TENTATIVELY supported, Tabelle 6-16): Δamenity[t+k] ~ Δstatus[t]
 ```
 
--- with the headline result (H3b dominance) reported as a *test outcome*, never hard-coded
+-- with which direction dominates, if either, reported as a *test outcome*, never hard-coded
 (index-definition.md §2.1). Both sides must be *deltas*, never a level-vs-level comparison
 (§2.2); every coefficient uses spatial-autocorrelation-robust inference, because adjacent PLRs are
 not independent observations (Tobler's first law; §2.3, §8 below); the OSM completeness-bias
@@ -188,11 +190,17 @@ Epic B headline "did the 2018 finding hold" test, D1 is collapsed to a binary
 This table is a live re-execution of the same three tests against the currently ingested marts --
 not a static copy.)*
 
-The back-test harness validates the live `gentrification_index` mart against two independent
-references: (A) MSS Status/Dynamik classes flowing through an independent model path
-(`int_gentrification_ts`), via Spearman rank correlation; and (B/C) a curated seed of ~20
-literature-labelled hotspot/coldspot PLRs [@doeringulbricht2016; @holmschulz2016; @holm2010],
-checking recall in the expected tail of the `status_index` distribution.
+The back-test harness checks the live `gentrification_index` mart for pipeline integrity and
+label consistency; it is not independent validation. (A) compares the mart's `status_index` with
+the MSS Status class through a second model path (`int_gentrification_ts`). Because `status_index`
+*is* the MSS class, rho = 1 by construction: the test catches pipeline breakage, not measurement
+error. (B/C) score recall of a curated seed of literature-labelled hotspot/coldspot PLRs
+[@doeringulbricht2016; @holmschulz2016; @holm2010] in the tails of the `status_index`
+distribution. But 2 of the 8 hotspot labels and all 6 coldspot labels are MSS class assignments
+themselves, and because `status_index` takes four values the "top decile" covers 17% of PLRs. The
+only partially independent check is Test F (non-gating): PLRs in an upgrading stage are more often
+under Milieuschutz designation (OR 1.84, cluster-bootstrap CI [1.02, 3.41], Fisher p = 0.0525) --
+weak support, partly confounded by shared indicators and district policy.
 
 ```{python}
 #| echo: false
@@ -300,10 +308,11 @@ else:
           "See docs/methodology/backtest.md for the last recorded run.")
 ```
 
-At the last recorded static run (`docs/methodology/backtest.md`, 2026-06-29), all three tests
-passed: Test A rho = 1.0000 (p < 0.0001, n = 535, the mart and the intermediate model agreeing on
-the same MSS D1 ordinal via two independent paths); Test B hotspot recall = 1.00 (8/8); Test C
-coldspot recall = 1.00 (6/6). The live table above re-executes the same query logic against
+At the last recorded static run (`docs/methodology/backtest.md`, 2026-10-27), all three gating
+tests passed: Test A rho = 1.0000 (n = 535; the mart and the intermediate model encode the same MSS
+D1 ordinal, so this is an integrity check, rho = 1 by construction); Test B hotspot recall = 1.00
+(8/8); Test C coldspot recall = 1.00 (6/6) -- both against a 17%-wide band and partly MSS-sourced
+labels. Test F (Milieuschutz) gave weak, borderline support. The live table above re-executes the same query logic against
 whatever DuckDB file is currently populated in this environment; a "DuckDB not found" message
 means the pipeline has not been built locally (`uv run poe build`), not that validation failed --
 consult the static record in that case.
