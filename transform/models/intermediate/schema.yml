@@ -131,17 +131,22 @@ models:
       stg_hamburg_geo (#40 H1, ADR-0014), joined with seed_dim_area_level for
       level_name.
       NOTE: parent_area_code is intentionally omitted from this dimension --
-      parent/child links now live in the separate dim_area_hierarchy model
-      (#242, I18), not as a column here, so dim_area's own grain/dedup logic
-      stays untouched. See dim_area_hierarchy.sql for details.
+      parent/child links live in the separate dim_area_hierarchy model (#242,
+      I18), not as a column here. Since #352 the layering is
+      int_dim_area_base -> dim_area_hierarchy -> int_hamburg_gebiet_names ->
+      int_area_display_name_override -> dim_area (the Hamburg Gebiet names
+      need the hierarchy's Gebiet -> Stadtteil edge). See
+      dim_area_hierarchy.sql for details.
       Area names are proper nouns kept in their local language (German for both
       Berlin and Hamburg).
       #352: the rows/codes/source names now come from int_dim_area_base (this
       model's body before #352); dim_area fills the display name for Hamburg
       statistisches Gebiet (int_hamburg_gebiet_names -- the source has none)
       and disambiguates the few Berlin LOR names that repeat within one level
-      and vintage (int_berlin_lor_name_disambiguation). area_name is display
-      only; area_code stays the key.
+      and vintage (int_berlin_lor_name_disambiguation), both applied with one
+      join through int_area_display_name_override. area_name is display only;
+      area_code stays the stable key (OSM-derived labels can change on
+      re-ingest).
     meta:
       dbt_meta_owner: data-engineer
     # QA-3 (#178): grain test -- the model's own QUALIFY ROW_NUMBER() OVER
@@ -1717,7 +1722,8 @@ models:
       Stadtteil from dim_area_hierarchy's Gebiet -> Stadtteil edge (the same
       edge as the pages' "Up:" link). A repeated OSM label gets
       ' (Gebiet <code>)' appended, so area_name is unique. Display only, NOT
-      methodology-bearing. Feeds dim_area and dim_area_geometry.
+      methodology-bearing. Table (two spatial joins upstream). Feeds dim_area
+      (via int_area_display_name_override) and dim_area_geometry.
     meta:
       dbt_meta_owner: data-engineer
     data_tests:
@@ -1771,13 +1777,55 @@ models:
       - name: osm_place_name
         description: Matched OSM place name, null where none matched.
 
+  - name: int_area_display_name_override
+    description: >
+      #352 -- per-city display-name overrides unioned into one
+      (city_code, area_level, area_code, area_name) set, so dim_area applies
+      them with a single join (ADR-0005 seam). Sources:
+      int_hamburg_gebiet_names (every Hamburg Gebiet) and
+      int_berlin_lor_name_disambiguation (collapsed over vintage with min()).
+      OSM-derived labels can change on re-ingest; area_code is the stable
+      key. Table, so dim_area queries don't re-run the spatial joins.
+    meta:
+      dbt_meta_owner: data-engineer
+    data_tests:
+
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns:
+              - city_code
+              - area_level
+              - area_code
+    columns:
+      - name: city_code
+        description: City identifier.
+        data_tests:
+
+          - not_null
+      - name: area_level
+        description: Area level identifier (same vocabulary as dim_area).
+        data_tests:
+
+          - not_null
+      - name: area_code
+        description: Area code (natural key within city_code, area_level).
+        data_tests:
+
+          - not_null
+      - name: area_name
+        description: Display name that replaces the source name in dim_area.
+        data_tests:
+
+          - not_null
+
   - name: int_berlin_lor_name_disambiguation
     description: >
       #352 -- Berlin LOR (plr/bzr/pgr) rows whose name repeats within one
       level AND one LOR vintage, with a label that tells them apart:
       '<name> (<nearest ancestor name that differs>)', ancestors by LOR
       prefix nesting in the same vintage, falling back to the code. Only
-      colliding rows are output; dim_area and dim_area_geometry left-join it.
+      colliding rows are output; dim_area (via int_area_display_name_override)
+      and dim_area_geometry left-join it.
       Cross-vintage repeats (the same place under a new code) are left
       alone. Display only, NOT methodology-bearing.
     meta:

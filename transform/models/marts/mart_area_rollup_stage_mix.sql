@@ -659,12 +659,13 @@ with
     -- Area name lookup (dim_area). NB: dim_area carries NO 'bezirk'-level rows
     -- today (seed_dim_area_level.csv's own note: "Bezirk has no dissolved-
     -- geometry choropleth, only a numeric roll-up") -- area_name is genuinely
-    -- NULL for area_level='bezirk' here, matching the same
-    -- honest-not-backfilled convention export_hamburg_geometry() already
-    -- documents for Hamburg subarea_l2's blank area_name (H3-domain-signoff.md
-    -- condition 3). A friendly Bezirk display name, if wanted, belongs in the
-    -- presentation layer (see web/scripts/export_area_geojson.py's BEZIRK_NAMES
-    -- for the existing precedent), not fabricated here.
+    -- NULL for area_level='bezirk' here, because no Berlin Bezirk name
+    -- source exists in this warehouse yet (dim_area_geometry's dissolved
+    -- Bezirk rows are unnamed for the same reason). A friendly Bezirk display
+    -- name, if wanted, belongs in the presentation layer (see
+    -- web/scripts/export_area_geojson.py's BEZIRK_NAMES for the existing
+    -- precedent), not fabricated here. (Hamburg subarea_l2 names, blank at
+    -- the source, are filled in dim_area since #352.)
     --
     -- area_name is ALSO genuinely NULL for the 4 Hamburg subarea_l1 rows
     -- whose area_code is one of the merged EWR disclosure-control Stadtteil

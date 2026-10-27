@@ -5,10 +5,13 @@
 -- for Berlin; district -> subarea_l1 -> subarea_l2 for Hamburg).
 --
 -- Kept as a SEPARATE model rather than a parent_area_code column on dim_area
--- (ticket's "your call" option) so dim_area's own dedup/grain logic (which
--- already collapses both LOR vintages into one row per area_code) stays
--- untouched -- this model layers parent/child derivation on top without
--- re-opening that dedup.
+-- (ticket's "your call" option) so the area dimension's own dedup/grain logic
+-- (which collapses both LOR vintages into one row per area_code) stays
+-- untouched. Since #352 this model sits BELOW dim_area, not on top of it:
+-- int_dim_area_base -> dim_area_hierarchy -> int_hamburg_gebiet_names
+-- -> int_area_display_name_override -> dim_area
+-- (the Hamburg Gebiet display names need this model's Gebiet -> Stadtteil
+-- edge).
 --
 -- Grain: one row per (city_code, area_level, area_code) THAT HAS a resolvable
 -- parent. Not every dim_area row necessarily appears here (see Hamburg

@@ -16,8 +16,8 @@
 -- vintage. An ancestor whose name equals the area's own name is skipped (PLR
 -- 06100102 'Schloßstraße' sits in BZR 'Schloßstraße'), and if no ancestor
 -- differs the code is used instead. Only colliding rows are output; dim_area
--- and dim_area_geometry LEFT JOIN this model and keep the source name
--- otherwise.
+-- (via int_area_display_name_override) and dim_area_geometry LEFT JOIN this
+-- model and keep the source name otherwise.
 --
 -- NOT methodology-bearing: display label only, area_code stays the key.
 {{

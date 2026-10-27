@@ -25,12 +25,17 @@
 -- ' (Gebiet <code>)' appended. Tested on dim_area_geometry
 -- (test_area_display_name_unique.sql).
 --
+-- Feeds dim_area via int_area_display_name_override, and dim_area_geometry.
+-- Materialized as a table (#352 review): it sits on two spatial joins
+-- (dim_area_hierarchy's Gebiet -> Stadtteil crosswalk and the OSM ST_Within
+-- match), which a view would re-run for every downstream query.
+--
 -- NOT methodology-bearing: a display label only. area_code stays the key
 -- everywhere; no index, weight, or spatial method changes. The OSM name is
 -- a best-effort label, not an official designation (the pages say so).
 {{
     config(
-        materialized="view",
+        materialized="table",
         meta={"dbt_meta_owner": "data-engineer"},
     )
 }}

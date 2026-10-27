@@ -508,9 +508,9 @@ def export_hamburg_geometry(con: duckdb.DuckDBPyConnection) -> None:
     module's header comment (H3, #237) for why this is a dedicated function rather than an entry
     in `VARIANTS_BY_AREA_LEVEL` above.
 
-    NB (H3-domain-signoff.md condition 3 / H1-domain-signoff.md §3): the Hamburg `subarea_l2`
-    source data has no name (only Hamburg's coarser `subarea_l1`/Stadtteil and `district` levels
-    do). Since #352, `dim_area_geometry.area_name` carries a derived display label instead --
+    NB (#352, maintainer spec): the Hamburg `subarea_l2` source data has no name (only Hamburg's
+    coarser `subarea_l1`/Stadtteil and `district` levels do), so `dim_area_geometry.area_name`
+    carries a derived display label instead --
     '<Stadtteil> · <OSM place name>' or '<Stadtteil> · Gebiet <code>' (see
     transform/models/intermediate/int_hamburg_gebiet_names.sql) -- passed through here unchanged.
     """

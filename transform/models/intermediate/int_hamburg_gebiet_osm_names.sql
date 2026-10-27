@@ -52,6 +52,8 @@
 -- Unmatched Gebiete are simply absent from this crosswalk's output (no row)
 -- -- the consuming model (int_hamburg_gebiet_names) must LEFT JOIN and
 -- tolerate a null osm_place_name, never treat absence as an error.
+-- The matched names can change when the OSM places extract is re-ingested;
+-- area_code is the stable key.
 -- Measured 2026-10-27 (#352): 41 of 943 Gebiete get a name once the
 -- Stadtteil-named suburb nodes are filtered out (144 before the filter, 104
 -- of those just the parent Stadtteil's own name).
@@ -74,9 +76,6 @@ with
             city_code = 'HH' and area_level = 'subarea_l2' and geometry_wkb is not null
     ),
 
-    -- Transform OSM's WGS-84 lon/lat to the Gebiet layer's native metric CRS
-    -- (EPSG:25832) so the point-in-polygon test runs in a metric, not
-    -- degree, space -- same direction/convention as int_osm_poi_hamburg.sql.
     -- #352: Hamburg Stadtteil and Bezirk names, to drop OSM places that name
     -- a whole Stadtteil rather than something inside one (see places below).
     stadtteil_bezirk_names as (
@@ -88,6 +87,9 @@ with
             and geo.area_name is not null
     ),
 
+    -- Transform OSM's WGS-84 lon/lat to the Gebiet layer's native metric CRS
+    -- (EPSG:25832) so the point-in-polygon test runs in a metric, not
+    -- degree, space -- same direction/convention as int_osm_poi_hamburg.sql.
     places as (
         select
             osm_id,
