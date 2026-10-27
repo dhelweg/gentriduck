@@ -162,7 +162,7 @@ where variant = 'standard'
 order by dynamism_index desc
 ```
 
-<AreaMap
+<PolygonMap
     data={thesis_areas}
     geoJsonUrl={`${base}/geo/bzr_standard.geojson`}
     geoId="area_code"
@@ -170,9 +170,6 @@ order by dynamism_index desc
     value="dynamism_index"
     legendType="scalar"
     title="Berlin Bezirksregion (BZR) — Dynamism (speed of status change), 2018 thesis reproduction (Dec 2016 snapshot)"
-    startingLat={52.52}
-    startingLong={13.405}
-    startingZoom={9}
     tooltip={areaTooltip}
 />
 

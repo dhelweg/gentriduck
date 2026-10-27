@@ -91,6 +91,11 @@ sidebar_position: 1
   // many/which stages are present at the selected area_level. (The `areas_leaf`/`areas_rollup`
   // queries below stay ordered by `stage_sort` -- most-acute-first -- purely so first-occurrence
   // order is deterministic/readable.)
+  //
+  // #351: the map is now drawn by web/components/PolygonMap.svelte (SVG, no Leaflet/tile basemap)
+  // instead of <AreaMap>; PolygonMap keeps exactly this positional first-occurrence colour rule.
+  // It is still a separate map instance and query from Berlin's (the H3 structural guard above);
+  // only the drawing component is shared, as every Evidence chart component already is.
   const stageColorByLabel = {
     'Active gentrification': '#d73027',
     'Early pioneer signal': '#fc8d59',
@@ -218,7 +223,7 @@ sidebar_position: 1
   deprived</b>, not more prosperous. "Dynamism" — higher means the area's status is improving
   <b>faster</b>, over Hamburg's own <b>3-year</b> observation window (Berlin's is 2 years) — see
   <a href="/methodology">methodology §6</a> for why that is a qualitative difference in what
-  "active" means, not just a numeric-scale one. Areas without a value are drawn but left blank.
+  "active" means, not just a numeric-scale one. Areas without a value are drawn in grey ("No data").
 </Alert>
 
 <Alert status="warning">
@@ -449,7 +454,7 @@ qualify row_number() over (partition by m.area_code order by m.typology_stage) =
 order by stage_sort
 ```
 
-<AreaMap
+<PolygonMap
     data={isRollup ? areas_rollup : areas_leaf}
     geoJsonUrl={geoJsonUrl}
     geoId="area_code"
@@ -458,9 +463,6 @@ order by stage_sort
     legendType={effectiveIndicator === 'status_class' ? 'categorical' : 'scalar'}
     colorPalette={effectiveIndicator === 'status_class' ? presentStagePalette(isRollup ? areas_rollup : areas_leaf) : undefined}
     title="Hamburg {areaLevelLabel[inputs.area_level.value]} — {effectiveIndicatorLabel}, latest period"
-    startingLat={53.5511}
-    startingLong={9.9937}
-    startingZoom={10}
     tooltip={areaTooltip}
 />
 

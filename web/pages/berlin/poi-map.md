@@ -134,13 +134,13 @@ for the full method, or the [methodology page](/methodology) for a plain-languag
 </Alert>
 
 <Alert status="warning">
-  <b>Thinly-mapped PLRs are left blank.</b> Offering Advantage is a compositional ratio (a location
+  <b>Thinly-mapped PLRs are greyed out.</b> Offering Advantage is a compositional ratio (a location
   quotient) -- in a PLR-year with very few mapped places overall, a single new or removed business
   can swing its Offering Advantage value disproportionately. PLR-years with fewer than 10 total
-  mapped places (across every domain) are shown as an unshaded gap on the map rather than a
+  mapped places (across every domain) are shown as a grey "No data" area on the map rather than a
   potentially misleading Offering Advantage value; the raw mapped-place count for the selected
-  domain is always visible in the tooltip so you can judge borderline cases yourself. <b>A blank
-  cell means only "too thinly observed to compute a stable ratio" -- never "commercially dead."</b>
+  domain is always visible in the tooltip so you can judge borderline cases yourself. <b>A grey
+  area means only "too thinly observed to compute a stable ratio" -- never "commercially dead."</b>
   OSM's mapping coverage is not spatially neutral: besides the early-year effect on the citywide
   chart below, completeness also varies *within* a given year and tends to correlate with area
   advantage -- poorer/peripheral areas are typically less thoroughly mapped than richer/central ones
@@ -295,7 +295,7 @@ where b.snapshot_year = ${inputs.year.value}
   no natural center, so it alone falls through to AreaMap's default sequential scale
   (colorPalette/min/max all undefined).
 -->
-<AreaMap
+<PolygonMap
     data={poi_map_data}
     geoJsonUrl={`${base}/geo/plr_live_data.geojson`}
     geoId="area_code"
@@ -330,12 +330,8 @@ where b.snapshot_year = ${inputs.year.value}
                 : undefined
     }
     title="Berlin Planungsraum (PLR) — {inputs.metric.value === 'density' ? 'POI density' : 'Offering Advantage'}, {inputs.domain.value}, {inputs.year.value}{inputs.view === 'development' ? ' (change vs. previous year)' : ''}"
-    startingLat={52.52}
-    startingLong={13.405}
-    startingZoom={9}
     link="link"
     tooltip={areaTooltip}
-    emptySet="warn"
     emptyMessage="No data for this domain/year combination."
 />
 
@@ -465,7 +461,6 @@ order by snapshot_year
     y=avg_brw_eur_m2
     title="Citywide average land value (Bodenrichtwert), residential zones (EUR/m²)"
     yAxisTitle="EUR/m²"
-    emptySet="warn"
     emptyMessage="No residential land-value zones matched for any year."
 />
 

@@ -83,12 +83,12 @@ city-agnostic mart that has carried real Hamburg rows since H1 (#40).
 </Alert>
 
 <Alert status="warning">
-  <b>This map has no neighbourhood names, and thinly-mapped Gebiete are left blank.</b> Hamburg's
+  <b>This map has no neighbourhood names, and thinly-mapped Gebiete are greyed out.</b> Hamburg's
   statistische Gebiete carry only a numeric code (see the <a href="/hamburg/maps">gentrification
   map</a> for why); hover any area for its code. Offering Advantage is a compositional ratio (a
   location quotient) — in a Gebiet-year with very few mapped places overall, a single new or
   removed business can swing its Offering Advantage value disproportionately, so Gebiet-years
-  below the same minimum-mapped-place threshold used for Berlin are shown as an unshaded gap rather
+  below the same minimum-mapped-place threshold used for Berlin are shown as a grey "No data" area rather
   than a potentially misleading value; the raw mapped-place count is always visible in the
   tooltip. <b>OSM's mapping coverage is not spatially neutral: completeness tends to correlate with
   area advantage, and poorer/peripheral areas are typically less thoroughly mapped than
@@ -199,7 +199,7 @@ from base as b
 where b.snapshot_year = ${inputs.year.value}
 ```
 
-<AreaMap
+<PolygonMap
     data={poi_map_data}
     geoJsonUrl={`${base}/geo/subarea_l2_live_data.geojson`}
     geoId="area_code"
@@ -234,11 +234,7 @@ where b.snapshot_year = ${inputs.year.value}
                 : undefined
     }
     title="Hamburg statistisches Gebiet — {inputs.metric.value === 'density' ? 'POI density' : 'Offering Advantage'}, {inputs.domain.value}, {inputs.year.value}{inputs.view === 'development' ? ' (change vs. previous year)' : ''}"
-    startingLat={53.5511}
-    startingLong={9.9937}
-    startingZoom={10}
     tooltip={areaTooltip}
-    emptySet="warn"
     emptyMessage="No data for this domain/year combination."
 />
 

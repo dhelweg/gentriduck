@@ -129,6 +129,11 @@ sidebar_position: 2
   // area_level. (The `areas_plr`/`areas_rollup` queries below stay ordered by `stage_sort` --
   // most-acute-first -- purely so first-occurrence order is deterministic/readable, not because
   // EvidenceMap itself requires it any more.)
+  //
+  // #351: the map is now drawn by web/components/PolygonMap.svelte (SVG, no Leaflet/tile basemap,
+  // since CARTO's basemap now returns "API KEY REQUIRED" tiles) instead of <AreaMap>. PolygonMap
+  // keeps exactly this positional first-occurrence colour rule and the same `${base}`-prefixed
+  // geoJsonUrl/link convention, so everything said above about both still holds.
   const stageColorByLabel = {
     'Active gentrification': '#d73027',
     'Early pioneer signal': '#fc8d59',
@@ -286,8 +291,8 @@ Hamburg's own indicators, area levels, and observation window.
   table below the map) means <b>higher</b> gentrification pressure. See the
   <a href="https://github.com/dhelweg/gentriduck/blob/main/docs/adr/0004-data-governance-and-index-definition.md">index definition</a>
   for the full methodology, or the <a href="/methodology">methodology & data sources</a> page for a
-  plain-language walkthrough. Areas without a value (e.g. uninhabited planning areas) are drawn but
-  left blank.
+  plain-language walkthrough. Areas without a value (e.g. uninhabited planning areas) are drawn in grey
+  and marked "No data" in the legend.
 </Alert>
 
 <Dropdown name="area_level" title="Area level" defaultValue="plr">
@@ -597,7 +602,7 @@ from base
 order by stage_sort
 ```
 
-<AreaMap
+<PolygonMap
     data={isRollup ? areas_rollup : areas_plr}
     geoJsonUrl={geoJsonUrl}
     geoId="area_code"
@@ -606,9 +611,6 @@ order by stage_sort
     legendType={effectiveIndicator === 'status_class' ? 'categorical' : 'scalar'}
     colorPalette={effectiveIndicator === 'status_class' ? presentStagePalette(isRollup ? areas_rollup : areas_plr) : undefined}
     title="Berlin {areaLevelLabel[inputs.area_level.value]} — {effectiveIndicatorLabel}, latest period"
-    startingLat={52.52}
-    startingLong={13.405}
-    startingZoom={9}
     link="link"
     tooltip={areaTooltip}
 />
@@ -852,7 +854,7 @@ Bezirksregion (BZR) map instead? It now lives on
 - This map's Planungsraum (PLR) level covers Berlin's current, live data at neighbourhood detail.
   The 2018 thesis's Dec-2016-snapshot reproduction, at the coarser Bezirksregion level, has its own
   fixed map on [the 2018 thesis, re-checked](/thesis-recheck).
-- Areas without a value (e.g. uninhabited planning areas) are drawn but left blank — a blank area
+- Areas without a value (e.g. uninhabited planning areas) are drawn in grey ("No data") — a grey area
   is missing data, not a "zero pressure" reading.
 
 ## Where next
