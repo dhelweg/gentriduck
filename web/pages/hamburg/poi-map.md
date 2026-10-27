@@ -29,7 +29,7 @@ sidebar_position: 2
     comment for why -- area_name is genuinely blank at this grain).
   - No click-through link -- no /hamburg/area/[code] profile page exists (see
     pages/hamburg/index.md).
-  - Separate <AreaMap> instance/route from Berlin's, per the H3-domain-signoff.md structural guard
+  - Separate <PolygonMap> instance (#351; formerly <AreaMap>)/route from Berlin's, per the H3-domain-signoff.md structural guard
     (no shared cross-city component instance) -- same principle as pages/hamburg/maps.md.
 -->
 
@@ -39,11 +39,11 @@ sidebar_position: 2
   $: areaTooltip = [
     {
       id: inputs.metric.value === 'density'
-        ? (inputs.view === 'stock' ? 'poi_density_per_km2' : 'density_delta')
-        : (inputs.view === 'stock' ? 'oa_domain' : 'oa_delta'),
+        ? ((inputs.view ?? 'stock') === 'stock' ? 'poi_density_per_km2' : 'density_delta')
+        : ((inputs.view ?? 'stock') === 'stock' ? 'oa_domain' : 'oa_delta'),
       title:
         (inputs.metric.value === 'density' ? 'POI density / km²' : 'Offering Advantage')
-        + (inputs.view === 'development' ? ' (change vs. previous year)' : ''),
+        + ((inputs.view ?? 'stock') === 'development' ? ' (change vs. previous year)' : ''),
       fmt: 'num1'
     },
     { id: 'poi_count', title: 'Mapped places (this domain)', fmt: 'num0' },
@@ -83,12 +83,12 @@ city-agnostic mart that has carried real Hamburg rows since H1 (#40).
 </Alert>
 
 <Alert status="warning">
-  <b>This map has no neighbourhood names, and thinly-mapped Gebiete are greyed out.</b> Hamburg's
+  <b>This map has no neighbourhood names, and thinly-mapped Gebiete are hatched grey.</b> Hamburg's
   statistische Gebiete carry only a numeric code (see the <a href="/hamburg/maps">gentrification
   map</a> for why); hover any area for its code. Offering Advantage is a compositional ratio (a
   location quotient) — in a Gebiet-year with very few mapped places overall, a single new or
   removed business can swing its Offering Advantage value disproportionately, so Gebiet-years
-  below the same minimum-mapped-place threshold used for Berlin are shown as a grey "No data" area rather
+  below the same minimum-mapped-place threshold used for Berlin are shown as a hatched grey "No data" area rather
   than a potentially misleading value; the raw mapped-place count is always visible in the
   tooltip. <b>OSM's mapping coverage is not spatially neutral: completeness tends to correlate with
   area advantage, and poorer/peripheral areas are typically less thoroughly mapped than
@@ -206,34 +206,34 @@ where b.snapshot_year = ${inputs.year.value}
     areaCol="area_code"
     value={
         inputs.metric.value === 'density'
-            ? (inputs.view === 'stock' ? 'poi_density_per_km2' : 'density_delta')
-            : (inputs.view === 'stock' ? 'oa_domain' : 'oa_delta')
+            ? ((inputs.view ?? 'stock') === 'stock' ? 'poi_density_per_km2' : 'density_delta')
+            : ((inputs.view ?? 'stock') === 'stock' ? 'oa_domain' : 'oa_delta')
     }
     legendType="scalar"
     colorPalette={
-        inputs.metric.value === 'density' && inputs.view === 'stock'
+        inputs.metric.value === 'density' && (inputs.view ?? 'stock') === 'stock'
             ? undefined
             : divergingPalette
     }
     min={
         inputs.metric.value === 'oa'
-            ? (inputs.view === 'stock'
+            ? ((inputs.view ?? 'stock') === 'stock'
                 ? symmetricDomain(poi_map_data, 'oa_domain', 1)[0]
                 : symmetricDomain(poi_map_data, 'oa_delta', 0)[0])
-            : inputs.view === 'development'
+            : (inputs.view ?? 'stock') === 'development'
                 ? symmetricDomain(poi_map_data, 'density_delta', 0)[0]
                 : undefined
     }
     max={
         inputs.metric.value === 'oa'
-            ? (inputs.view === 'stock'
+            ? ((inputs.view ?? 'stock') === 'stock'
                 ? symmetricDomain(poi_map_data, 'oa_domain', 1)[1]
                 : symmetricDomain(poi_map_data, 'oa_delta', 0)[1])
-            : inputs.view === 'development'
+            : (inputs.view ?? 'stock') === 'development'
                 ? symmetricDomain(poi_map_data, 'density_delta', 0)[1]
                 : undefined
     }
-    title="Hamburg statistisches Gebiet — {inputs.metric.value === 'density' ? 'POI density' : 'Offering Advantage'}, {inputs.domain.value}, {inputs.year.value}{inputs.view === 'development' ? ' (change vs. previous year)' : ''}"
+    title="Hamburg statistisches Gebiet — {inputs.metric.value === 'density' ? 'POI density' : 'Offering Advantage'}, {inputs.domain.value}, {inputs.year.value}{(inputs.view ?? 'stock') === 'development' ? ' (change vs. previous year)' : ''}"
     tooltip={areaTooltip}
     emptyMessage="No data for this domain/year combination."
 />

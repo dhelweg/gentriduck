@@ -117,7 +117,7 @@ table (Tabelle 6-16).
   // why that rendered blank for `standard`/`bzr`). Now `dynamism_index`, a scalar -- so no
   // categorical palette is needed here; /berlin/maps' scalar indicators use Evidence's default
   // single-hue sequential ramp (light -> dark blue), reused here unmodified via `legendType`
-  // alone (no `colorPalette` prop, see the <AreaMap> below).
+  // alone (no `colorPalette` prop, see the <PolygonMap> below; #351 replaced AreaMap).
   import { base } from '$app/paths';
 
   const areaTooltip = [
@@ -174,7 +174,9 @@ order by dynamism_index desc
 />
 
 There's no click-through here — the thesis's pre-2021 area codes don't resolve on the per-area
-pages, which are built on today's boundaries. Hover an area for its name and dynamism score.
+pages, which are built on today's boundaries. Hover an area for its name and dynamism score. One
+Bezirksregion, Forst Grunewald (the forest in the south-west), has a boundary but no index value in
+this snapshot, so it is drawn with grey hatching ("No data"); that is missing data, not a score.
 
 ### Read the columns together, not alone
 

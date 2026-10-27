@@ -23,7 +23,7 @@ sidebar_position: 3
   `/berlin/area/[code]` route by crawling real `<a href>` elements at build time, and this page's
   own DataTable only ever renders the *default* district's ~12 rows at build time (the other 11
   districts' rows only exist after the reader changes the dropdown, client-side) — nowhere near
-  covering all 542 areas. `AreaMap`'s canvas click-throughs (on `/berlin/maps`, `/berlin/poi-map`)
+  covering all 542 areas. the maps' click-throughs (`PolygonMap` since #351, formerly `AreaMap`'s canvas; on `/berlin/maps`, `/berlin/poi-map`)
   can't be crawled either (their links only exist after client-side JS runs — see
   `pages/berlin/area/index.md`'s own header comment). `area/index.md`'s single big DataTable,
   with every one of the 542 rows rendered server-side, is what actually makes the full per-PLR

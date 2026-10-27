@@ -96,8 +96,8 @@ sidebar_position: 2
 -->
 
 <script>
-  // basePath-aware asset URL (#144): AreaMap fetches `geoJsonUrl` verbatim, and its click-through
-  // `link` column does a raw `window.location.href = link` (EvidenceMap.js) -- unlike Evidence's
+  // basePath-aware asset URL (#144): the map fetches `geoJsonUrl` verbatim, and its click-through
+  // `link` column is a plain <a href> (PolygonMap, #351; AreaMap used window.location.href) -- unlike Evidence's
   // own nav/DataTable links, NEITHER prepends the base path -- so on the GitHub Pages project site
   // (served under /gentriduck) a bare "/geo/..." 404s (empty map) and a bare "/berlin/area/..."
   // 404s on click-through. Prepend SvelteKit's `base` (= deployment.basePath in the build; ""
@@ -295,7 +295,7 @@ Hamburg's own indicators, area levels, and observation window.
   table below the map) means <b>higher</b> gentrification pressure. See the
   <a href="https://github.com/dhelweg/gentriduck/blob/main/docs/adr/0004-data-governance-and-index-definition.md">index definition</a>
   for the full methodology, or the <a href="/methodology">methodology & data sources</a> page for a
-  plain-language walkthrough. Areas without a value (e.g. uninhabited planning areas) are drawn in grey
+  plain-language walkthrough. Areas without a value (e.g. uninhabited planning areas) are drawn with grey hatching
   and marked "No data" in the legend.
 </Alert>
 
@@ -858,7 +858,7 @@ Bezirksregion (BZR) map instead? It now lives on
 - This map's Planungsraum (PLR) level covers Berlin's current, live data at neighbourhood detail.
   The 2018 thesis's Dec-2016-snapshot reproduction, at the coarser Bezirksregion level, has its own
   fixed map on [the 2018 thesis, re-checked](/thesis-recheck).
-- Areas without a value (e.g. uninhabited planning areas) are drawn in grey ("No data") — a grey area
+- Areas without a value (e.g. uninhabited planning areas) are drawn with grey hatching ("No data") — a hatched area
   is missing data, not a "zero pressure" reading.
 
 ## Where next
