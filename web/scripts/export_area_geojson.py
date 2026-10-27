@@ -83,6 +83,19 @@ between them, unlike per-polygon simplification), with coordinates rounded to 5 
 Shapely is already a declared project dependency (pyproject.toml), so nothing new is added. This is
 display-only: no area, centroid, join, or indicator is computed from these files, and the governed
 `dim_area_geometry` mart and its parquet export keep the full-resolution geometry.
+
+#351 review addition: orphan areas are left out of the DISPLAY export. Now that the SVG maps draw
+every area in a file (areas without data in grey), a source-data placeholder becomes visible.
+Today that is exactly one feature: Hamburg statistisches Gebiet 106001, a 5-vertex, ~17.5 km^2
+rectangle north of the city (9.87-9.93 E, 53.69-53.73 N) with no gentrification_index row, lying
+entirely outside the Stadtteil (subarea_l1) layer; dim_area_hierarchy already flags it as an
+anomaly with a fallback parent. `_drop_orphan_display_areas()` applies a generic rule, not a
+hard-coded code: for every child level of `DRILLDOWN_LEVEL_PAIRS`, an area is dropped from the
+display copy when less than ORPHAN_MIN_INSIDE_PARENT_SHARE of its area lies inside the union of
+its parent level AND it has no gentrification_index row at all. Measured on the current data,
+every other area at every level pair is at least 90 % inside its parent layer, and 106001 is 0 %
+inside. The governed `dim_area_geometry` mart and its parquet export are NOT changed; the
+placeholder itself is a data follow-up.
 """
 
 from __future__ import annotations
@@ -109,6 +122,9 @@ OUT_DIR = REPO_ROOT / "web" / "static" / "geo"
 DISPLAY_SIMPLIFY_TOLERANCE_DEG = 0.00005
 # #351: decimal places kept per coordinate (5 = ~1 m).
 DISPLAY_COORD_DECIMALS = 5
+# #351 review: an area with no data is left out of the display export when less than this share of
+# it lies inside its parent level's layer (see the module docstring, "orphan areas").
+ORPHAN_MIN_INSIDE_PARENT_SHARE = 0.5
 
 
 def _round_coords(obj):
@@ -129,8 +145,10 @@ def _simplify_coverage(geometry_geojsons: list[str]) -> list[str]:
     """
     geoms = [shape(json.loads(g)) for g in geometry_geojsons]
     try:
+        # coverage_simplify needs shapely >= 2.1 (pinned in pyproject.toml); AttributeError is
+        # caught as well so an older shapely degrades to the per-polygon path instead of failing.
         simplified = list(shapely.coverage_simplify(geoms, DISPLAY_SIMPLIFY_TOLERANCE_DEG))
-    except shapely.errors.GEOSException as exc:
+    except (shapely.errors.GEOSException, AttributeError) as exc:
         logger.warning("coverage_simplify failed (%s) -- falling back to per-polygon simplify", exc)
         simplified = [
             shapely.simplify(g, DISPLAY_SIMPLIFY_TOLERANCE_DEG, preserve_topology=True)
@@ -158,6 +176,7 @@ def _load_display_geometry(con: duckdb.DuckDBPyConnection, geometry_path: Path) 
         "select row_number() over () as _display_rid, * from read_parquet(?)",
         [str(geometry_path)],
     )
+    _drop_orphan_display_areas(con)
     groups = con.execute(
         "select distinct city_code, area_level, area_vintage from dim_area_geometry order by all"
     ).fetchall()
@@ -191,6 +210,55 @@ def _load_display_geometry(con: duckdb.DuckDBPyConnection, geometry_path: Path) 
             before / 1e6,
             after / 1e6,
         )
+
+
+def _drop_orphan_display_areas(con: duckdb.DuckDBPyConnection) -> None:
+    """#351 review: remove orphan placeholder areas from the display copy of `dim_area_geometry`
+    (see the module docstring, "orphan areas", for the rule and the one case it catches today).
+    Requires the `gentrification_index` view to exist already."""
+    for parent_level, parent_vintage, child_level, child_vintage, _ in DRILLDOWN_LEVEL_PAIRS:
+        parents = con.execute(
+            """
+            select geometry_geojson from dim_area_geometry
+            where area_level = ? and area_vintage = ? and geometry_geojson is not null
+            """,
+            [parent_level, parent_vintage],
+        ).fetchall()
+        if not parents:
+            continue
+        parent_layer = shapely.union_all([shape(json.loads(g)) for (g,) in parents])
+        children = con.execute(
+            """
+            select geo._display_rid, geo.city_code, geo.area_code, geo.geometry_geojson,
+                   exists (
+                       select 1 from gentrification_index as g
+                       where g.city_code = geo.city_code
+                         and g.area_level = geo.area_level
+                         and g.area_code = geo.area_code
+                   ) as has_data
+            from dim_area_geometry as geo
+            where geo.area_level = ? and geo.area_vintage = ? and geo.geometry_geojson is not null
+            """,
+            [child_level, child_vintage],
+        ).fetchall()
+        for rid, city_code, area_code, geometry_geojson, has_data in children:
+            if has_data:
+                continue
+            geom = shape(json.loads(geometry_geojson))
+            if geom.area <= 0:
+                continue
+            inside = geom.intersection(parent_layer).area / geom.area
+            if inside < ORPHAN_MIN_INSIDE_PARENT_SHARE:
+                con.execute("delete from dim_area_geometry where _display_rid = ?", [rid])
+                logger.warning(
+                    "display export: dropped orphan %s %s/%s (%.0f%% inside the %s layer, no "
+                    "gentrification_index row) -- governed parquet unchanged",
+                    city_code,
+                    child_level,
+                    area_code,
+                    inside * 100,
+                    parent_level,
+                )
 
 
 def _write_feature_collection(out_path: Path, feature_collection: dict) -> None:
@@ -657,8 +725,9 @@ def main() -> None:
 
     OUT_DIR.mkdir(parents=True, exist_ok=True)
     con = duckdb.connect(":memory:")
-    _load_display_geometry(con, geometry_path)
+    # gentrification_index first: the display-geometry step's orphan rule reads it.
     con.execute(f"create view gentrification_index as select * from read_parquet('{index_path}')")
+    _load_display_geometry(con, geometry_path)
 
     export_gentrification_index_geometry(con)
     export_oa_arealevel_geometry(con)

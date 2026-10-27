@@ -785,7 +785,7 @@ requires-dist = [
     { name = "pyarrow", specifier = ">=14" },
     { name = "scikit-learn", specifier = ">=1.5" },
     { name = "scipy", specifier = ">=1.13" },
-    { name = "shapely", specifier = ">=2.0" },
+    { name = "shapely", specifier = ">=2.1" },
     { name = "spreg", specifier = ">=1.4" },
 ]
 
