@@ -25,8 +25,10 @@ sidebar_position: 2
     pages/hamburg/maps.md uses -- this page ignores that file's baked-in gentrification-index
     properties and only reads geometry + area_code, the same "geometry vehicle, values joined
     client-side" pattern /berlin/poi-map.md already uses against plr_live_data.geojson).
-  - Tooltip/table lead with the Gebiet CODE, not a name (see pages/hamburg/maps.md's header
-    comment for why -- area_name is genuinely blank at this grain).
+  - #352: the tooltip leads with the Gebiet's derived label (area_name, '<Stadtteil> · <OSM place
+    name>' or '<Stadtteil> · Gebiet <code>'), read by <PolygonMap> from the GeoJSON's own
+    area_name property (nameCol fallback), so poi_map_data needs no name join. Code stays as a
+    small last line.
   - No click-through link -- no /hamburg/area/[code] profile page exists (see
     pages/hamburg/index.md).
   - Separate <PolygonMap> instance (#351; formerly <AreaMap>)/route from Berlin's, per the H3-domain-signoff.md structural guard
@@ -41,6 +43,7 @@ sidebar_position: 2
   $: poiView = inputs.view === 'development' ? 'development' : 'stock';
 
   $: areaTooltip = [
+    { id: 'area_name', showColumnName: false, valueClass: 'font-bold text-sm', fmt: 'id' },
     {
       id: inputs.metric.value === 'density'
         ? (poiView === 'stock' ? 'poi_density_per_km2' : 'density_delta')
@@ -87,9 +90,10 @@ city-agnostic mart that has carried real Hamburg rows since H1 (#40).
 </Alert>
 
 <Alert status="warning">
-  <b>This map has no neighbourhood names, and thinly-mapped Gebiete are hatched grey.</b> Hamburg's
-  statistische Gebiete carry only a numeric code (see the <a href="/hamburg/maps">gentrification
-  map</a> for why); hover any area for its code. Offering Advantage is a compositional ratio (a
+  <b>Gebiet names are labels, and thinly-mapped Gebiete are hatched grey.</b> Hamburg's
+  statistische Gebiete carry only a numeric code, so each is labelled by its Stadtteil plus an
+  OpenStreetMap neighbourhood name or its code (see the <a href="/hamburg/maps">gentrification
+  map</a>); hover any area for its label. Offering Advantage is a compositional ratio (a
   location quotient) — in a Gebiet-year with very few mapped places overall, a single new or
   removed business can swing its Offering Advantage value disproportionately, so Gebiet-years
   below the same minimum-mapped-place threshold used for Berlin are shown as a hatched grey "No data" area rather
@@ -317,7 +321,9 @@ limit 15
 
 - **OSM early-year completeness bias** — the citywide POI-growth chart's early years should be
   read cautiously, for the same reason as Berlin's (see [methodology §6](/methodology)).
-- **No neighbourhood names** — Hamburg's statistische Gebiete are shown by numeric code only.
+- **Gebiet names are labels, not official names** — Hamburg's statistische Gebiete have only a
+  numeric code, so each is shown as its Stadtteil plus an OpenStreetMap neighbourhood name or its
+  code (see the [Hamburg data hub](/hamburg)).
 - **No land value or rent chart on this page (yet)** — Hamburg's price/rent mart now carries
   narrower-in-kind data than Berlin's (Wohnlage tier composition + modelled Mietenspiegel rent,
   I21-i/#303: no BRW/land-value equivalent, 2-tier not 3-tier Wohnlage, current-state-only), but no

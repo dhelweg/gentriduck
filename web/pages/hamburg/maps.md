@@ -125,11 +125,9 @@ sidebar_position: 1
   };
 
   // #310: subarea_l2 is the individual-Gebiet leaf level (gentrification_index, unchanged from
-  // H3); subarea_l1/district are rollup levels (mart_area_rollup_stage_mix). subarea_l2 genuinely
-  // has no area_name in the source data (H3-domain-signoff.md condition 3); subarea_l1/district DO
-  // carry a real Stadtteil/Bezirk name -- since that's exactly the same condition as `isRollup`,
-  // the tooltip below branches on `isRollup` directly rather than a separate `hasAreaName` (#310
-  // review fix, LOW-7: dead indirection -- the two were definitionally identical).
+  // H3); subarea_l1/district are rollup levels (mart_area_rollup_stage_mix). #352: every level now
+  // has an area_name -- subarea_l2's is a derived label ('<Stadtteil> · <OSM place name>' or
+  // '<Stadtteil> · Gebiet <code>', int_hamburg_gebiet_names), since the source has none.
   $: isRollup = inputs.area_level.value !== 'subarea_l2';
 
   // #310 review fix (D1 -- domain sign-off blocking): see berlin/maps.md's identical
@@ -159,10 +157,10 @@ sidebar_position: 1
     ? `${base}/geo/${geoJsonByLevel[inputs.area_level.value]}`
     : undefined;
 
-  // No area_name to lead with at the Gebiet grain (genuinely blank, see header comment) --
-  // tooltip leads with the Gebiet code instead of a name there; subarea_l1/district (#310) DO
-  // have a name, and additionally always carry dominant_share/n_habitable_children alongside the
-  // indicator value (design point 3: never a standalone dominant-stage label).
+  // #352: both branches lead with area_name (the Gebiet label at subarea_l2, see isRollup above)
+  // and keep the code as a small last line. subarea_l1/district (#310) additionally always carry
+  // dominant_share/n_habitable_children alongside the indicator value (design point 3: never a
+  // standalone dominant-stage label).
   // #310 review fix (MEDIUM-3/MEDIUM-4): `fragile_note`/`population_note` (computed in the
   // `areas_rollup` query below) surface `is_dominant_fragile`/`has_incomplete_population` inline
   // -- blank when the flag is false, the caveat sentence when true.
@@ -206,6 +204,7 @@ sidebar_position: 1
         { id: 'area_code', title: 'Area code', valueClass: 'text-xs opacity-60', fmt: 'id' }
       ]
     : [
+        { id: 'area_name', showColumnName: false, valueClass: 'font-bold text-sm', fmt: 'id' },
         {
           id: effectiveIndicator === 'status_class' ? 'stage_label' : effectiveIndicator,
           title: indicatorShortLabel[effectiveIndicator],
@@ -231,10 +230,11 @@ sidebar_position: 1
 </Alert>
 
 <Alert status="warning">
-  <b>This map has no neighbourhood names at the Gebiet level.</b> Hamburg's statistische Gebiete
+  <b>Gebiet names on this map are labels, not official names.</b> Hamburg's statistische Gebiete
   carry only a numeric code in the source geodata (unlike Berlin's named Planungsräume or
-  Hamburg's own Stadtteile/Bezirke) — hover any Gebiet for its code and value. There is no
-  per-area drill-down page for Hamburg's Gebiet level yet (Berlin's equivalent needs data — a
+  Hamburg's own Stadtteile/Bezirke), so each one is shown as its Stadtteil plus an OpenStreetMap
+  neighbourhood name that lies inside it, or its code where there is none — hover any Gebiet for
+  its label, value and code. There is no per-area drill-down page for Hamburg's Gebiet level yet (Berlin's equivalent needs data — a
   trajectory history, price/rent — that does not yet exist for Hamburg; see
   <a href="/hamburg">the Hamburg data hub</a> for the full inventory of what is and isn't built).
   <b>This map is never shown alongside, or blended with, Berlin's own map</b> — Hamburg and Berlin
@@ -243,7 +243,7 @@ sidebar_position: 1
 </Alert>
 
 <Dropdown name="area_level" title="Area level" defaultValue="subarea_l2">
-  <DropdownOption value="subarea_l2" valueLabel="Statistisches Gebiet — finest detail (no names)"/>
+  <DropdownOption value="subarea_l2" valueLabel="Statistisches Gebiet — finest detail"/>
   <DropdownOption value="subarea_l1" valueLabel="Stadtteil — ~104 named districts"/>
   <DropdownOption value="district" valueLabel="Bezirk — 7 boroughs"/>
 </Dropdown>
@@ -306,6 +306,7 @@ sidebar_position: 1
 select
     city_code,
     area_code,
+    area_name,
     status_index,
     dynamism_index,
     status_class,
@@ -474,6 +475,7 @@ order by stage_sort
 
 ```sql area_table_leaf
 select
+    area_name,
     area_code,
     status_index,
     dynamism_index,
@@ -632,8 +634,9 @@ order by area_name, stage_population_share desc nulls last
 
 {:else}
 
-<DataTable data={area_table_leaf} rows=10>
-    <Column id=area_code title="Gebiet code"/>
+<DataTable data={area_table_leaf} rows=10 search=true>
+    <Column id=area_name title="Statistisches Gebiet"/>
+    <Column id=area_code title="Code"/>
     <Column id=status_index title="Social status (1=least deprived … 4=most deprived)"/>
     <Column id=dynamism_index title="Speed of change (higher = faster upward change, 3-year window)"/>
     <Column id=stage_label title="Gentrification stage"/>
@@ -676,8 +679,10 @@ Offering Advantage by domain — see the
   shown here currently falls back to *equal* weighting across its constituent Gebiete rather than
   true population weighting — flagged per-area as "population data incomplete" in the table and
   map tooltip.
-- **No neighbourhood names at the Gebiet level** — Hamburg's statistische Gebiete are shown by
-  numeric code only; see the [Hamburg data hub](/hamburg) for why. Stadtteil/Bezirk do have names.
+- **Gebiet names are labels, not official names** — Hamburg's statistische Gebiete have only a
+  numeric code in the source data, so each is shown as its Stadtteil plus an OpenStreetMap
+  neighbourhood name inside it, or its code; see the [Hamburg data hub](/hamburg) for details.
+  Stadtteil/Bezirk names are the official ones.
 - **Only Hamburg's D1/D2 Sozialmonitoring outcome is shown here** — the demographic (D4)
   composite, land value & rent, and Milieuschutz-equivalent displacement zones are not (yet)
   published as a Hamburg map; see [methodology §6](/methodology) for the full inventory.

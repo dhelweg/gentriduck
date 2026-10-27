@@ -43,8 +43,9 @@ sidebar_position: 12
     via H1, #40, already gated) and is city-agnostic by construction (ADR-0005), so a genuine
     Hamburg POI & Offering Advantage page IS built (/hamburg/poi-map).
   - dim_area_geometry has HH rows at district (7, named), subarea_l1/Stadtteil (104, named), and
-    subarea_l2/Gebiet (943, NOT named -- area_name is a genuine blank in the source data at this
-    grain, not a bug) -- see that page and /methodology §6 point 3 for what this means for the map.
+    subarea_l2/Gebiet (943; the source data has no name at this grain, so since #352 area_name is
+    a derived label -- '<Stadtteil> · <OSM place name>' or '<Stadtteil> · Gebiet <code>', see
+    transform/models/intermediate/int_hamburg_gebiet_names.sql).
 
   NOT built here, and why: a district-browse/area-detail page (Berlin's primary browse entry)
   needs named areas and a per-area profile drawing on fct_gentrification_change (still
@@ -52,10 +53,8 @@ sidebar_position: 12
   #314, but no per-area display section is built from it here) and price-rent (which Hamburg
   *does* have since #303 --
   narrower in kind, see the table below -- but no per-area display section is built from it here);
-  Hamburg's Gebiete carry no name in the source data either way, so this page isn't built. A "full
-  searchable list" page (Berlin's secondary browse entry) would be a 943-row table of bare numeric
-  codes with no name to search by -- not a useful mirror of Berlin's named-PLR list, so it is not
-  built either. A time-series page mirroring Berlin's (citywide trend + "biggest movers"
+  so this page isn't built. (#352: the "full searchable list" Berlin has as its secondary browse
+  entry now exists for Hamburg too -- /hamburg/area lists every Gebiet by its derived label.) A time-series page mirroring Berlin's (citywide trend + "biggest movers"
   trajectory table) would need fct_gentrification_change (still Berlin-only, H3 sign-off
   condition 4) and fct_gentrification_trajectory (admits Hamburg as of #314, but no page is
   built from it here) -- so no /hamburg/time-series page either. This page states that gap
@@ -105,7 +104,7 @@ where variant = 'live_data' and area_level = 'subarea_l2' and city_code = 'HH'
 | Socio-demographic baseline composite (D4/EWR) | ✅ 5 indicators, PLR grain | ⛔ not published in this mart (`own_idx_class` is NULL for every Hamburg row) — see methodology §6.2/§6.3 for what the underlying composite looks like where it *is* disclosed |
 | Land value & estimated rent (Bodenrichtwert/Mietspiegel) | ✅ | ⚠️ narrower in kind, not missing — `mart_price_rent_dimension` carries Hamburg's Wohnlage tier composition + modelled Mietenspiegel rent (I21-i/#303): no BRW/land-value equivalent, 2-tier not 3-tier Wohnlage, current-state-only. No Hamburg display section is built from it here yet |
 | Milieuschutz / displacement-zone flag | ✅ | disclosed separately (Hamburg's *soziale Erhaltungsverordnung*, C5/#203) but not yet surfaced as a site page |
-| Named neighbourhoods / district browse | ✅ (542 PLRs, all named) | ⛔ Hamburg's finest grain (943 Gebiete) has **no name** in the source data — only a numeric code (see the map below). [Area profiles](/hamburg/area) (district → Stadtteil → Gebiet, I21-g/#301) publish the social-status trajectory (#317) and everyday amenities; other sections are still deferred |
+| Named neighbourhoods / district browse | ✅ (542 PLRs, all named) | ⚠️ Hamburg's finest grain (943 Gebiete) has **no official name** in the source data; this site labels each one by its Stadtteil plus an OpenStreetMap neighbourhood name or its code (e.g. "Eimsbüttel · Gebiet 35001"). [Area profiles](/hamburg/area) (district → Stadtteil → Gebiet, I21-g/#301) publish the social-status trajectory (#317) and everyday amenities; other sections are still deferred |
 | Per-area trajectory / time-series page | ✅ | ⚠️ the 2019–2025 social-status trajectory is published on every Gebiet and Stadtteil page (#314/#317); the edition-to-edition change table still needs `fct_gentrification_change` (Berlin-only by design, H3 sign-off condition 4) |
 | Everyday amenities (schools, doctors, transit, most common cuisine; OSM) | ✅ | ✅ on every Gebiet and Stadtteil page (I20) |
 
@@ -128,11 +127,13 @@ where variant = 'live_data' and area_level = 'subarea_l2' and city_code = 'HH'
 
 ## Honest caveats
 
-- **No neighbourhood names at Hamburg's finest grain.** Hamburg's statistisches Gebiete (this
+- **Gebiet names are labels, not official names.** Hamburg's statistische Gebiete (this
   project's Hamburg equivalent of a Berlin Planungsraum) carry only a numeric code in the source
-  geodata — unlike Berlin's PLRs, which are all named. The [maps page](/hamburg/maps) shows the
-  code; there is no name to browse or search by, so no full-list or district-browse page is built
-  for Hamburg (see the table above).
+  geodata, unlike Berlin's PLRs, which are all named. So each Gebiet is shown as its Stadtteil
+  plus either an OpenStreetMap neighbourhood or quarter name that lies inside it (41 of 943, e.g.
+  "St. Pauli · Karolinenviertel") or its code (e.g. "Eimsbüttel · Gebiet 35001"). An OSM name
+  marks a point inside the Gebiet; it does not mean the Gebiet and the neighbourhood share a
+  boundary.
 - **Only one data variant.** Unlike Berlin (which offers a 2018-thesis-reproduction `standard`
   variant alongside `live_data`), Hamburg only ever appears in the `live_data` variant — there is
   no Hamburg equivalent of the frozen 2018 snapshot.
