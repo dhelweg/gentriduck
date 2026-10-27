@@ -5,127 +5,127 @@
   "upstream": {
     "url": "https://osm-internal.download.geofabrik.de/europe/germany-internal.osh.pbf (login-gated, ADR-0002)",
     "vintage": "PBF file mtime 2026-10-25 (best-effort proxy for Geofabrik publish date, not a true fetch record)",
-    "retrieved_at": "2026-10-26T10:39:32Z"
+    "retrieved_at": "2026-10-26T23:11:25Z"
   },
   "outputs": [
     {
       "path": "data/raw/osm/berlin/2008.parquet",
-      "row_count": 1053,
+      "row_count": 1018,
       "schema_fingerprint": "sha256:b725a981035d7a796478c0a53040755234b32841887329c8fa90bbefea84c071",
-      "content_hash": "sha256:1a8f37f15d077c9ee9907c688f6639fe22d8e0f5f0fa72d4682cd33071cbe1fb"
+      "content_hash": "sha256:d1b20096e3e2672cc70664b553ca7d4d3df812cf80db819a46c5f80f23398f4d"
     },
     {
       "path": "data/raw/osm/berlin/2009.parquet",
-      "row_count": 8245,
+      "row_count": 7634,
       "schema_fingerprint": "sha256:b725a981035d7a796478c0a53040755234b32841887329c8fa90bbefea84c071",
-      "content_hash": "sha256:9e116f84b2c89c489d63b26a99a878ecf406e4ae3299180b592e738d5fff8e29"
+      "content_hash": "sha256:4fcc7347d15cfd55a460ee87cb7ae74bdcae144864c67f74c4cba01af512ac5b"
     },
     {
       "path": "data/raw/osm/berlin/2010.parquet",
-      "row_count": 17797,
+      "row_count": 16112,
       "schema_fingerprint": "sha256:b725a981035d7a796478c0a53040755234b32841887329c8fa90bbefea84c071",
-      "content_hash": "sha256:9092da67410fa7bb70cf3506103c14e6e4b5b289ab99b0d369af9a2fa20e9432"
+      "content_hash": "sha256:34f562ba0deaaf577256842da6df593cb8bb50a66696ea0e9a8b589d863fba70"
     },
     {
       "path": "data/raw/osm/berlin/2011.parquet",
-      "row_count": 29894,
+      "row_count": 26720,
       "schema_fingerprint": "sha256:b725a981035d7a796478c0a53040755234b32841887329c8fa90bbefea84c071",
-      "content_hash": "sha256:648028caffd36f95131634fc54865c92c5fb89be06b0178e4027c94310721867"
+      "content_hash": "sha256:1a4ab6a74c5c306f1ef8721a9fe23cc383eb0041e62ad2174555c5f53ff80517"
     },
     {
       "path": "data/raw/osm/berlin/2012.parquet",
-      "row_count": 40927,
+      "row_count": 35828,
       "schema_fingerprint": "sha256:b725a981035d7a796478c0a53040755234b32841887329c8fa90bbefea84c071",
-      "content_hash": "sha256:bb95bcda51713fd383f4ba9dd3af24c00d125ff7ebadc730c3cb3cdd59af84ac"
+      "content_hash": "sha256:b5fb232765dade651092aa9d7af7554ad014f9cd7756cdd21db45f412de2c1dc"
     },
     {
       "path": "data/raw/osm/berlin/2013.parquet",
-      "row_count": 49341,
+      "row_count": 41665,
       "schema_fingerprint": "sha256:b725a981035d7a796478c0a53040755234b32841887329c8fa90bbefea84c071",
-      "content_hash": "sha256:b50c53e02be84a2cb0465667400f6a6081c93a6c3fe3050c311ce1e8fb01a26f"
+      "content_hash": "sha256:7991ec73496279eba65534b10d74f10e94ef47a7a33107e6c7978e7ba3ecb9e4"
     },
     {
       "path": "data/raw/osm/berlin/2014.parquet",
-      "row_count": 55126,
+      "row_count": 45429,
       "schema_fingerprint": "sha256:b725a981035d7a796478c0a53040755234b32841887329c8fa90bbefea84c071",
-      "content_hash": "sha256:6d17fad6f5b64ca1349ec76676dd8c7effdfa68ca18e3c1366cbd26746770d8d"
+      "content_hash": "sha256:c43f3fc3460d10e36946d6e774ba33eaa21181541342a6e279aedb1b07f8ff83"
     },
     {
       "path": "data/raw/osm/berlin/2015.parquet",
-      "row_count": 61084,
+      "row_count": 49297,
       "schema_fingerprint": "sha256:b725a981035d7a796478c0a53040755234b32841887329c8fa90bbefea84c071",
-      "content_hash": "sha256:9926a54c35d9e67ed948b62a75c4ad14a13c960175fcb2bbbf6dc0ad0fe54b1e"
+      "content_hash": "sha256:8c84968dee2fb59261a9d374029ca70d0dc07026d1eb96b9eef090ce40e76d01"
     },
     {
       "path": "data/raw/osm/berlin/2016.parquet",
-      "row_count": 70285,
+      "row_count": 55603,
       "schema_fingerprint": "sha256:b725a981035d7a796478c0a53040755234b32841887329c8fa90bbefea84c071",
-      "content_hash": "sha256:b4b03a7f7dd26b2781bd566695420d17550b2fac76bf44f0ac8f6e1c5d5f52c5"
+      "content_hash": "sha256:c27cb8964d50973e327d35443697de4661639a8eb9b71b09b67adc83c2ae18d6"
     },
     {
       "path": "data/raw/osm/berlin/2017.parquet",
-      "row_count": 82419,
+      "row_count": 65618,
       "schema_fingerprint": "sha256:b725a981035d7a796478c0a53040755234b32841887329c8fa90bbefea84c071",
-      "content_hash": "sha256:c8dcf164bdaa33cf0dc2c9919ef418083ce136105af2e4ec39aa31c56fbd60e7"
+      "content_hash": "sha256:f086393a5e24426b63138d4b2751900e407ebf82b953febd8dfcd688809b1d25"
     },
     {
       "path": "data/raw/osm/berlin/2018.parquet",
-      "row_count": 91226,
+      "row_count": 72199,
       "schema_fingerprint": "sha256:b725a981035d7a796478c0a53040755234b32841887329c8fa90bbefea84c071",
-      "content_hash": "sha256:49f2bfc8356957c38d711d3ffa71632a6dae42144febf3f5cc98d6c84a9eac46"
+      "content_hash": "sha256:4e01d444271833a4d532d95ffa60efec7ad9e8fa71e75dc8a5f6beb4ad6a4c2e"
     },
     {
       "path": "data/raw/osm/berlin/2019.parquet",
-      "row_count": 102672,
+      "row_count": 81154,
       "schema_fingerprint": "sha256:b725a981035d7a796478c0a53040755234b32841887329c8fa90bbefea84c071",
-      "content_hash": "sha256:611f73d9ffac026ff9b7a033eb10273eb8d55af12c504fb79353c731000b1d35"
+      "content_hash": "sha256:65a349011e20bf78bc431837029f0a8cdba32dbce7f74ed75a8899a9747d0f76"
     },
     {
       "path": "data/raw/osm/berlin/2020.parquet",
-      "row_count": 111362,
+      "row_count": 87767,
       "schema_fingerprint": "sha256:b725a981035d7a796478c0a53040755234b32841887329c8fa90bbefea84c071",
-      "content_hash": "sha256:920e1c99e9bd8c3131ee9e7f27d7cf8e93e9bfe15a06c7200df415c18f9d3c18"
+      "content_hash": "sha256:3655b724330a30b5ed6aa1057b6002f8af627a20f5560ef66814b55daf27da08"
     },
     {
       "path": "data/raw/osm/berlin/2021.parquet",
-      "row_count": 125362,
+      "row_count": 99135,
       "schema_fingerprint": "sha256:b725a981035d7a796478c0a53040755234b32841887329c8fa90bbefea84c071",
-      "content_hash": "sha256:db73dc8397345dfd964e8c40a96d4a4687ed071cab4ef78d5373a43f56f87dc7"
+      "content_hash": "sha256:e4199c38baede4e51da0e2c9d1e53dd6aadbbcf5c81b3f863edd9283a8fb912a"
     },
     {
       "path": "data/raw/osm/berlin/2022.parquet",
-      "row_count": 136011,
+      "row_count": 108004,
       "schema_fingerprint": "sha256:b725a981035d7a796478c0a53040755234b32841887329c8fa90bbefea84c071",
-      "content_hash": "sha256:1d4174238d8d12b059462dd5938e8fc914687f0bdfc96c5ad683a7ab70c2c321"
+      "content_hash": "sha256:de873481912006e8d27f320ff83d7190a01a754a023315209140d6863dee580b"
     },
     {
       "path": "data/raw/osm/berlin/2023.parquet",
-      "row_count": 155502,
+      "row_count": 125595,
       "schema_fingerprint": "sha256:b725a981035d7a796478c0a53040755234b32841887329c8fa90bbefea84c071",
-      "content_hash": "sha256:57d494ef9617adfb3322747b301d01d71e386316fe0f9f273f6694c5e23ecf88"
+      "content_hash": "sha256:58148443ceae5a9742d0574a2d49f6cfa5497c5f8041abe07d0098b7a26a3455"
     },
     {
       "path": "data/raw/osm/berlin/2024.parquet",
-      "row_count": 177236,
+      "row_count": 145285,
       "schema_fingerprint": "sha256:b725a981035d7a796478c0a53040755234b32841887329c8fa90bbefea84c071",
-      "content_hash": "sha256:b697fae3ee2258f00151b38bb5a620e7fe5c3815a249a89d3cf5287d56e715ba"
+      "content_hash": "sha256:69fe482701df68c42f0536c40d5c91771eab0ca344abefb9cdc9c5728261ade4"
     },
     {
       "path": "data/raw/osm/berlin/2025.parquet",
-      "row_count": 191354,
+      "row_count": 157455,
       "schema_fingerprint": "sha256:b725a981035d7a796478c0a53040755234b32841887329c8fa90bbefea84c071",
-      "content_hash": "sha256:dde25cf742796bac7facab45759eeb04aabe62bf2d9f8221189ab8bc8f4c3836"
+      "content_hash": "sha256:eb4196fa014aa3e841ac040d208faed4a383b8a76fc935c91299b21991fdd93b"
     },
     {
-      "path": "data/raw/osm/berlin/2026-partial.parquet",
-      "row_count": 203531,
+      "path": "data/raw/osm/berlin/2026.parquet",
+      "row_count": 166862,
       "schema_fingerprint": "sha256:b725a981035d7a796478c0a53040755234b32841887329c8fa90bbefea84c071",
-      "content_hash": "sha256:5af12faf6e9153f860908be06b9e1e2e1a40d76ac6f87059d24e5cf354bf83b9"
+      "content_hash": "sha256:9c59d026858c947201d2eaf2758444a14f97e833a4cd35cf3316e087b4742c80"
     }
   ],
   "ingest_script": {
     "module": "ingestion.berlin.osm.ingest_osm_history",
-    "git_sha": "568c636037f8d369a12d96b0e640dff2bd25519c"
+    "git_sha": "bf836871f3b6c5e76fe84f87470104fec2a23551"
   },
   "manifest_schema_version": 1
 }
