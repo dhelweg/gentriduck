@@ -43,9 +43,11 @@ processes with an order to them:
 - a **commercial cycle** — the mix of shops, cafés, and services turns over to serve the new
   residents.
 
-Döring & Ulbricht (2016) confirmed this pattern specifically for Berlin, and the 2018 thesis found
-(p. 91) that the **social cycle leads the commercial cycle**: a neighbourhood's social composition
-tends to change *before* its commercial landscape visibly follows. "Gentrification pressure," in this
+Döring & Ulbricht (2016) confirmed this pattern specifically for Berlin, and the 2018 thesis
+tentatively found (its summary table rates it "rather confirmed") that the **social cycle leads the
+commercial cycle**: a neighbourhood's social composition tends to change *before* its commercial
+landscape visibly follows. This project's re-check supports that ordering only on recent official
+data — see [the thesis re-check](/thesis-recheck). "Gentrification pressure," in this
 project, means: **is a small area's official social-status classification improving, and does its
 commercial/demographic profile look like an area earlier or later in that same process?** It is a
 *signal*, drawn from the official record and from OpenStreetMap, not a certainty. The site

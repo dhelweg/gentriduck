@@ -698,8 +698,11 @@ live query:
   hierarchy — extending that roll-up to every method is explicitly out of this study's scope, not a
   silent gap. (The live figure now on each Bezirk/BZR/PGR page, §4 above, surfaces exactly the one
   method this roll-up IS proven for — nested LQ — never any of the other eight at coarse grain.)
-- **Only nested LQ is validated against the 2018 thesis's own results** (ρ = 0.148, p = 0.002,
-  n = 435 — the same directional-but-modest result already reported on the
+- **Only nested LQ is validated against the 2018 thesis's own computation:** recomputed from open
+  data, it agrees with the thesis's own Offering-Advantage values at ρ = 0.84 by domain (0.78 by
+  category, 0.54 by business type; 2016 snapshot). That is a check that the *construct* is rebuilt
+  faithfully — not that the thesis's hypotheses hold: as a test of H1 ("more commerce, higher
+  status") the same quotient is significant in the *opposite* direction (see the
   [thesis re-check page](/thesis-recheck)). The other eight methods, including density/per-capita,
   have no 2018 precedent to validate against by design — see §2 above.
 - **Getis-Ord Gi\* remains unavailable, verified directly against the seed registry.**

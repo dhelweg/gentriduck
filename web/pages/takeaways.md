@@ -40,10 +40,10 @@ page or document that has already been through this project's [methodology gate]
 **What the data shows:** the fast-food association (H1b) is the single most robust result across
 every re-test this project has run: it is correctly signed, statistically significant on both a
 raw business count and the thesis's own Offering-Advantage location-quotient, and it survives
-aggregation up to district scale. The broader lead-lag story — "today's commerce tracks, at a
-lag, tomorrow's social change" — reproduces cleanly on the same welfare-register data the original 2018
-thesis used, and partially revives at a two-year lag under a better predictor on modern official
-data, but the same-time co-movement hypothesis (H3c) never revives. **Read as: watch commercial
+aggregation up to Bezirksregion scale. The timing story — does social change come before commercial
+change? — is mixed: the thesis's direction holds on Berlin's official monitor for 2021–2025 but not
+for 2015–2019 or in Hamburg, and on the welfare-register data the original 2018 thesis used, commerce
+and status move together with neither clearly leading. **Read as: watch commercial
 mix, especially fast-food turnover, as one signal among several — not as a stand-alone predictor.**
 → [The 2018 thesis, re-checked](/thesis-recheck) — the full hypothesis-by-hypothesis comparison.
 

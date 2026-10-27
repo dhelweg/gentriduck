@@ -3,6 +3,14 @@
 **Date:** 2026-06-30
 **Status:** Epic B complete — analytical findings validated and signed off.
 
+> **Correction (2026-10-27).** This narrative predates three findings that change its
+> conclusions: (1) its H3a/H3b results came from a test that computed the same correlation for
+> both directions and scored sign-only "passes"; (2) the OSM extraction kept deleted POIs in
+> every later year (up to ~21% ghosts) and had silently switched multi-tag classification; (3) it
+> overstated the thesis's own verdicts (Tabelle 6-16: H3b only tentatively supported, H2/H3c
+> inconclusive). It is kept unedited below as the historical record. For current results see
+> docs/epic-e/E1-regression-findings.md and the /thesis-recheck page.
+
 ---
 
 ## What we built

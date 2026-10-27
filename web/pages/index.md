@@ -75,12 +75,12 @@ agent definition, every architecture decision, and every line of SQL that produc
 **Does the 2018 thesis's result still hold in 2025? Partly — and that's the interesting part.**
 
 The original thesis asked whether the churn of shops, cafés and restaurants in a Berlin
-neighbourhood tracks its social change. Rebuilt on the *same* welfare-register data the thesis
-used, the core result replicates cleanly: **rising neighbourhood status tends to pull in new
-commerce, rather than the other way round** — the social cycle leads the commercial one. Swap in
-Berlin's more robust *official* social monitor, though, and the signal weakens. The relationship is
-real, but fragile — sensitive to which social measure you use and to the period you look at. We
-show that tension openly rather than papering over it.
+neighbourhood tracks its social change. Its clearest finding still holds: **more fast-food outlets go
+with lower social status**. Its timing claim — that a neighbourhood's social change comes *before*
+its commercial change — holds on Berlin's official social monitor for 2021–2025, but not for
+2015–2019; on the welfare-register data the thesis used, commerce and status move together with
+neither clearly leading. The relationship is real, but fragile — sensitive to which social measure
+you use and to the period you look at. We show that tension openly rather than papering over it.
 
 **→ [The 2018 thesis, re-checked hypothesis by hypothesis](/thesis-recheck)** — the full comparison
 of what the thesis claimed, what it found, and what our rebuild finds today.

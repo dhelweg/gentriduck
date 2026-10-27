@@ -36,9 +36,10 @@ definition (`docs/methodology/index-definition.md` §0.4):
   proceeds as two coupled cycles -- a *social* invasion-succession (pioneers, then gentrifiers,
   then a settled high-status population displace incumbents) and a *commercial*
   invasion-succession (the amenity landscape turns over to serve the incoming population). The
-  thesis confirmed (p. 91, hypothesis H3b) that the social cycle **leads** the commercial cycle,
-  which is why the index is architected as a lead-lag model rather than a contemporaneous one
-  (ADR-0008 §2).
+  thesis tentatively supported (Tabelle 6-16, hypothesis H3b: "eher bestätigt") that the social cycle
+  **leads** the commercial cycle, which is why the index is architected as a lead-lag model rather
+  than a contemporaneous one (ADR-0008 §2). The revival's cross-lagged re-test supports that ordering
+  only on the 2021–2025 official monitor (docs/epic-e/E1-regression-findings.md).
 - **D\"oring & Ulbricht's (2016) Berlin-specific reading** [@doeringulbricht2016]: a high share of
   welfare recipients, young adults, and migrants, and a low share of long-tenure residents, marks
   a Planungsraum (PLR) as susceptible to gentrification -- a *precondition*, not an ongoing outcome
@@ -130,7 +131,7 @@ rather than a contemporaneous mean, the model fits change-on-change at temporal 
 
 ```
 H3a (POI leads status -- thesis REJECTED, tested anyway): Δstatus[t+k] ~ Δamenity[t]
-H3b (status leads POI -- thesis CONFIRMED, expected to dominate): Δamenity[t+k] ~ Δstatus[t]
+H3b (status leads POI -- thesis TENTATIVELY supported, Tabelle 6-16): Δamenity[t+k] ~ Δstatus[t]
 ```
 
 -- with the headline result (H3b dominance) reported as a *test outcome*, never hard-coded
