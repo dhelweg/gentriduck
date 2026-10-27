@@ -1124,7 +1124,14 @@ def write_backtest_md(
         f.write(f"**Gate result (pipeline integrity + label consistency):** {overall_str}\n")
         if res_f:
             f.write(
-                f"**Independent check (Test F, Milieuschutz, non-gating):** {res_f['verdict']}\n"
+                "**Independent check (Test F, Milieuschutz, non-gating):** "
+                + (
+                    f"SUPPORTED (borderline -- weak support; partially independent; "
+                    f"Fisher p = {res_f['fisher_p']:.4f})"
+                    if res_f["verdict"] == "SUPPORTED" and res_f.get("fisher_p", 0) >= 0.05
+                    else res_f["verdict"]
+                )
+                + "\n"
             )
         f.write("\n")
         f.write("## What these tests do and do not show\n\n")

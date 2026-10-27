@@ -2,7 +2,7 @@
 
 **Last run:** 2026-10-27
 **Gate result (pipeline integrity + label consistency):** ALL PASS
-**Independent check (Test F, Milieuschutz, non-gating):** SUPPORTED
+**Independent check (Test F, Milieuschutz, non-gating):** SUPPORTED (borderline -- weak support; partially independent; Fisher p = 0.0525)
 
 ## What these tests do and do not show
 

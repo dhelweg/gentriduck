@@ -182,3 +182,18 @@ def test_missing_d4_control_does_not_drop_the_panel() -> None:
         build_cross_lagged(df, k=1, control_col="ewr_composite_t"), n_boot=N_BOOT
     )
     assert res["H3a"]["d4_control"] is True
+
+
+def test_build_cross_lagged_refuses_duplicate_links() -> None:
+    df = _panel("h3a")
+    with pytest.raises(ValueError, match="duplicated"):
+        build_cross_lagged(pd.concat([df, df.iloc[[0]]]), k=1)
+
+
+def test_missing_cluster_stays_missing() -> None:
+    df = _panel("h3a")
+    df["stadtteil_code"] = "ST1"
+    df.loc[df.area_code == df.area_code.iloc[0], "stadtteil_code"] = np.nan
+    cl = build_cross_lagged(df, k=1, cluster_col="stadtteil_code")
+    assert cl["cluster"].isna().sum() == 1
+    assert "nan" not in set(cl["cluster"].dropna())

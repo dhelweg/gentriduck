@@ -5,7 +5,7 @@
 - **Date:** 2026-10-27
 - **Data (H1/H1b):** stg_thesis_2018_result_plr + int_poi_features_pivot (2018), n=436
 - **Data (H2/H3 MSS 2021–2025):** int_mss_lead_lag (lor_2021) + int_poi_features_pivot
-- **Data (H2/H3 MSS 2015–2019, B7):** int_mss_lead_lag (lor_pre2021) + int_poi_features_pivot
+- **Data (H2/H3 MSS 2013–2019, B7):** int_mss_lead_lag (lor_pre2021) + int_poi_features_pivot
 - **Data (H2/H3 EWR):** int_ewr_lead_lag + int_poi_features_pivot (2014–2020, same-era as thesis)
 - **Method:** Spearman / OLS for H1, H2 and H3c; cross-lagged partial Spearman with a Bezirksregion cluster-bootstrap 95% CI for H3a/H3b (`analysis/directional_inference.py`). Every result needs significance to count -- see Scoring.
 
@@ -18,8 +18,8 @@ Spearman rank correlations and OLS regression test five hypotheses from the 2018
 **Three comparison sets for H2/H3:**
 
 1. **MSS panel (2021–2025):** Uses `int_mss_lead_lag` (lor_2021) — best ground truth (official Berlin social monitoring index) but a different era and index than the thesis.
-2. **MSS pre-2021 panel (2015–2019, B7 #117):** Uses `int_mss_lead_lag` (lor_pre2021) — thesis-era boundary system (447 PLRs). Enables same-era H3b lead-lag. k=1: 2015→2017, 2017→2019 pairs; k=2: 2015→2019. Z-scores not cross-vintage comparable.
-3. **EWR same-era (2014–2020):** Uses `int_ewr_lead_lag` — the same data source and timeframe as the 2018 thesis. k=2 (2014→2016) matches the thesis lead-lag gap exactly. delta_ewr is metric (z-score arithmetic diff) so OLS is also valid.
+2. **MSS pre-2021 panel (2013–2019, B7 #117):** Uses `int_mss_lead_lag` (lor_pre2021) — thesis-era boundary system (447 PLRs). Enables same-era H3b lead-lag. Editions 2013-2019 (2013 from the MSS Excel source): k=1 pairs 2013→2015, 2015→2017, 2017→2019. Z-scores not cross-vintage comparable.
+3. **EWR resident-register composite (2014–2020):** Uses `int_ewr_lead_lag`. EWR is Berlin's resident register (Einwohnerregister); its composite measures population composition (residence duration, age, nationality, migration background), NOT social status, and it was not the thesis's outcome measure -- the thesis used MSS Status/Dynamik (editions 2013-2017; thesis §6.2.3, Tabelle 6-1). delta_ewr is metric (z-score arithmetic diff) so OLS is also valid.
 
 ## Scoring
 
@@ -65,7 +65,7 @@ Each controls for the outcome's own prior change. **Before 2026-10-26 the two we
 
 ## Results — Section 2: H2/H3 MSS Panel (modern era, 2021–2025)
 
-> Different era and index than thesis. MSS is a better ground truth but covers 2021–2025, not 2012–2018. Three editions -> one cross-lagged pivot (2023).
+> Different era and index than thesis. MSS is a better ground truth but covers 2021–2025, not 2012–2018. Three editions -> ONE cross-lagged pivot (2023), and NO D4 control (EWR 2021-2023 was never published): treat its H3a/H3b rows as a single-window estimate. Rows marked (borderline) have a CI that only just excludes 0 while the analytic p does not reach 0.05.
 
 | Hyp | Test | N | Statistic | Value [95% CI] | p-value | Expected dir | Verdict | Description |
 |---|---|---|---|---|---|---|---|---|
@@ -73,7 +73,7 @@ Each controls for the outcome's own prior change. **Before 2026-10-26 the two we
 | H2 | Spearman (OA) k=1 | 1060 | rho | -0.0988 | 0.0013 | negative | SUPPORTED | Current-edition OA-quotient basket ~ future status change [k=1 MSS editions, 2021+ panel] |
 | H2 | Spearman k=2 | 535 | rho | -0.1856 | 0.0000 | negative | SUPPORTED | Current-edition POI stock ~ future status change [k=2 MSS editions, 2021+ panel] |
 | H2 | Spearman (OA) k=2 | 528 | rho | -0.1473 | 0.0007 | negative | SUPPORTED | Current-edition OA-quotient basket ~ future status change [k=2 MSS editions, 2021+ panel] |
-| H3a | Cross-lagged k=1 | 535 | partial rho | 0.0799 [0.001, 0.152] | 0.0649 | negative | CONTRADICTED | Prior POI change [e0→e1] predicts later status change [e1→e2], given prior status change + D4 (POI leads status) [C5-corrected dynamism; k=1; pivot edition(s) [2023]; no D4 control -- unavailable at the pivot] |
+| H3a | Cross-lagged k=1 | 535 | partial rho | 0.0799 [0.001, 0.152] | 0.0649 | negative | CONTRADICTED (borderline) | Prior POI change [e0→e1] predicts later status change [e1→e2], given prior status change + D4 (POI leads status) [C5-corrected dynamism; k=1; pivot edition(s) [2023]; no D4 control -- unavailable at the pivot] |
 | H3b | Cross-lagged k=1 | 535 | partial rho | -0.1277 [-0.214, -0.035] | 0.0031 | negative | SUPPORTED | Prior status change [e0→e1] predicts later POI change [e1→e2], given prior POI change + D4 (status leads POI) [C5-corrected dynamism; k=1; pivot edition(s) [2023]; no D4 control -- unavailable at the pivot] |
 | H3a | Cross-lagged (OA) k=1 | 528 | partial rho | -0.0537 [-0.141, 0.043] | 0.2184 | negative | NOT SIGNIFICANT | Prior POI change [e0→e1] predicts later status change [e1→e2], given prior status change + D4 (POI leads status) [OA-quotient basket; k=1; pivot edition(s) [2023]; no D4 control -- unavailable at the pivot] |
 | H3b | Cross-lagged (OA) k=1 | 528 | partial rho | -0.1557 [-0.260, -0.054] | 0.0003 | negative | SUPPORTED | Prior status change [e0→e1] predicts later POI change [e1→e2], given prior POI change + D4 (status leads POI) [OA-quotient basket; k=1; pivot edition(s) [2023]; no D4 control -- unavailable at the pivot] |
@@ -86,19 +86,19 @@ Each controls for the outcome's own prior change. **Before 2026-10-26 the two we
 
 **Direction (cross-lagged H3a vs H3b):**
 
-- **Cross-lagged k=1:** status change leads commercial change (H3b; the thesis's direction) (H3a CONTRADICTED, H3b SUPPORTED)
+- **Cross-lagged k=1:** status change leads commercial change (H3b; the thesis's direction) (H3a CONTRADICTED (borderline), H3b SUPPORTED)
 - **Cross-lagged (OA) k=1:** status change leads commercial change (H3b; the thesis's direction) (H3a NOT SIGNIFICANT, H3b SUPPORTED)
 
-## Results — Section 3: H2/H3 MSS Pre-2021 Panel (thesis-era, 2015–2019, B7 #117)
+## Results — Section 3: H2/H3 MSS Pre-2021 Panel (thesis-era, 2013–2019, B7 #117)
 
-> lor_pre2021 boundary system (447 PLRs). Same era as the thesis. Z-scores normalised within lor_pre2021 -- NOT comparable to Section 2. One cross-lagged pivot (2017).
+> lor_pre2021 boundary system (447 PLRs). Same era as the thesis. Z-scores normalised within lor_pre2021 -- NOT comparable to Section 2. Editions 2013-2019 give two cross-lagged pivots (2015, 2017).
 
 | Hyp | Test | N | Statistic | Value [95% CI] | p-value | Expected dir | Verdict | Description |
 |---|---|---|---|---|---|---|---|---|
-| H2 | Spearman k=1 | 1305 | rho | -0.0254 | 0.3587 | negative | NOT SIGNIFICANT | Current-edition POI stock ~ future status change [k=1 MSS editions, 2015–2019 panel] |
-| H2 | Spearman (OA) k=1 | 1287 | rho | -0.0436 | 0.1182 | negative | NOT SIGNIFICANT | Current-edition OA-quotient basket ~ future status change [k=1 MSS editions, 2015–2019 panel] |
-| H2 | Spearman k=2 | 869 | rho | -0.0411 | 0.2266 | negative | NOT SIGNIFICANT | Current-edition POI stock ~ future status change [k=2 MSS editions, 2015–2019 panel] |
-| H2 | Spearman (OA) k=2 | 853 | rho | -0.0017 | 0.9601 | negative | NOT SIGNIFICANT | Current-edition OA-quotient basket ~ future status change [k=2 MSS editions, 2015–2019 panel] |
+| H2 | Spearman k=1 | 1305 | rho | -0.0254 | 0.3587 | negative | NOT SIGNIFICANT | Current-edition POI stock ~ future status change [k=1 MSS editions, 2013–2019 panel] |
+| H2 | Spearman (OA) k=1 | 1287 | rho | -0.0436 | 0.1182 | negative | NOT SIGNIFICANT | Current-edition OA-quotient basket ~ future status change [k=1 MSS editions, 2013–2019 panel] |
+| H2 | Spearman k=2 | 869 | rho | -0.0411 | 0.2266 | negative | NOT SIGNIFICANT | Current-edition POI stock ~ future status change [k=2 MSS editions, 2013–2019 panel] |
+| H2 | Spearman (OA) k=2 | 853 | rho | -0.0017 | 0.9601 | negative | NOT SIGNIFICANT | Current-edition OA-quotient basket ~ future status change [k=2 MSS editions, 2013–2019 panel] |
 | H3a | Cross-lagged k=1 | 869 | partial rho | 0.0367 [-0.025, 0.096] | 0.2809 | negative | NOT SIGNIFICANT | Prior POI change [e0→e1] predicts later status change [e1→e2], given prior status change + D4 (POI leads status) [C5-corrected dynamism; k=1; pivot edition(s) [2015, 2017]; D4 control] |
 | H3b | Cross-lagged k=1 | 869 | partial rho | -0.0112 [-0.082, 0.062] | 0.7417 | negative | NOT SIGNIFICANT | Prior status change [e0→e1] predicts later POI change [e1→e2], given prior POI change + D4 (status leads POI) [C5-corrected dynamism; k=1; pivot edition(s) [2015, 2017]; D4 control] |
 | H3a | Cross-lagged (OA) k=1 | 851 | partial rho | -0.0660 [-0.136, 0.006] | 0.0544 | negative | NOT SIGNIFICANT | Prior POI change [e0→e1] predicts later status change [e1→e2], given prior status change + D4 (POI leads status) [OA-quotient basket; k=1; pivot edition(s) [2015, 2017]; D4 control] |
@@ -117,9 +117,9 @@ Each controls for the outcome's own prior change. **Before 2026-10-26 the two we
 - **Cross-lagged k=1:** no directional evidence either way (H3a NOT SIGNIFICANT, H3b NOT SIGNIFICANT)
 - **Cross-lagged (OA) k=1:** no directional evidence either way (H3a NOT SIGNIFICANT, H3b NOT SIGNIFICANT)
 
-## Results — Section 4: H2/H3 EWR Same-Era (2014–2020, thesis source and timeframe)
+## Results — Section 4: H2/H3 EWR Resident-Register Composite (2014–2020)
 
-> Same data source and timeframe as the 2018 thesis. Annual panel: many cross-lagged pivots per area, all absorbed by the cluster bootstrap. POI side is the raw count via the dominant pre-2021 crosswalk (~35% of lor_2021 PLRs share a count with a neighbour -- pseudo-replication, see load_ewr_lead_lag_data).
+> EWR is Berlin's resident register (Einwohnerregister); its composite measures population composition (residence duration, age, nationality, migration background), NOT social status, and it was not the thesis's outcome measure -- the thesis used MSS Status/Dynamik (editions 2013-2017; thesis §6.2.3, Tabelle 6-1). H3c here correlates same-year LEVELS, not co-occurring changes -- not a like-for-like test of H3c. The POI side is the raw OSM count without the C5 completeness correction, so mapping growth can feed both directions. Annual panel: many cross-lagged pivots per area, all absorbed by the cluster bootstrap. POI side is the raw count via the dominant pre-2021 crosswalk (~35% of lor_2021 PLRs share a count with a neighbour -- pseudo-replication, see load_ewr_lead_lag_data). **Only the cross-lagged H3a/H3b rows use cluster-bootstrap CIs; the H2 and H3c rows here use analytic p-values on pooled area-year rows that are not independent, so their significance is overstated** -- read them as directional. The "D4 control" in this panel is the EWR composite's own level at the pivot (status IS the composite here), not an independent covariate.
 
 | Hyp | Test | N | Statistic | Value [95% CI] | p-value | Expected dir | Verdict | Description |
 |---|---|---|---|---|---|---|---|---|
@@ -155,8 +155,8 @@ Each controls for the outcome's own prior change. **Before 2026-10-26 the two we
 | H1b | Spearman | 137 | rho | 0.2411 | 0.0045 | positive | SUPPORTED | Fast-food POI count ~ MSS social status (status_index) |
 | H2 | Spearman k=1 | 560 | rho | -0.0362 | 0.3931 | negative | NOT SIGNIFICANT | Current-edition POI stock ~ future status change [k=1 MSS editions, BZR lor_2021 panel] |
 | H2 | Spearman k=2 | 280 | rho | -0.0574 | 0.3384 | negative | NOT SIGNIFICANT | Current-edition POI stock ~ future status change [k=2 MSS editions, BZR lor_2021 panel] |
-| H3a | Cross-lagged k=1 | 280 | partial rho | 0.0011 [-0.075, 0.077] | 0.9851 | negative | NOT SIGNIFICANT | Prior POI change [e0→e1] predicts later status change [e1→e2], given prior status change + D4 (POI leads status) [C5-corrected dynamism; k=1; pivot edition(s) [2017, 2023]; no D4 control -- unavailable at the pivot] |
-| H3b | Cross-lagged k=1 | 280 | partial rho | 0.0103 [-0.137, 0.185] | 0.8636 | negative | NOT SIGNIFICANT | Prior status change [e0→e1] predicts later POI change [e1→e2], given prior POI change + D4 (status leads POI) [C5-corrected dynamism; k=1; pivot edition(s) [2017, 2023]; no D4 control -- unavailable at the pivot] |
+| H3a | Cross-lagged k=1 | 280 | partial rho | 0.0011 [-0.076, 0.077] | 0.9851 | negative | NOT SIGNIFICANT | Prior POI change [e0→e1] predicts later status change [e1→e2], given prior status change + D4 (POI leads status) [C5-corrected dynamism; k=1; pivot edition(s) [2017, 2023]; no D4 control -- unavailable at the pivot] |
+| H3b | Cross-lagged k=1 | 280 | partial rho | 0.0103 [-0.150, 0.178] | 0.8636 | negative | NOT SIGNIFICANT | Prior status change [e0→e1] predicts later POI change [e1→e2], given prior POI change + D4 (status leads POI) [C5-corrected dynamism; k=1; pivot edition(s) [2017, 2023]; no D4 control -- unavailable at the pivot] |
 | H3c | Spearman k=1 | 560 | rho | 0.0782 | 0.0643 | negative | NOT SIGNIFICANT | Simultaneous dynamism ~ status_index co-movement (same edition) [k=1] |
 | H3c | Spearman k=2 | 280 | rho | 0.1532 | 0.0102 | negative | CONTRADICTED | Simultaneous dynamism ~ status_index co-movement (same edition) [k=2] |
 
@@ -191,8 +191,8 @@ Each controls for the outcome's own prior change. **Before 2026-10-26 the two we
 ## Overall Scorecard
 
 - **MSS modern (2021–2025):** Supported 8/18 · Contradicted 4 · Not significant 6
-- **MSS pre-2021 (2015–2019):** Supported 0/14 · Contradicted 3 · Not significant 11
-- **EWR same-era (2014–2020):** Supported 13/13 · Contradicted 0 · Not significant 0
+- **MSS pre-2021 (2013–2019, the thesis's editions):** Supported 0/14 · Contradicted 3 · Not significant 11
+- **EWR resident-register composite (2014–2020):** Supported 13/13 · Contradicted 0 · Not significant 0
 - **BZR scale:** Supported 1/9 · Contradicted 1 · Not significant 7
 - **Bezirk scale:** Supported 2/9 · Contradicted 0 · Not significant 7
 
@@ -202,15 +202,15 @@ Each controls for the outcome's own prior change. **Before 2026-10-26 the two we
 
 **MSS modern (2021–2025)**
 
-- **Cross-lagged k=1:** status change leads commercial change (H3b; the thesis's direction) (H3a CONTRADICTED, H3b SUPPORTED)
+- **Cross-lagged k=1:** status change leads commercial change (H3b; the thesis's direction) (H3a CONTRADICTED (borderline), H3b SUPPORTED)
 - **Cross-lagged (OA) k=1:** status change leads commercial change (H3b; the thesis's direction) (H3a NOT SIGNIFICANT, H3b SUPPORTED)
 
-**MSS pre-2021 (2015–2019)**
+**MSS pre-2021 (2013–2019, the thesis's editions)**
 
 - **Cross-lagged k=1:** no directional evidence either way (H3a NOT SIGNIFICANT, H3b NOT SIGNIFICANT)
 - **Cross-lagged (OA) k=1:** no directional evidence either way (H3a NOT SIGNIFICANT, H3b NOT SIGNIFICANT)
 
-**EWR same-era (2014–2020)**
+**EWR resident-register composite (2014–2020)**
 
 - **Cross-lagged (EWR) k=1:** both directions supported -- no single leading series (H3a SUPPORTED, H3b SUPPORTED)
 - **Cross-lagged (EWR) k=2:** both directions supported -- no single leading series (H3a SUPPORTED, H3b SUPPORTED)
@@ -228,13 +228,13 @@ Each controls for the outcome's own prior change. **Before 2026-10-26 the two we
 - **D1 polarity correction**: `status_index` is inverse-numeric -- lower = higher social status (index-definition.md §5). All expected directions corrected.
 - **H3 predictor (MSS panels)**: C5-corrected dynamism (and the OA basket), not raw POI counts -- avoids the OSM coverage-growth artefact.
 - **H3a/H3b method**: the thesis inferred direction from lagged-feature classifier fit (Weka) plus correlations; here it is a cross-lagged partial rank correlation with cluster-robust CIs. Same question, a design that can actually separate the two directions.
-- **Panels**: MSS 2021–2025 (lor_2021) and 2015–2019 (lor_pre2021) vs the thesis's 2012–2018 EWR; EWR 2014–2020 is the same-era comparison.
+- **Panels**: the thesis's outcome was MSS Status/Dynamik, editions 2013–2017. The like-for-like re-test is the MSS 2013–2019 panel (lor_pre2021), which contains those editions -- but it measures change as a move between the four status classes, where the thesis used the finer MSS Dynamik index, so it is lower-powered, not a clean refutation. MSS 2021–2025 (lor_2021) is the modern extension; EWR 2014–2020 is a population-composition context panel, not the thesis's outcome.
 - **No multiple-comparison correction** across hypotheses -- with this many rows, an isolated SUPPORTED cell is weak evidence on its own.
 - Epic B framing: directional revival (CLAUDE.md §Epic B framing) -- exact numbers need not match, but a direction must be established to count.
 
 ## Limitations
 
-- **One pivot per MSS panel**: three editions give a single cross-lagged pivot (2023 modern, 2017 pre-2021); k=2 needs five editions and is not testable.
+- **Few MSS pivots**: the modern panel (2021-2025) has a single cross-lagged pivot (2023) and no D4 control; the pre-2021 PLR panel has two (2015, 2017). The BZR/Bezirk loader still uses editions 2015-2019 only (no 2013), so its pre-2021 part has one pivot (2017) and differs from the PLR panel. k=2 cross-lags need five editions.
 - **EWR composite null pre-2014** (migration_background_share absent) -- the EWR panel's cross-lags start at 2014.
 - **Cross-vintage z-scores not comparable** (lor_pre2021 vs lor_2021).
 - **Granger logic is predictive, not causal**: a SUPPORTED cross-lag says one series' past change carries information about the other's next change beyond the outcome's own history -- not that it causes it (thesis weakness W3).

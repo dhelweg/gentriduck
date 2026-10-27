@@ -76,7 +76,7 @@ OUTPUT_MD = Path(__file__).parent.parent / "docs" / "epic-e" / "E1-regression-fi
 # Thesis p.55 H1b: fast-food ~ status — NEGATIVE (fast-food is a displacement indicator)
 # Thesis p.55 H2: POI stock → future status — positive (directional)
 # Thesis p.91 H3a: ΔPOI_t leads Δstatus_t+k — REJECTED (rho not significant in thesis)
-# Thesis p.91 H3b: Δstatus_t leads ΔPOI_t+k — CONFIRMED (rho positive, significant)
+# Thesis p.91 H3b: Δstatus_t leads ΔPOI_t+k — only TENTATIVELY supported (Tabelle 6-16: 'eher bestätigt')
 # Thesis p.91 H3c: simultaneous co-movement — UNCLEAR
 # Cross-lagged H3a/H3b design + significance-aware verdicts (2026-10-26 methodology
 # review). Sibling module; same import convention as e4_early_warning -> a9.
@@ -360,7 +360,8 @@ def load_lead_lag_data(con: duckdb.DuckDBPyConnection, vintage: str = "lor_2021"
 
     B7 (#117): vintage parameter selects the LOR boundary system.
     'lor_2021' = modern 2021-2025 panel (default).
-    'lor_pre2021' = thesis-era 2015-2019 panel (k=1: 2015→2017, 2017→2019; k=2: 2015→2019).
+    'lor_pre2021' = thesis-era panel, MSS editions 2013-2019 (2013 from the MSS Excel source;
+    k=1: 2013→2015, 2015→2017, 2017→2019; k=2: 2013→2017, 2015→2019).
 
     OA-A.4 (#168): also joins `int_poi_offering_advantage` category-level OA
     (`load_oa_category_panel`) at edition_t and edition_tk, exposing
@@ -1262,7 +1263,18 @@ def attach_verdicts(results: list[dict]) -> list[dict]:
             ci_high=r.get("ci_high"),
         )
         r["sig"] = r["verdict"] in ("SUPPORTED", "CONTRADICTED")
+        # Borderline: the cluster CI only just excludes 0 while the analytic p does not
+        # reach 0.05 -- the two inference routes disagree, so the label says so. Counts
+        # still use the canonical verdict.
+        r["borderline"] = bool(
+            r["sig"] and r.get("ci_low") is not None and r.get("p") is not None and r["p"] >= 0.05
+        )
     return results
+
+
+def _verdict_label(r: dict) -> str:
+    v = r.get("verdict", "?")
+    return f"{v} (borderline)" if r.get("borderline") else v
 
 
 def h3_direction_lines(results: list[dict]) -> list[str]:
@@ -1279,7 +1291,7 @@ def h3_direction_lines(results: list[dict]) -> list[str]:
             continue
         lines.append(
             f"- **{test}:** {direction_conclusion(a['verdict'], b['verdict'])} "
-            f"(H3a {a['verdict']}, H3b {b['verdict']})"
+            f"(H3a {_verdict_label(a)}, H3b {_verdict_label(b)})"
         )
     return lines
 
@@ -1326,7 +1338,7 @@ def print_results(results: list[dict]) -> None:
         p_str = f"{r['p']:.4f}" if r.get("p") is not None else "N/A"
         print(
             f"{r['hyp']:<5} {r['test']:<24} {r['n']:<5} {_value_str(r):<26} "
-            f"{p_str:<10} {r['expected_dir']:<9} {r.get('verdict', '?'):<16} {r['desc']}"
+            f"{p_str:<10} {r['expected_dir']:<9} {_verdict_label(r):<28} {r['desc']}"
         )
 
 
@@ -1339,7 +1351,7 @@ def _write_results_table(f, results: list[dict]) -> None:
         p_str = f"{r['p']:.4f}" if r.get("p") is not None else "N/A"
         f.write(
             f"| {r['hyp']} | {r['test']} | {r['n']} | {r['stat_type']} | {_value_str(r)} | "
-            f"{p_str} | {r['expected_dir']} | {r.get('verdict', '?')} | {r['desc']} |\n"
+            f"{p_str} | {r['expected_dir']} | {_verdict_label(r)} | {r['desc']} |\n"
         )
 
 
@@ -1368,7 +1380,7 @@ def write_findings(
             "- **Data (H2/H3 MSS 2021–2025):** int_mss_lead_lag (lor_2021) + int_poi_features_pivot\n"
         )
         f.write(
-            "- **Data (H2/H3 MSS 2015–2019, B7):** int_mss_lead_lag (lor_pre2021) + int_poi_features_pivot\n"
+            "- **Data (H2/H3 MSS 2013–2019, B7):** int_mss_lead_lag (lor_pre2021) + int_poi_features_pivot\n"
         )
         if results_ewr:
             f.write(
@@ -1410,17 +1422,18 @@ def write_findings(
             "(official Berlin social monitoring index) but a different era and index than the thesis.\n"
         )
         f.write(
-            "2. **MSS pre-2021 panel (2015–2019, B7 #117):** Uses `int_mss_lead_lag` (lor_pre2021) — "
+            "2. **MSS pre-2021 panel (2013–2019, B7 #117):** Uses `int_mss_lead_lag` (lor_pre2021) — "
         )
         f.write("thesis-era boundary system (447 PLRs). Enables same-era H3b lead-lag. ")
         f.write(
-            "k=1: 2015→2017, 2017→2019 pairs; k=2: 2015→2019. Z-scores not cross-vintage comparable.\n"
+            "Editions 2013-2019 (2013 from the MSS Excel source): k=1 pairs 2013→2015, 2015→2017, "
+            "2017→2019. Z-scores not cross-vintage comparable.\n"
         )
-        f.write("3. **EWR same-era (2014–2020):** Uses `int_ewr_lead_lag` — the same data source ")
+        f.write("3. **EWR resident-register composite (2014–2020):** Uses `int_ewr_lead_lag`. ")
         f.write(
-            "and timeframe as the 2018 thesis. k=2 (2014→2016) matches the thesis lead-lag gap "
+            "EWR is Berlin's resident register (Einwohnerregister); its composite measures population composition (residence duration, age, nationality, migration background), NOT social status, and it was not the thesis's outcome measure -- the thesis used MSS Status/Dynamik (editions 2013-2017; thesis §6.2.3, Tabelle 6-1). "
         )
-        f.write("exactly. delta_ewr is metric (z-score arithmetic diff) so OLS is also valid.\n\n")
+        f.write("delta_ewr is metric (z-score arithmetic diff) so OLS is also valid.\n\n")
         f.write("## Scoring\n\n")
         f.write(
             'Each row gets one verdict (2026-10-26; previously a row "passed" whenever its '
@@ -1455,8 +1468,8 @@ def write_findings(
 
         panels = [
             ("MSS modern (2021–2025)", results_mss),
-            ("MSS pre-2021 (2015–2019)", results_mss_pre or []),
-            ("EWR same-era (2014–2020)", results_ewr or []),
+            ("MSS pre-2021 (2013–2019, the thesis's editions)", results_mss_pre or []),
+            ("EWR resident-register composite (2014–2020)", results_ewr or []),
             ("BZR scale", results_bzr or []),
             ("Bezirk scale", results_bezirk or []),
         ]
@@ -1471,7 +1484,10 @@ def write_findings(
         f.write("## Results — Section 2: H2/H3 MSS Panel (modern era, 2021–2025)\n\n")
         f.write(
             "> Different era and index than thesis. MSS is a better ground truth but covers "
-            "2021–2025, not 2012–2018. Three editions -> one cross-lagged pivot (2023).\n\n"
+            "2021–2025, not 2012–2018. Three editions -> ONE cross-lagged pivot (2023), and NO D4 "
+            "control (EWR 2021-2023 was never published): treat its H3a/H3b rows as a single-window "
+            "estimate. Rows marked (borderline) have a CI that only just excludes 0 while the "
+            "analytic p does not reach 0.05.\n\n"
         )
         mss_h23 = [r for r in results_mss if r["hyp"] not in ("H1", "H1b")]
         _write_results_table(f, mss_h23)
@@ -1479,25 +1495,31 @@ def write_findings(
 
         if results_mss_pre:
             f.write(
-                "## Results — Section 3: H2/H3 MSS Pre-2021 Panel (thesis-era, 2015–2019, B7 #117)\n\n"
+                "## Results — Section 3: H2/H3 MSS Pre-2021 Panel (thesis-era, 2013–2019, B7 #117)\n\n"
             )
             f.write(
                 "> lor_pre2021 boundary system (447 PLRs). Same era as the thesis. Z-scores "
-                "normalised within lor_pre2021 -- NOT comparable to Section 2. One cross-lagged "
-                "pivot (2017).\n\n"
+                "normalised within lor_pre2021 -- NOT comparable to Section 2. Editions 2013-2019 "
+                "give two cross-lagged pivots (2015, 2017).\n\n"
             )
             _write_results_table(f, results_mss_pre)
             _write_section_summary(f, results_mss_pre)
 
         if results_ewr:
+            f.write("## Results — Section 4: H2/H3 EWR Resident-Register Composite (2014–2020)\n\n")
             f.write(
-                "## Results — Section 4: H2/H3 EWR Same-Era (2014–2020, thesis source and timeframe)\n\n"
-            )
-            f.write(
-                "> Same data source and timeframe as the 2018 thesis. Annual panel: many "
+                "> EWR is Berlin's resident register (Einwohnerregister); its composite measures population composition (residence duration, age, nationality, migration background), NOT social status, and it was not the thesis's outcome measure -- the thesis used MSS Status/Dynamik (editions 2013-2017; thesis §6.2.3, Tabelle 6-1). H3c here correlates same-year LEVELS, not co-occurring "
+                "changes -- not a like-for-like test of H3c. The POI side is the raw OSM count "
+                "without the C5 completeness correction, so mapping growth can feed both "
+                "directions. Annual panel: many "
                 "cross-lagged pivots per area, all absorbed by the cluster bootstrap. POI side is "
                 "the raw count via the dominant pre-2021 crosswalk (~35% of lor_2021 PLRs share a "
-                "count with a neighbour -- pseudo-replication, see load_ewr_lead_lag_data).\n\n"
+                "count with a neighbour -- pseudo-replication, see load_ewr_lead_lag_data). **Only the "
+                "cross-lagged H3a/H3b rows use cluster-bootstrap CIs; the H2 and H3c rows here use "
+                "analytic p-values on pooled area-year rows that are not independent, so their "
+                'significance is overstated** -- read them as directional. The "D4 control" in '
+                "this panel is the EWR composite's own level at the pivot (status IS the composite "
+                "here), not an independent covariate.\n\n"
             )
             _write_results_table(f, results_ewr)
             _write_section_summary(f, results_ewr)
@@ -1548,8 +1570,12 @@ def write_findings(
             "fit (Weka) plus correlations; here it is a cross-lagged partial rank correlation "
             "with cluster-robust CIs. Same question, a design that can actually separate the "
             "two directions.\n"
-            "- **Panels**: MSS 2021–2025 (lor_2021) and 2015–2019 (lor_pre2021) vs the thesis's "
-            "2012–2018 EWR; EWR 2014–2020 is the same-era comparison.\n"
+            "- **Panels**: the thesis's outcome was MSS Status/Dynamik, editions 2013–2017. The "
+            "like-for-like re-test is the MSS 2013–2019 panel (lor_pre2021), which contains those "
+            "editions -- but it measures change as a move between the four status classes, "
+            "where the thesis used the finer MSS Dynamik index, so it is lower-powered, not a "
+            "clean refutation. MSS 2021–2025 (lor_2021) is the modern extension; EWR 2014–2020 "
+            "is a population-composition context panel, not the thesis's outcome.\n"
             "- **No multiple-comparison correction** across hypotheses -- with this many rows, "
             "an isolated SUPPORTED cell is weak evidence on its own.\n"
             "- Epic B framing: directional revival (CLAUDE.md §Epic B framing) -- exact numbers "
@@ -1558,8 +1584,10 @@ def write_findings(
 
         f.write("## Limitations\n\n")
         f.write(
-            "- **One pivot per MSS panel**: three editions give a single cross-lagged pivot "
-            "(2023 modern, 2017 pre-2021); k=2 needs five editions and is not testable.\n"
+            "- **Few MSS pivots**: the modern panel (2021-2025) has a single cross-lagged pivot "
+            "(2023) and no D4 control; the pre-2021 PLR panel has two (2015, 2017). The BZR/Bezirk "
+            "loader still uses editions 2015-2019 only (no 2013), so its pre-2021 part has one "
+            "pivot (2017) and differs from the PLR panel. k=2 cross-lags need five editions.\n"
             "- **EWR composite null pre-2014** (migration_background_share absent) -- the EWR "
             "panel's cross-lags start at 2014.\n"
             "- **Cross-vintage z-scores not comparable** (lor_pre2021 vs lor_2021).\n"
@@ -1688,11 +1716,11 @@ def main() -> None:
     # --- MSS pre-2021 panel (B7 #117): thesis-era H2/H3 on lor_pre2021 (2015-2019) ---
     results_mss_pre = []
     if len(df_ll_pre) >= 10:
-        print("\nRunning H2 tests — MSS pre-2021 panel (2015–2019)...")
-        results_mss_pre += test_h2(df_ll_pre, panel_label="2015–2019 panel")
+        print("\nRunning H2 tests — MSS pre-2021 panel (2013–2019)...")
+        results_mss_pre += test_h2(df_ll_pre, panel_label="2013–2019 panel")
 
-        print("Running H3a/H3b/H3c — MSS pre-2021 panel (2015–2019)...")
-        results_mss_pre += test_h3(df_ll_pre, panel_label="2015–2019 panel")
+        print("Running H3a/H3b/H3c — MSS pre-2021 panel (2013–2019)...")
+        results_mss_pre += test_h3(df_ll_pre, panel_label="2013–2019 panel")
 
     # --- EWR same-era results (2014–2020, matches thesis source and timeframe) ---
     results_ewr = []
@@ -1708,12 +1736,12 @@ def main() -> None:
     _print_verdicts("MSS", results_mss)
 
     if results_mss_pre:
-        print("\n=== MSS PRE-2021 PANEL (thesis-era, 2015–2019) ===")
+        print("\n=== MSS PRE-2021 PANEL (thesis-era, 2013–2019) ===")
         print_results(results_mss_pre)
         _print_verdicts("MSS pre-2021", results_mss_pre)
 
     if results_ewr:
-        print("\n=== EWR SAME-ERA (2014–2020, thesis source and timeframe) ===")
+        print("\n=== EWR RESIDENT-REGISTER COMPOSITE (2014–2020) ===")
         print_results(results_ewr)
         _print_verdicts("EWR", results_ewr)
 

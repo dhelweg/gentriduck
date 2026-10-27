@@ -59,7 +59,7 @@ Diverges from thesis rejection: higher-than-expected AUC. Check for data leakage
 
 - k=1: AUC = 0.4506 — Diverges from thesis (sub-chance AUC).
 
-Diverges from thesis (H3b was confirmed in thesis). Possible cause: MSS panel covers only 2021-2025 (3 editions); thesis used 2010-2018 (longer panel).
+Diverges from thesis (H3b was only tentatively supported in the thesis (Tabelle 6-16: 'eher bestätigt')). Possible cause: MSS panel covers only 2021-2025 (3 editions); thesis used 2010-2018 (longer panel).
 
 ### H3c
 
@@ -71,7 +71,7 @@ Diverges from thesis (H3b was confirmed in thesis). Possible cause: MSS panel co
 
 | Task | N | Thesis AUC | Revival AUC | AUC std | F1w | F1w std | Leakage | Features |
 |---|---|---|---|---|---|---|---|---|
-| H1 (BZR scale) | 137 | 0.87 | 0.7520 | 0.0773 | 0.6545 | 0.0399 | None — POI counts are independent of status_class_bi | total_poi_count, poi_cafe, poi_bar, poi_restaurant, poi_fast_food, poi_nightlife |
+| H1 (BZR scale) | 137 | 0.87 | 0.7137 | 0.1330 | 0.5962 | 0.0808 | None — POI counts are independent of status_class_bi | total_poi_count, poi_cafe, poi_bar, poi_restaurant, poi_fast_food, poi_nightlife |
 
 > MAUP note (B10): BZR AUC reflects spatial smoothing (~4-6 PLRs per BZR). Higher AUC expected vs PLR due to within-BZR variance cancellation (thesis §3.2; index-definition.md §8). Not an independent confirmation.
 

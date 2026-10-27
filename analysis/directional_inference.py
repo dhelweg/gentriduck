@@ -201,6 +201,13 @@ def build_cross_lagged(
     if cluster_col:
         keep.append(cluster_col)
     sub = df.loc[df["lag_k"] == k, [c for c in dict.fromkeys(keep) if c in df.columns]]
+    # A duplicated (area, start, end) link would turn the self-merge below into a silent
+    # cartesian product and inflate n -- refuse it instead.
+    dup = int(sub.duplicated(["area_code", t0, t1]).sum()) if not sub.empty else 0
+    if dup:
+        raise ValueError(
+            f"build_cross_lagged: {dup} duplicated (area_code, {t0}, {t1}) links at k={k}"
+        )
     if sub.empty:
         return pd.DataFrame()
     m = sub.merge(sub, left_on=["area_code", t1], right_on=["area_code", t0], suffixes=("_p", "_f"))
@@ -219,7 +226,9 @@ def build_cross_lagged(
     if control_col and f"{control_col}_f" in m:
         out["control"] = m[f"{control_col}_f"].astype(float)
     if cluster_col and f"{cluster_col}_f" in m:
-        out["cluster"] = m[f"{cluster_col}_f"].astype(str)
+        # Keep a missing cluster missing (astype(str) would make every NaN one "nan" cluster);
+        # cluster_bootstrap_ci drops rows without a cluster.
+        out["cluster"] = m[f"{cluster_col}_f"].map(lambda v: None if pd.isna(v) else str(v))
     else:
         out["cluster"] = out["area_code"].map(default_cluster)
     return out.reset_index(drop=True)

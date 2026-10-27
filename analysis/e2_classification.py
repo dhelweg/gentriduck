@@ -9,7 +9,7 @@ using scikit-learn.  The five thesis hypotheses each map to a classification tas
   H1  (p.91): POI stock → MSS status class.    Thesis AUC: 0.87
   H2  (p.91): POI stock → future status change. Thesis AUC: 0.77
   H3a (p.91): ΔPOI leads Δstatus.              Thesis AUC: 0.72 (REJECTED — below threshold)
-  H3b (p.91): Δstatus leads ΔPOI.              Thesis AUC: 0.81 (CONFIRMED)
+  H3b (p.91): Δstatus leads ΔPOI.              Thesis AUC: 0.81 (tentatively supported, Tabelle 6-16)
   H3c (p.91): Simultaneous co-movement.         Thesis AUC: 0.71 (UNCLEAR)
 
 Features:
@@ -593,7 +593,7 @@ def task_h3a(df_ll) -> list[dict]:
 def task_h3b(df_ll) -> list[dict]:
     """H3b: Classify C5-corrected POI dynamism growth using status change (status leads POI).
 
-    Thesis p.91 H3b: Δstatus leads ΔPOI — CONFIRMED (AUC 0.81).
+    Thesis p.91 H3b: Δstatus leads ΔPOI — only TENTATIVELY supported (Tabelle 6-16, AUC 0.81).
     Features: delta_status_ordinal (ordinal direction proxy), status_index_t.
     Target: delta_dynamism_t > 0 (C5-corrected POI dynamism increases from t-1 to t).
 
@@ -814,14 +814,14 @@ def write_findings(all_results: list[dict], results_bzr: list[dict] | None = Non
                             f"- k={r['task'].split('=')[1].rstrip(')')}: AUC = {r['auc_mean']:.4f} — {verdict}.\n"
                         )
                     f.write(
-                        "\nDiverges from thesis (H3b was confirmed in thesis). Possible cause: "
+                        "\nDiverges from thesis (H3b was only tentatively supported in the thesis (Tabelle 6-16: 'eher bestätigt')). Possible cause: "
                     )
                     f.write(
                         "MSS panel covers only 2021-2025 (3 editions); thesis used 2010-2018 (longer panel).\n\n"
                     )
                 elif all_above_chance:
                     f.write(
-                        "Consistent with thesis confirmation (H3b confirmed in thesis): status predictor of future POI growth direction.\n\n"
+                        "Consistent with the thesis (H3b was only tentatively supported in the thesis (Tabelle 6-16: 'eher bestätigt')): status predictor of future POI growth direction.\n\n"
                     )
                 else:
                     f.write("Mixed results across k — see per-k AUC values above.\n\n")
