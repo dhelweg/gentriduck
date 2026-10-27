@@ -47,8 +47,8 @@ frameworks the methodology page (G2) must name:
 - **Dangschat (1988; 2000) — double invasion-succession cycle.** Gentrification proceeds as two
   coupled cycles: a *social* invasion-succession (pioneers → gentrifiers → settled high-status
   population displace incumbents) and a *commercial* invasion-succession (amenity landscape turns over
-  to serve incoming population). The thesis confirmed (p. 91, H3b) that **the social cycle leads the
-  commercial cycle.** This is the reason the model must be lead-lag, not contemporaneous (ADR-0008 §2).
+  to serve incoming population). The thesis tentatively supported (Tabelle 6-16, H3b: "eher
+  bestätigt") that **the social cycle leads the commercial cycle.** This is the reason the model must be lead-lag, not contemporaneous (ADR-0008 §2).
 - **Döring & Ulbricht (2016) — Gentrification-Hotspots und Verdrängungsprozesse in Berlin.** Supplies
   the Berlin-specific *vulnerability/displacement-susceptibility* reading of demographic composition: a
   high share of welfare recipients, young adults, migrants, and a *low* share of long-tenure residents
@@ -219,8 +219,8 @@ tested in §8 (cut-point perturbation).
 ## 2. Lead-lag specification
 
 This is the single most important architectural fix (ADR-0008 Decision 2; R-A7 geo §3). A
-contemporaneous mean **cannot** express the thesis's temporal-order finding (H3b confirmed, H3a
-rejected; thesis p. 91) and does not satisfy the ADR.
+contemporaneous mean **cannot** express the thesis's temporal-order finding (H3b tentatively supported, H3a
+rejected; thesis Tabelle 6-16) and does not satisfy the ADR.
 
 ### 2.1 Panel structure
 
@@ -230,14 +230,14 @@ For each PLR `i` and each year/edition `t`, we model **change→change** at temp
 H3a (POI leads status — thesis REJECTED; test anyway):
     Δstatus_{i,t+k}  ~  Δamenity_{i,t}  + baseline_i + controls
 
-H3b (status leads POI — thesis CONFIRMED; expected to dominate):
+H3b (status leads POI — thesis TENTATIVELY supported, Tabelle 6-16):
     Δamenity_{i,t+k} ~  Δstatus_{i,t}  + baseline_i + controls
 ```
 
 Both directions are fit for every `k`. The **headline result is the directional dominance of H3b
 (status→amenity)** — but that is a *reported test outcome*, never a hard-coded assumption (R-A7 geo
-condition 1; domain condition 3). The thesis confirmed (p. 91) H3b and rejected H3a, making the social
-cycle (D1/D2 movement) the *leading* cycle — exactly Dangschat's double invasion-succession.
+condition 1; domain condition 3). The thesis tentatively supported H3b and rejected H3a (Tabelle 6-16),
+making the social cycle (D1/D2 movement) the *leading* cycle — exactly Dangschat's double invasion-succession.
 
 ### 2.2 BOTH sides must be deltas (geo condition 1, binding)
 
@@ -281,6 +281,14 @@ applies the **C5 correction** (PLR-share normalization: `dynamism_score` is the 
 Feeding uncorrected coverage growth into H3b would bias the H3b test toward false confirmation (high
 "dynamism" in every PLR OSM expanded coverage in, regardless of actual neighbourhood change).
 PLRs with zero POIs across all years are excluded from the D3 predictor (§7).
+
+**Measurement scope (2026-10-27).** D3 counts **POIs mapped as OSM nodes** at each
+snapshot date. Deleted nodes are removed from every later snapshot (they were wrongly kept
+until `13fb28ef`; evidence in `docs/epic-c/OSM-extractor-fixes-2026-10-evidence.md`). A
+shop redrawn from a node to a building polygon therefore reads as a closure, which may bias
+dynamism downward in heavily remapped areas. Whether C5 needs an area-level node→way
+migration term is tracked in #337 (geo-DS sign-off
+`docs/methodology/2026-10-evidence-integrity-geo-signoff.md`, conditions 1-2).
 
 ### 2.5 LOR vintage discipline (binding)
 
@@ -648,8 +656,8 @@ consistent with Döring-Ulbricht (2016) and 2018 thesis Chapter 3 (*Gentrifizier
 
 The **lead-lag direction is the through-line of this map**: the social cycle (D1/D2 movement) *leads*
 the commercial cycle (D3 movement), Stage 1→2. A model that reads them contemporaneously would collapse
-Stages 1–3 into one and lose the thesis's actual finding (ADR-0008 §2; H3b confirmed / H3a rejected,
-thesis p. 91).
+Stages 1–3 into one and lose the thesis's actual finding (ADR-0008 §2; H3b tentatively supported / H3a rejected,
+thesis Tabelle 6-16).
 
 ---
 
@@ -689,7 +697,7 @@ thesis p. 91).
 ## Sources
 
 - ADR-0008 (`docs/adr/0008-multi-dimensional-gentrification-model.md`)
-- Thesis (Helweg 2018): pp. 55–56 (hypotheses), p. 91 (H3b confirmed / H3a rejected), p. 97
+- Thesis (Helweg 2018): pp. 55–56 (hypotheses), p. 91 / Tabelle 6-16 (H3b tentatively supported / H3a rejected), p. 97
   (Dynamik = change in benefit-recipient share vs. city average), §3.2 (*Gentrifizierung als Prozess*)
 - Dangschat (1988) — double invasion-succession cycle
 - Döring & Ulbricht (2016) — Gentrification-Hotspots und Verdrängungsprozesse in Berlin (mobility /

@@ -81,7 +81,14 @@ therefore agree *better* with the thesis's own values. It does, at every level (
 | category | 0.732 | **0.779** |
 | type | 0.497 | **0.536** |
 
-## 3. Caveat for the reviewers: node → way conversions
+## 3. Measurement scope: node-only (disclosed; tracked in #337)
+
+**The OSM counts are node-only: they count POIs mapped as nodes at date t.** Geo-DS sign-off
+(`docs/methodology/2026-10-evidence-integrity-geo-signoff.md`) condition 1 makes this a binding
+disclosure (also on the methodology page and index-definition.md §2.4); condition 2 —
+measuring node→way migration from the way history and deciding on a C5 term — is #337.
+
+### Original note for the reviewers: node → way conversions
 
 The extractor reads **nodes only**. When a mapper redraws a shop node as a building polygon (way),
 the node is deleted. Before the fix the ghost node kept such a POI counted — by accident, and
