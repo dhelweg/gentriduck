@@ -78,18 +78,22 @@ sidebar_position: 5
   // PLR-year) is now always shown too -- both so a blank/suppressed Offering Advantage cell is
   // self-explanatory (its own raw count is right there) and as general transparency for
   // near-threshold PLRs that aren't suppressed but are still low.
-  // #351 review: `inputs.view` is null on first render (before the ButtonGroup applies its
-  // defaultValue="stock"), which used to select the "change" column with the diverging palette and
-  // an off-centre domain. Every read below therefore uses `(inputs.view ?? 'stock')`.
+  // #351 review: Evidence's <ButtonGroup defaultValue=...> only reaches preset/query-generated
+  // items, never hand-written <ButtonGroupItem> children, so "stock" was never selected and
+  // `inputs.view` held Evidence's placeholder for an unset input (not null). Every read then fell
+  // through to the "change" column with the diverging palette and an off-centre domain. Fix: the
+  // stock item carries `default` (see the <ButtonGroup> below), and every read goes through
+  // `poiView`, which is 'stock' unless the reader has picked 'development'.
+  $: poiView = inputs.view === 'development' ? 'development' : 'stock';
   $: areaTooltip = [
     { id: 'area_name', showColumnName: false, valueClass: 'font-bold text-sm', fmt: 'id' },
     {
       id: inputs.metric.value === 'density'
-        ? ((inputs.view ?? 'stock') === 'stock' ? 'poi_density_per_km2' : 'density_delta')
-        : ((inputs.view ?? 'stock') === 'stock' ? 'oa_domain' : 'oa_delta'),
+        ? (poiView === 'stock' ? 'poi_density_per_km2' : 'density_delta')
+        : (poiView === 'stock' ? 'oa_domain' : 'oa_delta'),
       title:
         (inputs.metric.value === 'density' ? 'POI density / km²' : 'Offering Advantage')
-        + ((inputs.view ?? 'stock') === 'development' ? ' (change vs. previous year)' : ''),
+        + (poiView === 'development' ? ' (change vs. previous year)' : ''),
       fmt: 'num1'
     },
     { id: 'poi_count', title: 'Mapped places (this domain)', fmt: 'num0' },
@@ -212,7 +216,7 @@ for the full method, or the [methodology page](/methodology) for a plain-languag
 </Dropdown>
 
 <ButtonGroup name="view" title="Stock vs. development" display="tabs" defaultValue="stock">
-  <ButtonGroupItem value="stock" valueLabel="Stock (this year's value)"/>
+  <ButtonGroupItem value="stock" valueLabel="Stock (this year's value)" default/>
   <ButtonGroupItem value="development" valueLabel="Change since previous year"/>
 </ButtonGroup>
 
@@ -305,34 +309,34 @@ where b.snapshot_year = ${inputs.year.value}
     areaCol="area_code"
     value={
         inputs.metric.value === 'density'
-            ? ((inputs.view ?? 'stock') === 'stock' ? 'poi_density_per_km2' : 'density_delta')
-            : ((inputs.view ?? 'stock') === 'stock' ? 'oa_domain' : 'oa_delta')
+            ? (poiView === 'stock' ? 'poi_density_per_km2' : 'density_delta')
+            : (poiView === 'stock' ? 'oa_domain' : 'oa_delta')
     }
     legendType="scalar"
     colorPalette={
-        inputs.metric.value === 'density' && (inputs.view ?? 'stock') === 'stock'
+        inputs.metric.value === 'density' && poiView === 'stock'
             ? undefined
             : divergingPalette
     }
     min={
         inputs.metric.value === 'oa'
-            ? ((inputs.view ?? 'stock') === 'stock'
+            ? (poiView === 'stock'
                 ? symmetricDomain(poi_map_data, 'oa_domain', 1)[0]
                 : symmetricDomain(poi_map_data, 'oa_delta', 0)[0])
-            : (inputs.view ?? 'stock') === 'development'
+            : poiView === 'development'
                 ? symmetricDomain(poi_map_data, 'density_delta', 0)[0]
                 : undefined
     }
     max={
         inputs.metric.value === 'oa'
-            ? ((inputs.view ?? 'stock') === 'stock'
+            ? (poiView === 'stock'
                 ? symmetricDomain(poi_map_data, 'oa_domain', 1)[1]
                 : symmetricDomain(poi_map_data, 'oa_delta', 0)[1])
-            : (inputs.view ?? 'stock') === 'development'
+            : poiView === 'development'
                 ? symmetricDomain(poi_map_data, 'density_delta', 0)[1]
                 : undefined
     }
-    title="Berlin Planungsraum (PLR) — {inputs.metric.value === 'density' ? 'POI density' : 'Offering Advantage'}, {inputs.domain.value}, {inputs.year.value}{(inputs.view ?? 'stock') === 'development' ? ' (change vs. previous year)' : ''}"
+    title="Berlin Planungsraum (PLR) — {inputs.metric.value === 'density' ? 'POI density' : 'Offering Advantage'}, {inputs.domain.value}, {inputs.year.value}{poiView === 'development' ? ' (change vs. previous year)' : ''}"
     link="link"
     tooltip={areaTooltip}
     emptyMessage="No data for this domain/year combination."

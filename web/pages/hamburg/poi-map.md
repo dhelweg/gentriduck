@@ -35,15 +35,19 @@ sidebar_position: 2
 
 <script>
   import { base } from '$app/paths';
+  // #351 review: same fix as /berlin/poi-map. <ButtonGroup defaultValue=...> never reaches
+  // hand-written <ButtonGroupItem> children, so the stock item carries `default` instead, and every
+  // read goes through `poiView` ('stock' unless the reader picked 'development').
+  $: poiView = inputs.view === 'development' ? 'development' : 'stock';
 
   $: areaTooltip = [
     {
       id: inputs.metric.value === 'density'
-        ? ((inputs.view ?? 'stock') === 'stock' ? 'poi_density_per_km2' : 'density_delta')
-        : ((inputs.view ?? 'stock') === 'stock' ? 'oa_domain' : 'oa_delta'),
+        ? (poiView === 'stock' ? 'poi_density_per_km2' : 'density_delta')
+        : (poiView === 'stock' ? 'oa_domain' : 'oa_delta'),
       title:
         (inputs.metric.value === 'density' ? 'POI density / km²' : 'Offering Advantage')
-        + ((inputs.view ?? 'stock') === 'development' ? ' (change vs. previous year)' : ''),
+        + (poiView === 'development' ? ' (change vs. previous year)' : ''),
       fmt: 'num1'
     },
     { id: 'poi_count', title: 'Mapped places (this domain)', fmt: 'num0' },
@@ -145,7 +149,7 @@ city-agnostic mart that has carried real Hamburg rows since H1 (#40).
 </Dropdown>
 
 <ButtonGroup name="view" title="Stock vs. development" display="tabs" defaultValue="stock">
-  <ButtonGroupItem value="stock" valueLabel="Stock (this year's value)"/>
+  <ButtonGroupItem value="stock" valueLabel="Stock (this year's value)" default/>
   <ButtonGroupItem value="development" valueLabel="Change since previous year"/>
 </ButtonGroup>
 
@@ -206,34 +210,34 @@ where b.snapshot_year = ${inputs.year.value}
     areaCol="area_code"
     value={
         inputs.metric.value === 'density'
-            ? ((inputs.view ?? 'stock') === 'stock' ? 'poi_density_per_km2' : 'density_delta')
-            : ((inputs.view ?? 'stock') === 'stock' ? 'oa_domain' : 'oa_delta')
+            ? (poiView === 'stock' ? 'poi_density_per_km2' : 'density_delta')
+            : (poiView === 'stock' ? 'oa_domain' : 'oa_delta')
     }
     legendType="scalar"
     colorPalette={
-        inputs.metric.value === 'density' && (inputs.view ?? 'stock') === 'stock'
+        inputs.metric.value === 'density' && poiView === 'stock'
             ? undefined
             : divergingPalette
     }
     min={
         inputs.metric.value === 'oa'
-            ? ((inputs.view ?? 'stock') === 'stock'
+            ? (poiView === 'stock'
                 ? symmetricDomain(poi_map_data, 'oa_domain', 1)[0]
                 : symmetricDomain(poi_map_data, 'oa_delta', 0)[0])
-            : (inputs.view ?? 'stock') === 'development'
+            : poiView === 'development'
                 ? symmetricDomain(poi_map_data, 'density_delta', 0)[0]
                 : undefined
     }
     max={
         inputs.metric.value === 'oa'
-            ? ((inputs.view ?? 'stock') === 'stock'
+            ? (poiView === 'stock'
                 ? symmetricDomain(poi_map_data, 'oa_domain', 1)[1]
                 : symmetricDomain(poi_map_data, 'oa_delta', 0)[1])
-            : (inputs.view ?? 'stock') === 'development'
+            : poiView === 'development'
                 ? symmetricDomain(poi_map_data, 'density_delta', 0)[1]
                 : undefined
     }
-    title="Hamburg statistisches Gebiet — {inputs.metric.value === 'density' ? 'POI density' : 'Offering Advantage'}, {inputs.domain.value}, {inputs.year.value}{(inputs.view ?? 'stock') === 'development' ? ' (change vs. previous year)' : ''}"
+    title="Hamburg statistisches Gebiet — {inputs.metric.value === 'density' ? 'POI density' : 'Offering Advantage'}, {inputs.domain.value}, {inputs.year.value}{poiView === 'development' ? ' (change vs. previous year)' : ''}"
     tooltip={areaTooltip}
     emptyMessage="No data for this domain/year combination."
 />
