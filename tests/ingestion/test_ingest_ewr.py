@@ -12,6 +12,8 @@ no live network, no dependency on datenregister.berlin.de's current catalog cont
 
 from __future__ import annotations
 
+import codecs
+
 import json
 
 from berlin.ewr import ingest_ewr as ewr
@@ -82,8 +84,7 @@ def test_discover_url_via_ckan_selects_real_matrix_over_decoys(monkeypatch):
         # The real main-matrix series -- listed LAST, so a naive "first CSV in first
         # result" fallback would never reach it.
         _dataset(
-            f"Einwohnerinnen und Einwohner in Berlin in LOR-Planungsräumen am "
-            f"31.12.{year}",
+            f"Einwohnerinnen und Einwohner in Berlin in LOR-Planungsräumen am 31.12.{year}",
             [_csv_resource(real_url)],
         ),
     ]
@@ -110,7 +111,9 @@ def test_discover_url_via_ckan_excludes_each_category_individually(monkeypatch):
         f"LOR-Planungsräumen am 31.12.{year}",
         f"Einwohnerinnen und Einwohner in Berlin in LOR-Planungsräumen nach Wohndauer am 31.12.{year}",
     ):
-        datasets = [_dataset(marker_title, [_csv_resource(f"https://example.test/decoy_{year}.csv")])]
+        datasets = [
+            _dataset(marker_title, [_csv_resource(f"https://example.test/decoy_{year}.csv")])
+        ]
 
         def fake_urlopen(url, timeout=None, context=None, _datasets=datasets):  # noqa: ARG001
             return _FakeResponse(_ckan_payload(_datasets))
@@ -189,3 +192,30 @@ def test_discover_url_via_ckan_returns_none_on_network_error(monkeypatch, caplog
 
     assert result is None
     assert any("CKAN API request failed" in record.message for record in caplog.records)
+
+
+def test_parse_csv_bytes_names_an_html_soft_404() -> None:
+    """2026-10-26: the relaunched statistik-berlin-brandenburg.de answers dead /opendata/*.csv
+    URLs with HTTP 200 + its HTML app shell. That must be reported as a moved/removed file,
+    not as the old misleading "check separator/encoding" parse failure."""
+    import pytest
+
+    shell = (
+        b'<!doctype html>\n<html lang="de">\n  <head><title>Amt</title></head><body></body></html>'
+    )
+    with pytest.raises(ValueError, match="returned an HTML page"):
+        ewr._parse_csv_bytes(shell, 2016)
+    # Leading whitespace and uppercase variants are still caught...
+    with pytest.raises(ValueError, match="returned an HTML page"):
+        ewr._parse_csv_bytes(b"\r\n  <HTML><body></body></HTML>", 2016)
+    # ...and so is a UTF-8 BOM in front of the markup.
+    with pytest.raises(ValueError, match="returned an HTML page"):
+        ewr._parse_csv_bytes(codecs.BOM_UTF8 + b"<!DOCTYPE html><html></html>", 2016)
+
+
+def test_parse_csv_bytes_still_parses_a_real_matrix_csv() -> None:
+    """The soft-404 guard must not reject genuine semicolon-separated EWR matrices."""
+    csv = "RAUMID;BEZ;PGR;BZR;PLR;STADTRAUM;E_E;E_EM;E_EW\n01011101;01;01;0101;01011101;1;3500;1700;1800\n"
+    df = ewr._parse_csv_bytes(csv.encode("latin-1"), 2016)
+    assert df.shape == (1, 9)
+    assert df.loc[0, "E_E"] == "3500"

@@ -2,13 +2,13 @@
 
 - **Task:** H-C3 (#160) -- annual-cadence Hamburg lead-lag model + independent H3a/H3b re-test
 - **Issue:** #160 (H-C3); #129 (Stadtteil SE-clustering binding requirement) **(Follow-up now tracked: #265 (H-reg-SE) — see `docs/planning/deferred-work-audit-2026-07.md`.)**
-- **Date:** 2026-07-31
-- **Data:** int_hamburg_lead_lag (H-C3 #160), n=27871 rows
-- **Method:** Spearman rank correlation (bivariate, mirrors e1_regressions.py's test_h3 exactly) + OLS with Stadtteil-clustered standard errors (D4-covariate specification only, #129)
+- **Date:** 2026-10-27
+- **Data:** int_hamburg_lead_lag (H-C3 #160), n=27819 rows
+- **Method:** cross-lagged partial Spearman with a Stadtteil cluster-bootstrap 95% CI for H3a/H3b (shared with e1, `analysis/directional_inference.py`); Spearman for H3c; OLS with Stadtteil-clustered SEs for D4-controlled co-movement (#129). A result needs significance to count -- see Scoring.
 
 ## Do NOT assume Berlin's finding
 
-This is an **independent re-test**, not a confirmation exercise. The Berlin thesis (p. 91) found H3b (status change leads POI change) CONFIRMED and H3a (POI change leads status change) REJECTED. This script does not assume, expect, or force that outcome to replicate on Hamburg -- whatever direction/significance is observed below is reported as-is (#160 explicit scope note; #80 precedent for honest null/negative findings).
+This is an **independent re-test**, not a confirmation exercise. The Berlin thesis (Tabelle 6-16, PDF p. 91) found H3b (status change leads POI change) TENTATIVELY supported ('eher bestaetigt') and H3a (POI change leads status change) REJECTED. This script does not assume, expect, or force that outcome to replicate on Hamburg -- whatever direction/significance is observed below is reported as-is (#160 explicit scope note; #80 precedent for honest null/negative findings).
 
 ## Cadence caveat (binding)
 
@@ -17,43 +17,51 @@ Hamburg's Sozialmonitoring is ANNUAL (ADR-0014); `int_hamburg_lead_lag` uses `ed
 ## Hypothesis citations
 
 - **H3a**: Thesis p.91 H3a framing (theory: Dangschat 1988), independently re-tested on Hamburg -- REJECTED in the Berlin thesis, NOT assumed to replicate or reject here. Uses C5-corrected delta_dynamism_t (index-definition.md §2.4; int_hamburg_lead_lag.sql D3 C5 note, H-C1 #158 re-validation); delta_status_ordinal is inverse-numeric (index-definition.md §5 polarity table) so the theory-derived expected direction is negative.
-- **H3b**: Thesis p.91 H3b framing (theory: Dangschat 1988), independently re-tested on Hamburg -- CONFIRMED in the Berlin thesis, NOT assumed to replicate or reject here. delta_status_ordinal is inverse-numeric (index-definition.md §5 polarity table); improved status = negative delta, so the theory-derived expected Spearman(delta_status_ordinal, delta_dynamism_t) direction is negative.
-- **H3c**: Thesis p.91 H3c framing, run alongside H3a/H3b for the same apples-to-apples comparability e1_regressions.py provides for Berlin -- UNCLEAR in the Berlin thesis. status_index inverse-numeric (index-definition.md §5), theory-derived expected direction negative.
+- **H3b**: Thesis p.91 H3b framing (theory: Dangschat 1988), independently re-tested on Hamburg -- TENTATIVELY supported in the Berlin thesis (Tabelle 6-16: '(check)', 'eher bestaetigt'), NOT assumed to replicate or reject here. delta_status_ordinal is inverse-numeric (index-definition.md §5 polarity table); improved status = negative delta, so the theory-derived expected Spearman(delta_status_ordinal, delta_dynamism_t) direction is negative.
+- **H3c**: Thesis p.91 H3c framing, run alongside H3a/H3b for the same apples-to-apples comparability e1_regressions.py provides for Berlin -- INCONCLUSIVE in the Berlin thesis (Tabelle 6-16: 0). status_index inverse-numeric (index-definition.md §5), theory-derived expected direction negative.
 
-## Section 1: Bivariate Spearman (mirrors e1_regressions.py's test_h3 method)
+## Scoring
 
-> No D4 (ewr_composite_t) covariate in this section -- these are pure two-variable rank correlations, same as Berlin's own test_h3. Stadtteil clustering (#129) does NOT apply here (see module docstring scope note); it applies only to Section 2.
+SUPPORTED = significant in the expected direction; CONTRADICTED = significant, opposite direction; NOT SIGNIFICANT = the data cannot tell; NO DATA = untestable. Significance = the 95% cluster-bootstrap CI excludes 0 (cross-lagged rows), else p < 0.05. Before 2026-10-26 a row 'passed' whenever its sign matched -- six non-significant Section 2 coefficients scored 6/6.
 
-> **H3a/H3b are identical by construction in this section.** H3a computes `Spearman(delta_dyn_t, delta_status)` and H3b computes `Spearman(delta_status, delta_dyn_t)` -- the same two vectors with swapped argument order. Spearman correlation is symmetric under argument swap, so H3a and H3b return IDENTICAL rho/p/n at every lag_k below (inherited from e1_regressions.py's test_h3, which has the same property on Berlin's MSS data; see that function's docstring and B7-geo-signoff.md Concern 2). This is a **co-movement test across the lag window, not a strict temporal-precedence test** -- a symmetric bivariate statistic cannot distinguish "POI leads status" (H3a) from "status leads POI" (H3b); it can only say the two series co-move. **Section 2 below (the D4-controlled OLS with Stadtteil-clustered SEs) is the test that actually distinguishes the two directional hypotheses** -- H3a and H3b there are different regression specifications (different dependent variables) and its coefficients are genuinely non-symmetric.
+## Section 1: Cross-lagged H3a/H3b (directional) + H3c
 
-| Hyp | Test | N | Value | p-value | Sig | Expected Dir | Actual Dir | Match |
+> H3a/H3b: ordered, non-overlapping windows around each pivot year; each direction controls for the outcome's own prior change and the D4 baseline LEVEL. CIs: cluster bootstrap over Stadtteile (#129). This replaces the pre-2026-10-26 symmetric Spearman pair, which returned identical numbers for H3a and H3b.
+
+| Hyp | Test | N | N clusters | Value [95% CI] | p-value | Expected dir | Verdict |
+|---|---|---|---|---|---|---|---|
+| H3a | Cross-lagged k=1 (1yr) | 8298 | 95 | -0.0130 [-0.032, 0.006] | 0.2373 | negative | NOT SIGNIFICANT |
+| H3b | Cross-lagged k=1 (1yr) | 8298 | 95 | 0.0110 [-0.012, 0.034] | 0.3175 | negative | NOT SIGNIFICANT |
+| H3c | Spearman k=1 (1yr) | 10129 | N/A | 0.0508 | 0.0000 | negative | CONTRADICTED |
+| H3a | Cross-lagged k=2 (2yr) | 6617 | 95 | -0.0181 [-0.041, 0.005] | 0.1419 | negative | NOT SIGNIFICANT |
+| H3b | Cross-lagged k=2 (2yr) | 6617 | 95 | -0.0085 [-0.030, 0.014] | 0.4907 | negative | NOT SIGNIFICANT |
+| H3c | Spearman k=2 (2yr) | 9273 | N/A | 0.0567 | 0.0000 | negative | CONTRADICTED |
+| H3a | Cross-lagged k=3 (3yr) | 4943 | 95 | -0.0081 [-0.038, 0.021] | 0.5703 | negative | NOT SIGNIFICANT |
+| H3b | Cross-lagged k=3 (3yr) | 4943 | 95 | 0.0011 [-0.027, 0.028] | 0.9360 | negative | NOT SIGNIFICANT |
+| H3c | Spearman k=3 (3yr) | 8417 | N/A | 0.0648 | 0.0000 | negative | CONTRADICTED |
+
+**Verdicts:** Supported 0/9 · Contradicted 3 · Not significant 6
+
+**Direction:**
+
+- **Cross-lagged k=1 (1yr):** no directional evidence either way (H3a NOT SIGNIFICANT, H3b NOT SIGNIFICANT)
+- **Cross-lagged k=2 (2yr):** no directional evidence either way (H3a NOT SIGNIFICANT, H3b NOT SIGNIFICANT)
+- **Cross-lagged k=3 (3yr):** no directional evidence either way (H3a NOT SIGNIFICANT, H3b NOT SIGNIFICANT)
+
+## Section 2: D4-controlled co-movement, Stadtteil-clustered OLS (#129) -- NOT directional
+
+> ewr_composite_t (D4 baseline LEVEL, index-definition.md §4.3) enters as a covariate here -- per #129 / H1-geo-signoff.md Condition 2, standard errors on the primary change-predictor coefficient are clustered at Stadtteil grain (`run_ols_clustered`, CR1 sandwich estimator, Cameron, Gelbach & Miller 2011; Cameron & Miller 2015). Effective D4 sample size is Stadtteil count (observed: 95 distinct clusters per lag_k below; ~104-105 Stadtteile expected per ADR-0014), not Gebiet (row) count. **Both specs regress the same same-window pair, once in each orientation -- a co-movement measure, not a direction test** (it was mislabelled as directional before 2026-10-26).
+
+| Hyp | Test | N | N clusters | Value [95% CI] | p-value | Expected dir | Verdict | ewr_composite_t coef (p) |
 |---|---|---|---|---|---|---|---|---|
-| H3a | Spearman k=1 (1yr) | 9293 | -0.0202 | 0.0514 | No | negative | negative | PASS |
-| H3b | Spearman k=1 (1yr) | 9293 | -0.0202 | 0.0514 | No | negative | negative | PASS |
-| H3c | Spearman k=1 (1yr) | 10147 | 0.0748 | 0.0000 | Yes | negative | positive | FAIL |
-| H3a | Spearman k=2 (2yr) | 8435 | -0.0175 | 0.1070 | No | negative | negative | PASS |
-| H3b | Spearman k=2 (2yr) | 8435 | -0.0175 | 0.1070 | No | negative | negative | PASS |
-| H3c | Spearman k=2 (2yr) | 9291 | 0.0836 | 0.0000 | Yes | negative | positive | FAIL |
-| H3a | Spearman k=3 (3yr) | 7577 | -0.0152 | 0.1854 | No | negative | negative | PASS |
-| H3b | Spearman k=3 (3yr) | 7577 | -0.0152 | 0.1854 | No | negative | negative | PASS |
-| H3c | Spearman k=3 (3yr) | 8433 | 0.0916 | 0.0000 | Yes | negative | positive | FAIL |
+| H3 co-movement (status on POI) | OLS-clustered k=1 (1yr) | 8306 | 95 | -0.0041 | 0.3752 | negative | NOT SIGNIFICANT | 0.0068 (p=0.1302) |
+| H3 co-movement (POI on status) | OLS-clustered k=1 (1yr) | 8306 | 95 | -0.0475 | 0.3780 | negative | NOT SIGNIFICANT | 0.0023 (p=0.7880) |
+| H3 co-movement (status on POI) | OLS-clustered k=2 (2yr) | 7461 | 95 | -0.0035 | 0.4418 | negative | NOT SIGNIFICANT | 1.43e-04 (p=0.9844) |
+| H3 co-movement (POI on status) | OLS-clustered k=2 (2yr) | 7461 | 95 | -0.0287 | 0.4463 | negative | NOT SIGNIFICANT | -0.0029 (p=0.7576) |
+| H3 co-movement (status on POI) | OLS-clustered k=3 (3yr) | 6617 | 95 | -0.0056 | 0.2570 | negative | NOT SIGNIFICANT | -0.0056 (p=0.5414) |
+| H3 co-movement (POI on status) | OLS-clustered k=3 (3yr) | 6617 | 95 | -0.0391 | 0.2629 | negative | NOT SIGNIFICANT | 0.0011 (p=0.8542) |
 
-**Directional agreement (bivariate): 6/9. Significant: 3/9.**
-
-## Section 2: D4-controlled OLS, Stadtteil-clustered standard errors (#129 binding)
-
-> ewr_composite_t (D4 baseline LEVEL, index-definition.md §4.3) enters as a covariate here -- per #129 / H1-geo-signoff.md Condition 2, standard errors on the primary change-predictor coefficient are clustered at Stadtteil grain (`run_ols_clustered`, CR1 sandwich estimator, Cameron, Gelbach & Miller 2011; Cameron & Miller 2015). Effective D4 sample size is Stadtteil count (observed: 95 distinct clusters per lag_k below; ~104-105 Stadtteile expected per ADR-0014), not Gebiet (row) count.
-
-| Hyp | Test | N | N clusters | Value | p-value | Sig | Expected Dir | Actual Dir | Match | ewr_composite_t coef (p) |
-|---|---|---|---|---|---|---|---|---|---|---|
-| H3a (D4-controlled, Stadtteil-clustered) | OLS-clustered k=1 (1yr) | 9161 | 95 | -0.0045 | 0.3081 | No | negative | negative | PASS | 0.0017 (p=0.6544) |
-| H3b (D4-controlled, Stadtteil-clustered) | OLS-clustered k=1 (1yr) | 9161 | 95 | -0.0477 | 0.3110 | No | negative | negative | PASS | -0.0028 (p=0.7149) |
-| H3a (D4-controlled, Stadtteil-clustered) | OLS-clustered k=2 (2yr) | 8315 | 95 | -0.0045 | 0.2697 | No | negative | negative | PASS | -0.0035 (p=0.6104) |
-| H3b (D4-controlled, Stadtteil-clustered) | OLS-clustered k=2 (2yr) | 8315 | 95 | -0.0352 | 0.2746 | No | negative | negative | PASS | -0.0101 (p=0.1866) |
-| H3a (D4-controlled, Stadtteil-clustered) | OLS-clustered k=3 (3yr) | 7469 | 95 | -0.0052 | 0.2512 | No | negative | negative | PASS | -0.0082 (p=0.3759) |
-| H3b (D4-controlled, Stadtteil-clustered) | OLS-clustered k=3 (3yr) | 7469 | 95 | -0.0346 | 0.2559 | No | negative | negative | PASS | -0.0036 (p=0.5894) |
-
-**Directional agreement (D4-controlled, clustered): 6/6. Significant: 0/6.**
+**Verdicts:** Supported 0/6 · Contradicted 0 · Not significant 6
 
 ## Correction (#330): pre-#330 Section 2 numbers were computed under a contaminated D4 composite
 
@@ -134,13 +142,15 @@ justification for having used the invalid specification. See Limitations/Epic B 
 
 ## Overall scorecard
 
-**Total directional agreement: 12/15. Significant: 3/15.**
+- **Directional (cross-lagged H3a/H3b):** Supported 0/6 · Contradicted 0 · Not significant 6
+- **Contemporaneous (H3c):** Supported 0/3 · Contradicted 3 · Not significant 0
+- **D4-controlled co-movement (Section 2):** Supported 0/6 · Contradicted 0 · Not significant 6
 
-**Composition caveat:** this 15-test count mixes two different kinds of test -- 9 of them are the symmetric bivariate co-movement tests from Section 1 (which, per the caveat above Section 1's table, cannot by construction distinguish H3a from H3b), and only 6 are the genuinely directional D4-controlled tests from Section 2. Do not cite "12/15" as "15 lead-lag tests" -- read it as 9 co-movement tests plus 6 directional tests.
+Only the cross-lagged rows speak to H3a vs H3b; the other two kinds measure association, not order. Do not add them into one directional count.
 
 ## Comparison to Berlin (int_mss_lead_lag / e1_regressions.py test_h3)
 
-Berlin (thesis p. 91, replicated directionally by e1_regressions.py): H3b (status-leads-POI) CONFIRMED, H3a (POI-leads-status) REJECTED. See Section 1 above for whether Hamburg's bivariate H3a/H3b directions and significance match or diverge from this -- read alongside the cadence caveat (Hamburg lag_k is a different real-year window than Berlin's lag_k at the same integer value).
+Berlin thesis (Tabelle 6-16, PDF p. 91): H3b (status-leads-POI) TENTATIVELY supported, H3a (POI-leads-status) REJECTED. Berlin's own cross-lagged re-test is in docs/epic-e/E1-regression-findings.md. See Section 1 above for whether Hamburg's cross-lagged H3a/H3b directions and significance match or diverge from this -- read alongside the cadence caveat (Hamburg lag_k is a different real-year window than Berlin's lag_k at the same integer value).
 
 ## Limitations
 

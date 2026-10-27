@@ -100,6 +100,10 @@
                 lat,
                 harmonization_provenance,
                 source_attribution,
+                -- I20 (#252): `cuisine` passed through unchanged, mirroring
+                -- int_osm_poi_plr (it was dropped here, so Hamburg cuisine never
+                -- left int_osm_poi_harmonized).
+                cuisine,
                 st_transform(
                     st_point(lon, lat), 'EPSG:4326', 'EPSG:25832', true
                 ) as geom_25832
@@ -129,6 +133,7 @@
                 poi.lat,
                 poi.harmonization_provenance,
                 poi.source_attribution,
+                poi.cuisine,
                 gebiet.area_code,
                 gebiet.area_vintage
             from poi_points as poi
@@ -160,6 +165,7 @@
         cast(null as double) as lat,
         cast(null as varchar) as harmonization_provenance,
         cast(null as varchar) as source_attribution,
+        cast(null as varchar) as cuisine,
         cast(null as varchar) as area_code,
         cast(null as varchar) as area_vintage
     where false

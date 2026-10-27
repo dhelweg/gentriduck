@@ -1523,11 +1523,13 @@ models:
       (schools, kindergartens, doctors, dentists, pharmacies, supermarkets,
       playgrounds, transit stops) and a dominant-gastro-cuisine breakdown, at
       PLR grain and rolled up to BZR/PGR/Bezirk (I18 geo-hierarchy levels).
-      Not on the R-C1 gated-file list -- reads int_osm_poi_plr read-only, no
+      Not on the R-C1 gated-file list -- reads int_osm_poi_plr and
+      int_osm_poi_hamburg read-only, no
       index weight/normalization change. "Interestingness" thresholds (n >=
       floor before showing a dominant cuisine) and bench-class category
       suppression are a web/curation-layer concern (I20 slice 2/3, #253/#254),
-      not modeled here. Berlin only; Hamburg parity deferred, same as I19.
+      not modeled here. Berlin (plr/bzr/pgr/bezirk) and, since 2026-10-26,
+      Hamburg (subarea_l2/subarea_l1/district via dim_area_hierarchy).
     meta:
       dbt_meta_owner: data-engineer
     data_tests:
@@ -1544,23 +1546,27 @@ models:
       - name: city_code
         description: >
           City identifier (ADR-0005), normalized via canonical_city_code()
-          from int_osm_poi_plr's legacy lowercase 'berlin'. Currently 'BER' only.
+          from int_osm_poi_plr's legacy lowercase 'berlin'; 'HH' for Hamburg.
         data_tests:
 
           - not_null
           - accepted_values:
               arguments:
-                values: ["BER"]
+                values: ["BER", "HH"]
       - name: area_level
-        description: Geo-hierarchy level (I18) -- plr, bzr, pgr, or bezirk.
+        description: >
+          Geo-hierarchy level (I18) -- BER: plr, bzr, pgr, bezirk; HH: subarea_l2
+          (statistisches Gebiet), subarea_l1 (Stadtteil), district.
         data_tests:
 
           - not_null
           - accepted_values:
               arguments:
-                values: ["plr", "bzr", "pgr", "bezirk"]
+                values: ["plr", "bzr", "pgr", "bezirk", "subarea_l2", "subarea_l1", "district"]
       - name: area_code
-        description: LOR area code at this level's own grain (8/6/4/2-digit).
+        description: >
+          Area code at this level's own grain -- BER LOR 8/6/4/2-digit; HH as in
+          stg_hamburg_geo.
         data_tests:
 
           - not_null

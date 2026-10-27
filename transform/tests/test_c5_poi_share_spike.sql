@@ -18,6 +18,10 @@
 -- parameter) suppresses this small-N noise for every city while leaving the
 -- ratio logic itself untouched. Measured effect: BER flags 75->47, HH flags
 -- 77->45, equalizing the post-2016 tail across cities.
+-- Baseline re-derived 2026-10-27 on the corrected OSM extraction (deleted POIs no
+-- longer kept as ghosts, which had smoothed year-on-year shares): 115 flags =
+-- BER 56 + HH 59, concentrated in the early sparse years (geo-DS sign-off
+-- docs/methodology/2026-10-evidence-integrity-geo-signoff.md, condition 3).
 with
     share_with_rolling as (
         select

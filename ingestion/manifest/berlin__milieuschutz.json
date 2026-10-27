@@ -5,19 +5,19 @@
   "upstream": {
     "url": "https://gdi.berlin.de/services/wfs/erhaltungsverordnungsgebiete",
     "vintage": "current (live WFS edition; confirmed 2026-07-09)",
-    "retrieved_at": "2026-07-09T15:44:15Z"
+    "retrieved_at": "2026-10-25T12:27:56Z"
   },
   "outputs": [
     {
       "path": "data/raw/berlin/displacement/milieuschutz.parquet",
       "row_count": 82,
       "schema_fingerprint": "sha256:25657d4ec933351e3bcee23b6f27363f67171ffa4063f3ad7a2d54a465c8234e",
-      "content_hash": "sha256:3a419fc2398138cd87652138eb1c975f6157e3fb37d775c576ead4810d482ab8"
+      "content_hash": "sha256:8b0aea7aad057773003ac11e304c865fa5ccf6ba9ae0cc2c9afd4b226738df35"
     }
   ],
   "ingest_script": {
     "module": "ingestion.berlin.displacement.ingest_milieuschutz",
-    "git_sha": "a22dd65c5a4b7f8a4c809bcf28765de81284394c"
+    "git_sha": "69ef50ae6daa232764d706843fb18917f4deaf29"
   },
   "manifest_schema_version": 1
 }

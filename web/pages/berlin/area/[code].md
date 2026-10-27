@@ -971,7 +971,8 @@ select
     n_schools, n_kindergartens, n_doctors, n_dentists, n_pharmacies, n_supermarkets,
     n_playgrounds, n_transit_stops,
     gastro_poi_count, gastro_poi_with_cuisine_count,
-    dominant_cuisine, dominant_cuisine_share
+    replace(replace(dominant_cuisine, chr(59), ' / '), '_', ' ') as dominant_cuisine,
+    dominant_cuisine_share
 from gentriduck_marts.mart_area_amenities
 where city_code = 'BER' and area_level = 'plr' and area_code = '${params.code}'
 order by snapshot_year desc
@@ -1003,34 +1004,34 @@ with
             and area_code = substr('${params.code}', 1, 2)
             and snapshot_year = (select snapshot_year from latest)
     )
-select 1 as sort_order, 'Schools' as indicator, cast(a.n_schools as varchar) as area_value, cast(d.n_schools as varchar) as district_value
+select 1 as sort_order, 'Schools' as indicator, cast(cast(a.n_schools as bigint) as varchar) as area_value, cast(cast(d.n_schools as bigint) as varchar) as district_value
 from area_row as a cross join district_row as d
 union all
-select 2, 'Kindergartens', cast(a.n_kindergartens as varchar), cast(d.n_kindergartens as varchar)
+select 2, 'Kindergartens', cast(cast(a.n_kindergartens as bigint) as varchar), cast(cast(d.n_kindergartens as bigint) as varchar)
 from area_row as a cross join district_row as d
 union all
-select 3, 'Doctors', cast(a.n_doctors as varchar), cast(d.n_doctors as varchar)
+select 3, 'Doctors', cast(cast(a.n_doctors as bigint) as varchar), cast(cast(d.n_doctors as bigint) as varchar)
 from area_row as a cross join district_row as d
 union all
-select 4, 'Dentists', cast(a.n_dentists as varchar), cast(d.n_dentists as varchar)
+select 4, 'Dentists', cast(cast(a.n_dentists as bigint) as varchar), cast(cast(d.n_dentists as bigint) as varchar)
 from area_row as a cross join district_row as d
 union all
-select 5, 'Pharmacies', cast(a.n_pharmacies as varchar), cast(d.n_pharmacies as varchar)
+select 5, 'Pharmacies', cast(cast(a.n_pharmacies as bigint) as varchar), cast(cast(d.n_pharmacies as bigint) as varchar)
 from area_row as a cross join district_row as d
 union all
-select 6, 'Supermarkets', cast(a.n_supermarkets as varchar), cast(d.n_supermarkets as varchar)
+select 6, 'Supermarkets', cast(cast(a.n_supermarkets as bigint) as varchar), cast(cast(d.n_supermarkets as bigint) as varchar)
 from area_row as a cross join district_row as d
 union all
-select 7, 'Playgrounds', cast(a.n_playgrounds as varchar), cast(d.n_playgrounds as varchar)
+select 7, 'Playgrounds', cast(cast(a.n_playgrounds as bigint) as varchar), cast(cast(d.n_playgrounds as bigint) as varchar)
 from area_row as a cross join district_row as d
 union all
-select 8, 'Transit stops', cast(a.n_transit_stops as varchar), cast(d.n_transit_stops as varchar)
+select 8, 'Transit stops', cast(cast(a.n_transit_stops as bigint) as varchar), cast(cast(d.n_transit_stops as bigint) as varchar)
 from area_row as a cross join district_row as d
 order by sort_order
 ```
 
 <p>
-{#if amenities_current[0]}
+{#if amenities_current[0]?.snapshot_year}
 Based on OpenStreetMap tagging as of <b>{amenities_current[0].snapshot_year}</b>, this area has the
 everyday-infrastructure counts below, shown alongside its district (Bezirk) total for context.
 {:else}
@@ -1052,11 +1053,14 @@ No amenity data is available for this area yet.
 </Alert>
 
 <p>
-{#if amenities_current[0] && amenities_current[0].gastro_poi_with_cuisine_count >= 8 && amenities_current[0].dominant_cuisine_share >= 0.15}
+{#if amenities_current[0]?.snapshot_year && amenities_current[0].gastro_poi_with_cuisine_count >= 8 && amenities_current[0].dominant_cuisine_share >= 0.15}
 Among <b>{amenities_current[0].gastro_poi_with_cuisine_count}</b> restaurants/cafes with cuisine
 data tagged in this area, the <b>most common cuisine</b> is
 <b>{amenities_current[0].dominant_cuisine}</b>
-({Math.round(amenities_current[0].dominant_cuisine_share * 100)}% of tagged gastronomy POIs).
+({Math.round(amenities_current[0].dominant_cuisine_share * 100)}% of cuisine-tagged restaurants/cafes).
+{:else if amenities_current[0]?.snapshot_year && amenities_current[0].gastro_poi_with_cuisine_count >= 8}
+Cuisine is tagged for <b>{amenities_current[0].gastro_poi_with_cuisine_count}</b> restaurants/cafes
+here, but no single cuisine reaches 15% of them, so none is named.
 {:else}
 There isn't enough tagged cuisine data in this area yet to identify a most-common cuisine (OpenStreetMap
 tagging of restaurant/cafe cuisine is incomplete for smaller or less-mapped areas).

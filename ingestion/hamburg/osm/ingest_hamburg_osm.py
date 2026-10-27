@@ -37,15 +37,12 @@ does not touch weighting, normalization, or spatial-join methodology. The C5
 OSM-completeness-bias re-fit for Hamburg (ADR-0014 Pillar 6 note) is a separate,
 explicitly methodology-bearing follow-up when it lands.
 
-Usage:
+Usage (full refresh -- what `poe ingest-osm-hamburg` runs):
   uv run python ingestion/hamburg/osm/ingest_hamburg_osm.py \\
       --osh-pbf data/raw/osm/germany-internal.osh.pbf \\
-      --out-dir data/raw/osm/hamburg --years 2008-2024
-
-  For an in-progress calendar year (parity with Berlin's --partial-years, #125):
-  uv run python ingestion/hamburg/osm/ingest_hamburg_osm.py \\
-      --osh-pbf data/raw/osm/germany-internal.osh.pbf \\
-      --out-dir data/raw/osm/hamburg --years 2025-2026 --partial-years 2026
+      --out-dir data/raw/osm/hamburg --force
+  Years default to 2008..<current year>, each sampled at YYYY-01-01 (so there is no
+  "in-progress" year to treat specially -- --partial-years is deprecated, see --help).
 
 Bounding box source: OpenStreetMap Nominatim — Hamburg, Germany (administrative
 boundary bbox), same convention as Berlin's ingest_osm_history.py.
@@ -156,8 +153,9 @@ def main(argv: list[str] | None = None) -> int:
     )
     parser.add_argument(
         "--years",
-        default="2008-2024",
-        help="Year range to process, e.g. '2008-2024' or '2018,2019,2020' (default: 2008-2024).",
+        default=f"2008-{datetime.date.today().year}",
+        help="Year range, e.g. '2008-2026' or '2018,2019,2020' (default: 2008-<current year>). "
+        "Every year is sampled at YYYY-01-01, so the current year's snapshot is already final.",
     )
     parser.add_argument(
         "--skip-existing",
@@ -175,14 +173,18 @@ def main(argv: list[str] | None = None) -> int:
         "--workers",
         type=int,
         default=1,
-        help="Number of parallel worker processes (default: 1).",
+        help="Default 1 = ONE read of the .osh.pbf for all years (single-pass, fastest). "
+        "N>1 runs one full read per year in N processes; they contend on the shared file "
+        "and measured no faster than 3 (2026-10-26) -- slower than the default, kept only "
+        "for compatibility.",
     )
     parser.add_argument(
         "--partial-years",
         default="",
-        help="Comma-separated years whose output file is named '{year}-partial.parquet' "
-        "instead of '{year}.parquet' (e.g. '2026' for an in-progress year). Parity with "
-        "ingestion/berlin/osm/ingest_osm_history.py's --partial-years (#125).",
+        help="DEPRECATED (2026-10-26) -- only renames the output to '{year}-partial.parquet'. "
+        "Snapshots are always taken at YYYY-01-01, so a current-year file is final, not "
+        "partial, and does not change between .osh.pbf downloads. Kept so old invocations "
+        "do not break; do not use.",
     )
     args = parser.parse_args(argv)
 
@@ -205,6 +207,11 @@ def main(argv: list[str] | None = None) -> int:
         if args.partial_years
         else set()
     )
+    if partial_years:
+        _berlin_osm.log.warning(
+            "--partial-years is deprecated: it only renames the output file. Snapshots are "
+            "always taken at YYYY-01-01, so the current year is already final."
+        )
     out_dir: Path = args.out_dir
     skip_existing = args.skip_existing and not args.force
 
@@ -252,13 +259,12 @@ def main(argv: list[str] | None = None) -> int:
         "Processing %d years with %d worker(s): %s", len(years_to_run), workers, years_to_run
     )
 
-    def _run_year(year: int) -> None:
-        df = _berlin_osm.extract_snapshot(osh_pbf, year, poi_mapping)
-        _berlin_osm.write_parquet(df, out_dir / f"{_stem(year)}.parquet")
-
     if workers == 1:
+        # One read of the .osh.pbf for ALL requested years (Berlin's single-pass handler,
+        # bbox/city_code patched above). Validated 2026-10-26, see --workers help.
+        results = _berlin_osm.extract_all_snapshots(osh_pbf, years_to_run, poi_mapping)
         for year in years_to_run:
-            _run_year(year)
+            _berlin_osm.write_parquet(results[year], out_dir / f"{_stem(year)}.parquet")
     else:
         import multiprocessing
 
