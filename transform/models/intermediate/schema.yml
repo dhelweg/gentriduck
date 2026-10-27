@@ -1387,11 +1387,17 @@ models:
           perimeter, bbox spillover into neighbouring states).
         data_tests:
 
+          # Hamburg-specific threshold (2026-10-27). The 0.12 used for Berlin
+          # (measured 9.6%) was copied here, but Hamburg's rectangular bbox spills
+          # into Schleswig-Holstein / Lower Saxony: measured 13.7-20.6% null per
+          # year, 2008-2026, on the corrected extraction -- a structural ~18%, so the
+          # test warned on every year. 0.25 leaves headroom while still catching a
+          # real regression (a broken spatial join pushes this toward 100%).
           - assert_null_rate_below:
               arguments:
                 column_name: area_code
                 partition_by: snapshot_year
-                max_null_fraction: 0.12
+                max_null_fraction: 0.25
               config:
                 severity: warn
                 where: "snapshot_year is not null"
