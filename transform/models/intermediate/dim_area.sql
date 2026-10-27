@@ -1,45 +1,22 @@
 -- dim_area: conformed area dimension (ADR-0005 city-agnostic seam).
--- Distinct (city_code, area_level, area_code, area_name) from the 2018 thesis
--- index staging, joined with seed_dim_area_level for the human-readable level name.
+-- One row per (city_code, area_level, area_code) with a display area_name and
+-- the human-readable level_name.
 --
--- Sources (UNIONed):
--- 1. int_thesis_2018_area_index — 2018 thesis goldens (BER / bezirk / bzr / plr codes).
--- 2. stg_berlin_lor — WFS LOR PLR geometry staging (BER / plr, both vintages).
--- Added in #52 (dim_area wiring). This is the source that makes OSM 8-digit
--- PLR area_codes visible to dimension tests and to int_ewr_socioeco's PLR join
--- (int_ewr_series, an earlier dead-code join, was removed in QA-6/#181).
--- city_code is 'BER' (ADR-0005 canonical) from stg_berlin_lor.
--- 3. stg_berlin_lor_bzr — WFS LOR BZR geometry staging (BER / bzr, both vintages).
--- Added in #134 (bug fix): sources correctly-encoded (UTF-8) BZR names from the
--- same WFS as stg_berlin_lor, replacing the latin-1-mojibake-corrupted
--- thesis-golden BZR area_name via the same dedup pattern used for PLR.
--- 4. stg_hamburg_geo — WFS Hamburg geometry staging (HH / district / subarea_l1 /
--- subarea_l2). Added in #40 (H1 Hamburg onboarding, ADR-0014). This is the first
--- second-city area source and exercises the ADR-0005 city-agnostic seam for real.
--- 5. stg_berlin_lor_pgr — WFS LOR Prognoseraum (PGR) geometry staging (BER / pgr,
--- both vintages). Added in #242 (I18, geo-hierarchy pages): ADR-0003 already
--- licensed this LOR level, it simply hadn't been ingested. 'pgr' is used as the
--- area_level string (matching the already-implemented 'bzr'/'plr' convention,
--- not ADR-0003's aspirational generic 'subarea_l1' label -- architect-confirmed,
--- no new ADR needed).
--- 6. stg_berlin_ortsteil — WFS Ortsteil geometry staging (BER / ortsteil, single
--- current vintage, not a LOR level). Added in #269 (I-ortsteile): 96/97 Berlin
--- Stadtteile that nest cleanly into Bezirk but NOT into PLR -- see
--- dim_area_hierarchy.sql (ortsteil -> bezirk edge) and
--- int_berlin_plr_ortsteil_overlap.sql (the non-nesting PLR<->Ortsteil
--- area-overlap crosswalk, kept separate from this dimension).
---
--- Deduplication strategy:
--- - Area codes that appear in both sources get one row per (city_code, area_level,
--- area_code). WFS names (UTF-8, stg_berlin_lor / stg_berlin_lor_bzr / stg_hamburg_geo)
--- are preferred over thesis goldens (which sometimes have latin-1 mojibake).
--- ROW_NUMBER() QUALIFY keeps the first row when ordered by name (WFS rows sort
--- before '?' placeholders alphabetically).
--- - stg_berlin_lor / stg_berlin_lor_bzr each have two vintages (lor_pre2021,
--- lor_2021) sharing some area_codes; DISTINCT on the lor_areas / lor_bzr_areas
--- CTEs collapses these to one row per code.
---
--- NOTE — parent_area_code is intentionally omitted at this stage.
+-- The rows, codes and source names come from int_dim_area_base (this model's
+-- body until #352; see its header for the sources and the dedup). On top of
+-- that, #352 fills or disambiguates display names so no page has to show a
+-- bare code or two identical labels:
+-- - Hamburg statistisches Gebiet (subarea_l2): the source has no name, so
+-- area_name comes from int_hamburg_gebiet_names ('<Stadtteil> · <OSM
+-- name>' or '<Stadtteil> · Gebiet <code>').
+-- - Berlin LOR (plr/bzr/pgr): the few names that repeat within one level
+-- and vintage get their parent's name appended, from
+-- int_berlin_lor_name_disambiguation. dim_area has no vintage column, so a
+-- code takes its disambiguated label from whichever vintage it collides
+-- in (the colliding codes are vintage-specific today; min() keeps it
+-- deterministic if that ever changes).
+-- Every other row keeps its source name. area_code stays the key; names are
+-- display-only. Tested: area_name never null or blank (schema.yml).
 {{
     config(
         materialized="view",
@@ -48,95 +25,26 @@
 }}
 
 with
-    -- 2018 thesis golden areas (bezirk + bzr + plr from golden staging)
-    thesis_areas as (
-        select distinct idx.city_code, idx.area_level, idx.area_code, idx.area_name
-        from {{ ref("int_thesis_2018_area_index") }} as idx
-    ),
-
-    -- WFS LOR PLR areas (both vintages collapsed, city_code='BER', issue #52).
-    -- DISTINCT on (city_code, area_level, area_code, area_name) collapses any PLR
-    -- codes that appear in both pre-2021 and 2021 vintages with the same name.
-    lor_areas as (
-        select distinct city_code, 'plr' as area_level, area_code, area_name
-        from {{ ref("stg_berlin_lor") }}
-        where area_code is not null
-    ),
-
-    -- WFS LOR BZR areas (both vintages collapsed, city_code='BER', issue #134).
-    -- Same collapsing rationale as lor_areas above, at the Bezirksregion grain.
-    lor_bzr_areas as (
-        select distinct city_code, 'bzr' as area_level, area_code, area_name
-        from {{ ref("stg_berlin_lor_bzr") }}
-        where area_code is not null
-    ),
-
-    -- WFS LOR PGR areas (both vintages collapsed, city_code='BER', issue #242
-    -- I18). Same collapsing rationale as lor_areas above, at the Prognoseraum
-    -- grain.
-    lor_pgr_areas as (
-        select distinct city_code, 'pgr' as area_level, area_code, area_name
-        from {{ ref("stg_berlin_lor_pgr") }}
-        where area_code is not null
-    ),
-
-    -- WFS Hamburg areas (statistisches Gebiet / Stadtteil / Bezirk, city_code='HH',
-    -- issue #40 H1, ADR-0014). Single 'current' vintage for this first slice.
-    hamburg_areas as (
-        select distinct city_code, area_level, area_code, area_name
-        from {{ ref("stg_hamburg_geo") }}
-        where area_code is not null
-    ),
-
-    -- WFS Ortsteil areas (BER / ortsteil, single current vintage, issue #269
-    -- I-ortsteile). Non-LOR Berlin geography; see dim_area_hierarchy.sql and
-    -- int_berlin_plr_ortsteil_overlap.sql for the parent/PLR relationships.
-    ortsteil_areas as (
-        select distinct city_code, area_level, area_code, area_name
-        from {{ ref("stg_berlin_ortsteil") }}
-        where area_code is not null
-    ),
-
-    -- Union all sources; keep all columns to allow dedup in next step.
-    combined as (
-        select *, 1 as source_priority
-        from lor_areas
-        union all
-        select *, 1 as source_priority
-        from lor_bzr_areas
-        union all
-        select *, 1 as source_priority
-        from lor_pgr_areas
-        union all
-        select *, 1 as source_priority
-        from hamburg_areas
-        union all
-        select *, 1 as source_priority
-        from ortsteil_areas
-        union all
-        select *, 2 as source_priority
-        from thesis_areas
-    ),
-
-    -- Deduplicate: one row per (city_code, area_level, area_code).
-    -- WFS rows (source_priority=1) are preferred over thesis golden rows
-    -- (source_priority=2) so UTF-8 area_names win over latin-1 placeholders.
-    deduped as (
-        select city_code, area_level, area_code, area_name
-        from combined
-        qualify
-            row_number() over (
-                partition by city_code, area_level, area_code
-                order by source_priority, area_name
-            )
-            = 1
+    berlin_disambiguated as (
+        select city_code, area_level, area_code, min(area_name) as area_name
+        from {{ ref("int_berlin_lor_name_disambiguation") }}
+        group by city_code, area_level, area_code
     )
 
 select
-    deduped.city_code,
-    deduped.area_level,
-    deduped.area_code,
-    deduped.area_name,
-    lvl.level_name
-from deduped
-left join {{ ref("seed_dim_area_level") }} as lvl on deduped.area_level = lvl.level_code
+    base.city_code,
+    base.area_level,
+    base.area_code,
+    coalesce(hh.area_name, ber.area_name, base.area_name) as area_name,
+    base.level_name
+from {{ ref("int_dim_area_base") }} as base
+left join
+    {{ ref("int_hamburg_gebiet_names") }} as hh
+    on base.city_code = hh.city_code
+    and base.area_level = hh.area_level
+    and base.area_code = hh.area_code
+left join
+    berlin_disambiguated as ber
+    on base.city_code = ber.city_code
+    and base.area_level = ber.area_level
+    and base.area_code = ber.area_code

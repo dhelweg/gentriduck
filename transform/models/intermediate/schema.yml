@@ -136,6 +136,12 @@ models:
       stays untouched. See dim_area_hierarchy.sql for details.
       Area names are proper nouns kept in their local language (German for both
       Berlin and Hamburg).
+      #352: the rows/codes/source names now come from int_dim_area_base (this
+      model's body before #352); dim_area fills the display name for Hamburg
+      statistisches Gebiet (int_hamburg_gebiet_names -- the source has none)
+      and disambiguates the few Berlin LOR names that repeat within one level
+      and vintage (int_berlin_lor_name_disambiguation). area_name is display
+      only; area_code stays the key.
     meta:
       dbt_meta_owner: data-engineer
     # QA-3 (#178): grain test -- the model's own QUALIFY ROW_NUMBER() OVER
@@ -150,6 +156,11 @@ models:
               - city_code
               - area_level
               - area_code
+      # #352: no blank display names (943 Hamburg Gebiete had '' before);
+      # area_name's own not_null test covers NULL.
+      - dbt_utils.expression_is_true:
+          arguments:
+            expression: "trim(area_name) != ''"
     columns:
       - name: city_code
         description: City identifier (FK -> dim_city).
@@ -189,7 +200,55 @@ models:
 
           - not_null
       - name: area_name
-        description: Area name (German proper noun; Berlin or Hamburg place names).
+        description: >
+          Display name (German proper noun; Berlin or Hamburg place names).
+          #352: never null or blank -- Hamburg Gebiete get a derived label
+          ('<Stadtteil> · <OSM name>' or '<Stadtteil> · Gebiet <code>'), see
+          int_hamburg_gebiet_names.
+        data_tests:
+
+          - not_null
+      - name: level_name
+        description: Human-readable level name from seed_dim_area_level.
+
+  - name: int_dim_area_base
+    description: >
+      #352: dim_area's source-name layer -- dim_area.sql's body before #352,
+      unchanged: distinct (city_code, area_level, area_code, area_name) from
+      the thesis goldens + Berlin LOR/Ortsteil WFS + Hamburg WFS, deduped to
+      one row per (city_code, area_level, area_code), plus level_name.
+      area_name is the source name as-is (blank for Hamburg subarea_l2).
+      Split out so dim_area_hierarchy can read area codes without depending
+      on dim_area, whose Hamburg Gebiet names now depend on
+      dim_area_hierarchy.
+    meta:
+      dbt_meta_owner: data-engineer
+    data_tests:
+
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns:
+              - city_code
+              - area_level
+              - area_code
+    columns:
+      - name: city_code
+        description: City identifier (FK -> dim_city).
+        data_tests:
+
+          - not_null
+      - name: area_level
+        description: Area level identifier (same vocabulary as dim_area).
+        data_tests:
+
+          - not_null
+      - name: area_code
+        description: Area code. Natural key within (city_code, area_level).
+        data_tests:
+
+          - not_null
+      - name: area_name
+        description: Source area name; '' for Hamburg subarea_l2 (no name at source).
         data_tests:
 
           - not_null
@@ -1607,7 +1666,9 @@ models:
       model derives a best-effort DISPLAY-ONLY name via point-in-polygon
       match (ST_Within) of OSM place=neighbourhood|suburb|quarter nodes
       (stg_hamburg_osm_places) against Gebiet polygons (stg_hamburg_geo).
-      Consumed by dim_area_geometry.area_name for subarea_l2 rows only. NOT
+      #352: places named exactly like a Hamburg Stadtteil/Bezirk are dropped
+      (they name the Stadtteil, not the Gebiet). Consumed by
+      int_hamburg_gebiet_names only. NOT
       methodology-bearing (label enrichment, no index/mart-grain impact).
       Coverage is PARTIAL by design (943 official Gebiete vs informal OSM
       tagging) -- unmatched Gebiete simply have no row here. See this
@@ -1646,6 +1707,125 @@ models:
         description: "OSM place=* tag of the matched node: neighbourhood|suburb|quarter."
       - name: osm_place_osm_id
         description: "OSM node id of the matched place, e.g. 'node/12345' -- provenance only."
+
+  - name: int_hamburg_gebiet_names
+    description: >
+      #352 -- display name for every Hamburg statistisches Gebiet
+      (subarea_l2), whose WFS source has no name. '<Stadtteil> · <OSM place
+      name>' where int_hamburg_gebiet_osm_names matched a non-Stadtteil OSM
+      place inside the Gebiet, else '<Stadtteil> · Gebiet <code>'. Parent
+      Stadtteil from dim_area_hierarchy's Gebiet -> Stadtteil edge (the same
+      edge as the pages' "Up:" link). A repeated OSM label gets
+      ' (Gebiet <code>)' appended, so area_name is unique. Display only, NOT
+      methodology-bearing. Feeds dim_area and dim_area_geometry.
+    meta:
+      dbt_meta_owner: data-engineer
+    data_tests:
+
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns:
+              - city_code
+              - area_code
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns:
+              - city_code
+              - area_name
+    columns:
+      - name: city_code
+        description: Canonical city code 'HH' (ADR-0005).
+        data_tests:
+
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ["HH"]
+      - name: area_level
+        description: Always 'subarea_l2'.
+        data_tests:
+
+          - accepted_values:
+              arguments:
+                values: ["subarea_l2"]
+      - name: area_code
+        description: Statistisches-Gebiet natural key (joins stg_hamburg_geo / dim_area).
+        data_tests:
+
+          - not_null
+      - name: area_name
+        description: The display label (see model description).
+        data_tests:
+
+          - not_null
+      - name: area_name_source
+        description: "'osm' (label carries an OSM place name) or 'code' (Gebiet code fallback)."
+        data_tests:
+
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ["osm", "code"]
+      - name: stadtteil_name
+        description: Parent Stadtteil name (null only if the Gebiet has no resolved parent).
+      - name: osm_place_name
+        description: Matched OSM place name, null where none matched.
+
+  - name: int_berlin_lor_name_disambiguation
+    description: >
+      #352 -- Berlin LOR (plr/bzr/pgr) rows whose name repeats within one
+      level AND one LOR vintage, with a label that tells them apart:
+      '<name> (<nearest ancestor name that differs>)', ancestors by LOR
+      prefix nesting in the same vintage, falling back to the code. Only
+      colliding rows are output; dim_area and dim_area_geometry left-join it.
+      Cross-vintage repeats (the same place under a new code) are left
+      alone. Display only, NOT methodology-bearing.
+    meta:
+      dbt_meta_owner: data-engineer
+    data_tests:
+
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns:
+              - city_code
+              - area_level
+              - area_vintage
+              - area_code
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns:
+              - city_code
+              - area_level
+              - area_vintage
+              - area_name
+    columns:
+      - name: city_code
+        description: Canonical city code 'BER'.
+        data_tests:
+
+          - not_null
+      - name: area_level
+        description: "'plr', 'bzr' or 'pgr'."
+        data_tests:
+
+          - not_null
+      - name: area_vintage
+        description: LOR vintage the collision occurs in ('lor_pre2021' / 'lor_2021').
+        data_tests:
+
+          - not_null
+      - name: area_code
+        description: LOR area code.
+        data_tests:
+
+          - not_null
+      - name: source_area_name
+        description: The colliding source name.
+      - name: area_name
+        description: Disambiguated display label.
+        data_tests:
+
+          - not_null
 
   - name: int_hamburg_wohnlage_stadtteil
     description: >

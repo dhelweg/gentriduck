@@ -15,6 +15,12 @@
 -- subarea_l2 note below) -- this is a set of resolved EDGES, not a full
 -- re-statement of dim_area.
 --
+-- #352: the Berlin prefix-nesting CTEs below read area codes from
+-- int_dim_area_base (dim_area's source-name layer, same rows and codes)
+-- instead of dim_area itself. dim_area now derives Hamburg Gebiet display
+-- names from this model's Gebiet -> Stadtteil edge, so reading dim_area here
+-- would be a cycle. Codes only; no edge changes.
+--
 -- =============================================================================
 -- Berlin: LOR code-prefix nesting (PLR ⊃ BZR ⊃ PGR ⊃ Bezirk)
 -- =============================================================================
@@ -195,7 +201,7 @@ with
             area_code,
             'bzr' as parent_area_level,
             substr(lpad(area_code, 8, '0'), 1, 6) as parent_area_code
-        from {{ ref("dim_area") }}
+        from {{ ref("int_dim_area_base") }}
         where city_code = 'BER' and area_level = 'plr'
     ),
 
@@ -207,7 +213,7 @@ with
             area_code,
             'pgr' as parent_area_level,
             substr(area_code, 1, 4) as parent_area_code
-        from {{ ref("dim_area") }}
+        from {{ ref("int_dim_area_base") }}
         where city_code = 'BER' and area_level = 'bzr'
     ),
 
@@ -219,7 +225,7 @@ with
             area_code,
             'bezirk' as parent_area_level,
             substr(area_code, 1, 2) as parent_area_code
-        from {{ ref("dim_area") }}
+        from {{ ref("int_dim_area_base") }}
         where city_code = 'BER' and area_level = 'pgr'
     ),
 
