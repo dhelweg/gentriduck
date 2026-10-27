@@ -70,6 +70,17 @@ removes: **0 POIs added in every year, both cities.** June-only POIs in 2012 (5,
 deletions. That biases D3 dynamism, OA trends and every lead-lag test toward "growth" — and it does
 so unevenly across areas (more mapping churn → more ghosts).
 
+**Independent confirmation.** The thesis's own 2018 OSM snapshot cannot have contained deleted
+POIs. If the deletion fix is right, our reconstruction of the thesis's Offering Advantage should
+therefore agree *better* with the thesis's own values. It does, at every level (A3,
+`analysis/b_oa_validation.py`, 2016 snapshot, Spearman vs `reference/goldens/20180909_result_full_plr.csv`):
+
+| Level | Before (ghosts kept) | After fix |
+|---|---|---|
+| domain | 0.764 | **0.835** |
+| category | 0.732 | **0.779** |
+| type | 0.497 | **0.536** |
+
 ## 3. Caveat for the reviewers: node → way conversions
 
 The extractor reads **nodes only**. When a mapper redraws a shop node as a building polygon (way),
