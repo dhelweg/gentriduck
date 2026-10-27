@@ -25,6 +25,16 @@ title: Area hierarchy
   browse experience (population/typology-stage counts by Bezirk/PGR/BZR/Ortsteil) already exists and
   is live today at /berlin/area and /berlin/area/bezirk -- this page explains the CONCEPT the roll-up
   relies on; it deliberately does not duplicate that live browse UI.
+
+  #353 (Hamburg-Berlin parity review): the Hamburg section below said the subarea_l2 ->
+  subarea_l1 edge was "not currently resolved". That has been stale since OA-D1b (#240, geo +
+  domain PASS: docs/methodology/OA-D1b-geo-signoff.md, OA-D1b-domain-signoff.md) resolved it by
+  centroid-in-polygon containment with a nearest-Stadtteil fallback for 2 Gebiete
+  (dim_area_hierarchy.sql's hh_l2_to_l1 CTE), and #302 published it to the web layer
+  (mart_area_hierarchy). Every Hamburg area page flagged this page as stale (I21-j). Corrected
+  here as a factual restatement of that signed-off method, not a new claim. The Offering Advantage
+  sentence is updated to match the site: the roll-up exists in the data layer but is not shown
+  for Hamburg (the site's source keeps Berlin rows only).
 -->
 
 <Hero compact eyebrow="Chapter 3 — The Evidence · reference / rulebook" title="Area hierarchy" lede="How Berlin's neighbourhood-scale statistical areas nest into coarser levels — and why that nesting makes it possible to compute Offering Advantage at a whole borough's scale without any new geometry." />
@@ -114,15 +124,17 @@ code prefix at all** — this project deliberately does not assume Berlin's tric
 
 The **district ← subarea (level 1)** edge is resolved directly from Hamburg's own source data (a
 Bezirk attribute the geodata already carries) — no derivation needed. The **subarea (level 1) ←
-subarea (level 2)** edge, however, is **not currently resolved**: Hamburg's statistisches-Gebiet
-geodata carries only a bare sequential ID and an area figure, with no parent-Stadtteil code and no
-prefix relationship to derive one from. Building that link would require a new spatial-containment
-method (matching each Gebiet's location against its enclosing Stadtteil boundary) — a genuine
-methodology choice in its own right, not a mechanical extension of the Berlin approach, and it is
-explicitly not yet built
-([`dim_area_hierarchy.sql`](https://github.com/dhelweg/gentriduck/blob/main/transform/models/intermediate/dim_area_hierarchy.sql)).
-This is disclosed here rather than assumed away: **Hamburg's Offering Advantage figures do not
-currently roll up to a coarser scale the way Berlin's do.**
+subarea (level 2)** edge needs a method of its own: Hamburg's statistisches-Gebiet geodata carries
+only a bare sequential ID and an area figure, with no parent-Stadtteil code and no prefix
+relationship to derive one from. It is resolved by **spatial containment** — each Gebiet is
+assigned to the Stadtteil polygon that contains its centre point, with a nearest-Stadtteil
+fallback for the two Gebiete whose centre falls outside every Stadtteil polygon (OA-D1b,
+[#240](https://github.com/dhelweg/gentriduck/issues/240), reviewed by both methodology reviewers;
+[`dim_area_hierarchy.sql`](https://github.com/dhelweg/gentriduck/blob/main/transform/models/intermediate/dim_area_hierarchy.sql)).
+That is what lets the [Hamburg area profiles](/hamburg/area/district) list a Stadtteil's Gebiete
+and count them by stage. **Hamburg's Offering Advantage figures are not shown rolled up to a
+coarser scale on this site** — each Gebiet's own profile shows its figure, but no Stadtteil or
+district roll-up is published for Hamburg yet.
 
 ## What this does NOT do
 
@@ -150,9 +162,10 @@ currently roll up to a coarser scale the way Berlin's do.**
 - **The Bezirk polygon is derived, not sourced** — while its numeric roll-up is exact (the same
   summed counts as every other level), the dissolved shape is one additional processing step
   compared to the other three levels, disclosed here for full transparency.
-- **Hamburg's finest-level roll-up gap is a real, current limitation**, not a placeholder — any
-  Hamburg figure on this site that appears to be at a coarser-than-source-level scale should be
-  checked against this page before being read as a genuine roll-up.
+- **Hamburg's Gebiet → Stadtteil link is a spatial assignment, not a source fact** — a Gebiet
+  whose area straddles a Stadtteil boundary is assigned wholly to the Stadtteil containing its
+  centre point. Hamburg Stadtteil and district pages count Gebiete through this link; they never
+  publish a re-scored value for the larger area.
 
 ## Further reading
 
@@ -160,8 +173,10 @@ currently roll up to a coarser scale the way Berlin's do.**
   `area_level` scale switch for every OA calculation method.
 - [POI taxonomy reference](/reference/poi-taxonomy) — the other hierarchy this site is built on, at
   the *business* rather than the *area* level.
-- [All neighbourhoods](/berlin/area) and [district & area profiles](/berlin/area) — the live,
-  queryable browse experience across this same hierarchy (population and typology-stage counts) —
+- [All neighbourhoods](/berlin/area) and [district & area profiles](/berlin/area/bezirk) — the live,
+  queryable browse experience across this same hierarchy (population and typology-stage counts);
+  Hamburg's equivalents are [all Gebiete](/hamburg/area) and
+  [district & area profiles](/hamburg/area/district) —
   and the [OA methodology page's §4](/methodology-oa-modes#4-the-area-hierarchy-plr--bzr--pgr--bezirk)
   for the live BZR/PGR/Bezirk Offering Advantage choropleth (the canonical nested-LQ method summed
   up the same code prefix this page describes — never a re-scored index).

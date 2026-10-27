@@ -22,7 +22,8 @@ sidebar_position: 1
 <Hero compact eyebrow="Chapter 3 — The Evidence" title="Time series — how Berlin has moved" lede="Rather than making you guess one of Berlin's ~540 planning areas from a dropdown, this page zooms out: how the city as a whole has moved across the official social-monitoring reports, and which neighbourhoods moved the most." />
 
 To inspect any single area, use the district browser on the
-[area detail](/berlin/area-detail) page.
+[area detail](/berlin/area-detail) page. This page covers Berlin; Hamburg has its own
+[time series page](/hamburg/time-series).
 
 <Alert status="info">
   <b>How to read status:</b> the official status scale runs <b>1 = least deprived</b> to

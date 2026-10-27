@@ -53,7 +53,8 @@ sidebar_position: 3
 
 For the citywide picture, see the [maps page](/berlin/maps) or the
 [time-series view](/berlin/time-series). If you already know which neighbourhood you want, the
-[full searchable list](/berlin/area) is the faster way in.
+[full searchable list](/berlin/area) is the faster way in. This page covers Berlin; Hamburg has its
+own [district browse](/hamburg/area-detail).
 
 <Alert status="info">
   <b>How to read the figures:</b> official status runs <b>1 = least deprived</b> to

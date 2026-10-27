@@ -94,6 +94,13 @@ where variant = 'live_data' and area_level = 'plr' and city_code = 'BER'
     Advantage), plus the same two citywide contextual signals — POI growth, land value &amp; rent
     — added up across the whole city.
   </LinkCard>
+  <!-- #353 (Hamburg-Berlin parity): the coarse-profile hub had no card on either city hub; added
+       to both so each hub links every browse route the other does. -->
+  <LinkCard href="/berlin/area/bezirk" icon="🧭" title="District &amp; area profiles" cta="Browse districts and Ortsteile →">
+    Berlin's 12 Bezirke, their Prognoseräume and Bezirksregionen, and the 97 Ortsteile: population,
+    composition, and how their neighbourhoods are spread across stages — never a re-scored index
+    for the larger area.
+  </LinkCard>
 </LinkCards>
 
 ## Honest caveats
