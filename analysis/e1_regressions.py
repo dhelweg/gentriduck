@@ -76,8 +76,19 @@ OUTPUT_MD = Path(__file__).parent.parent / "docs" / "epic-e" / "E1-regression-fi
 # Thesis p.55 H1b: fast-food ~ status — NEGATIVE (fast-food is a displacement indicator)
 # Thesis p.55 H2: POI stock → future status — positive (directional)
 # Thesis p.91 H3a: ΔPOI_t leads Δstatus_t+k — REJECTED (rho not significant in thesis)
-# Thesis p.91 H3b: Δstatus_t leads ΔPOI_t+k — CONFIRMED (rho positive, significant)
+# Thesis p.91 H3b: Δstatus_t leads ΔPOI_t+k — only TENTATIVELY supported (Tabelle 6-16: 'eher bestätigt')
 # Thesis p.91 H3c: simultaneous co-movement — UNCLEAR
+# Cross-lagged H3a/H3b design + significance-aware verdicts (2026-10-26 methodology
+# review). Sibling module; same import convention as e4_early_warning -> a9.
+sys.path.insert(0, str(Path(__file__).parent))
+from directional_inference import (  # noqa: E402
+    build_cross_lagged,
+    cross_lagged_tests,
+    direction_conclusion,
+    summarise,
+    verdict,
+)
+
 THESIS_HYPOTHESES: dict[str, dict] = {
     "H1": {
         # D1 POLARITY: status_index is inverse-numeric — higher value = lower social status
@@ -86,7 +97,7 @@ THESIS_HYPOTHESES: dict[str, dict] = {
         # negatively correlates with status_index (more POIs → better status → lower index).
         # expected_dir = "negative" for raw Spearman(poi_count, status_index).
         "desc": "POI stock (total_poi_count) ~ MSS social status (status_index)",
-        "citation": "Thesis p.55: POI supply positively correlates with social status; because status_index is inverse-numeric (higher=worse, index-definition.md §5 polarity table), expected Spearman(poi, status_index) is negative",
+        "citation": "Thesis p.55; verdict Tabelle 6-16 (PDF p.91): H1 proven (check mark). POI supply positively correlates with social status; because status_index is inverse-numeric (higher=worse, index-definition.md §5 polarity table), expected Spearman(poi, status_index) is negative",
         "expected_dir": "negative",
         "expected_sig": True,
     },
@@ -96,7 +107,7 @@ THESIS_HYPOTHESES: dict[str, dict] = {
         # More fast-food → lower social status → higher status_index → positive correlation.
         # expected_dir = "positive" for Spearman(poi_fast_food, status_index).
         "desc": "Fast-food POI count ~ MSS social status (status_index)",
-        "citation": "Thesis p.55 H1b: fast-food as contested proxy for low-status / displacement pressure (see gentrification literature); more fast-food → lower status → higher status_index (inverse-numeric, index-definition.md §5), expected direction positive",
+        "citation": "Thesis p.55 H1b; verdict Tabelle 6-16: proven (check mark). Fast-food as contested proxy for low-status / displacement pressure (see gentrification literature); more fast-food → lower status → higher status_index (inverse-numeric, index-definition.md §5), expected direction positive",
         "expected_dir": "positive",
         "expected_sig": True,
     },
@@ -106,7 +117,7 @@ THESIS_HYPOTHESES: dict[str, dict] = {
         # More POI at t → gentrification pressure → status IMPROVES → delta_status_ordinal < 0.
         # expected_dir = "negative" for Spearman(poi_count_t, delta_status_ordinal).
         "desc": "Current-edition POI stock (2021+ editions) ~ future status change (delta_status_ordinal)",
-        "citation": "Thesis p.55 H2: current POI supply predicts future social-status improvement; delta_status_ordinal = tk - t (positive = worsened, index-definition.md §5 polarity), so expected direction is negative",
+        "citation": "Thesis p.55 H2; verdict Tabelle 6-16: INCONCLUSIVE (0, 'kein klares Bild' -- best model only mediocre). Current POI supply predicts future social-status improvement; delta_status_ordinal = tk - t (positive = worsened, index-definition.md §5 polarity), so expected direction is negative",
         "expected_dir": "negative",
         "expected_sig": False,  # directional only; thesis did not confirm significance for H2 in isolation
     },
@@ -114,8 +125,8 @@ THESIS_HYPOTHESES: dict[str, dict] = {
         # D1 POLARITY + C5: delta_dynamism_t (C5-corrected) leads delta_status_ordinal.
         # More amenity growth (positive delta_dynamism) → gentrification → status improves
         # → delta_status_ordinal decreases (inverse-numeric). Expected direction: negative.
-        "desc": "C5-corrected Δdynamism at t leads Δstatus at t+k (POI change leads status change)",
-        "citation": "Thesis p.91 H3a: POI change leads status change — REJECTED in thesis (not confirmed); uses C5-corrected delta_dynamism_t (index-definition.md §2.4; int_mss_lead_lag.sql D3 C5 note); delta_status_ordinal inverse-numeric so expected direction is negative",
+        "desc": "Prior POI change [e0→e1] predicts later status change [e1→e2], given prior status change + D4 (POI leads status)",
+        "citation": "Thesis Tabelle 6-16 (PDF p.91): H3a REJECTED (cross mark, 'wenig spricht fuer H3a'). Cross-lagged partial Spearman rho(dPOI_P, dStatus_F | dStatus_P, D4) with a Bezirksregion cluster-bootstrap CI (analysis/directional_inference.py); POI = C5-corrected dynamism (index-definition.md §2.4) or OA; delta_status_ordinal inverse-numeric so expected direction is negative",
         "expected_dir": "negative",
         "expected_sig": False,  # thesis rejected this
     },
@@ -123,8 +134,8 @@ THESIS_HYPOTHESES: dict[str, dict] = {
         # D1 POLARITY: Δstatus leads ΔPOI. Status IMPROVES (delta_status_ordinal < 0) →
         # commercial succession follows → delta_poi > 0. So Spearman(delta_status_ordinal, delta_poi)
         # should be negative (lower delta_status_ordinal = improved = leads to more POIs).
-        "desc": "Δstatus at t leads Δdynamism at t+k (status change leads POI change)",
-        "citation": "Thesis p.91 H3b: status change leads POI change — CONFIRMED in thesis; delta_status_ordinal inverse-numeric (index-definition.md §5 polarity), improved status = negative delta, expected Spearman(delta_status_ordinal, delta_dynamism) is negative",
+        "desc": "Prior status change [e0→e1] predicts later POI change [e1→e2], given prior POI change + D4 (status leads POI)",
+        "citation": "Thesis Tabelle 6-16 (PDF p.91): H3b TENTATIVELY supported -- '(check mark)', 'eher bestaetigt', 'leichte Tendenz' -- not confirmed. Cross-lagged partial Spearman rho(dStatus_P, dPOI_F | dPOI_P, D4) with a Bezirksregion cluster-bootstrap CI (analysis/directional_inference.py); improved status = negative delta, so expected direction is negative",
         "expected_dir": "negative",
         "expected_sig": True,
     },
@@ -132,7 +143,7 @@ THESIS_HYPOTHESES: dict[str, dict] = {
         # D1 POLARITY: dynamism_score_t ~ status_index_t. Higher dynamism → more gentrified
         # → better status → lower status_index (inverse-numeric). Expected direction: negative.
         "desc": "Simultaneous dynamism ~ status_index co-movement (same edition)",
-        "citation": "Thesis p.91 H3c: simultaneous co-movement — thesis result unclear; status_index inverse-numeric (index-definition.md §5), expected direction negative",
+        "citation": "Thesis Tabelle 6-16 (PDF p.91): H3c INCONCLUSIVE (0, 'kein klares Bild'). Simultaneous co-movement; status_index inverse-numeric (index-definition.md §5), expected direction negative",
         "expected_dir": "negative",
         "expected_sig": False,  # unclear per thesis
     },
@@ -349,7 +360,8 @@ def load_lead_lag_data(con: duckdb.DuckDBPyConnection, vintage: str = "lor_2021"
 
     B7 (#117): vintage parameter selects the LOR boundary system.
     'lor_2021' = modern 2021-2025 panel (default).
-    'lor_pre2021' = thesis-era 2015-2019 panel (k=1: 2015→2017, 2017→2019; k=2: 2015→2019).
+    'lor_pre2021' = thesis-era panel, MSS editions 2013-2019 (2013 from the MSS Excel source;
+    k=1: 2013→2015, 2015→2017, 2017→2019; k=2: 2013→2017, 2015→2019).
 
     OA-A.4 (#168): also joins `int_poi_offering_advantage` category-level OA
     (`load_oa_category_panel`) at edition_t and edition_tk, exposing
@@ -378,6 +390,7 @@ def load_lead_lag_data(con: duckdb.DuckDBPyConnection, vintage: str = "lor_2021"
             ll.dynamism_score_t,
             ll.dynamism_score_tk,
             ll.delta_dynamism_t,
+            ll.ewr_composite_t,  -- D4 baseline LEVEL: cross-lagged H3 control (§4.3)
             -- POI counts at t and t+k via pivot join
             COALESCE(p_t.total_poi_count, 0)    AS poi_count_t,
             COALESCE(p_tk.total_poi_count, 0)   AS poi_count_tk,
@@ -966,113 +979,96 @@ def test_h2(df_ll: object, panel_label: str = "2021+ panel") -> list[dict]:
     return results
 
 
+def _cross_lag_rows(cl, tests: dict, k: int, tag: str, measure_note: str) -> list[dict]:
+    """Result rows for one cross-lagged H3a/H3b pair (see directional_inference.py)."""
+    rows = []
+    pivots = sorted({int(p) for p in cl["pivot"]}) if not cl.empty else []
+    window_note = f"pivot edition(s) {pivots}" if pivots else "no consecutive windows"
+    for hyp in ("H3a", "H3b"):
+        res = tests[hyp]
+        rows.append(
+            {
+                "hyp": hyp,
+                "test": f"Cross-lagged{tag} k={k}",
+                "desc": (
+                    f"{THESIS_HYPOTHESES[hyp]['desc']} [{measure_note}; k={k}; {window_note}; "
+                    + (
+                        "D4 control"
+                        if res.get("d4_control")
+                        else "no D4 control -- unavailable at the pivot"
+                    )
+                    + "]"
+                ),
+                "citation": THESIS_HYPOTHESES[hyp]["citation"],
+                "stat_val": res["rho"],
+                "stat_type": "partial rho",
+                "n": res["n"],
+                "p": res["p"],
+                "ci_low": res["ci_low"],
+                "ci_high": res["ci_high"],
+                "n_clusters": res["n_clusters"],
+                "r2": None,
+                "expected_dir": THESIS_HYPOTHESES[hyp]["expected_dir"],
+                "actual_dir": _dir(res["rho"]),
+                "dir_match": _dir_match(res["rho"], THESIS_HYPOTHESES[hyp]["expected_dir"]),
+            }
+        )
+    return rows
+
+
 def test_h3(df_ll: object, panel_label: str = "2021+ panel") -> list[dict]:
-    """H3a/H3b/H3c: Lead-lag relationships between POI change and status change.
+    """H3a/H3b (cross-lagged, directional) and H3c (contemporaneous).
 
-    Thesis p.91:
-      H3a: ΔPOI_t → Δstatus_t+k  (POI leads status) — REJECTED
-      H3b: Δstatus_t → ΔPOI_t+k  (status leads POI) — CONFIRMED
-      H3c: simultaneous ΔPOI ~ Δstatus                — UNCLEAR
+    Thesis verdicts (Tabelle 6-16, PDF p.91): H3a REJECTED, H3b TENTATIVELY supported
+    ("eher bestaetigt"), H3c inconclusive.
 
-    C5-corrected predictor (index-definition.md §2.4; int_mss_lead_lag.sql D3 C5 note;
-    geo-DS sign-off PASS docs/epic-c/C5-geo-signoff.md 2026-06-19):
-    Uses delta_dynamism_t (C5-corrected within-vintage dynamism change) for H3a/H3b,
-    NOT raw delta_poi. Raw delta_poi reflects OSM coverage growth artefact — feeding it
-    into H3b biases the test toward false confirmation.
+    H3a and H3b are claims about temporal ORDER, so they are tested with a cross-lagged
+    panel design (analysis/directional_inference.py): around each pivot edition e1 the
+    prior window P = [e0, e1] and the following window F = [e1, e2] never overlap, and
 
-    D1 POLARITY (index-definition.md §5 polarity table; int_mss_lead_lag.sql lines 19-23):
-    delta_status_ordinal = status_index_tk - status_index_t.
-    Positive delta → status_index increased → STATUS WORSENED (more deprived).
-    Negative delta → status_index decreased → STATUS IMPROVED (less deprived).
-    Expected directions are therefore negative for H3a, H3b, H3c (see THESIS_HYPOTHESES).
+        H3a = partial_rho(dPOI_P,    dStatus_F | dStatus_P, D4_e1)
+        H3b = partial_rho(dStatus_P, dPOI_F    | dPOI_P,    D4_e1)
 
-    Metric differencing on ordinal MSS codes is prohibited (index-definition.md §3.3).
-    delta_status_ordinal is used here for rank-order correlation only (Spearman);
-    this is permitted per §3.2 ordinal-transition treatment.
+    each controlling for the outcome's own prior change. Until 2026-10-26 this function
+    computed H3b as Spearman of the SAME two arrays as H3a with the arguments swapped
+    (Spearman is symmetric, so H3b always equalled H3a), and the OA variants correlated
+    two changes over the same window. Neither test separated the directions.
 
-    NOTE: The int_mss_lead_lag model structures both predictors and outcomes as
-    within-vintage changes at editions t and t+k; the lag structure is part of the model
-    (not a pure lead test — both predictor and outcome share the same [t, t+k] window).
-    This is a co-movement test across the lag window, not a strict temporal-precedence test.
-    Results are labelled accordingly in the findings doc.
+    Rank-based (partial Spearman) because MSS status is ordinal -- metric differencing of
+    MSS codes is prohibited (index-definition.md §3.2/§3.3). CIs: cluster bootstrap over
+    Bezirksregionen (spatial dependence, thesis weakness W1); the verdict uses the CI.
 
-    For H3a: delta_dynamism_t (C5-corrected POI dynamism change at t) vs
-             delta_status_ordinal (status change from t to t+k).
-    For H3b: delta_status_ordinal (status change from t to t+k) vs delta_dynamism_t
-             (C5-corrected POI dynamism change — outcome side of status-leads-POI test).
-    For H3c: dynamism_score_t (contemporaneous dynamism at t) vs status_index_t.
+    POI measures: C5-corrected D3 dynamism (index-definition.md §2.4 -- raw counts carry
+    the OSM-coverage-growth artefact) and, where present, the OA-quotient basket (#168).
+    D4 control (ewr_composite_t, LEVEL only, §4.3) where the panel carries it.
+
+    D1 POLARITY (index-definition.md §5): status_index is inverse-numeric (higher =
+    more deprived), so an improvement is a NEGATIVE delta and the theory-expected sign of
+    both cross-lags is negative.
     """
     results = []
+    control = "ewr_composite_t" if "ewr_composite_t" in df_ll.columns else None
+    measures = [("", ("dynamism_score_t", "dynamism_score_tk"), "C5-corrected dynamism")]
+    if {"oa_mean_t", "oa_mean_tk"} <= set(df_ll.columns):
+        measures.append((" (OA)", ("oa_mean_t", "oa_mean_tk"), "OA-quotient basket"))
 
-    if panel_label == "2021+ panel":
-        # k=3 requires 2027 MSS edition
-        print(
-            "  NOTE: k=3 skipped — only 3 MSS editions available (2021, 2023, 2025); k=3 requires 2027 edition"
-        )
-    for k in [1, 2]:
-        sub = df_ll[df_ll["lag_k"] == k].copy()
+    for k in sorted(int(x) for x in df_ll["lag_k"].unique()):
+        for tag, cols, note in measures:
+            cl = build_cross_lagged(df_ll, k=k, poi_cols=cols, control_col=control)
+            if cl.empty:
+                print(
+                    f"  NOTE ({panel_label}): no consecutive k={k} windows for the "
+                    f"cross-lagged H3a/H3b{tag} test -- skipped"
+                )
+                continue
+            results += _cross_lag_rows(cl, cross_lagged_tests(cl), k, tag, note)
+
+        # H3c: contemporaneous level co-movement at edition t (not a lead-lag claim).
+        sub = df_ll[df_ll["lag_k"] == k]
         if len(sub) < 10:
             continue
-
-        # delta_status_ordinal: ordinal direction proxy for rank correlation only
-        # (not metric differencing; index-definition.md §3.3 + §3.2)
-        delta_status = sub["delta_status_ordinal"].values.astype(float)
-        dyn_t = sub["dynamism_score_t"].values.astype(float)
-        # C5-corrected dynamism change (index-definition.md §2.4; int_mss_lead_lag.sql D3 C5 note)
-        delta_dyn_t = sub["delta_dynamism_t"].values.astype(float)
         stat_t = sub["status_index_t"].values.astype(float)
-
-        # H3a: Thesis p.91 — POI change leads status change (REJECTED)
-        # Test: delta_dynamism_t (C5-corrected change) predicts delta_status_ordinal (k editions later)
-        # Uses C5-corrected delta_dynamism_t, not raw delta_poi (index-definition.md §2.4)
-        r3a = run_spearman(delta_dyn_t, delta_status, f"Spearman(delta_dyn_t, delta_status, k={k})")
-        results.append(
-            {
-                "hyp": "H3a",
-                "test": f"Spearman k={k}",
-                "desc": f"{THESIS_HYPOTHESES['H3a']['desc']} [k={k}]",
-                "citation": THESIS_HYPOTHESES["H3a"]["citation"],
-                "stat_val": r3a["rho"],
-                "stat_type": "rho",
-                "n": r3a["n"],
-                "p": r3a["p"],
-                "sig": r3a["sig"],
-                "r2": None,
-                "expected_dir": THESIS_HYPOTHESES["H3a"]["expected_dir"],
-                "actual_dir": _dir(r3a["rho"]),
-                "dir_match": _dir_match(r3a["rho"], THESIS_HYPOTHESES["H3a"]["expected_dir"]),
-            }
-        )
-
-        # H3b: Thesis p.91 — Status CHANGE leads POI CHANGE (CONFIRMED)
-        # Thesis p.91 H3b: Δstatus at t leads ΔPOI at t+k — both are changes, not levels.
-        # delta_status_ordinal = status change from t to t+k (ordinal direction proxy).
-        # delta_dynamism_t = C5-corrected POI dynamism change (not raw delta_poi).
-        # D1 POLARITY: improved status (delta_status_ordinal < 0) should lead to more amenity
-        # growth (delta_dynamism_t > 0) → expected Spearman(delta_status, delta_dyn) is negative.
-        r3b = run_spearman(delta_status, delta_dyn_t, f"Spearman(delta_status, delta_dyn_t, k={k})")
-        results.append(
-            {
-                "hyp": "H3b",
-                "test": f"Spearman k={k}",
-                "desc": f"{THESIS_HYPOTHESES['H3b']['desc']} [k={k}]",
-                "citation": THESIS_HYPOTHESES["H3b"]["citation"],
-                "stat_val": r3b["rho"],
-                "stat_type": "rho",
-                "n": r3b["n"],
-                "p": r3b["p"],
-                "sig": r3b["sig"],
-                "r2": None,
-                "expected_dir": THESIS_HYPOTHESES["H3b"]["expected_dir"],
-                "actual_dir": _dir(r3b["rho"]),
-                "dir_match": _dir_match(r3b["rho"], THESIS_HYPOTHESES["H3b"]["expected_dir"]),
-            }
-        )
-
-        # H3c: Thesis p.91 — Simultaneous co-movement (UNCLEAR)
-        # Test: dynamism_score_t ~ status_index_t (contemporaneous correlation)
-        # D1 POLARITY: higher dynamism → more gentrified → lower status_index (inverse-numeric).
-        # Expected Spearman(dyn_score_t, status_index_t) is negative.
+        dyn_t = sub["dynamism_score_t"].values.astype(float)
         r3c = run_spearman(dyn_t, stat_t, f"Spearman(dyn_score_t, status_t, k={k})")
         results.append(
             {
@@ -1091,86 +1087,15 @@ def test_h3(df_ll: object, panel_label: str = "2021+ panel") -> list[dict]:
                 "dir_match": _dir_match(r3c["rho"], THESIS_HYPOTHESES["H3c"]["expected_dir"]),
             }
         )
-
-        # OA-A.4 (#168): OA-change lead-lag analogues, run ALONSIDE (not instead
-        # of) the C5-corrected dynamism tests above -- the C5 correction already
-        # has its own geo-DS sign-off (docs/epic-c/C5-geo-signoff.md) for the
-        # OSM-coverage-growth artifact; delta_oa_mean_t is independently robust
-        # to that artifact (compositional / relative-to-city-total, see
-        # load_lead_lag_data docstring) rather than replacing the C5 measure.
-        # Ticket #168 body: "H3a-c use OA-change vs status-change lead/lag".
-        if "delta_oa_mean_t" in sub.columns and "oa_mean_t" in sub.columns:
-            delta_oa_t = sub["delta_oa_mean_t"].values.astype(float)
+        if "oa_mean_t" in sub.columns:
             oa_t = sub["oa_mean_t"].values.astype(float)
-
-            # H3a (OA): delta_oa_mean_t leads delta_status_ordinal.
-            r3a_oa = run_spearman(
-                delta_oa_t, delta_status, f"Spearman(delta_oa_mean_t, delta_status, k={k})"
-            )
-            results.append(
-                {
-                    "hyp": "H3a",
-                    "test": f"Spearman (OA) k={k}",
-                    "desc": f"OA-quotient change at t leads Δstatus at t+k (POI-composition change leads status change) [k={k}]",
-                    "citation": (
-                        "Thesis p.91 H3a, OA-change construct (ticket #168: "
-                        '"H3a-c use OA-change vs status-change lead/lag"); '
-                        "delta_oa_mean_t = oa_mean_tk - oa_mean_t (load_lead_lag_data); "
-                        "same D1 polarity as the dynamism-based H3a test above."
-                    ),
-                    "stat_val": r3a_oa["rho"],
-                    "stat_type": "rho",
-                    "n": r3a_oa["n"],
-                    "p": r3a_oa["p"],
-                    "sig": r3a_oa["sig"],
-                    "r2": None,
-                    "expected_dir": THESIS_HYPOTHESES["H3a"]["expected_dir"],
-                    "actual_dir": _dir(r3a_oa["rho"]),
-                    "dir_match": _dir_match(
-                        r3a_oa["rho"], THESIS_HYPOTHESES["H3a"]["expected_dir"]
-                    ),
-                }
-            )
-
-            # H3b (OA): delta_status_ordinal leads delta_oa_mean_t.
-            r3b_oa = run_spearman(
-                delta_status, delta_oa_t, f"Spearman(delta_status, delta_oa_mean_t, k={k})"
-            )
-            results.append(
-                {
-                    "hyp": "H3b",
-                    "test": f"Spearman (OA) k={k}",
-                    "desc": f"Δstatus at t leads OA-quotient change at t+k (status change leads POI-composition change) [k={k}]",
-                    "citation": (
-                        "Thesis p.91 H3b, OA-change construct (ticket #168); "
-                        "delta_oa_mean_t = oa_mean_tk - oa_mean_t; same D1 polarity as the "
-                        "dynamism-based H3b test above."
-                    ),
-                    "stat_val": r3b_oa["rho"],
-                    "stat_type": "rho",
-                    "n": r3b_oa["n"],
-                    "p": r3b_oa["p"],
-                    "sig": r3b_oa["sig"],
-                    "r2": None,
-                    "expected_dir": THESIS_HYPOTHESES["H3b"]["expected_dir"],
-                    "actual_dir": _dir(r3b_oa["rho"]),
-                    "dir_match": _dir_match(
-                        r3b_oa["rho"], THESIS_HYPOTHESES["H3b"]["expected_dir"]
-                    ),
-                }
-            )
-
-            # H3c (OA): simultaneous oa_mean_t ~ status_index_t co-movement.
             r3c_oa = run_spearman(oa_t, stat_t, f"Spearman(oa_mean_t, status_t, k={k})")
             results.append(
                 {
                     "hyp": "H3c",
                     "test": f"Spearman (OA) k={k}",
                     "desc": f"Simultaneous OA-quotient ~ status_index co-movement (same edition) [k={k}]",
-                    "citation": (
-                        "Thesis p.91 H3c, OA construct (ticket #168); oa_mean_t at edition_t "
-                        "~ status_index_t; same D1 polarity as the dynamism-based H3c test above."
-                    ),
+                    "citation": THESIS_HYPOTHESES["H3c"]["citation"] + " OA construct (#168).",
                     "stat_val": r3c_oa["rho"],
                     "stat_type": "rho",
                     "n": r3c_oa["n"],
@@ -1184,7 +1109,6 @@ def test_h3(df_ll: object, panel_label: str = "2021+ panel") -> list[dict]:
                     ),
                 }
             )
-
     return results
 
 
@@ -1263,53 +1187,30 @@ def test_h3_ewr(df_ewr: object) -> list[dict]:
         sub = df_ewr[df_ewr["lag_k"] == k].copy()
         if len(sub) < 10:
             continue
-        delta_ewr = sub["delta_ewr"].values.astype(float)
-        delta_ewr_t = sub["delta_ewr_t"].values.astype(float)
-        delta_poi = sub["delta_poi"].values.astype(float)
         ewr_t = sub["ewr_composite_t"].values.astype(float)
         poi_t = sub["poi_count_t"].values.astype(float)
 
-        # H3a: delta_poi (POI change at t) leads delta_ewr (status change t→t+k)
-        r3a = run_spearman(delta_poi, delta_ewr, f"Spearman(delta_poi, delta_ewr, k={k})")
-        results.append(
-            {
-                "hyp": "H3a",
-                "test": f"Spearman k={k}",
-                "source": "EWR",
-                "desc": f"Δpoi leads Δewr_composite [k={k} annual years, EWR 2014–2020, same-era]",
-                "citation": THESIS_HYPOTHESES["H3a"]["citation"],
-                "stat_val": r3a["rho"],
-                "stat_type": "rho",
-                "n": r3a["n"],
-                "p": r3a["p"],
-                "sig": r3a["sig"],
-                "r2": None,
-                "expected_dir": THESIS_HYPOTHESES["H3a"]["expected_dir"],
-                "actual_dir": _dir(r3a["rho"]),
-                "dir_match": _dir_match(r3a["rho"], THESIS_HYPOTHESES["H3a"]["expected_dir"]),
-            }
+        # H3a/H3b (2026-10-26): cross-lagged, ordered non-overlapping windows. Before, H3a
+        # correlated delta_poi and delta_ewr over the SAME [t, t+k] window (co-movement,
+        # not order) while H3b correctly paired the PRIOR status change with the following
+        # POI change, so the two were never comparable. Both now use the cross-lagged
+        # design (see test_h3 / directional_inference.py). Status = EWR composite (metric;
+        # lower = better status), POI = raw count via the dominant crosswalk, control =
+        # composite LEVEL at the pivot year. Repeated years per area and the crosswalk's
+        # pseudo-replication (load_ewr_lead_lag_data docstring) are both absorbed by the
+        # Bezirksregion cluster bootstrap.
+        cl = build_cross_lagged(
+            df_ewr,
+            k=k,
+            status_cols=("ewr_composite_t", "ewr_composite_tk"),
+            poi_cols=("poi_count_t", "poi_count_tk"),
+            control_col="ewr_composite_t",
+            time_cols=("year_t", "year_tk"),
         )
-
-        # H3b: delta_ewr_t (annual status change at t) leads delta_poi
-        r3b = run_spearman(delta_ewr_t, delta_poi, f"Spearman(delta_ewr_t, delta_poi, k={k})")
-        results.append(
-            {
-                "hyp": "H3b",
-                "test": f"Spearman k={k}",
-                "source": "EWR",
-                "desc": f"Δewr_composite at t leads Δpoi [k={k} annual years, EWR 2014–2020, same-era]",
-                "citation": THESIS_HYPOTHESES["H3b"]["citation"],
-                "stat_val": r3b["rho"],
-                "stat_type": "rho",
-                "n": r3b["n"],
-                "p": r3b["p"],
-                "sig": r3b["sig"],
-                "r2": None,
-                "expected_dir": THESIS_HYPOTHESES["H3b"]["expected_dir"],
-                "actual_dir": _dir(r3b["rho"]),
-                "dir_match": _dir_match(r3b["rho"], THESIS_HYPOTHESES["H3b"]["expected_dir"]),
-            }
-        )
+        if cl.empty:
+            print(f"  NOTE (EWR): no consecutive k={k} windows for cross-lagged H3a/H3b -- skipped")
+        else:
+            results += _cross_lag_rows(cl, cross_lagged_tests(cl), k, " (EWR)", "raw POI count")
 
         # H3c: contemporaneous ewr_composite_t ~ poi_count_t
         r3c = run_spearman(poi_t, ewr_t, f"Spearman(poi_count_t, ewr_composite_t, k={k})")
@@ -1349,40 +1250,108 @@ def _fmt_val(val: float | None) -> str:
     return f"{val:.4f}"
 
 
+def attach_verdicts(results: list[dict]) -> list[dict]:
+    """Score every row (2026-10-26). Significance is REQUIRED: the old `dir_match`
+    "PASS" only checked the sign, so e.g. rho = -0.05, p = 0.33 counted as confirming the
+    thesis. Cross-lagged rows use their cluster-bootstrap CI; the rest use p < 0.05."""
+    for r in results:
+        r["verdict"] = verdict(
+            r.get("stat_val"),
+            r["expected_dir"],
+            p=r.get("p"),
+            ci_low=r.get("ci_low"),
+            ci_high=r.get("ci_high"),
+        )
+        r["sig"] = r["verdict"] in ("SUPPORTED", "CONTRADICTED")
+        # Borderline: the cluster CI only just excludes 0 while the analytic p does not
+        # reach 0.05 -- the two inference routes disagree, so the label says so. Counts
+        # still use the canonical verdict.
+        r["borderline"] = bool(
+            r["sig"] and r.get("ci_low") is not None and r.get("p") is not None and r["p"] >= 0.05
+        )
+    return results
+
+
+def _verdict_label(r: dict) -> str:
+    v = r.get("verdict", "?")
+    return f"{v} (borderline)" if r.get("borderline") else v
+
+
+def h3_direction_lines(results: list[dict]) -> list[str]:
+    """One line per cross-lagged (test, k) pair: which series leads, if any."""
+    lines = []
+    seen = []
+    for r in results:
+        if r["hyp"] == "H3a" and r["test"].startswith("Cross-lagged"):
+            seen.append(r["test"])
+    for test in seen:
+        a = next(r for r in results if r["hyp"] == "H3a" and r["test"] == test)
+        b = next((r for r in results if r["hyp"] == "H3b" and r["test"] == test), None)
+        if b is None:
+            continue
+        lines.append(
+            f"- **{test}:** {direction_conclusion(a['verdict'], b['verdict'])} "
+            f"(H3a {_verdict_label(a)}, H3b {_verdict_label(b)})"
+        )
+    return lines
+
+
+def _value_str(r: dict) -> str:
+    val = _fmt_val(r["stat_val"])
+    if r.get("ci_low") is not None and r.get("ci_high") is not None:
+        val += f" [{r['ci_low']:.3f}, {r['ci_high']:.3f}]"
+    if r.get("r2") is not None:
+        val += f" R2={r['r2']:.4f}"
+    return val
+
+
+def _summary_lines(rows: list[dict]) -> list[str]:
+    lines = [f"Verdicts: {summarise([r['verdict'] for r in rows])}"]
+    direction = h3_direction_lines(rows)
+    if direction:
+        lines += ["Direction (cross-lagged H3a vs H3b):", *direction]
+    return lines
+
+
+def _print_verdicts(label: str, rows: list[dict]) -> None:
+    attach_verdicts(rows)
+    print(f"\n{label} -- " + "\n".join(_summary_lines(rows)))
+
+
+def _write_section_summary(f, rows: list[dict]) -> None:
+    attach_verdicts(rows)
+    f.write(f"\n**Verdicts:** {summarise([r['verdict'] for r in rows])}\n\n")
+    direction = h3_direction_lines(rows)
+    if direction:
+        f.write("**Direction (cross-lagged H3a vs H3b):**\n\n" + "\n".join(direction) + "\n\n")
+
+
 def print_results(results: list[dict]) -> None:
+    attach_verdicts(results)
     print("\n" + "=" * 100)
     print("E1 REGRESSION RESULTS — Thesis H1-H3c Validation (real hypotheses, POI predictors)")
     print("=" * 100)
-    hdr = f"{'Hyp':<5} {'Test':<14} {'N':<5} {'Type':<5} {'Value':<9} {'p-val':<10} {'Sig':<5} {'ExpDir':<9} {'ActDir':<9} {'Match':<6} Description"
+    hdr = f"{'Hyp':<5} {'Test':<24} {'N':<5} {'Value [95% CI]':<26} {'p-val':<10} {'ExpDir':<9} {'Verdict':<16} Description"
     print(hdr)
     print("-" * 100)
     for r in results:
-        val_str = _fmt_val(r["stat_val"])
         p_str = f"{r['p']:.4f}" if r.get("p") is not None else "N/A"
-        sig_str = "YES" if r.get("sig") else "NO"
-        match_str = "PASS" if r["dir_match"] else "FAIL"
-        r2_note = f" R2={r['r2']:.4f}" if r.get("r2") is not None else ""
         print(
-            f"{r['hyp']:<5} {r['test']:<14} {r['n']:<5} {r['stat_type']:<5} {val_str + r2_note:<9} "
-            f"{p_str:<10} {sig_str:<5} {r['expected_dir']:<9} {r['actual_dir']:<9} {match_str:<6} {r['desc']}"
+            f"{r['hyp']:<5} {r['test']:<24} {r['n']:<5} {_value_str(r):<26} "
+            f"{p_str:<10} {r['expected_dir']:<9} {_verdict_label(r):<28} {r['desc']}"
         )
 
 
 def _write_results_table(f, results: list[dict]) -> None:
     f.write(
-        "| Hyp | Test | N | Type | Value | p-value | Sig | Expected Dir | Actual Dir | Match | Description |\n"
+        "| Hyp | Test | N | Statistic | Value [95% CI] | p-value | Expected dir | Verdict | Description |\n"
     )
-    f.write("|---|---|---|---|---|---|---|---|---|---|---|\n")
+    f.write("|---|---|---|---|---|---|---|---|---|\n")
     for r in results:
-        val_str = _fmt_val(r["stat_val"])
-        if r.get("r2") is not None:
-            val_str += f" R2={r['r2']:.4f}"
         p_str = f"{r['p']:.4f}" if r.get("p") is not None else "N/A"
-        sig_str = "Yes" if r.get("sig") else "No"
-        match_str = "PASS" if r["dir_match"] else "FAIL"
         f.write(
-            f"| {r['hyp']} | {r['test']} | {r['n']} | {r['stat_type']} | {val_str} | "
-            f"{p_str} | {sig_str} | {r['expected_dir']} | {r['actual_dir']} | {match_str} | {r['desc']} |\n"
+            f"| {r['hyp']} | {r['test']} | {r['n']} | {r['stat_type']} | {_value_str(r)} | "
+            f"{p_str} | {r['expected_dir']} | {_verdict_label(r)} | {r['desc']} |\n"
         )
 
 
@@ -1398,11 +1367,8 @@ def write_findings(
 
     today = datetime.date.today().isoformat()
 
-    n_pass_mss = sum(1 for r in results_mss if r["dir_match"])
-    n_sig_mss = sum(1 for r in results_mss if r.get("sig"))
-
     OUTPUT_MD.parent.mkdir(parents=True, exist_ok=True)
-    with open(OUTPUT_MD, "w") as f:
+    with open(OUTPUT_MD, "w", encoding="utf-8") as f:
         f.write("# E1 Regression Findings -- Thesis H1-H3c Validation\n\n")
         f.write("- **Task:** H1-H3c regression and lead-lag analysis, real thesis hypotheses\n")
         f.write("- **Issue:** #65 / #115\n")
@@ -1414,13 +1380,18 @@ def write_findings(
             "- **Data (H2/H3 MSS 2021–2025):** int_mss_lead_lag (lor_2021) + int_poi_features_pivot\n"
         )
         f.write(
-            "- **Data (H2/H3 MSS 2015–2019, B7):** int_mss_lead_lag (lor_pre2021) + int_poi_features_pivot\n"
+            "- **Data (H2/H3 MSS 2013–2019, B7):** int_mss_lead_lag (lor_pre2021) + int_poi_features_pivot\n"
         )
         if results_ewr:
             f.write(
                 "- **Data (H2/H3 EWR):** int_ewr_lead_lag + int_poi_features_pivot (2014–2020, same-era as thesis)\n"
             )
-        f.write("- **Method:** Spearman rank correlation + OLS (scipy.stats)\n\n")
+        f.write(
+            "- **Method:** Spearman / OLS for H1, H2 and H3c; cross-lagged partial Spearman "
+            "with a Bezirksregion cluster-bootstrap 95% CI for H3a/H3b "
+            "(`analysis/directional_inference.py`). Every result needs significance to "
+            "count -- see Scoring.\n\n"
+        )
 
         f.write("## Methodology\n\n")
         f.write("Spearman rank correlations and OLS regression test five hypotheses from the 2018 ")
@@ -1451,170 +1422,179 @@ def write_findings(
             "(official Berlin social monitoring index) but a different era and index than the thesis.\n"
         )
         f.write(
-            "2. **MSS pre-2021 panel (2015–2019, B7 #117):** Uses `int_mss_lead_lag` (lor_pre2021) — "
+            "2. **MSS pre-2021 panel (2013–2019, B7 #117):** Uses `int_mss_lead_lag` (lor_pre2021) — "
         )
         f.write("thesis-era boundary system (447 PLRs). Enables same-era H3b lead-lag. ")
         f.write(
-            "k=1: 2015→2017, 2017→2019 pairs; k=2: 2015→2019. Z-scores not cross-vintage comparable.\n"
+            "Editions 2013-2019 (2013 from the MSS Excel source): k=1 pairs 2013→2015, 2015→2017, "
+            "2017→2019. Z-scores not cross-vintage comparable.\n"
         )
-        f.write("3. **EWR same-era (2014–2020):** Uses `int_ewr_lead_lag` — the same data source ")
+        f.write("3. **EWR resident-register composite (2014–2020):** Uses `int_ewr_lead_lag`. ")
         f.write(
-            "and timeframe as the 2018 thesis. k=2 (2014→2016) matches the thesis lead-lag gap "
+            "EWR is Berlin's resident register (Einwohnerregister); its composite measures population composition (residence duration, age, nationality, migration background), NOT social status, and it was not the thesis's outcome measure -- the thesis used MSS Status/Dynamik (editions 2013-2017; thesis §6.2.3, Tabelle 6-1). "
         )
-        f.write("exactly. delta_ewr is metric (z-score arithmetic diff) so OLS is also valid.\n\n")
-        f.write("The primary validation criterion is directional agreement (same sign as thesis ")
-        f.write("expectation), consistent with the Epic B directional revival framing.\n\n")
+        f.write("delta_ewr is metric (z-score arithmetic diff) so OLS is also valid.\n\n")
+        f.write("## Scoring\n\n")
+        f.write(
+            'Each row gets one verdict (2026-10-26; previously a row "passed" whenever its '
+            "sign matched, so a rho of -0.05 with p = 0.33 counted as confirming the thesis):\n\n"
+            "- **SUPPORTED** -- significant, in the thesis's expected direction.\n"
+            "- **CONTRADICTED** -- significant, in the opposite direction.\n"
+            "- **NOT SIGNIFICANT** -- the data cannot tell (whatever the sign).\n"
+            "- **NO DATA** -- not testable on this panel.\n\n"
+            "Significance = the 95% cluster-bootstrap CI excludes 0 for cross-lagged rows, "
+            "else p < 0.05. Epic B is a *directional* revival (exact numbers need not match), "
+            "but a direction only counts when the data actually establish it.\n\n"
+        )
+        f.write("## H3a vs H3b: how direction is tested\n\n")
+        f.write(
+            "H3a (commercial change precedes status change) and H3b (status change precedes "
+            "commercial change) are claims about ORDER. Around each pivot edition e1 the prior "
+            "window [e0, e1] and the following window [e1, e2] never overlap:\n\n"
+            "- H3a = partial rho(dPOI prior, dStatus following | dStatus prior, D4)\n"
+            "- H3b = partial rho(dStatus prior, dPOI following | dPOI prior, D4)\n\n"
+            "Each controls for the outcome's own prior change. **Before 2026-10-26 the two were "
+            "not separable:** on the MSS panels H3b was Spearman of the same two arrays as H3a "
+            "with the arguments swapped (identical by symmetry), the OA variants and the EWR "
+            "H3a correlated two changes over the same window, and only one direction per "
+            "panel was ever genuinely lagged. Rank-based because MSS status is ordinal "
+            "(index-definition.md §3.2).\n\n"
+        )
 
         f.write("## Hypothesis Citations\n\n")
         for key, hyp in THESIS_HYPOTHESES.items():
             f.write(f"- **{key}**: {hyp['citation']}\n")
         f.write("\n")
 
-        f.write("## Results — Section 1: H1/H1b (2018 cross-section, unchanged)\n\n")
+        panels = [
+            ("MSS modern (2021–2025)", results_mss),
+            ("MSS pre-2021 (2013–2019, the thesis's editions)", results_mss_pre or []),
+            ("EWR resident-register composite (2014–2020)", results_ewr or []),
+            ("BZR scale", results_bzr or []),
+            ("Bezirk scale", results_bezirk or []),
+        ]
+        for _, rows in panels:
+            attach_verdicts(rows)
+
+        f.write("## Results — Section 1: H1/H1b (2018 cross-section)\n\n")
         h1_results = [r for r in results_mss if r["hyp"] in ("H1", "H1b")]
         _write_results_table(f, h1_results)
-        f.write("\n")
+        _write_section_summary(f, h1_results)
 
         f.write("## Results — Section 2: H2/H3 MSS Panel (modern era, 2021–2025)\n\n")
         f.write(
-            "> Different era and index than thesis. MSS is a better ground truth but covers 2021–2025, not 2012–2018.\n\n"
+            "> Different era and index than thesis. MSS is a better ground truth but covers "
+            "2021–2025, not 2012–2018. Three editions -> ONE cross-lagged pivot (2023), and NO D4 "
+            "control (EWR 2021-2023 was never published): treat its H3a/H3b rows as a single-window "
+            "estimate. Rows marked (borderline) have a CI that only just excludes 0 while the "
+            "analytic p does not reach 0.05.\n\n"
         )
         mss_h23 = [r for r in results_mss if r["hyp"] not in ("H1", "H1b")]
         _write_results_table(f, mss_h23)
-        n_pass_mss_h23 = sum(1 for r in mss_h23 if r["dir_match"])
-        n_sig_mss_h23 = sum(1 for r in mss_h23 if r.get("sig"))
-        f.write(
-            f"\n**Directional agreement (H2/H3 MSS): {n_pass_mss_h23}/{len(mss_h23)}. Significant: {n_sig_mss_h23}/{len(mss_h23)}.**\n\n"
-        )
+        _write_section_summary(f, mss_h23)
 
         if results_mss_pre:
-            n_pass_pre = sum(1 for r in results_mss_pre if r["dir_match"])
-            n_sig_pre = sum(1 for r in results_mss_pre if r.get("sig"))
             f.write(
-                "## Results — Section 3: H2/H3 MSS Pre-2021 Panel (thesis-era, 2015–2019, B7 #117)\n\n"
+                "## Results — Section 3: H2/H3 MSS Pre-2021 Panel (thesis-era, 2013–2019, B7 #117)\n\n"
             )
             f.write(
-                "> lor_pre2021 boundary system (447 PLRs). Same-era H2/H3 panel as thesis. "
-                "Z-scores normalised within lor_pre2021 population — NOT cross-vintage comparable to Section 2.\n"
-            )
-            f.write(
-                "> k=1 pairs: 2015→2017, 2017→2019. k=2 pair: 2015→2019 (4-year lag, matches thesis H3b gap).\n\n"
+                "> lor_pre2021 boundary system (447 PLRs). Same era as the thesis. Z-scores "
+                "normalised within lor_pre2021 -- NOT comparable to Section 2. Editions 2013-2019 "
+                "give two cross-lagged pivots (2015, 2017).\n\n"
             )
             _write_results_table(f, results_mss_pre)
-            f.write(
-                f"\n**Directional agreement (H2/H3 MSS pre-2021): {n_pass_pre}/{len(results_mss_pre)}. Significant: {n_sig_pre}/{len(results_mss_pre)}.**\n\n"
-            )
+            _write_section_summary(f, results_mss_pre)
 
         if results_ewr:
+            f.write("## Results — Section 4: H2/H3 EWR Resident-Register Composite (2014–2020)\n\n")
             f.write(
-                "## Results — Section 4: H2/H3 EWR Same-Era (2014–2020, thesis source and timeframe)\n\n"
-            )
-            f.write(
-                "> Same data source and timeframe as the 2018 thesis. k=2 (2014→2016) is the direct comparison window.\n"
-            )
-            f.write(
-                "> delta_ewr is metric (z-score arithmetic difference) — OLS valid unlike MSS ordinal delta.\n\n"
+                "> EWR is Berlin's resident register (Einwohnerregister); its composite measures population composition (residence duration, age, nationality, migration background), NOT social status, and it was not the thesis's outcome measure -- the thesis used MSS Status/Dynamik (editions 2013-2017; thesis §6.2.3, Tabelle 6-1). H3c here correlates same-year LEVELS, not co-occurring "
+                "changes -- not a like-for-like test of H3c. The POI side is the raw OSM count "
+                "without the C5 completeness correction, so mapping growth can feed both "
+                "directions. Annual panel: many "
+                "cross-lagged pivots per area, all absorbed by the cluster bootstrap. POI side is "
+                "the raw count via the dominant pre-2021 crosswalk (~35% of lor_2021 PLRs share a "
+                "count with a neighbour -- pseudo-replication, see load_ewr_lead_lag_data). **Only the "
+                "cross-lagged H3a/H3b rows use cluster-bootstrap CIs; the H2 and H3c rows here use "
+                "analytic p-values on pooled area-year rows that are not independent, so their "
+                'significance is overstated** -- read them as directional. The "D4 control" in '
+                "this panel is the EWR composite's own level at the pivot (status IS the composite "
+                "here), not an independent covariate.\n\n"
             )
             _write_results_table(f, results_ewr)
-            n_pass_ewr = sum(1 for r in results_ewr if r["dir_match"])
-            n_sig_ewr = sum(1 for r in results_ewr if r.get("sig"))
-            f.write(
-                f"\n**Directional agreement (H2/H3 EWR): {n_pass_ewr}/{len(results_ewr)}. Significant: {n_sig_ewr}/{len(results_ewr)}.**\n\n"
-            )
+            _write_section_summary(f, results_ewr)
 
         if results_bzr:
-            n_pass_bzr = sum(1 for r in results_bzr if r["dir_match"])
-            n_sig_bzr = sum(1 for r in results_bzr if r.get("sig"))
             f.write(
                 "## Results — Section 5: H1/H2/H3 at BZR Scale (Bezirksregion, ~137 units, B10 #120)\n\n"
             )
             f.write(
-                "> B10: BZR scale (n≈137 units). Population-weighted rollup from PLR. "
-                "MAUP note: coarser-scale correlations tend to be stronger (spatial smoothing). "
-                "See index-definition.md §8 and B10-geo-signoff.md.\n\n"
+                "> Population-weighted rollup from PLR. MAUP: coarser scales smooth and inflate "
+                "correlations (index-definition.md §8, B10-geo-signoff.md). Cross-lagged CIs "
+                "cluster by Bezirk.\n\n"
             )
             _write_results_table(f, results_bzr)
-            f.write(
-                f"\n**Directional agreement (BZR): {n_pass_bzr}/{len(results_bzr)}. Significant: {n_sig_bzr}/{len(results_bzr)}.**\n\n"
-            )
+            _write_section_summary(f, results_bzr)
 
         if results_bezirk:
-            n_pass_bezirk = sum(1 for r in results_bezirk if r["dir_match"])
-            n_sig_bezirk = sum(1 for r in results_bezirk if r.get("sig"))
             f.write(
                 "## Results — Section 6: H1/H2/H3 at Bezirk Scale (District, 12 units, B10 #120)\n\n"
             )
             f.write(
-                "> B10: Bezirk scale (n=12 districts). Population-weighted rollup from PLR. "
-                "CAUTION: n=12 is extremely small; results have very low statistical power "
-                "and should be treated as indicative only (see B10-geo-signoff.md §MAUP).\n"
-                ">\n"
-                "> **MAUP caveat:** Bezirk-level correlations reflect within-district smoothing, not "
-                "independent observations. Statistical significance at this scale is edge-fragile: "
-                "for H1 cross-section (n=12), |rho|≈0.58 needed for p<0.05; "
-                "for H2 lead-lag (n=24 at k=2), |rho|≈0.40 needed. "
-                "Significant H2 cells (k=1, k=2) should be read with this threshold in mind.\n\n"
+                "> n = 12 districts: very low power; indicative only (B10-geo-signoff.md §MAUP). "
+                "Each district is its own cluster, and a 12-cluster bootstrap CI is itself "
+                "unreliable -- treat every verdict here as indicative.\n\n"
             )
             _write_results_table(f, results_bezirk)
-            f.write(
-                f"\n**Directional agreement (Bezirk): {n_pass_bezirk}/{len(results_bezirk)}. Significant: {n_sig_bezirk}/{len(results_bezirk)}.**\n\n"
-            )
+            _write_section_summary(f, results_bezirk)
 
         f.write("## Overall Scorecard\n\n")
-        all_results = (
-            results_mss
-            + (results_mss_pre or [])
-            + (results_ewr or [])
-            + (results_bzr or [])
-            + (results_bezirk or [])
-        )
-        n_pass_all = sum(1 for r in all_results if r["dir_match"])
-        n_sig_all = sum(1 for r in all_results if r.get("sig"))
-        f.write(
-            f"**Total directional agreement: {n_pass_all}/{len(all_results)}. Significant: {n_sig_all}/{len(all_results)}.**\n\n"
-        )
-        f.write(
-            f"**MSS modern panel (H1+H2+H3, 2021–2025): {n_pass_mss}/{len(results_mss)} direction, {n_sig_mss}/{len(results_mss)} significant.**\n"
-        )
-        if results_mss_pre:
-            f.write(
-                f"**MSS pre-2021 panel (H2+H3 only, 2015–2019): {n_pass_pre}/{len(results_mss_pre)} direction, {n_sig_pre}/{len(results_mss_pre)} significant.**\n"
-            )
-        if results_ewr:
-            f.write(
-                f"**EWR same-era (H2+H3 only): {n_pass_ewr}/{len(results_ewr)} direction, {n_sig_ewr}/{len(results_ewr)} significant.**\n\n"
-            )
+        for label, rows in panels:
+            if rows:
+                f.write(f"- **{label}:** {summarise([r['verdict'] for r in rows])}\n")
+        all_rows = [r for _, rows in panels for r in rows]
+        f.write(f"\n**All tests:** {summarise([r['verdict'] for r in all_rows])}\n\n")
+        f.write("### Which series leads? (cross-lagged H3a vs H3b)\n\n")
+        for label, rows in panels:
+            lines = h3_direction_lines(rows)
+            if lines:
+                f.write(f"**{label}**\n\n" + "\n".join(lines) + "\n\n")
 
         f.write("## Divergences from 2018 Thesis\n\n")
-        f.write("- **D1 polarity correction**: `status_index` is inverse-numeric — lower value = ")
-        f.write("higher social status (index-definition.md §5 polarity table). All expected_dir ")
-        f.write("values corrected accordingly.\n")
-        f.write("- **H3 predictor (MSS panel)**: Uses C5-corrected `delta_dynamism_t` from ")
-        f.write("`int_mss_lead_lag`, not raw `delta_poi` (avoids OSM coverage growth artefact).\n")
-        f.write("- **H2/H3 MSS**: tested on 2021–2025 live panel (lor_2021, 535–1071 rows) vs ")
-        f.write("thesis's 2012–2018 EWR cross-section. Different era, different index.\n")
-        f.write("- **H2/H3 EWR**: tested on 2014–2020 annual panel (lor_2021, ~542 rows per lag). ")
-        f.write("Same source as thesis. k=2 (2014→2016) matches thesis gap. delta_ewr is metric ")
         f.write(
-            "(arithmetic z-score diff); OLS additionally applied where MSS ordinal prohibits it.\n"
+            "- **D1 polarity correction**: `status_index` is inverse-numeric -- lower = higher "
+            "social status (index-definition.md §5). All expected directions corrected.\n"
+            "- **H3 predictor (MSS panels)**: C5-corrected dynamism (and the OA basket), not "
+            "raw POI counts -- avoids the OSM coverage-growth artefact.\n"
+            "- **H3a/H3b method**: the thesis inferred direction from lagged-feature classifier "
+            "fit (Weka) plus correlations; here it is a cross-lagged partial rank correlation "
+            "with cluster-robust CIs. Same question, a design that can actually separate the "
+            "two directions.\n"
+            "- **Panels**: the thesis's outcome was MSS Status/Dynamik, editions 2013–2017. The "
+            "like-for-like re-test is the MSS 2013–2019 panel (lor_pre2021), which contains those "
+            "editions -- but it measures change as a move between the four status classes, "
+            "where the thesis used the finer MSS Dynamik index, so it is lower-powered, not a "
+            "clean refutation. MSS 2021–2025 (lor_2021) is the modern extension; EWR 2014–2020 "
+            "is a population-composition context panel, not the thesis's outcome.\n"
+            "- **No multiple-comparison correction** across hypotheses -- with this many rows, "
+            "an isolated SUPPORTED cell is weak evidence on its own.\n"
+            "- Epic B framing: directional revival (CLAUDE.md §Epic B framing) -- exact numbers "
+            "need not match, but a direction must be established to count.\n\n"
         )
-        f.write("- **No multiple-comparison correction** applied across hypotheses.\n")
-        f.write("- Epic B framing: directional revival — exact number reproduction not required. ")
-        f.write("See CLAUDE.md §Epic B framing.\n\n")
 
         f.write("## Limitations\n\n")
         f.write(
-            "- **k=3 MSS not tested (modern panel)**: Only 3 lor_2021 MSS editions available (2021, 2023, 2025); "
-        )
-        f.write("k=3 requires 2027 edition.\n")
-        f.write("- **EWR composite null pre-2014**: migration_background_share absent before 2014 ")
-        f.write("makes ewr_composite null for 2008–2013 — EWR panel limited to 2014–2020.\n")
-        f.write(
-            "- **Cross-vintage z-scores not comparable**: lor_pre2021 and lor_2021 z-scores are "
-            "normalised within their respective PLR populations and must not be compared directly.\n"
-        )
-        f.write(
-            "- **MAUP sensitivity**: results are PLR-only and may be sensitive to area definition.\n"
+            "- **Few MSS pivots**: the modern panel (2021-2025) has a single cross-lagged pivot "
+            "(2023) and no D4 control; the pre-2021 PLR panel has two (2015, 2017). The BZR/Bezirk "
+            "loader still uses editions 2015-2019 only (no 2013), so its pre-2021 part has one "
+            "pivot (2017) and differs from the PLR panel. k=2 cross-lags need five editions.\n"
+            "- **EWR composite null pre-2014** (migration_background_share absent) -- the EWR "
+            "panel's cross-lags start at 2014.\n"
+            "- **Cross-vintage z-scores not comparable** (lor_pre2021 vs lor_2021).\n"
+            "- **Granger logic is predictive, not causal**: a SUPPORTED cross-lag says one "
+            "series' past change carries information about the other's next change beyond the "
+            "outcome's own history -- not that it causes it (thesis weakness W3).\n"
+            "- **MAUP**: PLR-scale results may change with area definition (A6 MAUP check).\n"
         )
 
 
@@ -1736,11 +1716,11 @@ def main() -> None:
     # --- MSS pre-2021 panel (B7 #117): thesis-era H2/H3 on lor_pre2021 (2015-2019) ---
     results_mss_pre = []
     if len(df_ll_pre) >= 10:
-        print("\nRunning H2 tests — MSS pre-2021 panel (2015–2019)...")
-        results_mss_pre += test_h2(df_ll_pre, panel_label="2015–2019 panel")
+        print("\nRunning H2 tests — MSS pre-2021 panel (2013–2019)...")
+        results_mss_pre += test_h2(df_ll_pre, panel_label="2013–2019 panel")
 
-        print("Running H3a/H3b/H3c — MSS pre-2021 panel (2015–2019)...")
-        results_mss_pre += test_h3(df_ll_pre, panel_label="2015–2019 panel")
+        print("Running H3a/H3b/H3c — MSS pre-2021 panel (2013–2019)...")
+        results_mss_pre += test_h3(df_ll_pre, panel_label="2013–2019 panel")
 
     # --- EWR same-era results (2014–2020, matches thesis source and timeframe) ---
     results_ewr = []
@@ -1753,26 +1733,17 @@ def main() -> None:
 
     print("\n=== MSS PANEL (modern era, 2021–2025) ===")
     print_results(results_mss)
-    n_pass_mss = sum(1 for r in results_mss if r["dir_match"])
-    n_sig_mss = sum(1 for r in results_mss if r.get("sig"))
-    print(f"\nMSS directional agreement: {n_pass_mss}/{len(results_mss)}")
-    print(f"MSS significant at p<0.05: {n_sig_mss}/{len(results_mss)}")
+    _print_verdicts("MSS", results_mss)
 
     if results_mss_pre:
-        print("\n=== MSS PRE-2021 PANEL (thesis-era, 2015–2019) ===")
+        print("\n=== MSS PRE-2021 PANEL (thesis-era, 2013–2019) ===")
         print_results(results_mss_pre)
-        n_pass_pre = sum(1 for r in results_mss_pre if r["dir_match"])
-        n_sig_pre = sum(1 for r in results_mss_pre if r.get("sig"))
-        print(f"\nMSS pre-2021 directional agreement: {n_pass_pre}/{len(results_mss_pre)}")
-        print(f"MSS pre-2021 significant at p<0.05: {n_sig_pre}/{len(results_mss_pre)}")
+        _print_verdicts("MSS pre-2021", results_mss_pre)
 
     if results_ewr:
-        print("\n=== EWR SAME-ERA (2014–2020, thesis source and timeframe) ===")
+        print("\n=== EWR RESIDENT-REGISTER COMPOSITE (2014–2020) ===")
         print_results(results_ewr)
-        n_pass_ewr = sum(1 for r in results_ewr if r["dir_match"])
-        n_sig_ewr = sum(1 for r in results_ewr if r.get("sig"))
-        print(f"\nEWR directional agreement: {n_pass_ewr}/{len(results_ewr)}")
-        print(f"EWR significant at p<0.05: {n_sig_ewr}/{len(results_ewr)}")
+        _print_verdicts("EWR", results_ewr)
 
     # --- B10: BZR scale H1/H2/H3 (data loaded above, before con.close) ---
     results_bzr = []
@@ -1792,10 +1763,7 @@ def main() -> None:
         if results_bzr:
             print("\n=== BZR SCALE (~137 units) ===")
             print_results(results_bzr)
-            n_pass_bzr = sum(1 for r in results_bzr if r["dir_match"])
-            n_sig_bzr = sum(1 for r in results_bzr if r.get("sig"))
-            print(f"\nBZR directional agreement: {n_pass_bzr}/{len(results_bzr)}")
-            print(f"BZR significant at p<0.05: {n_sig_bzr}/{len(results_bzr)}")
+            _print_verdicts("BZR", results_bzr)
     elif run_bzr:
         print("INFO: int_mss_bzr_aggregate not found — run 'uv run poe build' first (B10).")
 
@@ -1815,10 +1783,7 @@ def main() -> None:
         if results_bezirk:
             print("\n=== BEZIRK SCALE (12 districts — LOW POWER) ===")
             print_results(results_bezirk)
-            n_pass_bezirk = sum(1 for r in results_bezirk if r["dir_match"])
-            n_sig_bezirk = sum(1 for r in results_bezirk if r.get("sig"))
-            print(f"\nBezirk directional agreement: {n_pass_bezirk}/{len(results_bezirk)}")
-            print(f"Bezirk significant at p<0.05: {n_sig_bezirk}/{len(results_bezirk)}")
+            _print_verdicts("Bezirk", results_bezirk)
     elif run_bezirk:
         print("INFO: int_mss_bzr_aggregate not found — run 'uv run poe build' first (B10).")
 

@@ -1,0 +1,23 @@
+{
+  "source_id": "hamburg__osm_places",
+  "source_class": "rolling",
+  "city": "hamburg",
+  "upstream": {
+    "url": "https://osm-internal.download.geofabrik.de/europe/germany-internal.osh.pbf (login-gated, ADR-0002)",
+    "vintage": "PBF file mtime 2026-10-25 (best-effort proxy for Geofabrik publish date, not a true fetch record); extraction represents the latest visible OSM state as of ingestion time (current snapshot, not a dated cutoff).",
+    "retrieved_at": "2026-10-26T21:53:01Z"
+  },
+  "outputs": [
+    {
+      "path": "data/raw/osm/hamburg_places/place_names.parquet",
+      "row_count": 211,
+      "schema_fingerprint": "sha256:f576216d4acf8277f43eb8b732f37391983eccb4f833e9760e2e427701bd9e25",
+      "content_hash": "sha256:393efb82cac0411c82c4b444f9203bb2331ad70bb59a6e462cc78ea2573c4c9a"
+    }
+  ],
+  "ingest_script": {
+    "module": "ingestion.hamburg.osm.ingest_hamburg_osm_places",
+    "git_sha": "1448154d496763ac4ed0884952a06ebb996f0340"
+  },
+  "manifest_schema_version": 1
+}

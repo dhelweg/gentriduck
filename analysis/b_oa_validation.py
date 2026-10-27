@@ -298,7 +298,7 @@ def main() -> int:
     con.close()
 
     OUTPUT_MD.parent.mkdir(parents=True, exist_ok=True)
-    OUTPUT_MD.write_text(report)
+    OUTPUT_MD.write_text(report, encoding="utf-8")
     print(f"Wrote {OUTPUT_MD}")
     print()
     print(report)

@@ -1056,7 +1056,10 @@ No amenity data is available for this area yet.
 Among <b>{amenities_current[0].gastro_poi_with_cuisine_count}</b> restaurants/cafes with cuisine
 data tagged in this area, the <b>most common cuisine</b> is
 <b>{amenities_current[0].dominant_cuisine}</b>
-({Math.round(amenities_current[0].dominant_cuisine_share * 100)}% of tagged gastronomy POIs).
+({Math.round(amenities_current[0].dominant_cuisine_share * 100)}% of cuisine-tagged restaurants/cafes).
+{:else if amenities_current[0] && amenities_current[0].gastro_poi_with_cuisine_count >= 8}
+Cuisine is tagged for <b>{amenities_current[0].gastro_poi_with_cuisine_count}</b> restaurants/cafes
+here, but no single cuisine reaches 15% of them, so none is named.
 {:else}
 There isn't enough tagged cuisine data in this area yet to identify a most-common cuisine (OpenStreetMap
 tagging of restaurant/cafe cuisine is incomplete for smaller or less-mapped areas).

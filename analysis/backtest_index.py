@@ -126,6 +126,7 @@ except ImportError:
 
 try:
     import numpy as np
+    import pandas as pd
     from scipy import stats
 except ImportError:
     print("ERROR: scipy/numpy not installed. Run: uv sync")
@@ -855,6 +856,122 @@ def diagnostic_merged_hotspot_recall(index_df, gt_df) -> dict:
 # ---------------------------------------------------------------------------
 
 
+# ---------------------------------------------------------------------------
+# What the gating tests can and cannot show (2026-10-26 methodology review)
+# ---------------------------------------------------------------------------
+#
+# The live index's status_index IS the MSS D1 class and dynamism_index IS the MSS D2
+# class (R-A1 re-grounding, #64). So Tests A and D compare the MSS class with itself
+# via two pipeline paths -- rho = 1.0 by construction -- and Tests B/C score labels
+# that are partly (hotspots) or wholly (coldspots) MSS class assignments themselves.
+# They are PIPELINE-INTEGRITY and LABEL-CONSISTENCY checks, worth keeping as a gate,
+# but not evidence that the index measures gentrification. label_provenance() makes
+# the dependence visible; Test F adds one check against an instrument the index is
+# NOT built from.
+
+UPGRADING_STAGES = ("pioneer-signal", "active-gentrification", "consolidation-pressure")
+N_BOOT_F = 1999
+SEED_F = 42
+
+
+def label_provenance(index_df, gt_df) -> dict:
+    """Split ground-truth labels by source and report what the 'deciles' really cover."""
+    vals = index_df["status_index"].dropna().values
+    top_thr = float(np.percentile(vals, 90))
+    bottom_thr = float(np.percentile(vals, 10))
+    status = dict(zip(index_df["area_code"].astype(str), index_df["status_index"]))
+    out = {
+        "n_distinct_status_values": int(len(np.unique(vals))),
+        "top_threshold": top_thr,
+        "share_at_or_above_top": float(np.mean(vals >= top_thr)),
+        "bottom_threshold": bottom_thr,
+        "share_at_or_below_bottom": float(np.mean(vals <= bottom_thr)),
+    }
+    for label, thr, cmp in (
+        ("hotspot", top_thr, np.greater_equal),
+        ("coldspot", bottom_thr, np.less_equal),
+    ):
+        rows = gt_df[gt_df["label"] == label]
+        is_mss = rows["source"].astype(str).str.startswith("MSS")
+        for kind, subset in (("mss_sourced", rows[is_mss]), ("literature_sourced", rows[~is_mss])):
+            hits = [cmp(status[str(p)], thr) for p in subset["plr_id"] if str(p) in status]
+            out[f"{label}_{kind}_n"] = len(subset)
+            out[f"{label}_{kind}_recall"] = (sum(hits) / len(hits)) if hits else None
+    return out
+
+
+def _log_or(a: float, b: float, c: float, d: float) -> float:
+    """Log odds ratio with the Haldane-Anscombe 0.5 correction when any cell is 0."""
+    if min(a, b, c, d) == 0:
+        a, b, c, d = a + 0.5, b + 0.5, c + 0.5, d + 0.5
+    return float(np.log((a * d) / (b * c)))
+
+
+def test_milieuschutz_external(mss_df) -> dict:
+    """Test F (independent, NON-GATING): are PLRs the index places in an upgrading stage
+    more often under a Milieuschutz (soziale Erhaltungsverordnung) designation?
+
+    Milieuschutz is designated by the districts on the basis of their own displacement-
+    pressure studies -- an administrative instrument the index is not computed from.
+    The index's typology claims that the double-cycle stages (pioneer-signal, active-
+    gentrification, consolidation-pressure; index-definition.md §1.3) carry upgrading
+    pressure, so a valid index should show OR > 1.
+
+    Caveats (also written to the report): designation studies use social indicators
+    that partly overlap MSS inputs, so independence is partial; designation also varies
+    with district policy (a confounder); and the overlay is time-invariant (§1.8) while
+    stages are read at the latest MSS edition. Non-gating until signed off.
+
+    Statistic: odds ratio, 95% CI from a cluster bootstrap over Bezirksregionen (first 6
+    digits of the PLR code), Fisher exact p for reference.
+    """
+    from scipy.stats import fisher_exact
+
+    df = mss_df.dropna(subset=["mss_typology_stage"]).copy()
+    if df.empty:
+        return {"n": 0, "verdict": "NO DATA", "note": "No typology stages at the latest edition."}
+    df["upgrading"] = df["mss_typology_stage"].isin(UPGRADING_STAGES)
+    df["ms"] = df["mss_under_milieuschutz"].fillna(False).astype(bool)
+    df["cluster"] = df["area_code"].astype(str).str[:6]
+
+    def cells(d):
+        a = int((d.upgrading & d.ms).sum())
+        b = int((d.upgrading & ~d.ms).sum())
+        c = int((~d.upgrading & d.ms).sum())
+        e = int((~d.upgrading & ~d.ms).sum())
+        return a, b, c, e
+
+    a, b, c, e = cells(df)
+    log_or = _log_or(a, b, c, e)
+    _, p = fisher_exact([[a, b], [c, e]])
+
+    rng = np.random.default_rng(SEED_F)
+    groups = [g for _, g in df.groupby("cluster")]
+    draws = []
+    for _ in range(N_BOOT_F):
+        pick = rng.integers(0, len(groups), size=len(groups))
+        draws.append(_log_or(*cells(pd.concat([groups[i] for i in pick]))))
+    lo, hi = np.percentile(draws, [2.5, 97.5])
+
+    sys.path.insert(0, str(Path(__file__).parent))
+    from directional_inference import verdict
+
+    v = verdict(log_or, "positive", p=p, ci_low=float(lo), ci_high=float(hi))
+    return {
+        "n": len(df),
+        "n_clusters": len(groups),
+        "table": {"upgrading_ms": a, "upgrading_not": b, "other_ms": c, "other_not": e},
+        "rate_ms_upgrading": a / (a + b) if (a + b) else None,
+        "rate_ms_other": c / (c + e) if (c + e) else None,
+        "odds_ratio": float(np.exp(log_or)),
+        "or_ci_low": float(np.exp(lo)),
+        "or_ci_high": float(np.exp(hi)),
+        "fisher_p": float(p),
+        "verdict": v,
+        "edition": int(df["mss_edition"].max()) if "mss_edition" in df else None,
+    }
+
+
 def _pass_str(flag: bool | None) -> str:
     if flag is None:
         return "N/A"
@@ -971,7 +1088,10 @@ def print_results(
         overall_tests.append(res_d["pass"])
     overall = all(overall_tests)
     print("\n" + "=" * 80)
-    print(f"OVERALL: {'ALL PASS' if overall else 'ONE OR MORE FAIL'}")
+    print(
+        f"GATE (pipeline integrity + label consistency -- NOT measurement validity): "
+        f"{'ALL PASS' if overall else 'ONE OR MORE FAIL'}"
+    )
     print("=" * 80)
 
 
@@ -982,6 +1102,8 @@ def write_backtest_md(
     res_d: dict | None = None,
     res_e: dict | None = None,
     diag: dict | None = None,
+    prov: dict | None = None,
+    res_f: dict | None = None,
 ) -> None:
     """Write (overwrite) docs/methodology/backtest.md with methodology and results."""
     OUTPUT_MD.parent.mkdir(parents=True, exist_ok=True)
@@ -996,17 +1118,103 @@ def write_backtest_md(
     overall = all(overall_tests)
     overall_str = "ALL PASS" if overall else "ONE OR MORE FAIL"
 
-    with open(OUTPUT_MD, "w") as f:
+    with open(OUTPUT_MD, "w", encoding="utf-8") as f:
         f.write("# B2 Back-Test Harness: Live Index vs Ground Truth\n\n")
         f.write(f"**Last run:** {run_date}\n")
-        f.write(f"**Overall result:** {overall_str}\n\n")
+        f.write(f"**Gate result (pipeline integrity + label consistency):** {overall_str}\n")
+        if res_f:
+            f.write(
+                "**Independent check (Test F, Milieuschutz, non-gating):** "
+                + (
+                    f"SUPPORTED (borderline -- weak support; partially independent; "
+                    f"Fisher p = {res_f['fisher_p']:.4f})"
+                    if res_f["verdict"] == "SUPPORTED" and res_f.get("fisher_p", 0) >= 0.05
+                    else res_f["verdict"]
+                )
+                + "\n"
+            )
+        f.write("\n")
+        f.write("## What these tests do and do not show\n\n")
+        f.write(
+            "> **The gate is not evidence that the index measures gentrification.** The live "
+            "index's `status_index` *is* the MSS D1 class and `dynamism_index` *is* the MSS D2 "
+            "class (R-A1, #64). Tests A and D therefore compare the MSS class with itself via two "
+            "pipeline paths (rho = 1.0 by construction), and Tests B/C score labels that are "
+            "partly or wholly MSS class assignments themselves -- see Label provenance below. "
+            "They catch pipeline breakage (a vintage mismatch, a polarity flip), which is why they "
+            'stay as a gate. Until 2026-10-26 this page called them validation "against two '
+            'independent references"; they are not independent. **Test F** is the one check '
+            "against an instrument the index is not built from.\n\n"
+        )
+        if prov:
+            f.write("### Label provenance\n\n")
+            f.write(
+                f"- `status_index` takes **{prov['n_distinct_status_values']} distinct values**, so "
+                f'the "top decile" (>= {prov["top_threshold"]:.1f}) actually covers '
+                f'**{100 * prov["share_at_or_above_top"]:.0f}% of PLRs** and the "bottom decile" '
+                f"(<= {prov['bottom_threshold']:.1f}) **{100 * prov['share_at_or_below_bottom']:.0f}%**. "
+                'Recall against these bands is far easier than the word "decile" suggests.\n'
+            )
+            for label in ("hotspot", "coldspot"):
+                for kind, name in (
+                    ("mss_sourced", "MSS-sourced"),
+                    ("literature_sourced", "literature-sourced"),
+                ):
+                    n = prov[f"{label}_{kind}_n"]
+                    r = prov[f"{label}_{kind}_recall"]
+                    r_str = f"recall {r:.2f}" if r is not None else "no labels"
+                    f.write(f"- {label}s, {name}: n = {n}, {r_str}\n")
+            f.write(
+                "\nMSS-sourced labels can only confirm the MSS class they were copied from. "
+                "There are **no independent coldspot labels**.\n\n"
+            )
+        if res_f:
+            t = res_f.get("table", {})
+            f.write("### Test F -- independent external check: Milieuschutz (non-gating)\n\n")
+            f.write(
+                "Are PLRs the index places in an upgrading stage (pioneer-signal, "
+                "active-gentrification, consolidation-pressure; index-definition.md §1.3) more "
+                "often under a Milieuschutz (soziale Erhaltungsverordnung) designation? "
+                "Milieuschutz is designated by the districts from their own displacement-pressure "
+                "studies, not from this index. A valid index should give OR > 1.\n\n"
+            )
+            if res_f.get("n"):
+                f.write(
+                    f"| | under Milieuschutz | not | share under Milieuschutz |\n|---|---|---|---|\n"
+                    f"| upgrading stage | {t['upgrading_ms']} | {t['upgrading_not']} | "
+                    f"{100 * (res_f['rate_ms_upgrading'] or 0):.0f}% |\n"
+                    f"| other stages | {t['other_ms']} | {t['other_not']} | "
+                    f"{100 * (res_f['rate_ms_other'] or 0):.0f}% |\n\n"
+                    f"- **Odds ratio {res_f['odds_ratio']:.2f}**, 95% cluster-bootstrap CI "
+                    f"[{res_f['or_ci_low']:.2f}, {res_f['or_ci_high']:.2f}] "
+                    f"({res_f['n_clusters']} Bezirksregionen); Fisher p = {res_f['fisher_p']:.4f}; "
+                    f"n = {res_f['n']} PLRs, MSS edition {res_f['edition']}.\n"
+                    f"- **Verdict: {res_f['verdict']}** (SUPPORTED = OR > 1 with a CI excluding 1).\n"
+                )
+                if res_f["verdict"] == "SUPPORTED" and res_f["fisher_p"] >= 0.05:
+                    f.write(
+                        "- **Borderline -- read as weak support.** The cluster-bootstrap CI just "
+                        "excludes 1 but Fisher's exact test does not reach 0.05 "
+                        f"(p = {res_f['fisher_p']:.4f}). With "
+                        f"{100 * (res_f['rate_ms_other'] or 0):.0f}% of other-stage PLRs also "
+                        "under Milieuschutz, the index discriminates designation only modestly.\n"
+                    )
+                f.write("\n")
+            f.write(
+                "Caveats: designation studies use social indicators that partly overlap MSS inputs "
+                "(independence is partial, not total); designation also varies with district "
+                "policy, a confounder this test does not remove; the overlay is time-invariant "
+                "(§1.8) while stages are read at the latest edition. Non-gating until the "
+                "methodology sign-offs promote it.\n\n"
+            )
         f.write("---\n\n")
 
         f.write("## Overview\n\n")
         f.write(
-            "This document records the results of the B2 ground-truth back-test harness, "
-            "which validates the live gentrification index (`gentrification_index`, `live_data` "
-            "variant, latest period) against two independent references:\n\n"
+            "This document records the results of the B2 back-test harness for the live "
+            "gentrification index (`gentrification_index`, `live_data` variant, latest "
+            "period). The gating Tests A-D use two references that are NOT independent of "
+            'the index (see "What these tests do and do not show" above):\n\n'
         )
         f.write(
             "1. **MSS Status/Dynamik classes** (official Berlin ground truth): the Senate's "
@@ -1605,9 +1813,21 @@ def main() -> None:
     print(f"  Diagnostic (non-gating): {diag['note']}")
 
     # Print and write results
+    prov = label_provenance(index_df, gt_df)
+    res_f = test_milieuschutz_external(mss_df)
+    print(
+        f"\n--- Test F (independent, non-gating): Milieuschutz OR "
+        f"{res_f.get('odds_ratio', float('nan')):.2f} "
+        f"[{res_f.get('or_ci_low', float('nan')):.2f}, {res_f.get('or_ci_high', float('nan')):.2f}] "
+        f"-> {res_f['verdict']} ---"
+    )
+    print(
+        f"--- 'Top decile' covers {100 * prov['share_at_or_above_top']:.0f}% of PLRs; "
+        f"literature-sourced hotspot recall {prov['hotspot_literature_sourced_recall']} ---"
+    )
     print_results(res_a, res_b, res_c, res_d, res_e, diag)
 
-    write_backtest_md(res_a, res_b, res_c, res_d, res_e, diag)
+    write_backtest_md(res_a, res_b, res_c, res_d, res_e, diag, prov=prov, res_f=res_f)
     print(f"\nResults written to: {OUTPUT_MD}")
 
 

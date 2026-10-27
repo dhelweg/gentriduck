@@ -118,6 +118,14 @@
                     st_point(lon, lat), 'EPSG:4326', 'EPSG:25833', true
                 ) as geom_25833
             from {{ ref("int_osm_poi_harmonized") }}
+            -- Berlin adapter: Berlin POIs only. The harmonized model unions
+            -- every city (ADR-0005); without this filter all Hamburg POIs were
+            -- joined against Berlin's LOR polygons and got a null area_code
+            -- (911,600 rows on 2026-10-26, the first build with Hamburg OSM).
+            -- Mirrors int_osm_poi_hamburg's `where city_code = 'HH'`. Uses the
+            -- canonical code so it survives Berlin's legacy 'berlin' value
+            -- ever being canonicalised.
+            where {{ canonical_city_code("city_code") }} = 'BER'
         ),
 
         -- LOR geometries from stg_berlin_lor (C3-ref: ref() instead of raw parquet).

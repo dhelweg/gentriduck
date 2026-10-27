@@ -105,6 +105,7 @@ Runtime expectations:
 from __future__ import annotations
 
 import argparse
+import codecs
 import datetime
 import io
 import json
@@ -195,6 +196,12 @@ COMPANION_COLS = ["E_A"]
 VINTAGE_URLS: dict[int, str] = {
     # Direct CSV download URLs from statistik-berlin-brandenburg.de (CC BY 3.0 DE).
     # Source: daten.berlin.de CKAN API + manual verification.
+    # DEAD as of 2026-10-26: every /opendata/*.csv URL below now returns the site's HTML
+    # app shell (HTTP 200, soft 404) after a statistik-berlin-brandenburg.de relaunch, and
+    # the datenregister.berlin.de CKAN registry still lists these same dead URLs. All of
+    # these years are served by the vendored copies (ADR-0023). Kept so the live tier
+    # resumes automatically if the URLs come back; a NEW year needs its current URL found
+    # by hand (the relaunched site is a JS app with no crawlable download links).
     2008: "https://www.statistik-berlin-brandenburg.de/opendata/EWR200812E_Matrix.csv",
     2009: "https://www.statistik-berlin-brandenburg.de/opendata/EWR200912E_Matrix.csv",
     2010: "https://www.statistik-berlin-brandenburg.de/opendata/EWR201012E_Matrix.csv",
@@ -643,6 +650,19 @@ def compute_indicators(df: pd.DataFrame, year: int) -> pd.DataFrame:
 
 def _parse_csv_bytes(raw_bytes: bytes, year: int) -> pd.DataFrame:
     """Decode and parse raw CSV bytes; tries latin-1/utf-8 and ;/,/tab separators."""
+    # Soft-404 guard (2026-10-26): after a site relaunch, statistik-berlin-brandenburg.de
+    # answers every old /opendata/*.csv URL with HTTP 200 and its HTML app shell. That
+    # decodes fine and then fails every separator, which used to surface as the
+    # misleading "check separator/encoding" error below. Name the real cause instead.
+    head = raw_bytes[:512].lstrip()
+    if head.startswith(codecs.BOM_UTF8):  # a UTF-8 BOM in front of the markup
+        head = head[len(codecs.BOM_UTF8) :].lstrip()
+    head = head.lower()
+    if head.startswith((b"<!doctype html", b"<html")):
+        raise ValueError(
+            f"EWR {year} URL returned an HTML page, not CSV -- the file has moved or been "
+            "removed upstream (soft 404); the vendored copy (ADR-0023) is used instead"
+        )
     for encoding in ("latin-1", "utf-8-sig", "utf-8", "cp1252"):
         try:
             text = raw_bytes.decode(encoding)

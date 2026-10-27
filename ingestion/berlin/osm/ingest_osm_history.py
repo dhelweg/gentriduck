@@ -16,20 +16,23 @@ Processing:
   poi_mapping tag set.  Output: one GeoParquet per year under
   data/raw/osm/berlin/<year>.parquet.
 
-Usage:
+Usage (full refresh after a new .osh.pbf download -- what `poe ingest-osm-berlin` runs):
   uv run python ingestion/berlin/osm/ingest_osm_history.py \\
-      --osh-pbf data/raw/germany-internal.osh.pbf \\
-      --out-dir data/raw/osm/berlin \\
-      --years 2008-2024
+      --osh-pbf data/raw/osm/germany-internal.osh.pbf \\
+      --out-dir data/raw/osm/berlin --force
+  Years default to 2008..<current year>, each sampled at YYYY-01-01. --force is needed
+  for a refresh: without it every existing year is skipped and nothing is re-extracted
+  (a POI-mapping seed change, e.g. #201, still requires re-extracting every year).
 
-Performance (M2 MacBook Pro, 11 GB germany-internal.osh.pbf):
-  Each worker makes one full sequential pass through the .osh.pbf file.
-  ~75 min per year-worker.  Parallelism helps on I/O-light machines but
-  causes contention when multiple processes read the same large file
-  simultaneously — tested: 9 parallel workers at 100 % CPU each, no
-  faster than 3.  Recommended: --workers 3 max, or sequential (default)
-  if RAM < 8 GB.  Full 17-year run (2008-2024): ~3.5 h sequential,
-  ~2.5 h with --workers 3.
+Performance:
+  Default (--workers 1): ONE sequential pass through the .osh.pbf extracts every
+  requested year at once (_MultiYearSnapshotHandler via extract_all_snapshots --
+  the same handler extract_snapshot uses with a single year, so identical output).
+  Measured 2026-10-26 (i7-13650HX, 12.4 GB file): 8 years in 113 min; 19 years in
+  168 min while a second city's pass shared the disk.
+  --workers N>1 runs one FULL pass per year in N processes instead. They contend on
+  the shared file: 12 workers measured no faster than 3 (~86 min per 3-year wave),
+  i.e. slower than the default. Kept only for compatibility.
 
 Dependency note (new in C1):
   `osmium` (PyPI, BSL-1.0) was added to pyproject.toml as part of this task.
@@ -360,22 +363,37 @@ class _MultiYearSnapshotHandler(osmium.SimpleHandler):
     def node(self, n: osmium.osm.Node) -> None:
         """Called for each node version in chronological order."""
         # Resolve bbox and POI match once per version (shared across all years).
-        try:
-            lon = n.lon
-            lat = n.lat
-        except Exception:
-            return
-
-        in_bbox = (
-            BERLIN_MIN_LON <= lon <= BERLIN_MAX_LON and BERLIN_MIN_LAT <= lat <= BERLIN_MAX_LAT
-        )
+        if n.visible:
+            try:
+                lon = n.lon
+                lat = n.lat
+            except Exception:
+                return  # visible version with an invalid location: nothing to place
+            in_bbox = (
+                BERLIN_MIN_LON <= lon <= BERLIN_MAX_LON and BERLIN_MIN_LAT <= lat <= BERLIN_MAX_LAT
+            )
+        else:
+            # Deleted version. OSM history files carry NO location for deletions, so
+            # reading n.lon raises -- and this handler used to `return` right there,
+            # skipping the pop below: every hard-deleted POI stayed in every later
+            # snapshot forever (closures-by-deletion never registered). Found
+            # 2026-10-26. A deletion has no position, so it can never be "in bbox";
+            # falling through pops the node from each snapshot at/after its timestamp.
+            lon = lat = None
+            in_bbox = False
 
         poi_match: tuple[str, str, str] | None = None
         cuisine: str | None = None
         if in_bbox and n.visible:
             for tag in n.tags:
                 match = self.poi_mapping.get((tag.k, tag.v))
-                if match is not None:
+                # FIRST matching tag wins (in the node's stored tag order). This was the
+                # behaviour every validated analysis ran on; #252 removed the loop's
+                # `break` to keep scanning for `cuisine` and silently flipped it to
+                # last-match-wins, reclassifying multi-tag POIs (fuel+kiosk, cafe+bakery,
+                # restaurant+hotel ...) -- found and restored 2026-10-26. Keep scanning
+                # (for cuisine) but never overwrite an earlier match.
+                if match is not None and poi_match is None:
                     poi_match = match
                 # I20 (#252): capture the `cuisine` secondary tag verbatim
                 # (raw OSM value, e.g. "italian;pizza") whenever present —
@@ -528,8 +546,9 @@ def main(argv: list[str] | None = None) -> int:
     )
     parser.add_argument(
         "--years",
-        default="2008-2024",
-        help="Year range to process, e.g. '2008-2024' or '2018,2019,2020' (default: 2008-2024).",
+        default=f"2008-{datetime.date.today().year}",
+        help="Year range, e.g. '2008-2026' or '2018,2019,2020' (default: 2008-<current year>). "
+        "Every year is sampled at YYYY-01-01, so the current year's snapshot is already final.",
     )
     parser.add_argument(
         "--skip-existing",
@@ -547,13 +566,18 @@ def main(argv: list[str] | None = None) -> int:
         "--workers",
         type=int,
         default=1,
-        help="Number of parallel worker processes (default: 1).",
+        help="Default 1 = ONE read of the .osh.pbf for all years (single-pass, fastest). "
+        "N>1 runs one full read per year in N processes; they contend on the shared file "
+        "and measured no faster than 3 (2026-10-26) -- slower than the default, kept only "
+        "for compatibility.",
     )
     parser.add_argument(
         "--partial-years",
         default="",
-        help="Comma-separated years whose output file is named '{year}-partial.parquet' "
-        "instead of '{year}.parquet' (e.g. '2026' for an in-progress year).",
+        help="DEPRECATED (2026-10-26) -- only renames the output to '{year}-partial.parquet'. "
+        "Snapshots are always taken at YYYY-01-01, so a current-year file is final, not "
+        "partial, and does not change between .osh.pbf downloads. Kept so old invocations "
+        "do not break; do not use.",
     )
     args = parser.parse_args(argv)
 
@@ -575,6 +599,11 @@ def main(argv: list[str] | None = None) -> int:
         if args.partial_years
         else set()
     )
+    if partial_years:
+        log.warning(
+            "--partial-years is deprecated: it only renames the output file. Snapshots are "
+            "always taken at YYYY-01-01, so the current year is already final."
+        )
     out_dir: Path = args.out_dir
     skip_existing = args.skip_existing and not args.force
 
@@ -613,13 +642,12 @@ def main(argv: list[str] | None = None) -> int:
     workers = min(args.workers, len(years_to_run))
     log.info("Processing %d years with %d worker(s): %s", len(years_to_run), workers, years_to_run)
 
-    def _run_year(year: int) -> None:
-        df = extract_snapshot(osh_pbf, year, poi_mapping)
-        write_parquet(df, out_dir / f"{_stem(year)}.parquet")
-
     if workers == 1:
+        # One read of the .osh.pbf for ALL requested years instead of one per year.
+        # Validated 2026-10-26 against 19 known manifest row counts (see --workers help).
+        results = extract_all_snapshots(osh_pbf, years_to_run, poi_mapping)
         for year in years_to_run:
-            _run_year(year)
+            write_parquet(results[year], out_dir / f"{_stem(year)}.parquet")
     else:
         with multiprocessing.Pool(processes=workers) as pool:
             pool.starmap(

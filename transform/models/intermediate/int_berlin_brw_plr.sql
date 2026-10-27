@@ -76,7 +76,7 @@
 -- int_berlin_ewr_plr2021.
 --
 -- brw_residential_coverage_frac (geo condition 4):
--- = SUM(intersection_area_m2) / ST_Area(plr_geom) per PLR.
+-- = AREA(UNION of residential-zone pieces) / ST_Area(plr_geom) per PLR (2026-10-27).
 -- A PLR with zero residential BRW coverage yields NULL brw_weighted_avg_eur_m2 and
 -- NULL brw_residential_coverage_frac; never 0.
 -- Consumers use this to identify pure park/water/industrial/airport PLRs where the
@@ -116,14 +116,8 @@ with
     -- ST_MakeValid applied here (geo condition 3) to fix degenerate polygon edges
     -- before
     -- intersection; avoids ST_Area crashes on self-intersecting rings.
-    brw as (
-        select
-            reference_date,
-            city_code,
-            brw_id,
-            value_eur_per_m2,
-            nutzung,
-            st_makevalid(st_geomfromwkb(geometry_wkb)) as geom
+    brw_records as (
+        select reference_date, city_code, brw_id, value_eur_per_m2, geometry_wkb
         from {{ ref("stg_berlin_bodenrichtwert") }}
         -- BauNVO Wohngebiet filter (geo condition 2): residential zones only.
         -- W% covers WA, WR, WB, WS variants. Non-residential (G/I/GE) excluded.
@@ -141,6 +135,28 @@ with
             between 3.7e5 and 4.2e5
             and st_y(st_centroid(st_makevalid(st_geomfromwkb(geometry_wkb))))
             between 5.79e6 and 5.84e6
+    ),
+
+    -- One row per (date, zone polygon) -- 2026-10-26. Berlin publishes several
+    -- differentiated land values on ONE zone polygon (e.g. brw_id 1339 = 900 and
+    -- 1456 = 850 EUR/m2 share a polygon in 2022). Area-weighting each record
+    -- separately counted the same ground once per record: coverage_frac reached
+    -- exactly 2.0, and a multi-record zone got double weight in the PLR average.
+    -- Stacking jumped from ~9 to ~26 residential polygons per year in 2022 (2,231
+    -- records on 1,581 polygons), which also put a structural break into any
+    -- 2021->2022 BRW trend. Stacked values are averaged: the attributes that
+    -- differentiate them (building type, density) are not in staging, so the mean
+    -- is the neutral choice.
+    brw as (
+        select
+            reference_date,
+            city_code,
+            min(brw_id) as brw_id,
+            avg(value_eur_per_m2) as value_eur_per_m2,
+            count(*) as n_stacked_records,
+            st_makevalid(st_geomfromwkb(geometry_wkb)) as geom
+        from brw_records
+        group by reference_date, city_code, geometry_wkb
     ),
 
     -- PLR geometries: LOR 2021 vintage only for consistent alignment with the BRW
@@ -187,6 +203,7 @@ with
             area_code,
             area_vintage,
             st_area(intersection_geom) as intersection_area_m2,
+            intersection_geom,
             plr_area_m2,
             brw_area_m2
         from candidate_pairs
@@ -210,7 +227,11 @@ with
 -- This averages the BRW value weighted by the portion of the PLR each zone covers.
 --
 -- brw_residential_coverage_frac (geo condition 4):
--- = SUM(intersection_area_m2) / plr_area_m2
+-- = AREA(UNION of intersection pieces) / plr_area_m2  (2026-10-26; was SUM of
+-- intersection areas, which counts any overlapping zones twice and reached 2.0 --
+-- see the `brw` CTE). The union is correct by construction for every kind of
+-- overlap, including near-duplicate polygons the exact-geometry collapse cannot
+-- catch (15 IoU>0.95 pairs in 2022, values a median EUR 410/m2 apart).
 -- Fraction of the PLR area covered by residential BRW zones.
 -- NULL when plr_area_m2 = 0 (degenerate geometry; should never occur post-makevalid).
 -- Consumers: NULL PLRs with zero residential coverage (pure park/water/airport PLRs).
@@ -229,7 +250,7 @@ select
     -- Residential coverage fraction of PLR (geo condition 4).
     -- NULL when no valid PLR area (degenerate); zero naturally never appears because
     -- rows only exist when intersection_area_m2 > 1.0 (guard above).
-    sum(intersection_area_m2)
+    st_area(st_union_agg(intersection_geom))
     / nullif(max(plr_area_m2), 0) as brw_residential_coverage_frac
 from brw_plr_intersections
 where plr_area_m2 > 0

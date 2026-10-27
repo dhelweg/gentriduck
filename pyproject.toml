@@ -200,8 +200,16 @@ ingest = "python ingestion/run_ingest.py"
 # OSM full-history ingestion (ADR-0002/C1, H1 Pillar 6) — run manually once the maintainer has
 # downloaded the Germany `.osh.pbf` from Geofabrik's internal (login-gated) server into
 # data/raw/osm/. Not part of `poe ingest` (see note above).
-ingest-osm-berlin = "python ingestion/berlin/osm/ingest_osm_history.py --osh-pbf data/raw/osm/germany-internal.osh.pbf --out-dir data/raw/osm/berlin"
-ingest-osm-hamburg = "python ingestion/hamburg/osm/ingest_hamburg_osm.py --osh-pbf data/raw/osm/germany-internal.osh.pbf --out-dir data/raw/osm/hamburg"
+# 2026-10-26: these are FULL refreshes. `--force` re-extracts every year (2008..current year,
+# each sampled at YYYY-01-01) in ONE read of the file (~2-3 h per city; Berlin and Hamburg can
+# run concurrently). Without `--force` every existing year is skipped and the task silently
+# does nothing -- and a POI-mapping or extractor change still needs every year re-extracted.
+ingest-osm-berlin = "python ingestion/berlin/osm/ingest_osm_history.py --osh-pbf data/raw/osm/germany-internal.osh.pbf --out-dir data/raw/osm/berlin --force"
+ingest-osm-hamburg = "python ingestion/hamburg/osm/ingest_hamburg_osm.py --osh-pbf data/raw/osm/germany-internal.osh.pbf --out-dir data/raw/osm/hamburg --force"
+# #307: Hamburg statistisches-Gebiet display names from OSM place=* nodes (the WFS source has no
+# name property). Same .osh.pbf, one more read. Had no task before 2026-10-26, so it was never
+# run and stg_hamburg_osm_places stayed empty.
+ingest-osm-hamburg-places = "python ingestion/hamburg/osm/ingest_hamburg_osm_places.py --osh-pbf data/raw/osm/germany-internal.osh.pbf --force"
 # F3 (#35) / ADR-0015: one-command end-to-end data refresh — raw sources through servable
 # artefacts. Chains existing tasks in dependency order via poe task refs (not duplicated shell
 # commands): dbt deps -> all fresh-checkout-safe ingestion -> dbt build -> export marts -> export

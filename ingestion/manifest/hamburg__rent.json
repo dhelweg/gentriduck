@@ -5,7 +5,7 @@
   "upstream": {
     "url": "https://geodienste.hamburg.de/HH_WFS_Wohnlagen ; Mietenspiegel WFS",
     "vintage": "current (erhebungsstand 2025-04-01; confirmed live 2026-07-01)",
-    "retrieved_at": "2026-07-05T22:19:35Z"
+    "retrieved_at": "2026-10-25T12:27:14Z"
   },
   "outputs": [
     {
@@ -23,7 +23,7 @@
   ],
   "ingest_script": {
     "module": "ingestion.hamburg.rent.ingest_hamburg_rent",
-    "git_sha": "9cf6028ab6d493ea675cc31ff03be957e928c616"
+    "git_sha": "69ef50ae6daa232764d706843fb18917f4deaf29"
   },
   "manifest_schema_version": 1
 }

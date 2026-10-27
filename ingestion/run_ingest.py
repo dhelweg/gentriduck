@@ -165,12 +165,12 @@ def build_steps(repo_root: Path) -> list[IngestStep]:
             _py(
                 "ingestion/berlin/mss/ingest_mss_2013_excel.py", "--out-dir", "data/raw/berlin/mss"
             ),
-            # Shares a manifest source_id with ingest_mss.py above (existing,
-            # pre-#251 quirk — both write "berlin__mss"). Skip-if-fresh treats
-            # this conservatively: the shared entry only reads "ok" once both
-            # scripts' outputs are on disk and unchanged, so neither is ever
-            # skipped on the strength of the *other's* manifest write alone
-            # unless a full run already confirmed both are fresh.
+            # Shares a manifest source_id with ingest_mss.py above (both write
+            # "berlin__mss"). Freshness is decided ONCE per source before any step
+            # runs (main()), so the WFS step's manifest write can no longer make this
+            # step look fresh -- it did, and mss_2013 silently disappeared (fixed
+            # 2026-10-27). Known quirk: the manifest's ingest_script.module is the
+            # last writer's, so an edit to ingest_mss.py alone is not seen as stale.
             source_id="berlin__mss",
             blocking=True,
         ),
@@ -238,6 +238,19 @@ def build_steps(repo_root: Path) -> list[IngestStep]:
                 "data/raw/berlin/mietspiegel",
             ),
             source_id="berlin__mietspiegel",
+            blocking=False,
+        ),
+        # Berlin Milieuschutz (ADR-0019) -- a leaf dimension per the rationale above.
+        # Was manifest-tracked but missing from this list, so `poe ingest` never
+        # refreshed it (a missing leaf source yields zero rows, not an error, #94).
+        IngestStep(
+            "Berlin Milieuschutz",
+            _py(
+                "ingestion/berlin/displacement/ingest_milieuschutz.py",
+                "--out-dir",
+                "data/raw/berlin/displacement",
+            ),
+            source_id="berlin__milieuschutz",
             blocking=False,
         ),
         # Hamburg — second-city adapters (ADR-0014); OSM (Pillar 6) excluded, see ingest-osm-hamburg.
@@ -327,9 +340,17 @@ class StepResult:
     findings: list[str] = field(default_factory=list)
 
 
-def run_step(step: IngestStep, repo_root: Path, force: bool) -> StepResult:
+def run_step(
+    step: IngestStep,
+    repo_root: Path,
+    force: bool,
+    freshness: Optional[dict[str, tuple[bool, str]]] = None,
+) -> StepResult:
     if step.source_id and not force:
-        fresh, reason = is_fresh(step.source_id, repo_root)
+        if freshness is not None and step.source_id in freshness:
+            fresh, reason = freshness[step.source_id]
+        else:
+            fresh, reason = is_fresh(step.source_id, repo_root)
         if fresh:
             return StepResult(step, "skipped", detail=reason)
 
@@ -415,7 +436,20 @@ def main(argv: Optional[list[str]] = None) -> int:
             )
             return 2
 
-    results = [run_step(step, repo_root, force) for step in steps]
+    # Freshness is decided ONCE per source, before any step runs (2026-10-27). Some sources
+    # have several steps -- berlin__mss: the WFS editions, then the 2013 Excel edition that
+    # WFS lacks. Checking per step let the WFS step's own manifest write (covering only what
+    # it produced) make the Excel step look fresh, so it was skipped and mss_2013 silently
+    # disappeared. All steps of a source now share one decision.
+    freshness = (
+        {}
+        if force
+        else {
+            sid: is_fresh(sid, repo_root)
+            for sid in dict.fromkeys(s.source_id for s in steps if s.source_id)
+        }
+    )
+    results = [run_step(step, repo_root, force, freshness) for step in steps]
 
     print()
     print(render_summary(results))

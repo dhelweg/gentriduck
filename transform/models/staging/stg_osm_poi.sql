@@ -41,10 +41,13 @@
 -- Per-city `cuisine` presence is detected at compile time (below) rather than
 -- assumed: `union_by_name=true` only synthesizes a NULL column for files
 -- *within* a glob where at least one sibling file in that same glob has the
--- column -- if NONE of one city's files have it yet (e.g. Hamburg's
--- ingest_hamburg_osm.py, #40, has not been extended for #252's tags), a bare
--- `cuisine` reference on that city's branch is a DuckDB Binder Error, not a
--- NULL. Each city glob is therefore probed independently so Berlin landing
+-- column -- if NONE of one city's files have it yet (e.g. a city whose
+-- parquet predates a newly added tag), a bare `cuisine` reference on that
+-- city's branch is a DuckDB Binder Error, not a NULL. (Hamburg is NOT such a
+-- case: ingest_hamburg_osm.py reuses the Berlin extractor's handler and
+-- OUTPUT_SCHEMA, so it emits `cuisine` too -- confirmed 2026-10-26. The guard
+-- stays for any future tag or city.) Each city glob is therefore probed independently
+-- so Berlin landing
 -- `cuisine` first doesn't break Hamburg (and vice versa for any future tag).
 -- dbt_meta_owner: data-engineer
 {{

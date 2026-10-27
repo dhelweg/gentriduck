@@ -5,7 +5,7 @@
   "upstream": {
     "url": "https://geodienste.hamburg.de/wfs_sozialmonitoring (de.hh.up:sozialmonitoring)",
     "vintage": "editions 2013-2025 (annual; embedded per-row in the output)",
-    "retrieved_at": "2026-07-05T22:19:13Z"
+    "retrieved_at": "2026-10-25T12:26:41Z"
   },
   "outputs": [
     {
@@ -17,7 +17,7 @@
   ],
   "ingest_script": {
     "module": "ingestion.hamburg.sozialmonitoring.ingest_hamburg_sozialmonitoring",
-    "git_sha": "2f6b2f6853967d004d6942592bb52d4740e6cc97"
+    "git_sha": "69ef50ae6daa232764d706843fb18917f4deaf29"
   },
   "manifest_schema_version": 1
 }

@@ -14,7 +14,7 @@ null/negative-finding reporting).
 R-C2 GROUNDING CITATIONS (mandatory per CLAUDE.md grounding rule):
   Thesis p. 91 (2018 Berlin gentrification thesis): defines H3a (POI/amenity change
     LEADS status change; REJECTED in the Berlin thesis) and H3b (status change LEADS
-    amenity change; CONFIRMED in the Berlin thesis) via Dangschat's (1988) double
+    amenity change; TENTATIVELY supported in the Berlin thesis (Tabelle 6-16: '(check)', 'eher bestaetigt')) via Dangschat's (1988) double
     invasion-succession cycle. The THEORY (Dangschat 1988) is city-agnostic; the
     thesis's empirical CONFIRMATION is Berlin-specific and is exactly what this script
     re-tests independently for Hamburg, per geo-DS Condition 2
@@ -62,21 +62,21 @@ CADENCE CAVEAT (binding; see int_hamburg_lead_lag.sql header for the full note):
   real-time horizon" anywhere in this script's output or the findings doc -- every
   results table below labels lag_k with its real-year equivalent explicitly.
 
-H3a/H3b SYMMETRIC-SPEARMAN CAVEAT (binding disclosure; inherited from
-e1_regressions.py's test_h3, see its docstring around "co-movement test across the
-lag window" and B7-geo-signoff.md Concern 2):
-  Spearman(delta_dyn_t, delta_status) == Spearman(delta_status, delta_dyn_t) --
-  correlation is symmetric under argument swap. `test_h3_hamburg` below therefore
-  returns IDENTICAL rho/p/n for H3a and H3b at every lag_k (Section 1 of the findings
-  doc). This is NOT a bug and NOT evidence that the two directional hypotheses agree
-  -- a symmetric bivariate statistic structurally cannot distinguish "POI leads
-  status" from "status leads POI"; it can only say the two series co-move within the
-  [t, t+k] window. Section 1 is reported as a co-movement test, not a strict
-  temporal-precedence test, exactly as Berlin's own test_h3 is labelled. The test that
-  actually can distinguish direction is Section 2 (`test_h3_d4_clustered` below): the
-  D4-controlled OLS with Stadtteil-clustered SEs has H3a/H3b as two DIFFERENT
-  regression specifications (different dependent variables), so its coefficients are
-  not symmetric by construction and are the genuinely informative directional test.
+H3a/H3b DIRECTION (2026-10-26 methodology review -- supersedes the old caveat):
+  H3a/H3b are claims about temporal ORDER. Until 2026-10-26 neither section of this
+  script could separate them. Section 1 computed Spearman(delta_dyn_t, delta_status)
+  for H3a and the SAME two arrays swapped for H3b (Spearman is symmetric -> identical
+  numbers). Section 2 was documented as "the genuinely informative directional test",
+  but its two OLS specs regress the same same-window pair in both orientations: that
+  rescales the coefficient without adding evidence about order, which is why its H3a/H3b
+  p-values were near-identical (0.31/0.31, 0.27/0.27, 0.25/0.26).
+
+  Section 1 now uses the shared cross-lagged design (analysis/directional_inference.py):
+  around each pivot year, prior window [e0, e1] and following window [e1, e2] never
+  overlap; H3a = partial_rho(dPOI_prior, dStatus_following | dStatus_prior, D4) and
+  H3b = partial_rho(dStatus_prior, dPOI_following | dPOI_prior, D4), with a
+  Stadtteil-clustered bootstrap CI (#129: Stadtteil is the effective D4 sample unit).
+  Section 2 is kept, relabelled as what it is: D4-controlled same-window CO-MOVEMENT.
 
 Why manual cluster-robust OLS, not statsmodels (CLAUDE.md golden rule #2):
   statsmodels is not an existing dependency of this project (pyproject.toml lists
@@ -154,7 +154,7 @@ HAMBURG_HYPOTHESES: dict[str, dict] = {
         "desc": "Δstatus at t leads Δdynamism at t+k (status change leads POI change)",
         "citation": (
             "Thesis p.91 H3b framing (theory: Dangschat 1988), independently re-tested "
-            "on Hamburg -- CONFIRMED in the Berlin thesis, NOT assumed to replicate or "
+            "on Hamburg -- TENTATIVELY supported in the Berlin thesis (Tabelle 6-16: '(check)', 'eher bestaetigt'), NOT assumed to replicate or "
             "reject here. delta_status_ordinal is inverse-numeric (index-definition.md "
             "§5 polarity table); improved status = negative delta, so the theory-derived "
             "expected Spearman(delta_status_ordinal, delta_dynamism_t) direction is "
@@ -168,7 +168,7 @@ HAMBURG_HYPOTHESES: dict[str, dict] = {
         "citation": (
             "Thesis p.91 H3c framing, run alongside H3a/H3b for the same "
             "apples-to-apples comparability e1_regressions.py provides for Berlin -- "
-            "UNCLEAR in the Berlin thesis. status_index inverse-numeric "
+            "INCONCLUSIVE in the Berlin thesis (Tabelle 6-16: 0). status_index inverse-numeric "
             "(index-definition.md §5), theory-derived expected direction negative."
         ),
         "expected_dir": "negative",
@@ -185,6 +185,18 @@ LAG_K_REAL_YEARS = {1: 1, 2: 2, 3: 3}
 # ---------------------------------------------------------------------------
 # Data loading
 # ---------------------------------------------------------------------------
+
+
+# Cross-lagged H3a/H3b + significance-aware verdicts (2026-10-26). Sibling module;
+# same import convention as e4_early_warning -> a9 / e1 -> directional_inference.
+sys.path.insert(0, str(Path(__file__).parent))
+from directional_inference import (  # noqa: E402
+    build_cross_lagged,
+    cross_lagged_tests,
+    direction_conclusion,
+    summarise,
+    verdict,
+)
 
 
 def load_hamburg_lead_lag(con: duckdb.DuckDBPyConnection) -> pd.DataFrame:
@@ -364,75 +376,59 @@ def run_ols_clustered(
 
 
 def test_h3_hamburg(df_ll: pd.DataFrame) -> list[dict]:
-    """H3a/H3b/H3c on Hamburg's annual-cadence panel -- Spearman only, mirroring
-    e1_regressions.py's test_h3 bivariate method EXACTLY (same predictor/outcome
-    pairs, same C5-corrected delta_dynamism_t, same D1-polarity delta_status_ordinal)
-    for direct methodological comparability.
+    """H3a/H3b (cross-lagged, directional) and H3c (contemporaneous), Hamburg annual panel.
 
-    #129 SCOPE NOTE (binding, explicit per ticket instructions): none of these three
-    bivariate Spearman tests use ewr_composite_t (D4) as a covariate -- they mirror
-    e1's own test_h3, which is a pure two-variable rank correlation. Stadtteil
-    clustering therefore does NOT apply to these three tests; the D4-covariate
-    regression that DOES require it is `test_h3_d4_clustered` below.
-
-    SYMMETRIC-SPEARMAN CAVEAT (binding disclosure; see module docstring): H3a's
-    Spearman(delta_dyn_t, delta_status) and H3b's Spearman(delta_status, delta_dyn_t)
-    are the SAME two vectors with swapped argument order -- Spearman correlation is
-    symmetric, so H3a and H3b return IDENTICAL rho/p/n below at every lag_k. This is a
-    co-movement test, not a strict temporal-precedence test; it cannot itself
-    adjudicate which hypothesis holds. `test_h3_d4_clustered` is the specification
-    that can (non-symmetric OLS coefficients).
+    Same design as e1_regressions.test_h3 (analysis/directional_inference.py): ordered,
+    non-overlapping windows around each pivot year; each direction controls for the
+    outcome's own prior change and the D4 baseline LEVEL (ewr_composite_t, §4.3). CIs
+    are a cluster bootstrap over Stadtteile (#129 / H1-geo-signoff.md Condition 2 --
+    every Gebiet in a Stadtteil inherits the same D4 value, so the Stadtteil is the
+    effective independent unit). Replaces the pre-2026-10-26 symmetric Spearman pair,
+    which returned identical numbers for H3a and H3b.
     """
     results = []
-    for k in sorted(df_ll["lag_k"].unique()):
-        sub = df_ll[df_ll["lag_k"] == k].copy()
+    for k in sorted(int(x) for x in df_ll["lag_k"].unique()):
+        real_years = LAG_K_REAL_YEARS.get(k, k)
+        cl = build_cross_lagged(
+            df_ll, k=k, control_col="ewr_composite_t", cluster_col="stadtteil_code"
+        )
+        if cl.empty:
+            print(f"  NOTE: no consecutive k={k} windows for cross-lagged H3a/H3b -- skipped")
+        else:
+            tests = cross_lagged_tests(cl)
+            for hyp in ("H3a", "H3b"):
+                res = tests[hyp]
+                results.append(
+                    {
+                        "hyp": hyp,
+                        "test": f"Cross-lagged k={k} ({real_years}yr)",
+                        "desc": (
+                            f"{HAMBURG_HYPOTHESES[hyp]['desc']} [cross-lagged, k={k}, "
+                            f"{real_years} real year(s) per window; "
+                            + ("D4 control" if res.get("d4_control") else "no D4 control")
+                            + "]"
+                        ),
+                        "citation": HAMBURG_HYPOTHESES[hyp]["citation"],
+                        "stat_val": res["rho"],
+                        "stat_type": "partial rho",
+                        "n": res["n"],
+                        "n_clusters": res["n_clusters"],
+                        "p": res["p"],
+                        "ci_low": res["ci_low"],
+                        "ci_high": res["ci_high"],
+                        "expected_dir": HAMBURG_HYPOTHESES[hyp]["expected_dir"],
+                        "actual_dir": _dir(res["rho"]),
+                        "dir_match": _dir_match(
+                            res["rho"], HAMBURG_HYPOTHESES[hyp]["expected_dir"]
+                        ),
+                    }
+                )
+
+        sub = df_ll[df_ll["lag_k"] == k]
         if len(sub) < 10:
             continue
-        real_years = LAG_K_REAL_YEARS.get(int(k), k)
-
-        delta_status = sub["delta_status_ordinal"].values.astype(float)
         dyn_t = sub["dynamism_score_t"].values.astype(float)
-        delta_dyn_t = sub["delta_dynamism_t"].values.astype(float)
         stat_t = sub["status_index_t"].values.astype(float)
-
-        # H3a: POI change at t leads status change at t+k
-        r3a = run_spearman(delta_dyn_t, delta_status, f"Spearman(delta_dyn_t, delta_status, k={k})")
-        results.append(
-            {
-                "hyp": "H3a",
-                "test": f"Spearman k={k} ({real_years}yr)",
-                "desc": f"{HAMBURG_HYPOTHESES['H3a']['desc']} [k={k}, {real_years} real year(s)]",
-                "citation": HAMBURG_HYPOTHESES["H3a"]["citation"],
-                "stat_val": r3a["rho"],
-                "stat_type": "rho",
-                "n": r3a["n"],
-                "p": r3a["p"],
-                "sig": r3a["sig"],
-                "expected_dir": HAMBURG_HYPOTHESES["H3a"]["expected_dir"],
-                "actual_dir": _dir(r3a["rho"]),
-                "dir_match": _dir_match(r3a["rho"], HAMBURG_HYPOTHESES["H3a"]["expected_dir"]),
-            }
-        )
-
-        # H3b: status change at t leads POI change at t+k
-        r3b = run_spearman(delta_status, delta_dyn_t, f"Spearman(delta_status, delta_dyn_t, k={k})")
-        results.append(
-            {
-                "hyp": "H3b",
-                "test": f"Spearman k={k} ({real_years}yr)",
-                "desc": f"{HAMBURG_HYPOTHESES['H3b']['desc']} [k={k}, {real_years} real year(s)]",
-                "citation": HAMBURG_HYPOTHESES["H3b"]["citation"],
-                "stat_val": r3b["rho"],
-                "stat_type": "rho",
-                "n": r3b["n"],
-                "p": r3b["p"],
-                "sig": r3b["sig"],
-                "expected_dir": HAMBURG_HYPOTHESES["H3b"]["expected_dir"],
-                "actual_dir": _dir(r3b["rho"]),
-                "dir_match": _dir_match(r3b["rho"], HAMBURG_HYPOTHESES["H3b"]["expected_dir"]),
-            }
-        )
-
         # H3c: simultaneous co-movement (same edition, run alongside for parity)
         r3c = run_spearman(dyn_t, stat_t, f"Spearman(dyn_score_t, status_t, k={k})")
         results.append(
@@ -456,8 +452,14 @@ def test_h3_hamburg(df_ll: pd.DataFrame) -> list[dict]:
 
 
 def test_h3_d4_clustered(df_ll: pd.DataFrame) -> list[dict]:
-    """H3a/H3b re-tested as OLS controlling for the D4 baseline (ewr_composite_t),
+    """D4-controlled same-window CO-MOVEMENT between status change and POI change,
     with standard errors clustered at Stadtteil grain (#129 binding requirement).
+
+    NOT a direction test (2026-10-26): both specs below regress the SAME two changes
+    over the SAME [t, t+k] window, once in each orientation. Swapping the dependent
+    variable rescales the coefficient but adds no evidence about which change came
+    first. Direction is tested in test_h3_hamburg (cross-lagged). Rows here are
+    labelled 'H3 co-movement', never H3a/H3b.
 
     This is the ONE specification in this script where ewr_composite_t enters as a
     covariate (index-definition.md §4.3 D4-baseline-LEVEL discipline: ewr_composite_t
@@ -493,7 +495,7 @@ def test_h3_d4_clustered(df_ll: pd.DataFrame) -> list[dict]:
         )
         results.append(
             {
-                "hyp": "H3a (D4-controlled, Stadtteil-clustered)",
+                "hyp": "H3 co-movement (status on POI)",
                 "test": f"OLS-clustered k={k} ({real_years}yr)",
                 "desc": (
                     f"{HAMBURG_HYPOTHESES['H3a']['desc']} [k={k}, {real_years} real "
@@ -526,7 +528,7 @@ def test_h3_d4_clustered(df_ll: pd.DataFrame) -> list[dict]:
         )
         results.append(
             {
-                "hyp": "H3b (D4-controlled, Stadtteil-clustered)",
+                "hyp": "H3 co-movement (POI on status)",
                 "test": f"OLS-clustered k={k} ({real_years}yr)",
                 "desc": (
                     f"{HAMBURG_HYPOTHESES['H3b']['desc']} [k={k}, {real_years} real "
@@ -567,7 +569,7 @@ def test_h3_d4_clustered(df_ll: pd.DataFrame) -> list[dict]:
 # purposes. It is embedded directly in this generator -- rather than left as
 # a hand-edit on the generated markdown file -- because `write_findings`
 # below rewrites docs/epic-h/E5-hamburg-lead-lag-findings.md wholesale
-# (`open(OUTPUT_MD, "w")`) on every `uv run poe analysis` run: a note living
+# (`open(OUTPUT_MD, "w", encoding="utf-8")`) on every `uv run poe analysis` run: a note living
 # only in the generated file would be silently erased by the next
 # regeneration, which is exactly the failure both #330 sign-offs flagged
 # (domain-signoff §2 "one command away from deletion"; geo-signoff E-C1). Do
@@ -659,61 +661,82 @@ justification for having used the invalid specification. See Limitations/Epic B 
 # ---------------------------------------------------------------------------
 
 
+def attach_verdicts(results: list[dict]) -> list[dict]:
+    """Significance-aware verdict per row (2026-10-26) -- see e1_regressions.attach_verdicts."""
+    for r in results:
+        r["verdict"] = verdict(
+            r.get("stat_val"),
+            r["expected_dir"],
+            p=r.get("p"),
+            ci_low=r.get("ci_low"),
+            ci_high=r.get("ci_high"),
+        )
+        r["sig"] = r["verdict"] in ("SUPPORTED", "CONTRADICTED")
+    return results
+
+
+def _value_str(r: dict) -> str:
+    val = _fmt_val(r["stat_val"])
+    if r.get("ci_low") is not None and r.get("ci_high") is not None:
+        val += f" [{r['ci_low']:.3f}, {r['ci_high']:.3f}]"
+    return val
+
+
+def _direction_lines(results: list[dict]) -> list[str]:
+    lines = []
+    for a in (r for r in results if r["hyp"] == "H3a"):
+        b = next((r for r in results if r["hyp"] == "H3b" and r["test"] == a["test"]), None)
+        if b is not None:
+            lines.append(
+                f"- **{a['test']}:** {direction_conclusion(a['verdict'], b['verdict'])} "
+                f"(H3a {a['verdict']}, H3b {b['verdict']})"
+            )
+    return lines
+
+
 def print_results(results: list[dict]) -> None:
+    attach_verdicts(results)
     print("\n" + "=" * 100)
     print("E5 HAMBURG LEAD-LAG RESULTS -- independent H3a/H3b/H3c re-test (#160)")
     print("=" * 100)
-    hdr = (
-        f"{'Hyp':<38} {'Test':<28} {'N':<6} {'Value':<10} {'p-val':<10} "
-        f"{'Sig':<5} {'ExpDir':<9} {'ActDir':<9} {'Match':<6}"
+    print(
+        f"{'Hyp':<34} {'Test':<24} {'N':<6} {'Value [95% CI]':<26} {'p-val':<10} "
+        f"{'ExpDir':<9} {'Verdict':<16}"
     )
-    print(hdr)
     print("-" * 100)
     for r in results:
-        val_str = _fmt_val(r["stat_val"])
         p_str = f"{r['p']:.4f}" if r.get("p") is not None else "N/A"
-        sig_str = "YES" if r.get("sig") else "NO"
-        match_str = "PASS" if r["dir_match"] else "FAIL"
         print(
-            f"{r['hyp']:<38} {r['test']:<28} {r['n']:<6} {val_str:<10} "
-            f"{p_str:<10} {sig_str:<5} {r['expected_dir']:<9} {r['actual_dir']:<9} {match_str:<6}"
+            f"{r['hyp']:<34} {r['test']:<24} {r['n']:<6} {_value_str(r):<26} "
+            f"{p_str:<10} {r['expected_dir']:<9} {r['verdict']:<16}"
         )
+    print(f"\nVerdicts: {summarise([r['verdict'] for r in results])}")
+    for line in _direction_lines(results):
+        print(line)
 
 
 def _write_results_table(f, results: list[dict], with_clusters: bool = False) -> None:
-    if with_clusters:
-        f.write(
-            "| Hyp | Test | N | N clusters | Value | p-value | Sig | Expected Dir | "
-            "Actual Dir | Match | ewr_composite_t coef (p) |\n"
+    attach_verdicts(results)
+    f.write(
+        "| Hyp | Test | N | N clusters | Value [95% CI] | p-value | Expected dir | Verdict |"
+        + (" ewr_composite_t coef (p) |" if with_clusters else "")
+        + "\n"
+    )
+    f.write("|---|---|---|---|---|---|---|---|" + ("---|" if with_clusters else "") + "\n")
+    for r in results:
+        p_str = f"{r['p']:.4f}" if r.get("p") is not None else "N/A"
+        row = (
+            f"| {r['hyp']} | {r['test']} | {r['n']} | {r.get('n_clusters', 'N/A')} | "
+            f"{_value_str(r)} | {p_str} | {r['expected_dir']} | {r['verdict']} |"
         )
-        f.write("|---|---|---|---|---|---|---|---|---|---|---|\n")
-        for r in results:
-            val_str = _fmt_val(r["stat_val"])
-            p_str = f"{r['p']:.4f}" if r.get("p") is not None else "N/A"
-            sig_str = "Yes" if r.get("sig") else "No"
-            match_str = "PASS" if r["dir_match"] else "FAIL"
-            z_str = (
+        if with_clusters:
+            z = (
                 f"{_fmt_val(r.get('coef_z_ewr'))} (p={_fmt_val(r.get('p_z_ewr'))})"
                 if r.get("coef_z_ewr") is not None
                 else "N/A"
             )
-            f.write(
-                f"| {r['hyp']} | {r['test']} | {r['n']} | {r.get('n_clusters', 'N/A')} | "
-                f"{val_str} | {p_str} | {sig_str} | {r['expected_dir']} | {r['actual_dir']} | "
-                f"{match_str} | {z_str} |\n"
-            )
-    else:
-        f.write("| Hyp | Test | N | Value | p-value | Sig | Expected Dir | Actual Dir | Match |\n")
-        f.write("|---|---|---|---|---|---|---|---|---|\n")
-        for r in results:
-            val_str = _fmt_val(r["stat_val"])
-            p_str = f"{r['p']:.4f}" if r.get("p") is not None else "N/A"
-            sig_str = "Yes" if r.get("sig") else "No"
-            match_str = "PASS" if r["dir_match"] else "FAIL"
-            f.write(
-                f"| {r['hyp']} | {r['test']} | {r['n']} | {val_str} | {p_str} | {sig_str} | "
-                f"{r['expected_dir']} | {r['actual_dir']} | {match_str} |\n"
-            )
+            row += f" {z} |"
+        f.write(row + "\n")
 
 
 def write_findings(
@@ -725,15 +748,15 @@ def write_findings(
 
     today = datetime.date.today().isoformat()
 
-    n_pass = sum(1 for r in results_bivariate if r["dir_match"])
-    n_sig = sum(1 for r in results_bivariate if r.get("sig"))
+    attach_verdicts(results_bivariate)
+    attach_verdicts(results_d4_clustered)
     n_clusters_seen = ", ".join(
         str(v)
         for v in sorted({r.get("n_clusters") for r in results_d4_clustered if r.get("n_clusters")})
     )
 
     OUTPUT_MD.parent.mkdir(parents=True, exist_ok=True)
-    with open(OUTPUT_MD, "w") as f:
+    with open(OUTPUT_MD, "w", encoding="utf-8") as f:
         f.write(
             "# E5 Hamburg Lead-Lag Findings -- Independent H3a/H3b/H3c Re-Test (H-C3, #160)\n\n"
         )
@@ -748,16 +771,17 @@ def write_findings(
         f.write(f"- **Date:** {today}\n")
         f.write(f"- **Data:** int_hamburg_lead_lag (H-C3 #160), n={len(df_ll)} rows\n")
         f.write(
-            "- **Method:** Spearman rank correlation (bivariate, mirrors "
-            "e1_regressions.py's test_h3 exactly) + OLS with Stadtteil-clustered "
-            "standard errors (D4-covariate specification only, #129)\n\n"
+            "- **Method:** cross-lagged partial Spearman with a Stadtteil cluster-bootstrap "
+            "95% CI for H3a/H3b (shared with e1, `analysis/directional_inference.py`); "
+            "Spearman for H3c; OLS with Stadtteil-clustered SEs for D4-controlled "
+            "co-movement (#129). A result needs significance to count -- see Scoring.\n\n"
         )
 
         f.write("## Do NOT assume Berlin's finding\n\n")
         f.write(
             "This is an **independent re-test**, not a confirmation exercise. The Berlin thesis "
-            "(p. 91) found H3b (status change leads POI change) CONFIRMED and H3a (POI change "
-            "leads status change) REJECTED. This script does not assume, expect, or force that "
+            "(Tabelle 6-16, PDF p. 91) found H3b (status change leads POI change) TENTATIVELY "
+            "supported ('eher bestaetigt') and H3a (POI change leads status change) REJECTED. This script does not assume, expect, or force that "
             "outcome to replicate on Hamburg -- whatever direction/significance is observed below "
             "is reported as-is (#160 explicit scope note; #80 precedent for honest null/negative "
             "findings).\n\n"
@@ -777,34 +801,29 @@ def write_findings(
             f.write(f"- **{key}**: {hyp['citation']}\n")
         f.write("\n")
 
-        f.write("## Section 1: Bivariate Spearman (mirrors e1_regressions.py's test_h3 method)\n\n")
+        f.write("## Scoring\n\n")
         f.write(
-            "> No D4 (ewr_composite_t) covariate in this section -- these are pure two-variable "
-            "rank correlations, same as Berlin's own test_h3. Stadtteil clustering (#129) does "
-            "NOT apply here (see module docstring scope note); it applies only to Section 2.\n\n"
+            "SUPPORTED = significant in the expected direction; CONTRADICTED = significant, "
+            "opposite direction; NOT SIGNIFICANT = the data cannot tell; NO DATA = untestable. "
+            "Significance = the 95% cluster-bootstrap CI excludes 0 (cross-lagged rows), else "
+            "p < 0.05. Before 2026-10-26 a row 'passed' whenever its sign matched -- six "
+            "non-significant Section 2 coefficients scored 6/6.\n\n"
         )
+        f.write("## Section 1: Cross-lagged H3a/H3b (directional) + H3c\n\n")
         f.write(
-            "> **H3a/H3b are identical by construction in this section.** H3a computes "
-            "`Spearman(delta_dyn_t, delta_status)` and H3b computes `Spearman(delta_status, "
-            "delta_dyn_t)` -- the same two vectors with swapped argument order. Spearman "
-            "correlation is symmetric under argument swap, so H3a and H3b return IDENTICAL "
-            "rho/p/n at every lag_k below (inherited from e1_regressions.py's test_h3, which has "
-            "the same property on Berlin's MSS data; see that function's docstring and "
-            "B7-geo-signoff.md Concern 2). This is a **co-movement test across the lag window, "
-            "not a strict temporal-precedence test** -- a symmetric bivariate statistic cannot "
-            'distinguish "POI leads status" (H3a) from "status leads POI" (H3b); it can only '
-            "say the two series co-move. **Section 2 below (the D4-controlled OLS with "
-            "Stadtteil-clustered SEs) is the test that actually distinguishes the two directional "
-            "hypotheses** -- H3a and H3b there are different regression specifications (different "
-            "dependent variables) and its coefficients are genuinely non-symmetric.\n\n"
+            "> H3a/H3b: ordered, non-overlapping windows around each pivot year; each direction "
+            "controls for the outcome's own prior change and the D4 baseline LEVEL. CIs: "
+            "cluster bootstrap over Stadtteile (#129). This replaces the pre-2026-10-26 "
+            "symmetric Spearman pair, which returned identical numbers for H3a and H3b.\n\n"
         )
         _write_results_table(f, results_bivariate)
-        f.write(
-            f"\n**Directional agreement (bivariate): {n_pass}/{len(results_bivariate)}. Significant: {n_sig}/{len(results_bivariate)}.**\n\n"
-        )
+        f.write(f"\n**Verdicts:** {summarise([r['verdict'] for r in results_bivariate])}\n\n")
+        direction = _direction_lines(results_bivariate)
+        if direction:
+            f.write("**Direction:**\n\n" + "\n".join(direction) + "\n\n")
 
         f.write(
-            "## Section 2: D4-controlled OLS, Stadtteil-clustered standard errors (#129 binding)\n\n"
+            "## Section 2: D4-controlled co-movement, Stadtteil-clustered OLS (#129) -- NOT directional\n\n"
         )
         f.write(
             "> ewr_composite_t (D4 baseline LEVEL, index-definition.md §4.3) enters as a covariate "
@@ -813,15 +832,13 @@ def write_findings(
             "(`run_ols_clustered`, CR1 sandwich estimator, Cameron, Gelbach & Miller 2011; "
             "Cameron & Miller 2015). Effective D4 sample size is Stadtteil count "
             f"(observed: {n_clusters_seen} distinct clusters per lag_k below; "
-            "~104-105 Stadtteile expected per ADR-0014), not Gebiet (row) count.\n\n"
+            "~104-105 Stadtteile expected per ADR-0014), not Gebiet (row) count. **Both specs "
+            "regress the same same-window pair, once in each orientation -- a co-movement "
+            "measure, not a direction test** (it was mislabelled as directional before "
+            "2026-10-26).\n\n"
         )
         _write_results_table(f, results_d4_clustered, with_clusters=True)
-        n_pass_d4 = sum(1 for r in results_d4_clustered if r["dir_match"])
-        n_sig_d4 = sum(1 for r in results_d4_clustered if r.get("sig"))
-        f.write(
-            f"\n**Directional agreement (D4-controlled, clustered): {n_pass_d4}/{len(results_d4_clustered)}. "
-            f"Significant: {n_sig_d4}/{len(results_d4_clustered)}.**\n\n"
-        )
+        f.write(f"\n**Verdicts:** {summarise([r['verdict'] for r in results_d4_clustered])}\n\n")
 
         # #330 durability fix (D330-C1 / E-C1): emit the self-correction record from
         # the generator itself so it survives every `uv run poe analysis` re-run --
@@ -830,32 +847,26 @@ def write_findings(
         f.write("\n")
 
         f.write("## Overall scorecard\n\n")
-        all_results = results_bivariate + results_d4_clustered
-        n_pass_all = sum(1 for r in all_results if r["dir_match"])
-        n_sig_all = sum(1 for r in all_results if r.get("sig"))
+        directional = [r for r in results_bivariate if r["hyp"] in ("H3a", "H3b")]
         f.write(
-            f"**Total directional agreement: {n_pass_all}/{len(all_results)}. "
-            f"Significant: {n_sig_all}/{len(all_results)}.**\n\n"
+            f"- **Directional (cross-lagged H3a/H3b):** "
+            f"{summarise([r['verdict'] for r in directional])}\n"
+            f"- **Contemporaneous (H3c):** "
+            f"{summarise([r['verdict'] for r in results_bivariate if r['hyp'] == 'H3c'])}\n"
+            f"- **D4-controlled co-movement (Section 2):** "
+            f"{summarise([r['verdict'] for r in results_d4_clustered])}\n\n"
         )
-        # D330-C4: composition caveat -- do not let "n/{len(all_results)}" be read as
-        # "{len(all_results)} lead-lag tests"; Section 1 is symmetric co-movement,
-        # Section 2 is the only genuinely directional D4-controlled test.
         f.write(
-            f"**Composition caveat:** this {len(all_results)}-test count mixes two different kinds "
-            f"of test -- {len(results_bivariate)} of them are the symmetric bivariate co-movement "
-            "tests from Section 1 (which, per the caveat above Section 1's table, cannot by "
-            f"construction distinguish H3a from H3b), and only {len(results_d4_clustered)} are the "
-            f"genuinely directional D4-controlled tests from Section 2. Do not cite "
-            f'"{n_pass_all}/{len(all_results)}" as "{len(all_results)} lead-lag tests" -- read it as '
-            f"{len(results_bivariate)} co-movement tests plus {len(results_d4_clustered)} directional "
-            "tests.\n\n"
+            "Only the cross-lagged rows speak to H3a vs H3b; the other two kinds measure "
+            "association, not order. Do not add them into one directional count.\n\n"
         )
 
         f.write("## Comparison to Berlin (int_mss_lead_lag / e1_regressions.py test_h3)\n\n")
         f.write(
-            "Berlin (thesis p. 91, replicated directionally by e1_regressions.py): H3b "
-            "(status-leads-POI) CONFIRMED, H3a (POI-leads-status) REJECTED. See Section 1 above "
-            "for whether Hamburg's bivariate H3a/H3b directions and significance match or diverge "
+            "Berlin thesis (Tabelle 6-16, PDF p. 91): H3b (status-leads-POI) TENTATIVELY "
+            "supported, H3a (POI-leads-status) REJECTED. Berlin's own cross-lagged re-test is in "
+            "docs/epic-e/E1-regression-findings.md. See Section 1 above for whether Hamburg's "
+            "cross-lagged H3a/H3b directions and significance match or diverge "
             "from this -- read alongside the cadence caveat (Hamburg lag_k is a different "
             "real-year window than Berlin's lag_k at the same integer value).\n\n"
         )
@@ -962,11 +973,7 @@ def main() -> None:
     for r in results_d4_clustered:
         print(f"  {r['hyp']} {r['test']}: n={r['n']}, n_clusters={r.get('n_clusters')}")
 
-    print_results(results_bivariate)
-    n_pass = sum(1 for r in results_bivariate if r["dir_match"])
-    n_sig = sum(1 for r in results_bivariate if r.get("sig"))
-    print(f"\nBivariate directional agreement: {n_pass}/{len(results_bivariate)}")
-    print(f"Bivariate significant at p<0.05: {n_sig}/{len(results_bivariate)}")
+    print_results(results_bivariate)  # prints verdicts + direction itself
 
     print_results(results_d4_clustered)
 

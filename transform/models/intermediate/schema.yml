@@ -1228,6 +1228,11 @@ models:
       - name: city_code
         description: City identifier (ADR-0005).
         data_tests:
+          # Leak guard (2026-10-26): this Berlin adapter must only ever hold Berlin
+          # rows -- both the legacy 'berlin' value and canonical 'BER' (ADR-0005).
+          - accepted_values:
+              arguments:
+                values: ["berlin", "BER"]
 
           - not_null:
               config:
@@ -1382,11 +1387,17 @@ models:
           perimeter, bbox spillover into neighbouring states).
         data_tests:
 
+          # Hamburg-specific threshold (2026-10-27). The 0.12 used for Berlin
+          # (measured 9.6%) was copied here, but Hamburg's rectangular bbox spills
+          # into Schleswig-Holstein / Lower Saxony: measured 13.7-20.6% null per
+          # year, 2008-2026, on the corrected extraction -- a structural ~18%, so the
+          # test warned on every year. 0.25 leaves headroom while still catching a
+          # real regression (a broken spatial join pushes this toward 100%).
           - assert_null_rate_below:
               arguments:
                 column_name: area_code
                 partition_by: snapshot_year
-                max_null_fraction: 0.12
+                max_null_fraction: 0.25
               config:
                 severity: warn
                 where: "snapshot_year is not null"
@@ -3348,7 +3359,9 @@ models:
             where: "brw_weighted_avg_eur_m2 is not null"
       - dbt_utils.expression_is_true:
           arguments:
-            expression: "brw_residential_coverage_frac <= 1.05"
+            # Tightened 1.05 -> 1.0001 (2026-10-27): coverage is now the area of the
+            # UNION of zone pieces, so it cannot exceed 1 except by float noise.
+            expression: "brw_residential_coverage_frac <= 1.0001"
           config:
             where: "brw_residential_coverage_frac is not null"
             severity: warn
@@ -3403,14 +3416,15 @@ models:
           industrial/airport PLR). Never 0 — zero EUR/m² is a false statement (geo cond 4).
       - name: n_brw_zones
         description: >
-          Count of distinct residential BRW zones contributing to this PLR's weighted mean.
+          Count of distinct residential BRW zone POLYGONS contributing to this PLR's
+          weighted mean (stacked records on one polygon count once since 2026-10-27).
           Always >= 1 when brw_weighted_avg_eur_m2 is not null.
       - name: brw_residential_coverage_frac
         description: >
           Fraction of the PLR area covered by residential (nutzung LIKE 'W%') BRW zones:
-          SUM(intersection_area_m2) / ST_Area(plr_geom) per PLR.
-          Expected range: (0, 1]. Values > 1.0 indicate topological artefacts post-makevalid
-          — flag in QA; do not treat > 1.0 as valid coverage. A warn-severity test guards this.
+          AREA(UNION of zone pieces) / ST_Area(plr_geom) per PLR. Range (0, 1] by
+          construction (was a SUM of pieces before 2026-10-27, which double-counted
+          overlapping zones up to 2.0). A warn-severity test guards <= 1.0001.
           NULL when no W% BRW zones overlap this PLR (pure park/water/industrial).
           Consumers: use to identify where the BRW signal is thin or absent. Zero-residential
           PLRs yield NULL brw_weighted_avg_eur_m2 and NULL here — transparent, not silently 0.
