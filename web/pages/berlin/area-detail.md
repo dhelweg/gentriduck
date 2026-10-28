@@ -15,6 +15,13 @@ sidebar_position: 3
   see docs/epic-i/I2-route-map.md). sidebar_position renumbered 13 -> 3 (scoped to this page's
   siblings under pages/berlin/, not the whole site).
 
+  #353 (domain spot-check R2, docs/epic-g/353-domain-spotcheck.md): the sort key has only three
+  values (negative/neutral/positive Dynamik) with many ties, and gentrification-stage areas all
+  read `positive`, so the copy no longer calls the first row "the highest gentrification-pressure
+  neighbourhood"; it says what the order is. A deterministic tie-break (area_name, area_code) is
+  added -- the spotlight previously depended on DuckDB row order within the tie. The ordering
+  rule itself is unchanged (#358 decides it).
+
   I3 (#220) rationalization decision, area-detail vs. area/index (ticket's "reconcile ... or
   document why not merging them"): this page (coarse Bezirk browse + spotlight) is the primary
   browse entry; `pages/berlin/area/index.md` (the crawlable full-text-search table of all 542
@@ -49,7 +56,7 @@ sidebar_position: 3
   unchanged -- it is not duplicated elsewhere (I21-ia scoping §3).
 -->
 
-<Hero compact eyebrow="Chapter 3 — The Evidence" title="Area detail — one neighbourhood, full picture" lede="Pick a district to compare its neighbourhoods, then see a headline snapshot of the one currently under the most gentrification pressure, with a link to its full profile." />
+<Hero compact eyebrow="Chapter 3 — The Evidence" title="Area detail — one neighbourhood, full picture" lede="Pick a district to compare its neighbourhoods, then see a headline snapshot of one neighbourhood with the district's strongest pressure reading, with a link to its full profile." />
 
 For the citywide picture, see the [maps page](/berlin/maps) or the
 [time-series view](/berlin/time-series). If you already know which neighbourhood you want, the
@@ -97,11 +104,16 @@ where variant = 'live_data' and area_level = 'plr' and city_code = 'BER'
       where variant = 'live_data' and area_level = 'plr'
   )
   and substr(area_code, 1, 2) = '${inputs.bezirk.value}'
-order by (dynamism_class_bi = 'negative') desc, dynamism_index desc
+order by (dynamism_class_bi = 'negative') desc, dynamism_index desc, area_name, area_code
 ```
 
-Every neighbourhood in the selected district, highest gentrification pressure first. Click any row
-to open its exact page; the top-ranked one is also profiled in the spotlight below.
+Every neighbourhood in the selected district, ordered by its MSS Dynamik reading: negative first
+(the reading this site treats as higher pressure), then neutral, then positive. Neighbourhoods
+with the same reading are listed alphabetically, so order within a group means nothing. This
+order uses the Dynamik reading alone, not the stage: neighbourhoods in a gentrification stage
+(active-gentrification, pioneer-signal, improving-vulnerable, consolidation-pressure) all have a
+positive reading by definition, so they appear further down. Click any row to open its exact page;
+the first-listed one is also profiled in the spotlight below.
 
 <DataTable data={browse} rows=10 rowShading=true link=area_link>
     <Column id=area_name title="Neighbourhood (PLR)"/>
@@ -119,7 +131,7 @@ where variant = 'live_data' and area_level = 'plr' and city_code = 'BER'
       where variant = 'live_data' and area_level = 'plr'
   )
   and substr(area_code, 1, 2) = '${inputs.bezirk.value}'
-order by (dynamism_class_bi = 'negative') desc, dynamism_index desc
+order by (dynamism_class_bi = 'negative') desc, dynamism_index desc, area_name, area_code
 limit 1
 ```
 
@@ -151,7 +163,7 @@ where g.variant = 'live_data' and g.area_level = 'plr' and g.city_code = 'BER'
             where variant = 'live_data' and area_level = 'plr'
         )
         and substr(area_code, 1, 2) = '${inputs.bezirk.value}'
-      order by (dynamism_class_bi = 'negative') desc, dynamism_index desc
+      order by (dynamism_class_bi = 'negative') desc, dynamism_index desc, area_name, area_code
       limit 1
   )
 ```
@@ -172,12 +184,13 @@ where g.variant = 'live_data' and g.area_level = 'plr' and g.city_code = 'BER'
      `/berlin/area/[code]` template and failed on (#323). -->
 <p>
 {#if chosen[0]?.area_code}
-{chosen[0].area_name} is currently the highest gentrification-pressure neighbourhood in the
-selected district. Its full profile — social-status trajectory, commercial-mix development,
+{chosen[0].area_name} is listed first: it is one of the neighbourhoods in this district with a
+negative Dynamik reading (this site's higher-pressure reading) and comes first alphabetically among
+them, which does not mean it is under more pressure than the others in that group. Its full profile — social-status trajectory, commercial-mix development,
 Offering Advantage, demographics, amenities, and land value/rent — is on its
 <a href="/berlin/area/{chosen[0].area_code}">canonical area page</a>.
 {:else}
-Pick a district above to see its highest-pressure neighbourhood — each one also has a full profile in the <a href="/berlin/area">neighbourhood list</a>.
+Pick a district above to see a snapshot of its first-listed neighbourhood — each one also has a full profile in the <a href="/berlin/area">neighbourhood list</a>.
 {/if}
 </p>
 

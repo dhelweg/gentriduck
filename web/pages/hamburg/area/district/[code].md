@@ -200,7 +200,7 @@ from totals as t cross join top cross join advanced as a
         const majorityClause = (topShare != null && topShare > 0.5)
           ? `<b>${mssMix.top_stage}</b> is the only stage holding a majority (${Math.round(topShare * 100)}%)`
           : 'no single stage holds a majority';
-        return `<b>${nAdvanced}</b> of <b>${nTotal}</b> Gebiete here are classified <b>active-gentrification</b> or <b>pioneer-signal</b>; ${majorityClause} — a distribution across this district's own Gebiete, never a single re-scored gentrification-index value for the district itself.`;
+        return `<b>${nAdvanced}</b> of <b>${nTotal}</b> Gebiete with a current stage here are classified <b>active-gentrification</b> or <b>pioneer-signal</b>; ${majorityClause} — a distribution across this district's own Gebiete, never a single re-scored gentrification-index value for the district itself.`;
       })();
 
   $: trajMix = trajectory_mix_summary?.[0];
@@ -360,7 +360,7 @@ than a real absence. See the [Hamburg POI map](/hamburg/poi-map) for the per-Geb
 
 ### Offering Advantage across the area hierarchy
 
-<NotYetPublished what="This district's Offering Advantage roll-up (Berlin's district pages show one per domain)">
+<NotYetPublished cityLabel="Hamburg" cityHub="/hamburg" what="This district's Offering Advantage roll-up (Berlin's district pages show one per domain)">
   The roll-up is computed for Hamburg in the data layer, but the site's data source keeps only
   Berlin's rows, and the scale-sensitivity (MAUP) disclosure that must accompany a roll-up has only
   been checked for Berlin. Each Gebiet's own Offering Advantage profile is on its page.
@@ -368,14 +368,14 @@ than a real absence. See the [Hamburg POI map](/hamburg/poi-map) for the per-Geb
 
 ## Within-group dominance
 
-<NotYetPublished what="Within-group dominance for this district's Gebiete">
+<NotYetPublished cityLabel="Hamburg" cityHub="/hamburg" what="Within-group dominance for this district's Gebiete">
   The underlying mart carries Hamburg rows, but the site's data source deliberately restricts it to
   Berlin, and no sign-off has yet reviewed a Hamburg public view of it.
 </NotYetPublished>
 
 ## People & structure
 
-<NotYetPublished what="Population and composition sums for this district">
+<NotYetPublished cityLabel="Hamburg" cityHub="/hamburg" what="Population and composition sums for this district">
   Hamburg's population-register figures do exist at district level, but the Hamburg demographics
   sign-off (#313) sets conditions for a Hamburg web page of its own (wording, no ranking, how merged
   Stadtteile and missing values are explained), and that page has not been built or reviewed yet.
@@ -383,7 +383,7 @@ than a real absence. See the [Hamburg POI map](/hamburg/poi-map) for the per-Geb
 
 ## Amenities & everyday infrastructure
 
-<NotYetPublished what="An amenities table for the district as a whole">
+<NotYetPublished cityLabel="Hamburg" cityHub="/hamburg" what="An amenities table for the district as a whole">
   This district's totals already appear as the comparison column on each of its Stadtteil and
   Gebiet pages. Berlin's district pages have no amenities section either; a district-level version
   would be new reader-facing copy, which the amenities sign-off asks to have re-checked first.
@@ -391,7 +391,7 @@ than a real absence. See the [Hamburg POI map](/hamburg/poi-map) for the per-Geb
 
 ## Land value & estimated rent
 
-<NotYetPublished what="Land value and estimated rent for this district">
+<NotYetPublished cityLabel="Hamburg" cityHub="/hamburg" what="Land value and estimated rent for this district">
   Hamburg has no land-value (Bodenrichtwert) series on this site. Its rent signal is narrower in kind
   than Berlin's (Wohnlage tier composition plus a modelled Mietenspiegel rent, at Stadtteil level,
   current state only), and its sign-off (#303) requires a Hamburg-specific methodology disclosure
@@ -469,7 +469,7 @@ source-provided district attribute on its Stadtteil geodata — published withou
 
 See the [Hamburg data hub](/hamburg) for what's published today, [Hamburg's map](/hamburg/maps)
 (switch the area level to Bezirk for this district's stage mix on the map),
-[browse by district](/hamburg/area-detail) for this district's Gebiete ranked by pressure, or
+[browse by district](/hamburg/area-detail) for this district's Gebiete ordered by their pressure reading, or
 [the area-hierarchy reference](/reference/area-hierarchy) for how Hamburg's small-area geography is
 structured.
 

@@ -24,7 +24,8 @@ sidebar_position: 1
     follow-up in docs/epic-g/353-hamburg-berlin-parity-audit.md, not changed there.
 
   What it does NOT show, stated on the page: Berlin's citywide median-status line. That line
-  reads fct_gentrification_change, which is Berlin-only by design (H3 domain sign-off, scope-guard
+  reads fct_gentrification_change, which is kept Berlin-only until Hamburg has its own sign-off for
+  it (H3 domain sign-off, scope-guard
   condition 4), and #314's sign-off asks for any long-run Hamburg view to be a separately labelled
   product rather than built from the 2019-2025 labels. No new statistic, weight or method here.
 -->
@@ -48,9 +49,9 @@ combined with this one.
 
 ## Hamburg, citywide: social status over time
 
-<NotYetPublished what="A citywide status-over-time line (Berlin's page opens with one)">
-  Berlin's line reads <code>fct_gentrification_change</code>, which is Berlin-only by design (the
-  Hamburg admission sign-off's scope-guard condition 4). Hamburg's 13 annual editions are not drawn
+<NotYetPublished cityLabel="Hamburg" cityHub="/hamburg" what="A citywide status-over-time line (Berlin's page opens with one)">
+  Berlin's line reads <code>fct_gentrification_change</code>, which is kept Berlin-only until Hamburg
+  has its own sign-off for it (the Hamburg admission sign-off's scope-guard condition 4). Hamburg's 13 annual editions are not drawn
   as a long-run series anywhere on this site yet: the Hamburg trajectory sign-off (#314) asks for
   any long-run Hamburg view to be a separately labelled product, not built from the 2019–2025
   labels below. The current stage of every Gebiet is on <a href="/hamburg/maps">Hamburg's map</a>.

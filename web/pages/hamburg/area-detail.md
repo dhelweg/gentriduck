@@ -27,11 +27,16 @@ sidebar_position: 3
 
   Crawl note (same as Berlin's page): the browse table only renders the default district's rows at
   build time; every Gebiet page is still built via /hamburg/area and the Stadtteil pages' tables.
+  #353 domain spot-check R2 (docs/epic-g/353-domain-spotcheck.md): the sort key has only three
+  values with many ties (3-13 Gebiete per district tie at `negative`), and every gentrification-
+  stage Gebiet reads `positive`, so the copy says what the order is instead of calling the first
+  row "the highest gentrification-pressure Gebiet". The ordering rule is unchanged (#358 decides
+  it); the existing area_name tie-break keeps it deterministic.
   The spotlight link is value-guarded (#255/#323 precedent) so an empty build-time result can never
   render a literal "/hamburg/area/undefined" link.
 -->
 
-<Hero compact eyebrow="Chapter 3 — The Evidence" title="Area detail — one Gebiet, full picture" lede="Pick a district to compare its statistische Gebiete, then see a headline snapshot of the one currently under the most gentrification pressure, with a link to its full profile." />
+<Hero compact eyebrow="Chapter 3 — The Evidence" title="Area detail — one Gebiet, full picture" lede="Pick a district to compare its statistische Gebiete, then see a headline snapshot of one Gebiet with the district's strongest pressure reading, with a link to its full profile." />
 
 For the citywide picture, see the [maps page](/hamburg/maps) or the
 [time-series view](/hamburg/time-series). If you already know which Gebiet you want, the
@@ -89,8 +94,13 @@ where gi.variant = 'live_data' and gi.area_level = 'subarea_l2' and gi.city_code
 order by (gi.dynamism_class_bi = 'negative') desc, gi.dynamism_index desc, gi.area_name
 ```
 
-Every Gebiet with a current stage in the selected district, highest gentrification pressure first.
-Click any row to open its exact page; the top-ranked one is also profiled in the spotlight below.
+Every Gebiet with a current stage in the selected district, ordered by its Sozialmonitoring Dynamik
+reading: negative first (the reading this site treats as higher pressure), then neutral, then
+positive. Gebiete with the same reading are listed alphabetically, so order within a group means
+nothing. This order uses the Dynamik reading alone, not the stage: Gebiete in a gentrification
+stage (active-gentrification, pioneer-signal, improving-vulnerable, consolidation-pressure) all
+have a positive reading by definition, so they appear further down. Click any row to open its
+exact page; the first-listed one is also profiled in the spotlight below.
 
 <DataTable data={browse} rows=10 rowShading=true search=true link=area_link>
     <Column id=area_name title="Statistisches Gebiet"/>
@@ -153,11 +163,12 @@ left join gentriduck_marts.fct_gentrification_trajectory as t
 <!-- #353: value-guarded link (#255/#323 precedent, see pages/berlin/area-detail.md's comment). -->
 <p>
 {#if spotlight[0]?.area_code}
-{spotlight[0].area_name} is currently the highest gentrification-pressure Gebiet in the selected
-district. Its full profile — stage, social-status trajectory, commercial-mix development, Offering
+{spotlight[0].area_name} is listed first: it is one of the Gebiete in this district with a negative
+Dynamik reading (this site's higher-pressure reading) and comes first alphabetically among them,
+which does not mean it is under more pressure than the others in that group. Its full profile — stage, social-status trajectory, commercial-mix development, Offering
 Advantage, and amenities — is on its <a href="/hamburg/area/{spotlight[0].area_code}">canonical area page</a>.
 {:else}
-Pick a district above to see its highest-pressure Gebiet — each one also has a full profile in the <a href="/hamburg/area">Gebiet list</a>.
+Pick a district above to see a snapshot of its first-listed Gebiet — each one also has a full profile in the <a href="/hamburg/area">Gebiet list</a>.
 {/if}
 </p>
 

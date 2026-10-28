@@ -278,11 +278,15 @@ where city_code = 'HH' and area_level = 'subarea_l2'
   // #353: plain-language stage line for "at a glance" -- the stage label is the same plain label
   // /hamburg/maps shows for this Gebiet; the "not directly equivalent" clause is H3 domain
   // condition 1(iv). No portrait wording beyond that (see this page's header comment).
+  // #353 domain spot-check R1 (docs/epic-g/353-domain-spotcheck.md): no pressure-trend clause here.
+  // Every gentrification-signal stage has Dynamik = positive by the typology's definition, which
+  // the site's legend reads as LOWER pressure, so "Active gentrification, with a positive pressure
+  // trend" contradicted itself.
   // The link is a literal `href="/methodology"`: Evidence's base-path preprocessor rewrites literal
   // hrefs in +page.md files (script included), so it must not carry `${base}` itself.
   $: cur = current_stage?.[0];
   $: stageSentence = cur && cur.stage_label
-    ? `In Hamburg's latest Sozialmonitoring edition on this site (${String(cur.period_yyyymm).slice(0, 4)}), this Gebiet is in the stage <b>${cur.stage_label}</b>, with a <b>${cur.pressure_trend}</b> pressure trend. This is a Hamburg-coded stage: it is <b>not directly equivalent</b> to a Berlin stage of the same name (Hamburg's Dynamik window is 3 years, Berlin's 2; see <a href="/methodology">methodology §6</a>).`
+    ? `In Hamburg's latest Sozialmonitoring edition on this site (${String(cur.period_yyyymm).slice(0, 4)}), this Gebiet is classified in the stage <b>${cur.stage_label}</b>. This is a Hamburg-coded stage: it is <b>not directly equivalent</b> to a Berlin stage of the same name (Hamburg measures Dynamik over 3 years, Berlin over 2, so the same name can mark a different speed of change; see <a href="/methodology">methodology §6</a>).`
     : 'No current Sozialmonitoring stage is on record for this Gebiet in the latest Hamburg edition on this site.';
 
   // #317: pace/comparison sentence for the "Social status & trajectory" section, computed the same
@@ -374,7 +378,7 @@ where city_code = 'HH' and area_level = 'subarea_l2'
 <AreaBreadcrumbs {crumbs} />
 <PageTitle title={pageTitle} />
 
-<Hero compact eyebrow={heroEyebrow} title="{nameLabel}" lede="Stage, social-status trajectory, commercial mix, Offering Advantage, and everyday amenities for one Hamburg statistisches Gebiet — Hamburg's finest published small-area grain, the same scale as a Berlin Planungsraum." />
+<Hero compact eyebrow={heroEyebrow} title="{nameLabel}" lede="Stage, social-status trajectory, commercial mix, Offering Advantage, and everyday amenities for one Hamburg statistisches Gebiet — Hamburg's finest published small-area grain. It plays the role a Planungsraum plays for Berlin on this site, but a Gebiet is typically smaller." />
 
 <!-- #302 (I21-h): real "Up:" link, same #255-precedent value-guarded static-prefix-href pattern
      as pages/berlin/area/[code].md's own Up-link (see that page's comment for the "undefined"-
@@ -412,7 +416,8 @@ where city_code = 'HH' and area_level = 'subarea_l2'
 <HamburgTrajectoryNote subject="this Gebiet" />
 
 {#if cur && cur.stage}
-<BigValue data={current_stage} value=stage title="Current stage"/>
+<!-- #353 review: the plain stage label, same wording as the sentence above and /hamburg/maps. -->
+<BigValue data={current_stage} value=stage_label title="Current stage"/>
 {:else}
 <Alert status="info">
   No current Sozialmonitoring stage is on record for this Gebiet in the latest Hamburg edition on
@@ -436,9 +441,9 @@ Trajectory labels are explained on the [methodology page](/methodology) — an "
 not by itself mean the change was good for existing residents; rising status can reflect
 displacement as easily as incumbent social mobility.
 
-<NotYetPublished what="A status-over-time chart (Berlin's profile pages draw one, with district and city lines)">
-  Berlin's chart reads <code>fct_gentrification_change</code>, which is Berlin-only by design
-  (H3 sign-off, scope-guard condition 4). Hamburg's 13 annual editions are not charted as a time
+<NotYetPublished cityLabel="Hamburg" cityHub="/hamburg" what="A status-over-time chart (Berlin's profile pages draw one, with district and city lines)">
+  Berlin's chart reads <code>fct_gentrification_change</code>, which is kept Berlin-only
+  until Hamburg has its own sign-off for it (H3 sign-off, scope-guard condition 4). Hamburg's 13 annual editions are not charted as a time
   series anywhere on this site yet: the Hamburg trajectory sign-off (#314) asks for any long-run
   Hamburg view to be a separately labelled product, not a reuse of the 2019–2025 labels above.
 </NotYetPublished>
@@ -635,7 +640,7 @@ computed or reviewed for Hamburg, so only the citywide baseline is drawn here.
 
 ## Within-group dominance
 
-<NotYetPublished what="Within-group dominance (is one business type crowding out the rest of its group?)">
+<NotYetPublished cityLabel="Hamburg" cityHub="/hamburg" what="Within-group dominance (is one business type crowding out the rest of its group?)">
   The underlying mart (<code>mart_poi_dominance</code>) carries Hamburg rows, but the site's data
   source deliberately restricts it to Berlin, and no sign-off has yet reviewed a Hamburg public view
   of it (the dominance ethics conditions, OA-D0 domain sign-off, were checked for Berlin only).
@@ -643,7 +648,7 @@ computed or reviewed for Hamburg, so only the citywide baseline is drawn here.
 
 ## People & structure
 
-<NotYetPublished what="A population and composition table">
+<NotYetPublished cityLabel="Hamburg" cityHub="/hamburg" what="A population and composition table">
   Hamburg's population-register figures are only published at Stadtteil and district level, not
   for single Gebiete (methodology §6, point 3). Even at Stadtteil level, the Hamburg demographics
   sign-off (#313) sets conditions that bind a future Hamburg web page of its own, which has not been
@@ -788,7 +793,7 @@ others, and makes no claim about whether it is a good or bad place to live.
 
 ## Land value & estimated rent
 
-<NotYetPublished what="Land value and estimated rent">
+<NotYetPublished cityLabel="Hamburg" cityHub="/hamburg" what="Land value and estimated rent">
   Hamburg has no land-value (Bodenrichtwert) series on this site at all. Its rent signal is
   narrower in kind than Berlin's (Wohnlage tier composition plus a modelled Mietenspiegel rent, at
   Stadtteil level, current state only), and its sign-off (#303) requires a Hamburg-specific

@@ -214,7 +214,7 @@ from totals as t cross join top cross join advanced as a
         const majorityClause = (topShare != null && topShare > 0.5)
           ? `<b>${mssMix.top_stage}</b> is the only stage holding a majority (${Math.round(topShare * 100)}%)`
           : 'no single stage holds a majority';
-        return `<b>${nAdvanced}</b> of <b>${nTotal}</b> Gebiete here are classified <b>active-gentrification</b> or <b>pioneer-signal</b>; ${majorityClause} — a distribution across this Stadtteil's own Gebiete, never a single re-scored gentrification-index value for the Stadtteil itself.`;
+        return `<b>${nAdvanced}</b> of <b>${nTotal}</b> Gebiete with a current stage here are classified <b>active-gentrification</b> or <b>pioneer-signal</b>; ${majorityClause} — a distribution across this Stadtteil's own Gebiete, never a single re-scored gentrification-index value for the Stadtteil itself.`;
       })();
 
   $: trajMix = trajectory_mix_summary?.[0];
@@ -359,7 +359,7 @@ than a real absence. See the [Hamburg POI map](/hamburg/poi-map) for the per-Geb
 
 ### Offering Advantage across the area hierarchy
 
-<NotYetPublished what="This Stadtteil's Offering Advantage roll-up (Berlin's coarse pages show one per domain)">
+<NotYetPublished cityLabel="Hamburg" cityHub="/hamburg" what="This Stadtteil's Offering Advantage roll-up (Berlin's coarse pages show one per domain)">
   The roll-up is computed for Hamburg in the data layer, but the site's data source keeps only
   Berlin's rows, and the scale-sensitivity (MAUP) disclosure that must accompany a roll-up has only
   been checked for Berlin. Each Gebiet's own Offering Advantage profile is on its page, linked below.
@@ -367,14 +367,14 @@ than a real absence. See the [Hamburg POI map](/hamburg/poi-map) for the per-Geb
 
 ## Within-group dominance
 
-<NotYetPublished what="Within-group dominance for this Stadtteil's Gebiete">
+<NotYetPublished cityLabel="Hamburg" cityHub="/hamburg" what="Within-group dominance for this Stadtteil's Gebiete">
   The underlying mart carries Hamburg rows, but the site's data source deliberately restricts it to
   Berlin, and no sign-off has yet reviewed a Hamburg public view of it.
 </NotYetPublished>
 
 ## People & structure
 
-<NotYetPublished what="Population and composition sums for this Stadtteil">
+<NotYetPublished cityLabel="Hamburg" cityHub="/hamburg" what="Population and composition sums for this Stadtteil">
   Hamburg's population-register figures do exist at Stadtteil level, but the Hamburg demographics
   sign-off (#313) sets conditions for a Hamburg web page of its own (wording, no ranking, how merged
   Stadtteile and missing values are explained), and that page has not been built or reviewed yet.
@@ -515,7 +515,7 @@ others, and makes no claim about whether it is a good or bad place to live.
 
 ## Land value & estimated rent
 
-<NotYetPublished what="Land value and estimated rent for this Stadtteil">
+<NotYetPublished cityLabel="Hamburg" cityHub="/hamburg" what="Land value and estimated rent for this Stadtteil">
   Hamburg has no land-value (Bodenrichtwert) series on this site. Its rent signal is narrower in kind
   than Berlin's (Wohnlage tier composition plus a modelled Mietenspiegel rent, current state only),
   and its sign-off (#303) requires a Hamburg-specific methodology disclosure before any of it is

@@ -132,7 +132,7 @@ where city_code = 'HH' and area_level = 'subarea_l2'
 | Land value & estimated rent (Bodenrichtwert/Mietspiegel) | ✅ | ⚠️ narrower in kind, not missing — `mart_price_rent_dimension` carries Hamburg's Wohnlage tier composition + modelled Mietenspiegel rent (I21-i/#303): no BRW/land-value equivalent, 2-tier not 3-tier Wohnlage, current-state-only. Not shown on any page yet: its sign-off requires a Hamburg-specific methodology disclosure first |
 | Milieuschutz / displacement-zone flag | ✅ | disclosed separately (Hamburg's *soziale Erhaltungsverordnung*, C5/#203) but not yet surfaced as a site page |
 | Named neighbourhoods / district browse | ✅ (542 PLRs, all named) | ⚠️ Hamburg's finest grain (943 Gebiete) has **no official name** in the source data; this site labels each one by its Stadtteil plus an OpenStreetMap neighbourhood name or its code (e.g. "Eimsbüttel · Gebiet 35001"). [District browse](/hamburg/area-detail) and area profiles (district → Stadtteil → Gebiet) publish stage, trajectory, commercial mix and amenities; demographics, within-group dominance and land value are not shown, each page says why |
-| Per-area trajectory / time-series page | ✅ | ⚠️ the 2019–2025 social-status trajectory is on every area page and the [time series](/hamburg/time-series) page (movers, trajectory mix; #314/#317); no citywide long-run status line or per-area status chart, which would need `fct_gentrification_change` (Berlin-only by design, H3 sign-off condition 4) |
+| Per-area trajectory / time-series page | ✅ | ⚠️ the 2019–2025 social-status trajectory is on every area page and the [time series](/hamburg/time-series) page (movers, trajectory mix; #314/#317); no citywide long-run status line or per-area status chart, which would need `fct_gentrification_change` (kept Berlin-only until Hamburg has its own sign-off for it, H3 sign-off condition 4) |
 | Everyday amenities (schools, doctors, transit, most common cuisine; OSM) | ✅ | ✅ on every Gebiet and Stadtteil page (I20) |
 
 ## Where to go next
@@ -150,9 +150,9 @@ where city_code = 'HH' and area_level = 'subarea_l2'
     the Gebiete whose status changed.
   </LinkCard>
   <LinkCard href="/hamburg/area-detail" icon="🏘️" title="Area detail — start here" cta="Browse by district →">
-    The primary way in: browse by district (Bezirk), then read a headline spotlight on that
-    district's highest-pressure Gebiet, with a link to its full profile. Links to
-    <a href="/hamburg/area">the full searchable list</a> if you already know the Gebiet.
+    The primary way in: browse by district (Bezirk), then read a headline spotlight on one Gebiet
+    with that district's strongest pressure reading, with a link to its full profile. If you
+    already know the Gebiet, the full searchable list (next card) is faster.
   </LinkCard>
   <LinkCard href="/hamburg/area" icon="🔍" title="All Gebiete (full list)" cta="Search Gebiete →">
     A searchable table of all statistische Gebiete — a secondary way in for when you already know

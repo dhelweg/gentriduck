@@ -143,7 +143,7 @@ maps, per-neighbourhood profiles, time series, and the commercial-mix data — s
      above — see its own data hub, never a pooled/merged headline (methodology §6's structural
      rule against pooled cross-city comparison). -->
 Gentriduck now also tracks **Hamburg** — admitted 2026-07-18 after its own methodology gate, and
-live since with the same set of views as Berlin: maps, a time series, a district browse,
+live since with the same kinds of views as Berlin: maps, a time series, a district browse,
 per-area profiles, and a POI map. It is a narrower dataset than Berlin's, honestly scoped on its
 own page: the **[Hamburg data hub](/hamburg)**.
 
