@@ -1,6 +1,6 @@
 ---
 title: POI & Offering Advantage map
-sidebar_position: 2
+sidebar_position: 5
 ---
 
 <!--
@@ -28,8 +28,9 @@ sidebar_position: 2
   - #352: the tooltip leads with the Gebiet's derived label (area_name, '<Stadtteil> · <OSM place
     name>' or '<Stadtteil> · Gebiet <code>', joined from dim_area_geometry in poi_map_data). The
     code is a small last line only where the label doesn't already contain it (code_note).
-  - No click-through link -- the /hamburg/area/[code] profile pages exist (I21-g/#301) but this
-    map doesn't link to them; the closing paragraph points to the area-profiles list.
+  - #353 (parity): click-through link added, same as /berlin/poi-map -- clicking a Gebiet opens
+    its /hamburg/area/[code] profile page, which since #353 also shows that Gebiet's
+    OA-by-domain radar.
   - Separate <PolygonMap> instance (#351; formerly <AreaMap>)/route from Berlin's, per the H3-domain-signoff.md structural guard
     (no shared cross-city component instance) -- same principle as pages/hamburg/maps.md.
 -->
@@ -212,7 +213,9 @@ select
     case when b.oa_domain_min_base_flag then null else b.oa_domain_raw end as oa_domain,
     b.density_delta,
     case when b.oa_domain_min_base_flag then null else b.oa_delta_raw end as oa_delta,
-    b.oa_domain_min_base_flag
+    b.oa_domain_min_base_flag,
+    -- #353: basePath-aware click-through, same `${base}`-prefixed column as /berlin/poi-map.
+    '${base}/hamburg/area/' || b.area_code as link
 from base as b
 left join names as n on b.area_code = n.area_code
 where b.snapshot_year = ${inputs.year.value}
@@ -253,13 +256,13 @@ where b.snapshot_year = ${inputs.year.value}
                 : undefined
     }
     title="Hamburg statistisches Gebiet — {inputs.metric.value === 'density' ? 'POI density' : 'Offering Advantage'}, {inputs.domain.value}, {inputs.year.value}{poiView === 'development' ? ' (change vs. previous year)' : ''}"
+    link="link"
     tooltip={areaTooltip}
     emptyMessage="No data for this domain/year combination."
 />
 
-Every Gebiet has its own profile page — find it in the [area profiles list](/hamburg/area)
-(this map doesn't link to it), or see the [Hamburg data hub](/hamburg) for what is and isn't
-published there yet.
+Click a Gebiet on the map to open its profile page, which also shows the Gebiet's full
+OA-by-domain profile as a radar chart.
 
 ---
 

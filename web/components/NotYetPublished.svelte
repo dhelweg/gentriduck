@@ -1,48 +1,52 @@
 <!--
-  I21-g (#301): shared "not yet published for Hamburg" state. Extracted so every section of the
-  Hamburg area-hierarchy scaffold (`/hamburg/area/…`) renders the SAME honest wording instead of
-  five hand-copied Alert blocks drifting apart over time -- same "one source of truth" reasoning as
-  FooterNav.svelte/Hero.svelte (I1, #218).
+  I21-g (#301): shared "not published for Hamburg" state, so every Hamburg area-profile section
+  that cannot show a figure says so in the same words instead of hand-copied Alerts drifting apart
+  (same "one source of truth" reasoning as FooterNav.svelte/Hero.svelte, I1 #218).
 
-  Why this exists instead of a live query that just happens to return empty: this ticket (I21-g,
-  Track 1 of I21 §4) is scoped as structure-only -- no real Hamburg per-area number may render on
-  this route, full stop, even where an underlying mart already has real Hamburg rows (e.g.
-  gentrification_index already publishes Hamburg subarea_l2 stage/status on /hamburg/maps, H3/#237).
-  A live query against that mart here would technically be "correct" today but would make this
-  page's content depend on which marts happen to be populated, rather than on the explicit,
-  separately-gated decision I21-i (#303) is reserved for. Rendering a fixed, honest placeholder
-  instead of a maybe-empty query is the deliberate choice: it can never leak a real number, in this
-  ticket or in any future mart change, until I21-i explicitly flips it.
+  Why a fixed statement and not a live query that happens to return nothing: whether a Hamburg
+  figure may appear on a public page is decided by a methodology sign-off, not by whether a mart
+  happens to carry Hamburg rows. A fixed statement can never leak a number that no sign-off covers,
+  whatever the marts contain.
 
-  Evidence auto-imports any `.svelte` file under `web/components/` (see FooterNav.svelte's header
-  comment for the mechanism) -- no import needed in page markdown, just `<NotYetPublished what="…" />`.
+  #353 (Hamburg-Berlin parity): the original wording pointed every section at I21-i (#303) as "the"
+  pending gate. #303 has since closed (it admitted Hamburg price/rent rows to the mart only), and
+  several sections are now published under their own sign-offs (#314/#317 trajectory, I20
+  amenities, H3 stage). So each remaining use now states its own concrete reason in the default
+  slot -- which sign-off condition or missing data blocks it -- instead of a generic pointer.
+  docs/epic-g/353-hamburg-berlin-parity-audit.md lists every remaining gap and its reason.
+
+  Evidence auto-imports any `.svelte` file under `web/components/` -- no import needed in page
+  markdown:
+    <NotYetPublished cityLabel="Hamburg" cityHub="/hamburg" what="Land value and estimated rent for this Stadtteil">
+      Reason sentence(s), may contain <a href="/methodology">links</a>.
+    </NotYetPublished>
 -->
 <script>
-	// Evidence's markdown auto-import (`sveltekit-autoimport`) only injects core components into
-	// `.md` pages, not into nested `.svelte` components under web/components/ (no existing
-	// component here relies on it -- checked before adding this dependency) -- so `<Alert>` is
-	// imported explicitly, same package the page-level markdown resolves it from.
+	// Evidence's markdown auto-import only injects core components into `.md` pages, not into
+	// nested `.svelte` components under web/components/ -- so `<Alert>` is imported explicitly.
 	import { Alert } from '@evidence-dev/core-components';
+	// A component's own template is not base-path rewritten (see FooterNav.svelte's comment);
+	// addBasePath is idempotent, so an already-prefixed href is left alone (LinkCard.svelte).
+	import { addBasePath } from '@evidence-dev/sdk/utils/svelte';
 
-	/** Short, lower-case noun phrase for what this section would show once published, e.g. "this
-	 * area's Offering Advantage profile" or "demographic figures for this Gebiet". */
-	export let what = 'this section';
-	/** Optional: set true for the page-level (above-the-fold) banner, which uses slightly stronger
-	 * wording than a per-section one. */
-	export let pageLevel = false;
+	/** What is not shown, as a noun phrase, e.g. "Demographic figures for this Stadtteil". */
+	export let what = 'This section';
+	/** #353 review (ADR-0005): the city is a prop, not hard-coded, so the component stays
+	 * city-agnostic. Pages pass e.g. cityLabel="Hamburg" cityHub="/hamburg". */
+	export let cityLabel = 'this city';
+	/** Root-relative path of the city's data hub; omit to drop the hub link. */
+	export let cityHub = undefined;
 </script>
 
 <Alert status="info">
-	{#if pageLevel}
-		<b>Not yet published for Hamburg.</b> This page is a structural scaffold (I21-g, #301) —
-		the route, breadcrumb, and section layout exist and are reviewed, but Hamburg's real numbers
-		for {what} are deliberately withheld here until Hamburg's own fresh, independent geo- and
-		domain-expert sign-off clears for this specific view and the <code>published_cities</code>
-		gate is flipped for it (I21-i, #303). This is never a broken query — it is an explicit,
-		reviewed decision not to show a value yet.
-	{:else}
-		<b>Not yet published for Hamburg.</b> {what} would render here once I21-i (#303) clears its
-		own sign-off and publication gate — this section exists structurally but deliberately shows
-		no figure yet, not a broken or empty query.
-	{/if}
+	<!-- #353 review: "Not published for X: {what}." reads correctly for singular and plural
+	     subjects (the earlier "{what} is not shown here" did not). -->
+	<b>Not published for {cityLabel}:</b>
+	{what}.
+	<slot>
+		No existing methodology sign-off covers showing this for {cityLabel} yet, so this page says so
+		instead of showing a number.
+		{#if cityHub}See the <a href={addBasePath(cityHub)}>{cityLabel} data hub</a> for what is and
+			isn't published.{/if}
+	</slot>
 </Alert>

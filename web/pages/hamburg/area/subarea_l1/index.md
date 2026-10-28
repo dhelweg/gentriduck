@@ -20,28 +20,52 @@ sidebar_position: 2
 
   Route shape per docs/epic-i/I21-a-route-ruling.md §2/§4: `/hamburg/area/subarea_l1/[code]`,
   `subarea_l1` being Hamburg's own vocabulary term for the generic `headline` slot (Berlin: `bzr`).
+
+  #353 (Hamburg-Berlin parity review): the stale "no real figures are published there yet" lede
+  is replaced, and the table now mirrors Berlin's Ortsteil list (pages/berlin/area/ortsteil/
+  index.md): Stadtteil, its district, and how many Gebiete it contains (OA-D1b/#240 crosswalk via
+  mart_area_hierarchy, #302). The bare code column is dropped: Stadtteile are officially named.
 -->
 
-<Hero compact eyebrow="Chapter 3 — The Evidence" title="Stadtteile" lede="Hamburg's 104 Stadtteile (subarea level 1) — the headline scale between district and statistisches Gebiet. Each Stadtteil's own page is a structural scaffold (I21-g, #301); no real figures are published there yet." />
+<Hero compact eyebrow="Chapter 3 — The Evidence" title="Stadtteile" lede="Hamburg's 104 Stadtteile — the named, official scale between district and statistisches Gebiet." />
+
+Each Stadtteil page shows how many of its statistische Gebiete currently sit in each
+gentrification stage and trajectory type, plus mapped-place counts and everyday amenities — never
+a re-scored index (see the [methodology page](/methodology)). See the
+[district & area profiles hub](/hamburg/area/district) for the 7 districts, or the
+[full Gebiet list](/hamburg/area) for individual statistische Gebiete.
 
 ```sql stadtteile
 select
-    area_code,
-    area_name,
-    '/hamburg/area/subarea_l1/' || area_code as stadtteil_link
-from gentriduck_marts.dim_area_geometry
-where city_code = 'HH' and area_level = 'subarea_l1'
+    s.area_code,
+    s.area_name,
+    d.area_name as district,
+    count(c.area_code) as n_gebiete,
+    '/hamburg/area/subarea_l1/' || s.area_code as stadtteil_link
+from gentriduck_marts.dim_area_geometry as s
+left join
+    gentriduck_marts.mart_area_hierarchy as p
+    on p.city_code = 'HH' and p.area_level = 'subarea_l1' and p.area_code = s.area_code
+left join
+    gentriduck_marts.dim_area_geometry as d
+    on d.city_code = 'HH' and d.area_level = 'district' and d.area_code = p.parent_area_code
+left join
+    gentriduck_marts.mart_area_hierarchy as c
+    on c.city_code = 'HH' and c.area_level = 'subarea_l2' and c.parent_area_code = s.area_code
+where s.city_code = 'HH' and s.area_level = 'subarea_l1'
     -- #334: defensive guard, currently a no-op -- verified none of the 4 disclosure-control
     -- merged-pair Stadtteile (slash-joined area_code, e.g. "02117/118") have a dim_area_geometry
     -- row (no WFS geometry for a merged pair), so this table never lists one today. See
     -- district/[code].md's `children` query for why a slash-bearing code must never be linked.
-    and area_code not like '%/%'
-order by area_name
+    and s.area_code not like '%/%'
+group by all
+order by s.area_name
 ```
 
 <DataTable data={stadtteile} rows=20 search=true link=stadtteil_link emptySet="warn" emptyMessage="No Hamburg Stadtteil geometry available.">
     <Column id=area_name title="Stadtteil"/>
-    <Column id=area_code title="Code"/>
+    <Column id=district title="District"/>
+    <Column id=n_gebiete title="Statistische Gebiete"/>
 </DataTable>
 
 ---
