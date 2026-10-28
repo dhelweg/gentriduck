@@ -120,3 +120,29 @@ value & rent → where this area sits → honest caveats → further reading.
 5. Hamburg price/rent display (G20): #303 Condition 2 G2 disclosure first.
 6. Hamburg district amenities copy (G22): I20 condition-5 re-check.
 7. Berlin movers top-12 cut (B2).
+
+## Domain spot-check (2026-10-28) and fixes
+
+`gentrification-domain-expert` spot-checked the reused wording (`docs/epic-g/353-domain-spotcheck.md`,
+verdict CONCERNS); `web-engineer-reviewer` approved with four low findings. Applied on this branch:
+
+- **R1 (G14):** the "at a glance" stage sentence no longer carries a pressure-trend clause. Every
+  gentrification-signal stage has Dynamik = positive by definition, which the site's legend reads as
+  lower pressure, so the clause contradicted the stage. The window clause now says what the 3-year vs
+  2-year difference means (H3 condition 1(i)).
+- **R2 (G6):** both area-detail pages, both hubs and the Hamburg district page now describe the browse
+  order as what it is (a three-value Dynamik reading, ties listed alphabetically, gentrification-stage
+  areas further down) instead of "highest gentrification pressure". Berlin's ordering gets a
+  deterministic tie-break (`area_name, area_code`); Hamburg's already had one. The ordering rule itself
+  is unchanged; #358 decides it.
+- **R3:** the Gebiet lede no longer claims the same scale as a Berlin Planungsraum.
+- **O1–O4:** "with a current stage" in the coarse-page takeaways; "kept Berlin-only until Hamburg has
+  its own sign-off for it" instead of "Berlin-only by design"; "the same kinds of views" on the home
+  page; the trajectory note says "don't read it as a long-run verdict" instead of comparing with
+  Berlin's figures.
+- **Web lows:** `NotYetPublished` reads "Not published for {city}: {what}." (number-neutral) and takes
+  `cityLabel`/`cityHub` props (ADR-0005); the Gebiet "Current stage" value shows the plain label; no
+  nested links inside the hub cards.
+
+Still open, for #358 (not changed here): the home page's "Highest-pressure neighbourhoods" table
+(Berlin) uses the same three-value ordering with a `limit 10` over 64 tied areas.

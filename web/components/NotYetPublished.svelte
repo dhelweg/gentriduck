@@ -17,7 +17,7 @@
 
   Evidence auto-imports any `.svelte` file under `web/components/` -- no import needed in page
   markdown:
-    <NotYetPublished what="Land value and estimated rent for this Stadtteil">
+    <NotYetPublished cityLabel="Hamburg" cityHub="/hamburg" what="Land value and estimated rent for this Stadtteil">
       Reason sentence(s), may contain <a href="/methodology">links</a>.
     </NotYetPublished>
 -->
@@ -25,20 +25,28 @@
 	// Evidence's markdown auto-import only injects core components into `.md` pages, not into
 	// nested `.svelte` components under web/components/ -- so `<Alert>` is imported explicitly.
 	import { Alert } from '@evidence-dev/core-components';
-	// A component's own template is not base-path rewritten (see FooterNav.svelte's comment).
-	import { base } from '$app/paths';
+	// A component's own template is not base-path rewritten (see FooterNav.svelte's comment);
+	// addBasePath is idempotent, so an already-prefixed href is left alone (LinkCard.svelte).
+	import { addBasePath } from '@evidence-dev/sdk/utils/svelte';
 
-	/** What this section would show, as a sentence subject, e.g. "Demographic figures for this
-	 * Stadtteil". */
+	/** What is not shown, as a noun phrase, e.g. "Demographic figures for this Stadtteil". */
 	export let what = 'This section';
+	/** #353 review (ADR-0005): the city is a prop, not hard-coded, so the component stays
+	 * city-agnostic. Pages pass e.g. cityLabel="Hamburg" cityHub="/hamburg". */
+	export let cityLabel = 'this city';
+	/** Root-relative path of the city's data hub; omit to drop the hub link. */
+	export let cityHub = undefined;
 </script>
 
 <Alert status="info">
-	<b>Not published for Hamburg.</b>
-	{what} is not shown here.
+	<!-- #353 review: "Not published for X: {what}." reads correctly for singular and plural
+	     subjects (the earlier "{what} is not shown here" did not). -->
+	<b>Not published for {cityLabel}:</b>
+	{what}.
 	<slot>
-		No existing methodology sign-off covers showing this for Hamburg yet, so this page says so
-		instead of showing a number. See the <a href="{base}/hamburg">Hamburg data hub</a> for what is and
-		isn't published.
+		No existing methodology sign-off covers showing this for {cityLabel} yet, so this page says so
+		instead of showing a number.
+		{#if cityHub}See the <a href={addBasePath(cityHub)}>{cityLabel} data hub</a> for what is and
+			isn't published.{/if}
 	</slot>
 </Alert>
