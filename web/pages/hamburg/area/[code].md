@@ -278,9 +278,11 @@ where city_code = 'HH' and area_level = 'subarea_l2'
   // #353: plain-language stage line for "at a glance" -- the stage label is the same plain label
   // /hamburg/maps shows for this Gebiet; the "not directly equivalent" clause is H3 domain
   // condition 1(iv). No portrait wording beyond that (see this page's header comment).
+  // The link is a literal `href="/methodology"`: Evidence's base-path preprocessor rewrites literal
+  // hrefs in +page.md files (script included), so it must not carry `${base}` itself.
   $: cur = current_stage?.[0];
   $: stageSentence = cur && cur.stage_label
-    ? `In Hamburg's latest Sozialmonitoring edition on this site (${String(cur.period_yyyymm).slice(0, 4)}), this Gebiet is in the stage <b>${cur.stage_label}</b>, with a <b>${cur.pressure_trend}</b> pressure trend. This is a Hamburg-coded stage: it is <b>not directly equivalent</b> to a Berlin stage of the same name (Hamburg's Dynamik window is 3 years, Berlin's 2; see <a href="${base}/methodology">methodology §6</a>).`
+    ? `In Hamburg's latest Sozialmonitoring edition on this site (${String(cur.period_yyyymm).slice(0, 4)}), this Gebiet is in the stage <b>${cur.stage_label}</b>, with a <b>${cur.pressure_trend}</b> pressure trend. This is a Hamburg-coded stage: it is <b>not directly equivalent</b> to a Berlin stage of the same name (Hamburg's Dynamik window is 3 years, Berlin's 2; see <a href="/methodology">methodology §6</a>).`
     : 'No current Sozialmonitoring stage is on record for this Gebiet in the latest Hamburg edition on this site.';
 
   // #317: pace/comparison sentence for the "Social status & trajectory" section, computed the same

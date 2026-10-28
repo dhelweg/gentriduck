@@ -315,11 +315,15 @@ where
   // #353 (found in the parity review): these sentences are written with markdown emphasis/link
   // syntax, but `{@html}` inserts them as raw HTML, so readers saw literal "**stable-established**"
   // and "[what this does and doesn't mean](/methodology)". Convert the two inline forms used above
-  // to HTML here; wording unchanged.
+  // to HTML here; wording unchanged. The link markup is assembled from pieces on purpose: Evidence's
+  // addBasePathToHrefAndSrc preprocessor regex-rewrites every literal `href=` in a +page.md file,
+  // script included, so a literal `href=` followed by a template expression would come out as
+  // "/gentriduck/<expr>" and double the base path (the first build of this fix 404ed on exactly
+  // that). `base` is prepended here instead.
   const mdInline = (s) =>
     s
       .replace(/\*\*(.+?)\*\*/g, '<b>$1</b>')
-      .replace(/\[([^\]]+)\]\((\/[^)]*)\)/g, (_m, text, href) => `<a href="${base}${href}">${text}</a>`);
+      .replace(/\[([^\]]+)\]\((\/[^)]*)\)/g, (_m, text, href) => '<a hr' + 'ef="' + base + href + '">' + text + '</a>');
   $: portraitParagraphs = [stageSentence, comparisonSentence, mixSentence, speedSentence].filter(Boolean).map(mdInline);
 
   // I14 (#231): stacked-bar segments sorted by total mapped-place count, largest first --
