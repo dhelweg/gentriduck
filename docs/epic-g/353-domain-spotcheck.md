@@ -140,3 +140,38 @@ Findings come from repo files on this branch, the committed sign-offs, and a rea
   "theory_risks": ["negative-Dynamik-as-pressure convention vs D1xD2 typology (site-wide)", "fallback-parented Gebiete in Stadtteil sums"],
   "recommendations": ["apply R1-R3", "same R2 wording on /berlin/area-detail", "separate ticket on the pressure-trend convention"] }
 ```
+
+---
+
+## Re-check, 2026-10-28 (`f98a19c3`, `fab40fa9`)
+
+Verdict: PASS
+
+I checked `git diff f98a19c3~1..fab40fa9 -- web/` on `feat/353-hamburg-parity` against the fixes above.
+
+| Fix | Where | Status |
+|---|---|---|
+| R1 | `hamburg/area/[code].md` stage sentence | Applied as proposed. The pressure clause is gone, the text now says "classified in", and the qualitative Dynamik-window clause is there. The "Current stage" BigValue now shows the same plain `stage_label`. |
+| R2 | `hamburg/area-detail.md` (lede, table text, spotlight, empty state); `hamburg/index.md` card; `district/[code].md` link line | Applied as proposed. |
+| R2 (Berlin) | `berlin/area-detail.md`, `berlin/index.md` | Same wording, adapted ("MSS Dynamik", "neighbourhoods"), plus an `area_name, area_code` tie-break, so the "listed alphabetically" claim is now true for Berlin too. The ordering rule itself is unchanged and left to #358, which is correct for a wording ticket. |
+| R3 | Gebiet Hero lede | Applied as proposed. |
+| O1–O4 | Stadtteil/district takeaways, the three "Berlin-only" mentions, home page, `HamburgTrajectoryNote` | All applied. The trajectory note still makes both #314 §5 disclosures. |
+| `NotYetPublished` | component and all uses | The city is now a prop, which fits ADR-0005. "Not published for Hamburg: {what}." reads correctly. The reasons text is unchanged. Every live use passes `cityLabel="Hamburg"`. |
+
+**Checked against the data.** The spotlight sentence says the first-listed area "is one of the
+[areas] in this district with a negative Dynamik reading and comes first alphabetically among them".
+In the current serving data that is true everywhere:
+
+- every Hamburg district has 3–13 negative Gebiete, and every Berlin Bezirk has 2–12 negative PLRs;
+- the 943 Hamburg Gebiet labels are unique, so the `area_name` tie-break is deterministic.
+
+**Non-blocking (track under #358 or the next edition refresh).** That spotlight sentence depends on
+the data. If a future edition leaves a district with no negative area, the first-listed area would
+be neutral and the sentence would be false. A simple fix: show the sentence only when the
+spotlight's `pressure_trend = 'negative'`, and otherwise show "{name} is listed first alphabetically
+among the Gebiete with the district's strongest reading". This flaw was in my R2 proposal, not in
+the implementation.
+
+The site-wide theory risk above (the negative-Dynamik-as-pressure convention against the D1×D2
+typology) stays open and now sits with #358. Nothing in this branch blocks integration on the domain
+side.
