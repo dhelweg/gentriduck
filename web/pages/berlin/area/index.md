@@ -8,7 +8,7 @@ sidebar_position: 4
   (index.md + [param].md — https://docs.evidence.dev/core-concepts/templated-pages/). Not primary
   navigation (no nav link, no dropdown/picker UX) -- its job is to be a real, crawlable link to
   every current PLR so the static-site build (adapter-static, GitHub Pages, no server) actually
-  generates a page for each of the 542 areas, since the canvas-rendered AreaMap can't be crawled
+  generates a page for each of the 542 areas, since the client-rendered map (PolygonMap, #351; formerly the canvas-rendered AreaMap) can't be crawled
   server-side (its links only exist after client-side JS runs). The searchable table below is a
   legitimate secondary way in for anyone who lands here directly; the primary UX stays the district
   browse on /berlin/area-detail and the map/mover click-throughs.

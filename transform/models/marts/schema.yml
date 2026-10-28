@@ -1069,10 +1069,15 @@ models:
       - name: area_name
         description: >
           Area name (WFS UTF-8 source; see dim_area's dedup pattern). EXCEPTION,
-          #307: Hamburg subarea_l2 (statistisches Gebiet) rows have no WFS name
-          -- area_name here is instead a best-effort OSM-derived name (via
-          int_hamburg_gebiet_osm_names' point-in-polygon match), and may be
-          NULL where no OSM match was found (partial coverage by design).
+          #307/#352: Hamburg subarea_l2 (statistisches Gebiet) rows have no WFS
+          name -- area_name here is the derived label from
+          int_hamburg_gebiet_names ('<Stadtteil> · <OSM place name>' or
+          '<Stadtteil> · Gebiet <code>'), never NULL. #352: Berlin PLR/BZR/PGR
+          names that repeat within one level and vintage carry the parent name
+          in brackets (int_berlin_lor_name_disambiguation). Still NULL for the
+          dissolved Berlin 'bezirk' rows (no name source). Unique per
+          (city_code, area_level, area_vintage) --
+          test_area_display_name_unique.
         data_type: varchar
       - name: area_vintage
         description: >

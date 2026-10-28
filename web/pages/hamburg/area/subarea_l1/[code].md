@@ -1,5 +1,6 @@
 ---
 breadcrumb: "select area_name as breadcrumb from gentriduck_marts.dim_area_geometry where city_code = 'HH' and area_level = 'subarea_l1' and area_code = '${params.code}' limit 1"
+hide_breadcrumbs: true
 ---
 
 <!--
@@ -50,6 +51,26 @@ breadcrumb: "select area_name as breadcrumb from gentriduck_marts.dim_area_geome
   Q1): every rendering of this section discloses (1) a recent ~6-year window (2019-2025), not
   Hamburg's full 13-edition history, and (2) a status-only classification, never a displacement
   verdict -- both stated in the Alert immediately below this heading.
+
+  #353 (Hamburg-Berlin parity review): this page now follows the Berlin coarse-profile shape
+  (pages/berlin/area/bzr/[code].md, pages/berlin/area/ortsteil/[code].md) section by section. Same
+  rule as the Gebiet page (see pages/hamburg/area/[code].md's #353 note and
+  docs/epic-g/353-hamburg-berlin-parity-audit.md): show only counts and sums of per-Gebiet figures
+  that are already public under a sign-off; no averaged or re-scored Stadtteil value.
+  - Neighbourhood stage mix: a COUNT of this Stadtteil's Gebiete by their current stage
+    (`gentrification_index`, live_data, latest Hamburg period -- the per-Gebiet stages /hamburg/maps
+    already shows, H3/#237), grouped through mart_area_hierarchy's OA-D1b/#240 edge (#302). Same
+    distribution-not-point-value display as Berlin's I18-web-signed stage mix
+    (docs/epic-i/I18-web-geo-signoff.md / -domain-signoff.md), plus H3 domain condition 1(iv)'s
+    "not directly equivalent" label. The crosswalk-provenance note the #302 domain sign-off asks
+    for sits next to it.
+  - Mapped places: a SUM of the Gebiete's latest-snapshot `fct_poi_development` counts (the same
+    counts /hamburg/poi-map uses), same as Berlin's coarse-page "Mapped places" bar.
+  - Still not shown, each with its reason on the page: Offering Advantage roll-up (the HH rows in
+    mart_poi_oa_arealevel are filtered out at the site's source layer and the roll-up's MAUP
+    disclosure has not been reviewed for Hamburg), within-group dominance (source layer BER-only),
+    people & structure (#313 forward conditions C-5..C-8 bind a Hamburg web slice of its own),
+    land value & rent (#303 Condition 2).
 -->
 
 ```sql stadtteil_name
@@ -78,52 +99,176 @@ limit 1
 -- #302 (I21-h): constituent Gebiete, via mart_area_hierarchy (thin pass-through of
 -- dim_area_hierarchy's hh_l2_to_l1 CTE, the OA-D1b/#240 spatial crosswalk -- see that model's
 -- header for the method; this query re-derives nothing). Joined against dim_area_geometry for the
--- display name -- structural links only, no statistic (I21-i, #303, publishes real figures).
+-- display name. #353: plus each Gebiet's current stage (the same per-Gebiet row /hamburg/maps
+-- shows), mirroring the stage column on Berlin's coarse-page children tables.
 select
     h.area_code as gebiet_code,
     coalesce(g.area_name, h.area_code) as gebiet_name,
+    gi.status_class as stage,
+    gi.dynamism_class as pressure_trend,
     '/hamburg/area/' || h.area_code as gebiet_link
 from gentriduck_marts.mart_area_hierarchy as h
 left join
     gentriduck_marts.dim_area_geometry as g
     on g.city_code = 'HH' and g.area_level = 'subarea_l2' and g.area_code = h.area_code
+left join
+    gentriduck_marts.gentrification_index as gi
+    on gi.city_code = 'HH' and gi.variant = 'live_data' and gi.area_level = 'subarea_l2'
+    and gi.area_code = h.area_code
+    and gi.period_yyyymm = (
+        select max(period_yyyymm)
+        from gentriduck_marts.gentrification_index
+        where variant = 'live_data' and area_level = 'subarea_l2' and city_code = 'HH'
+    )
 where h.city_code = 'HH' and h.area_level = 'subarea_l2' and h.parent_area_code = '${params.code}'
 order by gebiet_name
 ```
 
-<Hero compact eyebrow="Chapter 3 — The Evidence" title="{stadtteil_name[0] ? stadtteil_name[0].area_name : 'Stadtteil'}" lede="Hamburg's Stadtteil-level (Bezirksregion-equivalent) scaffold — the headline scale between district and statistisches Gebiet (I21-g, #301). Most sections are still deferred; the Up/children links (#302) and the Gebiet trajectory distribution below (#317) are real." />
+```sql stage_mix
+-- #353: COUNT of this Stadtteil's Gebiete by current stage (see header note) -- same shape as
+-- pages/berlin/area/bzr/[code].md's stage_mix, grouped through mart_area_hierarchy instead of a
+-- code prefix (Hamburg codes don't nest).
+select
+    -- Not 'uninhabited': a Gebiet without a stage may simply be below Hamburg's own reporting
+    -- threshold, so the label only says what is known (no stage on record). Cf. the #313 domain
+    -- sign-off's D-7 finding about an unconditional 'uninhabited' label.
+    coalesce(gi.status_class, 'no stage on record') as stage,
+    count(*) as n_areas
+from gentriduck_marts.mart_area_hierarchy as h
+left join
+    gentriduck_marts.gentrification_index as gi
+    on gi.city_code = 'HH' and gi.variant = 'live_data' and gi.area_level = 'subarea_l2'
+    and gi.area_code = h.area_code
+    and gi.period_yyyymm = (
+        select max(period_yyyymm)
+        from gentriduck_marts.gentrification_index
+        where variant = 'live_data' and area_level = 'subarea_l2' and city_code = 'HH'
+    )
+where h.city_code = 'HH' and h.area_level = 'subarea_l2' and h.parent_area_code = '${params.code}'
+group by all
+order by n_areas desc
+```
+
+```sql stage_mix_summary
+-- Modal stage + heterogeneity flag from the SAME rows as stage_mix -- Berlin's stage_mix_summary
+-- pattern. Gebiete with no stage in the latest edition are excluded from the
+-- total, so the sentence only counts Gebiete that actually carry a stage.
+with
+    mix as (
+        select gi.status_class as stage, count(*) as n_areas
+        from gentriduck_marts.mart_area_hierarchy as h
+        join
+            gentriduck_marts.gentrification_index as gi
+            on gi.city_code = 'HH' and gi.variant = 'live_data' and gi.area_level = 'subarea_l2'
+            and gi.area_code = h.area_code
+            and gi.period_yyyymm = (
+                select max(period_yyyymm)
+                from gentriduck_marts.gentrification_index
+                where variant = 'live_data' and area_level = 'subarea_l2' and city_code = 'HH'
+            )
+        where
+            h.city_code = 'HH' and h.area_level = 'subarea_l2'
+            and h.parent_area_code = '${params.code}' and gi.status_class is not null
+        group by all
+    ),
+    totals as (select sum(n_areas) as n_total from mix),
+    top as (select stage, n_areas from mix order by n_areas desc limit 1),
+    advanced as (
+        select coalesce(sum(n_areas), 0) as n_advanced
+        from mix
+        where stage in ('active-gentrification', 'pioneer-signal')
+    )
+select
+    t.n_total,
+    top.stage as top_stage,
+    top.n_areas as top_stage_n,
+    (top.n_areas::double / nullif(t.n_total, 0)) as top_stage_share,
+    a.n_advanced
+from totals as t cross join top cross join advanced as a
+```
+
+<script>
+  // #308: for the drill-down mini map's geoJsonUrl/link base-path prefixing (#144 convention) --
+  // see this page's "## Where this area sits" section below. Hoisted into this page's single
+  // existing <script> block (Svelte allows only one instance-level <script> per component/page).
+  import { base } from '$app/paths';
+
+  // #353: breadcrumb trail + browser-tab title (see web/components/AreaBreadcrumbs.svelte).
+  $: stadtteilLabel = stadtteil_name?.[0]?.area_name ?? null;
+  $: crumbs = [
+    { label: 'Hamburg', href: '/hamburg' },
+    { label: 'Stadtteile', href: '/hamburg/area/subarea_l1' },
+    { label: stadtteilLabel ?? 'Stadtteil' }
+  ];
+  $: pageTitle = stadtteilLabel ? `${stadtteilLabel} — Stadtteil profile · Hamburg` : null;
+
+  // #353: stage-mix takeaway -- Berlin's coarse-page mssTakeaway sentence, Gebiete instead of
+  // Planungsräume.
+  $: mssMix = stage_mix_summary?.[0];
+  $: mssTakeaway = (!mssMix || mssMix.n_total == null || Number(mssMix.n_total) === 0)
+    ? null
+    : (() => {
+        const nTotal = Number(mssMix.n_total);
+        const nAdvanced = Number(mssMix.n_advanced || 0);
+        const topShare = mssMix.top_stage_share != null ? Number(mssMix.top_stage_share) : null;
+        const majorityClause = (topShare != null && topShare > 0.5)
+          ? `<b>${mssMix.top_stage}</b> is the only stage holding a majority (${Math.round(topShare * 100)}%)`
+          : 'no single stage holds a majority';
+        return `<b>${nAdvanced}</b> of <b>${nTotal}</b> Gebiete with a current stage here are classified <b>active-gentrification</b> or <b>pioneer-signal</b>; ${majorityClause} — a distribution across this Stadtteil's own Gebiete, never a single re-scored gentrification-index value for the Stadtteil itself.`;
+      })();
+
+  $: trajMix = trajectory_mix_summary?.[0];
+  $: trajTakeaway = (!trajMix || trajMix.n_total == null || Number(trajMix.n_total) === 0)
+    ? null
+    : (() => {
+        const nTotal = Number(trajMix.n_total);
+        const nTrending = Number(trajMix.n_trending || 0);
+        const topShare = trajMix.top_type_share != null ? Number(trajMix.top_type_share) : null;
+        const majorityClause = (topShare != null && topShare > 0.5)
+          ? `<b>${trajMix.top_type}</b> is the only trajectory type holding a majority (${Math.round(topShare * 100)}%)`
+          : 'no single trajectory type holds a majority';
+        return `<b>${nTrending}</b> of <b>${nTotal}</b> Gebiete here show a clear <b>improving</b> or <b>declining</b> trajectory over the 2019–2025 window; ${majorityClause} — a distribution across this Stadtteil's own Gebiete, never a single re-scored value for the Stadtteil itself.`;
+      })();
+</script>
+
+<AreaBreadcrumbs {crumbs} />
+<PageTitle title={pageTitle} />
+
+<Hero compact eyebrow="Chapter 3 — The Evidence" title="{stadtteil_name[0] ? stadtteil_name[0].area_name : 'Stadtteil'} — Stadtteil profile" lede="Neighbourhood-stage mix, trajectory mix, commercial mix, and everyday amenities for this Stadtteil, counted from its constituent statistische Gebiete — never a re-scored index at this grain." />
 
 <!-- #302 (I21-h): real "Up:" link, same #255-precedent value-guarded static-prefix-href pattern
-     as pages/berlin/area/[code].md's own Up-link. -->
-<p>Up: {#if parent_info[0]?.district_code}<a href="/hamburg/area/district/{parent_info[0].district_code}">{parent_info[0].district_name ?? 'District profile'}</a>{:else}<a href="/hamburg/area/district">District profile</a>{/if} · <a href="/hamburg/area/subarea_l1">all Stadtteile</a> · <a href="/hamburg/area/district">all districts</a></p>
+     as pages/berlin/area/[code].md's own Up-link. #353: same shape as Berlin's Ortsteil line. -->
+<p>Up: {#if parent_info[0]?.district_code}<a href="/hamburg/area/district/{parent_info[0].district_code}">{parent_info[0].district_name ?? 'District profile'}</a>{:else}<a href="/hamburg/area/district">District profile</a>{/if} · <a href="/hamburg/area/subarea_l1">all Stadtteile</a> · <a href="/hamburg/area/district">all districts</a> · <a href="/hamburg/area">all Gebiete</a></p>
 
-[All Stadtteile](/hamburg/area/subarea_l1) · [Districts](/hamburg/area/district) ·
-[Hamburg data hub](/hamburg)
-
-<NotYetPublished pageLevel what="this Stadtteil's status, commercial mix, and demographic profile (its Gebiet-level trajectory distribution is now published below, #317)" />
+<Alert status="info">
+  Figures on this page are <b>counts and sums</b> over this Stadtteil's statistische Gebiete —
+  never a separately re-scored index. See the <a href="/methodology">methodology page</a> for why
+  coarse-grain areas are not re-scored, and any Gebiet's own page (listed further down) for its
+  stage and trajectory.
+</Alert>
 
 ## Social status & trajectory
 
-This section shows the **distribution** of this Stadtteil's constituent Gebiete's own trajectory
-classifications — never a single re-scored index value for the Stadtteil itself, unless a future
-ticket promotes this grain to primary-equivalent scoring (currently out of scope; see
-`docs/epic-i/I21-ia-restructure-scoping.md` §2.2's `headline` row).
+Every statistisches Gebiet in this Stadtteil is individually classified into one of six
+gentrification stages from Hamburg's own Sozialmonitoring (see [methodology](/methodology)). This
+page reports the **distribution** of those Gebiet-level stages — never a single re-scored index
+value for the Stadtteil itself. Hamburg's stages are **not directly equivalent** to same-named
+Berlin stages (Hamburg's Dynamik window is 3 years, Berlin's 2; [methodology §6](/methodology)).
 
-<Alert status="warning">
-  <b>Two things to know before reading this section (#317):</b><br/>
-  <b>1. Recent window, not full history.</b> These labels describe a bounded <b>~6-year window
-  (2019–2025)</b> of Hamburg's own annual Sozialmonitoring panel, not the full 13-edition
-  (2013–2025) series — the same cadence-normalized window already used for Berlin (H-C2, #159),
-  applied here to Hamburg's annual cadence for the first time (#314). A Gebiet classified
-  <b>persistently-deprived</b> or <b>stable-established</b> below reflects only the last ~6 years,
-  not necessarily its full history — don't read it with the same long-run framing Berlin's own
-  multi-decade biennial figures might imply.<br/>
-  <b>2. Status-only, not a displacement verdict.</b> <code>stable-established</code>,
-  <code>persistently-deprived</code>, <code>improving</code>, <code>declining</code>, and
-  <code>mixed</code> describe how each Gebiet's <i>officially-measured social status</i> moved over
-  that window — never a claim about who moved, why, or whether any resident was displaced. See
-  <a href="/methodology">methodology</a> for what this classification does and doesn't claim.
-</Alert>
+{#if mssTakeaway}
+<p>{@html mssTakeaway}</p>
+{:else}
+<Alert status="warning">No Gebiet stage data available for this Stadtteil.</Alert>
+{/if}
+
+<BarChart data={stage_mix} x=stage y=n_areas title="Gebiete by current stage, {stadtteil_name[0] ? stadtteil_name[0].area_name : 'this Stadtteil'}" swapXY=true emptySet="warn" emptyMessage="No Gebiet stage data for this Stadtteil."/>
+
+Which Gebiete belong to this Stadtteil comes from a spatial crosswalk (each Gebiet assigned to the
+Stadtteil that contains it; OA-D1b, #240), not from the Gebiet codes themselves.
+
+### Trajectory mix, 2019–2025
+
+<HamburgTrajectoryNote subject="each Gebiet" />
 
 ```sql trajectory_mix
 -- #317: distribution of trajectory_type across this Stadtteil's constituent Gebiete -- a one-hop
@@ -174,26 +319,6 @@ select
 from totals as t cross join top cross join trending as tr
 ```
 
-<script>
-  // #308: for the drill-down mini map's geoJsonUrl/link base-path prefixing (#144 convention) --
-  // see this page's "## Where this area sits" section below. Hoisted into this page's single
-  // existing <script> block (Svelte allows only one instance-level <script> per component/page).
-  import { base } from '$app/paths';
-
-  $: trajMix = trajectory_mix_summary?.[0];
-  $: trajTakeaway = (!trajMix || trajMix.n_total == null || Number(trajMix.n_total) === 0)
-    ? null
-    : (() => {
-        const nTotal = Number(trajMix.n_total);
-        const nTrending = Number(trajMix.n_trending || 0);
-        const topShare = trajMix.top_type_share != null ? Number(trajMix.top_type_share) : null;
-        const majorityClause = (topShare != null && topShare > 0.5)
-          ? `<b>${trajMix.top_type}</b> is the only trajectory type holding a majority (${Math.round(topShare * 100)}%)`
-          : 'no single trajectory type holds a majority';
-        return `<b>${nTrending}</b> of <b>${nTotal}</b> Gebiete here show a clear <b>improving</b> or <b>declining</b> trajectory over the 2019–2025 window; ${majorityClause} — a distribution across this Stadtteil's own Gebiete, never a single re-scored value for the Stadtteil itself.`;
-      })();
-</script>
-
 {#if trajTakeaway}
 <p>{@html trajTakeaway}</p>
 {:else}
@@ -204,15 +329,56 @@ from totals as t cross join top cross join trending as tr
 
 ## Commercial mix & Offering Advantage
 
-<NotYetPublished what="this Stadtteil's commercial-mix breakdown and Offering Advantage roll-up" />
+### Mapped places
+
+```sql poi_mix
+-- #353: SUM of this Stadtteil's Gebiete' latest-snapshot counts -- same shape as Berlin's
+-- coarse-page poi_mix, grouped through mart_area_hierarchy (OA-D1b/#240) instead of a code prefix.
+select
+    f.poi_category_h,
+    sum(f.poi_count) as poi_count
+from gentriduck_marts.fct_poi_development as f
+join
+    gentriduck_marts.mart_area_hierarchy as h
+    on h.city_code = 'HH' and h.area_level = 'subarea_l2' and h.area_code = f.area_code
+where f.city_code = 'HH' and f.area_vintage = 'current'
+  and h.parent_area_code = '${params.code}'
+  and f.snapshot_year = (
+      select max(snapshot_year) from gentriduck_marts.fct_poi_development
+      where city_code = 'HH' and area_vintage = 'current'
+  )
+group by all
+order by poi_count desc
+```
+
+<BarChart data={poi_mix} x=poi_category_h y=poi_count title="Mapped places by category (latest snapshot), {stadtteil_name[0] ? stadtteil_name[0].area_name : 'this Stadtteil'}" swapXY=true emptySet="warn" emptyMessage="No mapped places recorded for this Stadtteil."/>
+
+These are OpenStreetMap-derived counts; OSM coverage is not spatially neutral (poorer or peripheral
+areas tend to be less thoroughly mapped, Haklay 2010), so a low count can be a coverage gap rather
+than a real absence. See the [Hamburg POI map](/hamburg/poi-map) for the per-Gebiet picture.
+
+### Offering Advantage across the area hierarchy
+
+<NotYetPublished cityLabel="Hamburg" cityHub="/hamburg" what="This Stadtteil's Offering Advantage roll-up (Berlin's coarse pages show one per domain)">
+  The roll-up is computed for Hamburg in the data layer, but the site's data source keeps only
+  Berlin's rows, and the scale-sensitivity (MAUP) disclosure that must accompany a roll-up has only
+  been checked for Berlin. Each Gebiet's own Offering Advantage profile is on its page, linked below.
+</NotYetPublished>
 
 ## Within-group dominance
 
-<NotYetPublished what="within-group dominance figures for this Stadtteil" />
+<NotYetPublished cityLabel="Hamburg" cityHub="/hamburg" what="Within-group dominance for this Stadtteil's Gebiete">
+  The underlying mart carries Hamburg rows, but the site's data source deliberately restricts it to
+  Berlin, and no sign-off has yet reviewed a Hamburg public view of it.
+</NotYetPublished>
 
 ## People & structure
 
-<NotYetPublished what="demographic sums for this Stadtteil" />
+<NotYetPublished cityLabel="Hamburg" cityHub="/hamburg" what="Population and composition sums for this Stadtteil">
+  Hamburg's population-register figures do exist at Stadtteil level, but the Hamburg demographics
+  sign-off (#313) sets conditions for a Hamburg web page of its own (wording, no ranking, how merged
+  Stadtteile and missing values are explained), and that page has not been built or reviewed yet.
+</NotYetPublished>
 
 ## Amenities & everyday infrastructure
 
@@ -230,6 +396,7 @@ from totals as t cross join top cross join trending as tr
   Hamburg codes do not nest by prefix, so the district comes from mart_area_hierarchy
   (the district_row subquery below), not Berlin's substr(). The district row is LEFT-joined so a missing
   parent leaves its column empty instead of blanking the whole table.
+  #353: block unchanged (I20-hamburg-parity-domain-signoff.md reviewed this exact copy).
 -->
 
 ```sql amenities_current
@@ -348,7 +515,12 @@ others, and makes no claim about whether it is a good or bad place to live.
 
 ## Land value & estimated rent
 
-<NotYetPublished what="land value / estimated rent figures for this Stadtteil" />
+<NotYetPublished cityLabel="Hamburg" cityHub="/hamburg" what="Land value and estimated rent for this Stadtteil">
+  Hamburg has no land-value (Bodenrichtwert) series on this site. Its rent signal is narrower in kind
+  than Berlin's (Wohnlage tier composition plus a modelled Mietenspiegel rent, current state only),
+  and its sign-off (#303) requires a Hamburg-specific methodology disclosure before any of it is
+  shown publicly — that has not been done yet.
+</NotYetPublished>
 
 ## Where this area sits
 
@@ -356,11 +528,10 @@ others, and makes no claim about whether it is a good or bad place to live.
      Stadtteil's own polygon highlighted, its statistische Gebiete (the next level down, OA-D1b/#240
      ST_Within spatial crosswalk, published via mart_area_hierarchy) clickable -- see
      pages/hamburg/area/district/[code].md's own drill-down mini map comment for the general
-     pattern. Uses area_name (OSM-derived Gebiet name, #307) as the visible child label, not the raw
-     numeric area_code -- names are now available (see stg_hamburg_osm_places.sql /
-     int_hamburg_gebiet_osm_names.sql / dim_area_geometry.sql's #307 CTE), falling back to the code
-     for the Gebiete that OSM's informal neighbourhood tagging doesn't cover (partial coverage by
-     design). `base` is imported once, in this page's single existing `<script>` block above. -->
+     pattern. Uses area_name (the derived Gebiet label, #307/#352: '<Stadtteil> · <OSM place
+     name>' or '<Stadtteil> · Gebiet <code>', see int_hamburg_gebiet_names.sql) as the visible
+     child label, not the raw numeric area_code; every Gebiet has one since #352. `base` is
+     imported once, in this page's single existing `<script>` block above. -->
 
 ```sql minimap_areas
 -- Self row's name resolved directly in SQL (not a JS-templated string literal) so a WFS-sourced
@@ -376,9 +547,8 @@ where city_code = 'HH' and area_level = 'subarea_l1' and area_code = '${params.c
 union all
 select
     'subarea_l2:' || h.area_code as feature_key,
-    -- #307: OSM-derived Gebiet name where matched, falling back to the numeric code where OSM's
-    -- informal tagging has no coverage -- same coalesce already used by this page's own `children`
-    -- query above (gebiet_name).
+    -- #307/#352: the derived Gebiet label (every Gebiet has one); the coalesce-to-code is a
+    -- guard only -- same coalesce as this page's own `children` query above (gebiet_name).
     coalesce(nullif(g.area_name, ''), h.area_code) as area_name,
     'Click to explore' as role,
     2 as sort_order,
@@ -401,35 +571,34 @@ order by sort_order, area_name
 
 <DataTable data={children} rows=20 link=gebiet_link emptySet="warn" emptyMessage="No constituent Gebiete found for this Stadtteil.">
     <Column id=gebiet_name title="Statistisches Gebiet"/>
+    <Column id=stage title="Stage"/>
+    <Column id=pressure_trend title="Pressure trend"/>
 </DataTable>
 
-This Stadtteil's parent district is linked above ("Up:") and this list of constituent Gebiete both
-come from <code>mart_area_hierarchy</code> (#302, I21-h), a thin pass-through of
-<code>dim_area_hierarchy.sql</code>'s <code>hh_l1_to_district</code> (source-provided) and
-<code>hh_l2_to_l1</code> (OA-D1b/#240 spatial crosswalk, geo-DS + domain-expert PASS) edges — this
-ticket publishes those already-resolved edges to the web layer without re-deciding either method.
+The parent district ("Up:" above) is a source-provided attribute of Hamburg's Stadtteil geodata;
+the Gebiet list comes from the OA-D1b (#240) spatial crosswalk. Both are published through
+<code>mart_area_hierarchy</code> (#302) without re-deciding either method.
 
 ## Honest caveats
 
-- **This page is mostly still a structural scaffold (I21-g, #301).** Every section except "Social
-  status & trajectory" (below), the "Up" link, and the "Gebiete in this Stadtteil" table shows a
-  fixed deferred-state placeholder rather than a real Hamburg figure — publishing the rest of this
-  page's content is a separately-gated follow-up (I21-i, #303).
-- **The "Social status & trajectory" distribution above is real, not a placeholder (#317).** It
-  reads Hamburg's own admitted rows in `fct_gentrification_trajectory` (#314, dual-signed-off PASS)
-  — a recent **~6-year (2019–2025) window**, not full history, and a **status-only classification**,
-  never a displacement verdict (see the disclosure directly above that section's chart).
-- **The "Up" link and "Gebiete in this Stadtteil" table are real, not placeholders (#302, I21-h).**
-  The underlying parent/child links were resolved and signed off earlier (one source-provided, one
-  the OA-D1b/#240 spatial crosswalk); this ticket only publishes them to the web layer.
-- See [Hamburg's data hub](/hamburg) for the full, current inventory of what is and isn't published
-  for Hamburg, and [methodology & data sources §6](/methodology) for how Hamburg's data differs from
-  Berlin's generally.
+- **Stadtteil figures are counts and sums of its Gebiete, never a re-scored index** — the stage and
+  trajectory sections show how this Stadtteil's Gebiete are distributed, not a single value for
+  the Stadtteil.
+- **Hamburg's stages are not directly equivalent to same-named Berlin stages** — Hamburg's Dynamik
+  window is 3 years, Berlin's 2 ([methodology §6](/methodology), points 1 and 4).
+- **The trajectory mix describes a recent ~6-year (2019–2025) window**, not full history, and is a
+  **status-only classification**, never a displacement verdict.
+- **Mapped-place counts come from OpenStreetMap**, whose coverage varies by area and grew over time.
+- **Some Berlin sections are not shown for Hamburg** — the Offering Advantage roll-up, within-group
+  dominance, people & structure, and land value & rent — each with its reason in its own section
+  above. See the [Hamburg data hub](/hamburg) for the full inventory and
+  [methodology & data sources §6](/methodology) for how Hamburg's data differs from Berlin's.
 
 ## Further reading
 
-See the [Hamburg data hub](/hamburg) for what's published today, [Hamburg's map](/hamburg/maps) for
-this Stadtteil's constituent areas' already-public gentrification-stage figures, or
+See the [Hamburg data hub](/hamburg) for what's published today, [Hamburg's map](/hamburg/maps)
+(switch the area level to Stadtteil for this Stadtteil's stage mix on the map),
+[browse by district](/hamburg/area-detail) for other areas, or
 [the area-hierarchy reference](/reference/area-hierarchy) for how Hamburg's small-area geography is
 structured.
 

@@ -7,9 +7,10 @@
 -- subarea_l1) and Berlin's PLR carry a real area_name; Gebiet is the one
 -- gap in the area-hierarchy ladder. This model derives a best-effort,
 -- DISPLAY-ONLY name for each Gebiet from OSM `place=neighbourhood|suburb|
--- quarter` nodes (stg_hamburg_osm_places, #307 ingestion), consumed only by
--- dim_area_geometry.area_name for subarea_l2 rows and, through it, the web
--- layer (web/pages/hamburg/area/[code].md).
+-- quarter` nodes (stg_hamburg_osm_places, #307 ingestion). #352: consumed
+-- only by int_hamburg_gebiet_names, which builds the full Gebiet label
+-- (parent Stadtteil + this name, or + the Gebiet code where there is no
+-- match) for dim_area and dim_area_geometry.
 --
 -- NOT methodology-bearing (label/name enrichment for display, same framing
 -- CLAUDE.md gives dim_area_geometry itself): does not touch
@@ -49,8 +50,13 @@
 -- Gebiete vs informal, patchy OSM neighbourhood/suburb/quarter tagging in
 -- Hamburg means most Gebiete will have NO OSM place point inside them.
 -- Unmatched Gebiete are simply absent from this crosswalk's output (no row)
--- -- the consuming model (dim_area_geometry) must LEFT JOIN and tolerate a
--- null osm_place_name, never treat absence as an error.
+-- -- the consuming model (int_hamburg_gebiet_names) must LEFT JOIN and
+-- tolerate a null osm_place_name, never treat absence as an error.
+-- The matched names can change when the OSM places extract is re-ingested;
+-- area_code is the stable key.
+-- Measured 2026-10-27 (#352): 41 of 943 Gebiete get a name once the
+-- Stadtteil-named suburb nodes are filtered out (144 before the filter, 104
+-- of those just the parent Stadtteil's own name).
 --
 -- Grain: at most one row per (city_code='HH', area_code) -- area_code is
 -- the statistisches-Gebiet natural key (subarea_l2 only; this model does
@@ -70,6 +76,17 @@ with
             city_code = 'HH' and area_level = 'subarea_l2' and geometry_wkb is not null
     ),
 
+    -- #352: Hamburg Stadtteil and Bezirk names, to drop OSM places that name
+    -- a whole Stadtteil rather than something inside one (see places below).
+    stadtteil_bezirk_names as (
+        select distinct geo.area_name
+        from {{ ref("stg_hamburg_geo") }} as geo
+        where
+            geo.city_code = 'HH'
+            and geo.area_level in ('subarea_l1', 'district')
+            and geo.area_name is not null
+    ),
+
     -- Transform OSM's WGS-84 lon/lat to the Gebiet layer's native metric CRS
     -- (EPSG:25832) so the point-in-polygon test runs in a metric, not
     -- degree, space -- same direction/convention as int_osm_poi_hamburg.sql.
@@ -82,7 +99,18 @@ with
                 st_point(lon, lat), 'EPSG:4326', 'EPSG:25832', always_xy := true
             ) as geom_25832
         from {{ ref("stg_hamburg_osm_places") }}
-        where city_code = 'HH'
+        where
+            city_code = 'HH'
+            -- #352: drop places named exactly like a Stadtteil or Bezirk. Those
+            -- are the place=suburb nodes for the Stadtteil itself (117 of the
+            -- 211 ingested nodes): the Gebiet that happens to contain the
+            -- Blankenese node is not "Blankenese", it is one of several
+            -- Gebiete in it. Before this filter they also won the tie-break
+            -- over a real quarter/neighbourhood name in the same Gebiet
+            -- ('suburb' ranks above 'quarter'). The Stadtteil name still
+            -- reaches the label, as the parent prefix (int_hamburg_gebiet_names).
+            and place_name
+            not in (select sb.area_name from stadtteil_bezirk_names as sb)
     ),
 
     candidates as (

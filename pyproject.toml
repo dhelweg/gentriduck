@@ -18,7 +18,7 @@ dependencies = [
     # right fit for the multi-timestamp .osh.pbf format quackosm's snapshot-oriented reader doesn't
     # natively support. See the ADR amendment for the full rationale.
     "osmium>=4.0",
-    "shapely>=2.0",
+    "shapely>=2.1",  # 2.1: shapely.coverage_simplify (web/scripts/export_area_geojson.py, #351)
     "certifi>=2024.0",
     # ADR-0010: PySAL spatial-statistics family (BSD-3).
     # libpysal: spatial weights from shapely geometries (no geopandas).

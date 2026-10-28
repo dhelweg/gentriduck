@@ -5,15 +5,24 @@
 -- for Berlin; district -> subarea_l1 -> subarea_l2 for Hamburg).
 --
 -- Kept as a SEPARATE model rather than a parent_area_code column on dim_area
--- (ticket's "your call" option) so dim_area's own dedup/grain logic (which
--- already collapses both LOR vintages into one row per area_code) stays
--- untouched -- this model layers parent/child derivation on top without
--- re-opening that dedup.
+-- (ticket's "your call" option) so the area dimension's own dedup/grain logic
+-- (which collapses both LOR vintages into one row per area_code) stays
+-- untouched. Since #352 this model sits BELOW dim_area, not on top of it:
+-- int_dim_area_base -> dim_area_hierarchy -> int_hamburg_gebiet_names
+-- -> int_area_display_name_override -> dim_area
+-- (the Hamburg Gebiet display names need this model's Gebiet -> Stadtteil
+-- edge).
 --
 -- Grain: one row per (city_code, area_level, area_code) THAT HAS a resolvable
 -- parent. Not every dim_area row necessarily appears here (see Hamburg
 -- subarea_l2 note below) -- this is a set of resolved EDGES, not a full
 -- re-statement of dim_area.
+--
+-- #352: the Berlin prefix-nesting CTEs below read area codes from
+-- int_dim_area_base (dim_area's source-name layer, same rows and codes)
+-- instead of dim_area itself. dim_area now derives Hamburg Gebiet display
+-- names from this model's Gebiet -> Stadtteil edge, so reading dim_area here
+-- would be a cycle. Codes only; no edge changes.
 --
 -- =============================================================================
 -- Berlin: LOR code-prefix nesting (PLR ⊃ BZR ⊃ PGR ⊃ Bezirk)
@@ -195,7 +204,7 @@ with
             area_code,
             'bzr' as parent_area_level,
             substr(lpad(area_code, 8, '0'), 1, 6) as parent_area_code
-        from {{ ref("dim_area") }}
+        from {{ ref("int_dim_area_base") }}
         where city_code = 'BER' and area_level = 'plr'
     ),
 
@@ -207,7 +216,7 @@ with
             area_code,
             'pgr' as parent_area_level,
             substr(area_code, 1, 4) as parent_area_code
-        from {{ ref("dim_area") }}
+        from {{ ref("int_dim_area_base") }}
         where city_code = 'BER' and area_level = 'bzr'
     ),
 
@@ -219,7 +228,7 @@ with
             area_code,
             'bezirk' as parent_area_level,
             substr(area_code, 1, 2) as parent_area_code
-        from {{ ref("dim_area") }}
+        from {{ ref("int_dim_area_base") }}
         where city_code = 'BER' and area_level = 'pgr'
     ),
 

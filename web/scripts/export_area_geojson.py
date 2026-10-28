@@ -70,6 +70,32 @@ mini map needs a district's/Stadtteil's own polygon and its children's. Same LGV
 geometry `dim_area_geometry` already ingests -- no new data source, geometry-only (no
 `gentrification_index` join, matching `export_oa_arealevel_geometry()`'s pattern above), so no
 architect gate. See `DRILLDOWN_LEVEL_PAIRS`' own comment for the per-pair vintage/level detail.
+
+#351 addition: display simplification. The site's maps are now drawn by the in-repo SVG component
+`web/components/PolygonMap.svelte` (no Leaflet, no tile provider), which downloads and projects
+these files in the browser. The raw WFS geometry is survey-grade (sub-metre vertices), which made
+the files 1-13 MB each (e.g. bzr_plr_drilldown.geojson was 12.8 MB, fetched by every PLR and BZR
+profile page) for a city-wide map where one screen pixel is ~30-60 m. `_load_display_geometry()`
+therefore swaps the `geometry_geojson` column for a display copy before any export runs:
+simplified with `shapely.coverage_simplify` once per (city_code, area_level, area_vintage)
+coverage (shared borders between neighbours are simplified once, so no slivers or gaps open up
+between them, unlike per-polygon simplification), with coordinates rounded to 5 decimals (~1 m).
+Shapely is already a declared project dependency (pyproject.toml), so nothing new is added. This is
+display-only: no area, centroid, join, or indicator is computed from these files, and the governed
+`dim_area_geometry` mart and its parquet export keep the full-resolution geometry.
+
+#351 review addition: orphan areas are left out of the DISPLAY export. Now that the SVG maps draw
+every area in a file (areas without data in grey), a source-data placeholder becomes visible.
+Today that is exactly one feature: Hamburg statistisches Gebiet 106001, a 5-vertex, ~17.5 km^2
+rectangle north of the city (9.87-9.93 E, 53.69-53.73 N) with no gentrification_index row, lying
+entirely outside the Stadtteil (subarea_l1) layer; dim_area_hierarchy already flags it as an
+anomaly with a fallback parent. `_drop_orphan_display_areas()` applies a generic rule, not a
+hard-coded code: for every child level of `DRILLDOWN_LEVEL_PAIRS`, an area is dropped from the
+display copy when less than ORPHAN_MIN_INSIDE_PARENT_SHARE of its area lies inside the union of
+its parent level AND it has no gentrification_index row at all. Measured on the current data,
+every other area at every level pair is at least 90 % inside its parent layer, and 106001 is 0 %
+inside. The governed `dim_area_geometry` mart and its parquet export are NOT changed; the
+placeholder itself is a data follow-up.
 """
 
 from __future__ import annotations
@@ -79,6 +105,8 @@ import logging
 from pathlib import Path
 
 import duckdb
+import shapely
+from shapely.geometry import mapping, shape
 
 logging.basicConfig(level=logging.INFO, format="%(message)s")
 logger = logging.getLogger(__name__)
@@ -86,6 +114,157 @@ logger = logging.getLogger(__name__)
 REPO_ROOT = Path(__file__).resolve().parent.parent.parent
 SERVING_DIR = REPO_ROOT / "data" / "serving"
 OUT_DIR = REPO_ROOT / "web" / "static" / "geo"
+
+# #351: display-simplification tolerance in degrees (coverage_simplify's Visvalingam-Whyatt
+# tolerance, about 3-5 m at Berlin/Hamburg latitudes). Small enough that a profile page's zoomed
+# detail panel (a single PLR across ~400 px, ~5 m/px) still looks smooth; it still cuts the files
+# by roughly 85-90 %.
+DISPLAY_SIMPLIFY_TOLERANCE_DEG = 0.00005
+# #351: decimal places kept per coordinate (5 = ~1 m).
+DISPLAY_COORD_DECIMALS = 5
+# #351 review: an area with no data is left out of the display export when less than this share of
+# it lies inside its parent level's layer (see the module docstring, "orphan areas").
+ORPHAN_MIN_INSIDE_PARENT_SHARE = 0.5
+
+
+def _round_coords(obj):
+    """Recursively round every coordinate in a GeoJSON `coordinates` array."""
+    if isinstance(obj, (list, tuple)):
+        if obj and isinstance(obj[0], (int, float)):
+            return [round(c, DISPLAY_COORD_DECIMALS) for c in obj]
+        return [_round_coords(o) for o in obj]
+    return obj
+
+
+def _simplify_coverage(geometry_geojsons: list[str]) -> list[str]:
+    """#351: simplify one polygon coverage (all areas of one level/vintage) for display.
+
+    `coverage_simplify` keeps shared edges identical between neighbours. If GEOS rejects the
+    input as a coverage, it falls back to per-polygon topology-preserving simplification. If a
+    geometry would come out empty, the original is kept, so an area never disappears from the map.
+    """
+    geoms = [shape(json.loads(g)) for g in geometry_geojsons]
+    try:
+        # coverage_simplify needs shapely >= 2.1 (pinned in pyproject.toml); AttributeError is
+        # caught as well so an older shapely degrades to the per-polygon path instead of failing.
+        simplified = list(shapely.coverage_simplify(geoms, DISPLAY_SIMPLIFY_TOLERANCE_DEG))
+    except (shapely.errors.GEOSException, AttributeError) as exc:
+        logger.warning("coverage_simplify failed (%s) -- falling back to per-polygon simplify", exc)
+        simplified = [
+            shapely.simplify(g, DISPLAY_SIMPLIFY_TOLERANCE_DEG, preserve_topology=True)
+            for g in geoms
+        ]
+    out = []
+    for original, simple in zip(geoms, simplified, strict=True):
+        chosen = original if simple is None or simple.is_empty else simple
+        geo = mapping(chosen)
+        out.append(
+            json.dumps(
+                {"type": geo["type"], "coordinates": _round_coords(geo["coordinates"])},
+                separators=(",", ":"),
+            )
+        )
+    return out
+
+
+def _load_display_geometry(con: duckdb.DuckDBPyConnection, geometry_path: Path) -> None:
+    """#351: materialize `dim_area_geometry` as a table whose `geometry_geojson` column holds the
+    display-simplified geometry (see the module docstring), so every export function below reads
+    the light copy without needing any change of its own."""
+    con.execute(
+        "create table dim_area_geometry as "
+        "select row_number() over () as _display_rid, * from read_parquet(?)",
+        [str(geometry_path)],
+    )
+    _drop_orphan_display_areas(con)
+    groups = con.execute(
+        "select distinct city_code, area_level, area_vintage from dim_area_geometry order by all"
+    ).fetchall()
+    for city_code, area_level, area_vintage in groups:
+        rows = con.execute(
+            """
+            select _display_rid, geometry_geojson
+            from dim_area_geometry
+            where city_code is not distinct from ?
+              and area_level is not distinct from ?
+              and area_vintage is not distinct from ?
+              and geometry_geojson is not null
+            """,
+            [city_code, area_level, area_vintage],
+        ).fetchall()
+        if not rows:
+            continue
+        simplified = _simplify_coverage([g for _, g in rows])
+        before = sum(len(g) for _, g in rows)
+        after = sum(len(g) for g in simplified)
+        con.executemany(
+            "update dim_area_geometry set geometry_geojson = ? where _display_rid = ?",
+            [[g, rid] for (rid, _), g in zip(rows, simplified, strict=True)],
+        )
+        logger.info(
+            "simplified %s/%s/%s for display (%d areas, %.1f MB -> %.1f MB)",
+            city_code,
+            area_level,
+            area_vintage,
+            len(rows),
+            before / 1e6,
+            after / 1e6,
+        )
+
+
+def _drop_orphan_display_areas(con: duckdb.DuckDBPyConnection) -> None:
+    """#351 review: remove orphan placeholder areas from the display copy of `dim_area_geometry`
+    (see the module docstring, "orphan areas", for the rule and the one case it catches today).
+    Requires the `gentrification_index` view to exist already."""
+    for parent_level, parent_vintage, child_level, child_vintage, _ in DRILLDOWN_LEVEL_PAIRS:
+        parents = con.execute(
+            """
+            select geometry_geojson from dim_area_geometry
+            where area_level = ? and area_vintage = ? and geometry_geojson is not null
+            """,
+            [parent_level, parent_vintage],
+        ).fetchall()
+        if not parents:
+            continue
+        parent_layer = shapely.union_all([shape(json.loads(g)) for (g,) in parents])
+        children = con.execute(
+            """
+            select geo._display_rid, geo.city_code, geo.area_code, geo.geometry_geojson,
+                   exists (
+                       select 1 from gentrification_index as g
+                       where g.city_code = geo.city_code
+                         and g.area_level = geo.area_level
+                         and g.area_code = geo.area_code
+                   ) as has_data
+            from dim_area_geometry as geo
+            where geo.area_level = ? and geo.area_vintage = ? and geo.geometry_geojson is not null
+            """,
+            [child_level, child_vintage],
+        ).fetchall()
+        for rid, city_code, area_code, geometry_geojson, has_data in children:
+            if has_data:
+                continue
+            geom = shape(json.loads(geometry_geojson))
+            if geom.area <= 0:
+                continue
+            inside = geom.intersection(parent_layer).area / geom.area
+            if inside < ORPHAN_MIN_INSIDE_PARENT_SHARE:
+                con.execute("delete from dim_area_geometry where _display_rid = ?", [rid])
+                logger.warning(
+                    "display export: dropped orphan %s %s/%s (%.0f%% inside the %s layer, no "
+                    "gentrification_index row) -- governed parquet unchanged",
+                    city_code,
+                    child_level,
+                    area_code,
+                    inside * 100,
+                    parent_level,
+                )
+
+
+def _write_feature_collection(out_path: Path, feature_collection: dict) -> None:
+    """#351: compact JSON (no whitespace), since the browser downloads these files."""
+    out_path.write_text(json.dumps(feature_collection, separators=(",", ":")), encoding="utf-8")
+
 
 # The (area_level, variant) combinations the maps page (web/pages/maps.md) actually renders.
 # `bzr` only ever shows `standard` -- `live_data` has no BZR-level rows yet (the page already
@@ -146,10 +325,14 @@ def export_gentrification_index_geometry(con: duckdb.DuckDBPyConnection) -> None
 
             rows = con.execute(
                 """
+                -- #351: identity columns come from the geometry side of the left join. They
+                -- used to come from `g`, so every area without an index row (e.g. uninhabited
+                -- PLRs) was exported with area_code = null and could not be drawn at all,
+                -- not even as a grey "No data" area.
                 select
-                    g.city_code,
-                    g.area_code,
-                    g.area_name,
+                    geo.city_code,
+                    geo.area_code,
+                    coalesce(g.area_name, geo.area_name) as area_name,
                     g.status_index,
                     g.status_class,
                     g.status_class_bi,
@@ -207,7 +390,7 @@ def export_gentrification_index_geometry(con: duckdb.DuckDBPyConnection) -> None
 
             feature_collection = {"type": "FeatureCollection", "features": features}
             out_path = OUT_DIR / f"{area_level}_{variant}.geojson"
-            out_path.write_text(json.dumps(feature_collection))
+            _write_feature_collection(out_path, feature_collection)
             logger.info(
                 "exported %s/%s (%d features, vintage=%s, period=%s) -> %s",
                 area_level,
@@ -259,7 +442,7 @@ def export_oa_arealevel_geometry(con: duckdb.DuckDBPyConnection) -> None:
 
         feature_collection = {"type": "FeatureCollection", "features": features}
         out_path = OUT_DIR / f"{area_level}_lor2021.geojson"
-        out_path.write_text(json.dumps(feature_collection))
+        _write_feature_collection(out_path, feature_collection)
         logger.info(
             "exported %s/lor2021 (%d features) -> %s",
             area_level,
@@ -310,7 +493,7 @@ def export_hamburg_rollup_geometry(con: duckdb.DuckDBPyConnection) -> None:
 
         feature_collection = {"type": "FeatureCollection", "features": features}
         out_path = OUT_DIR / f"{area_level}_current.geojson"
-        out_path.write_text(json.dumps(feature_collection))
+        _write_feature_collection(out_path, feature_collection)
         logger.info(
             "exported hamburg %s/current (%d features) -> %s",
             area_level,
@@ -325,11 +508,11 @@ def export_hamburg_geometry(con: duckdb.DuckDBPyConnection) -> None:
     module's header comment (H3, #237) for why this is a dedicated function rather than an entry
     in `VARIANTS_BY_AREA_LEVEL` above.
 
-    NB (H3-domain-signoff.md condition 3 / H1-domain-signoff.md §3): `area_name` is genuinely
-    blank for every Hamburg `subarea_l2` row in the source data (only Hamburg's coarser
-    `subarea_l1`/Stadtteil and `district` levels carry names) -- this is passed through as-is
-    (empty string), not backfilled, so the map/tooltip honestly shows only the numeric Gebiet
-    code where no name exists, rather than inventing one.
+    NB (#352, maintainer spec): the Hamburg `subarea_l2` source data has no name (only Hamburg's
+    coarser `subarea_l1`/Stadtteil and `district` levels do), so `dim_area_geometry.area_name`
+    carries a derived display label instead --
+    '<Stadtteil> · <OSM place name>' or '<Stadtteil> · Gebiet <code>' (see
+    transform/models/intermediate/int_hamburg_gebiet_names.sql) -- passed through here unchanged.
     """
     latest_period_row = con.execute(
         """
@@ -407,7 +590,7 @@ def export_hamburg_geometry(con: duckdb.DuckDBPyConnection) -> None:
 
     feature_collection = {"type": "FeatureCollection", "features": features}
     out_path = OUT_DIR / "subarea_l2_live_data.geojson"
-    out_path.write_text(json.dumps(feature_collection))
+    _write_feature_collection(out_path, feature_collection)
     logger.info(
         "exported hamburg subarea_l2/live_data (%d features, period=%s) -> %s",
         len(features),
@@ -484,7 +667,7 @@ def export_area_drilldown_geometry(con: duckdb.DuckDBPyConnection) -> None:
 
         feature_collection = {"type": "FeatureCollection", "features": features}
         out_path = OUT_DIR / f"{out_name}.geojson"
-        out_path.write_text(json.dumps(feature_collection))
+        _write_feature_collection(out_path, feature_collection)
         logger.info(
             "exported drilldown %s->%s (%d features) -> %s",
             parent_level,
@@ -527,7 +710,7 @@ def export_ortsteil_self_geometry(con: duckdb.DuckDBPyConnection) -> None:
 
     feature_collection = {"type": "FeatureCollection", "features": features}
     out_path = OUT_DIR / "ortsteil_self.geojson"
-    out_path.write_text(json.dumps(feature_collection))
+    _write_feature_collection(out_path, feature_collection)
     logger.info(
         "exported ortsteil self (%d features) -> %s", len(features), out_path.relative_to(REPO_ROOT)
     )
@@ -542,8 +725,9 @@ def main() -> None:
 
     OUT_DIR.mkdir(parents=True, exist_ok=True)
     con = duckdb.connect(":memory:")
-    con.execute(f"create view dim_area_geometry as select * from read_parquet('{geometry_path}')")
+    # gentrification_index first: the display-geometry step's orphan rule reads it.
     con.execute(f"create view gentrification_index as select * from read_parquet('{index_path}')")
+    _load_display_geometry(con, geometry_path)
 
     export_gentrification_index_geometry(con)
     export_oa_arealevel_geometry(con)

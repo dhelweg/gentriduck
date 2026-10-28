@@ -1,5 +1,6 @@
 ---
 breadcrumb: "select area_name as breadcrumb from gentriduck_marts.gentrification_index where variant = 'live_data' and area_level = 'plr' and city_code = 'BER' and area_code = '${params.code}' order by period_yyyymm desc limit 1"
+hide_breadcrumbs: true
 ---
 
 <!--
@@ -177,6 +178,11 @@ where
     and gi.period_yyyymm = (select period_yyyymm from latest_period)
 ```
 
+<!-- #353: city-aware breadcrumb trail + per-page <title> (both computed in the <script> block
+     below; see web/components/AreaBreadcrumbs.svelte and PageTitle.svelte). -->
+<AreaBreadcrumbs {crumbs} />
+<PageTitle title={pageTitle} />
+
 <Hero compact eyebrow="Chapter 3 — The Evidence · most granular" title={area_info[0] ? area_info[0].area_name : 'Neighbourhood'} lede="Status trajectory, commercial-mix development, Offering Advantage, and land value/rent for one Berlin Planungsraum." />
 
 <!-- #247 (I18-web slice 2): breadcrumb up to this area's Bezirksregion coarse profile. bzr_code
@@ -201,6 +207,16 @@ where
 
   const areaName = () => (area_info?.[0] ? area_info[0].area_name : 'This area');
   $: bezirkName = district_info?.[0]?.bezirk_name ?? 'its district';
+
+  // #353: breadcrumb trail + browser-tab title, same shape on every profile page in both cities
+  // ("Home › <City> › <list page> › <this area>").
+  $: plrName = area_info?.[0]?.area_name ?? null;
+  $: crumbs = [
+    { label: 'Berlin', href: '/berlin' },
+    { label: 'All neighbourhoods', href: '/berlin/area' },
+    { label: plrName ?? 'Neighbourhood' }
+  ];
+  $: pageTitle = plrName ? `${plrName} — neighbourhood profile · Berlin` : null;
 
   // -- Portrait: current stage, in plain language ---------------------------------------------
   $: cur = context_current?.[0];
@@ -296,7 +312,19 @@ where
     return sentence;
   })();
 
-  $: portraitParagraphs = [stageSentence, comparisonSentence, mixSentence, speedSentence].filter(Boolean);
+  // #353 (found in the parity review): these sentences are written with markdown emphasis/link
+  // syntax, but `{@html}` inserts them as raw HTML, so readers saw literal "**stable-established**"
+  // and "[what this does and doesn't mean](/methodology)". Convert the two inline forms used above
+  // to HTML here; wording unchanged. The link markup is assembled from pieces on purpose: Evidence's
+  // addBasePathToHrefAndSrc preprocessor regex-rewrites every literal `href=` in a +page.md file,
+  // script included, so a literal `href=` followed by a template expression would come out as
+  // "/gentriduck/<expr>" and double the base path (the first build of this fix 404ed on exactly
+  // that). `base` is prepended here instead.
+  const mdInline = (s) =>
+    s
+      .replace(/\*\*(.+?)\*\*/g, '<b>$1</b>')
+      .replace(/\[([^\]]+)\]\((\/[^)]*)\)/g, (_m, text, href) => '<a hr' + 'ef="' + base + href + '">' + text + '</a>');
+  $: portraitParagraphs = [stageSentence, comparisonSentence, mixSentence, speedSentence].filter(Boolean).map(mdInline);
 
   // I14 (#231): stacked-bar segments sorted by total mapped-place count, largest first --
   // previously unordered (stacking order followed SQL row order, not count). Computed client-side

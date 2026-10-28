@@ -1,5 +1,6 @@
 ---
 breadcrumb: "select bezirk_name as breadcrumb from (select '01' as bezirk_code, 'Mitte' as bezirk_name union all select '02','Friedrichshain-Kreuzberg' union all select '03','Pankow' union all select '04','Charlottenburg-Wilmersdorf' union all select '05','Spandau' union all select '06','Steglitz-Zehlendorf' union all select '07','Tempelhof-Schöneberg' union all select '08','Neukölln' union all select '09','Treptow-Köpenick' union all select '10','Marzahn-Hellersdorf' union all select '11','Lichtenberg' union all select '12','Reinickendorf') t where bezirk_code = '${params.code}'"
+hide_breadcrumbs: true
 ---
 
 <!--
@@ -82,6 +83,10 @@ from (
 ) t
 where bezirk_code = '${params.code}'
 ```
+
+<!-- #353: city-aware breadcrumb trail + per-page <title>, computed in the <script> block below. -->
+<AreaBreadcrumbs {crumbs} />
+<PageTitle title={pageTitle} />
 
 <Hero compact eyebrow="Chapter 3 — The Evidence" title="{bezirk_name[0].bezirk_name} — district profile" lede="Population, composition, and neighbourhood-stage mix for this district, summed and recomputed from its constituent Planungsräume — never a re-scored index at this grain." />
 
@@ -225,6 +230,15 @@ from totals as t cross join top cross join advanced as a
   // see this page's "## Where this area sits" section below. Hoisted into this page's single
   // existing <script> block (Svelte allows only one instance-level <script> per component/page).
   import { base } from '$app/paths';
+
+  // #353: breadcrumb trail + browser-tab title (see web/components/AreaBreadcrumbs.svelte).
+  $: districtLabel = bezirk_name?.[0]?.bezirk_name ?? null;
+  $: crumbs = [
+    { label: 'Berlin', href: '/berlin' },
+    { label: 'District & area profiles', href: '/berlin/area/bezirk' },
+    { label: districtLabel ?? 'District' }
+  ];
+  $: pageTitle = districtLabel ? `${districtLabel} — district profile · Berlin` : null;
 
   $: mssMix = stage_mix_summary?.[0];
   $: mssTakeaway = (!mssMix || mssMix.n_total == null || Number(mssMix.n_total) === 0)

@@ -1,6 +1,6 @@
 ---
 title: Maps — gentrification pressure by area
-sidebar_position: 1
+sidebar_position: 2
 ---
 
 <!--
@@ -9,24 +9,24 @@ sidebar_position: 1
   full data inventory). Deliberately NOT a shared/toggled page with Berlin's /berlin/maps -- per
   the H3-domain-signoff.md structural guard (condition 2: "no pooled cross-city ranking or numeric
   status_index/dynamism_index differencing in any Hamburg-vs-Berlin UI"), Hamburg gets its own
-  route, its own AreaMap instance, and its own colour-scale computation, never a shared component
+  route, its own map instance (<PolygonMap> since #351, formerly <AreaMap>), and its own colour-scale computation, never a shared component
   instance that could invite a side-by-side/subtracted reading. See /methodology §6's "No pooled
   Berlin<->Hamburg ranking" bullet for the site-wide statement of this rule.
 
   Differences from /berlin/maps, all deliberate (not oversights):
   - No `variant` dropdown -- Hamburg only has `live_data` (see pages/hamburg/index.md).
-  - No click-through link -- there is no /hamburg/area/[code] per-area profile page (Berlin's
-    version needs fct_gentrification_change/mart_price_rent_dimension, both Berlin-only). #310's
-    new subarea_l1/district rollup levels DO have profile-page routes
-    (/hamburg/area/subarea_l1/[code], /hamburg/area/district/[code]) but this page still doesn't
-    link to them, for the same "no click-through anywhere on this page" consistency Berlin's own
-    page doesn't have to worry about.
+  - #353 (parity): click-through links added -- clicking an area opens its profile page
+    (/hamburg/area/[code] for a Gebiet, /hamburg/area/subarea_l1/[code] or
+    /hamburg/area/district/[code] at the rollup levels), exactly as /berlin/maps does. Previously
+    listed here as a difference; there was no gate reason for it, the profile routes simply didn't
+    exist yet when H3 built this page. The 4 merged-pair Stadtteil codes (slash-joined, #334) get a
+    NULL link (no geometry, no profile page).
   - Uses the `subarea_l2_live_data.geojson`/`subarea_l1_current.geojson`/`district_current.geojson`
     exports (web/scripts/export_area_geojson.py), not a variant of the existing plr_*/bzr_* files.
 
   The stage color palette and dropdown/indicator options are otherwise the same convention as
   /berlin/maps (RdYlBu-6 for the six-stage typology, single-hue sequential for the raw ordinals) --
-  same D1xD2 matrix, same colour semantics -- but this is a SEPARATE <AreaMap> instance/data query,
+  same D1xD2 matrix, same colour semantics -- but this is a SEPARATE <PolygonMap> instance/data query,
   not the same component instance reused across cities, so there is no shared legend/colour-scale
   object a reader could misread as asserting Berlin/Hamburg equivalence.
 
@@ -91,6 +91,11 @@ sidebar_position: 1
   // many/which stages are present at the selected area_level. (The `areas_leaf`/`areas_rollup`
   // queries below stay ordered by `stage_sort` -- most-acute-first -- purely so first-occurrence
   // order is deterministic/readable.)
+  //
+  // #351: the map is now drawn by web/components/PolygonMap.svelte (SVG, no Leaflet/tile basemap)
+  // instead of <AreaMap>; PolygonMap keeps exactly this positional first-occurrence colour rule.
+  // It is still a separate map instance and query from Berlin's (the H3 structural guard above);
+  // only the drawing component is shared, as every Evidence chart component already is.
   const stageColorByLabel = {
     'Active gentrification': '#d73027',
     'Early pioneer signal': '#fc8d59',
@@ -120,11 +125,9 @@ sidebar_position: 1
   };
 
   // #310: subarea_l2 is the individual-Gebiet leaf level (gentrification_index, unchanged from
-  // H3); subarea_l1/district are rollup levels (mart_area_rollup_stage_mix). subarea_l2 genuinely
-  // has no area_name in the source data (H3-domain-signoff.md condition 3); subarea_l1/district DO
-  // carry a real Stadtteil/Bezirk name -- since that's exactly the same condition as `isRollup`,
-  // the tooltip below branches on `isRollup` directly rather than a separate `hasAreaName` (#310
-  // review fix, LOW-7: dead indirection -- the two were definitionally identical).
+  // H3); subarea_l1/district are rollup levels (mart_area_rollup_stage_mix). #352: every level now
+  // has an area_name -- subarea_l2's is a derived label ('<Stadtteil> · <OSM place name>' or
+  // '<Stadtteil> · Gebiet <code>', int_hamburg_gebiet_names), since the source has none.
   $: isRollup = inputs.area_level.value !== 'subarea_l2';
 
   // #310 review fix (D1 -- domain sign-off blocking): see berlin/maps.md's identical
@@ -148,12 +151,16 @@ sidebar_position: 1
     subarea_l1: 'Stadtteil',
     district: 'Bezirk'
   };
-  $: geoJsonUrl = `${base}/geo/${geoJsonByLevel[inputs.area_level.value]}`;
+  // #351: undefined (PolygonMap waits) until the Dropdown has a value, instead of requesting
+  // "/geo/undefined" (a 404) for the one tick before the input store initializes.
+  $: geoJsonUrl = geoJsonByLevel[inputs.area_level.value]
+    ? `${base}/geo/${geoJsonByLevel[inputs.area_level.value]}`
+    : undefined;
 
-  // No area_name to lead with at the Gebiet grain (genuinely blank, see header comment) --
-  // tooltip leads with the Gebiet code instead of a name there; subarea_l1/district (#310) DO
-  // have a name, and additionally always carry dominant_share/n_habitable_children alongside the
-  // indicator value (design point 3: never a standalone dominant-stage label).
+  // #352: both branches lead with area_name (the Gebiet label at subarea_l2, see isRollup above)
+  // and keep the code as a small last line. subarea_l1/district (#310) additionally always carry
+  // dominant_share/n_habitable_children alongside the indicator value (design point 3: never a
+  // standalone dominant-stage label).
   // #310 review fix (MEDIUM-3/MEDIUM-4): `fragile_note`/`population_note` (computed in the
   // `areas_rollup` query below) surface `is_dominant_fragile`/`has_incomplete_population` inline
   // -- blank when the flag is false, the caveat sentence when true.
@@ -197,12 +204,14 @@ sidebar_position: 1
         { id: 'area_code', title: 'Area code', valueClass: 'text-xs opacity-60', fmt: 'id' }
       ]
     : [
+        { id: 'area_name', showColumnName: false, valueClass: 'font-bold text-sm', fmt: 'id' },
         {
           id: effectiveIndicator === 'status_class' ? 'stage_label' : effectiveIndicator,
           title: indicatorShortLabel[effectiveIndicator],
           fmt: effectiveIndicator === 'status_class' ? 'id' : 'num1'
         },
-        { id: 'area_code', title: 'Gebiet code', valueClass: 'text-xs opacity-60', fmt: 'id' }
+        // #352 review: code_note is null (line skipped) when the label already holds the code.
+        { id: 'code_note', title: 'Gebiet code', valueClass: 'text-xs opacity-60', fmt: 'id' }
       ];
 </script>
 
@@ -218,23 +227,23 @@ sidebar_position: 1
   deprived</b>, not more prosperous. "Dynamism" — higher means the area's status is improving
   <b>faster</b>, over Hamburg's own <b>3-year</b> observation window (Berlin's is 2 years) — see
   <a href="/methodology">methodology §6</a> for why that is a qualitative difference in what
-  "active" means, not just a numeric-scale one. Areas without a value are drawn but left blank.
+  "active" means, not just a numeric-scale one. Areas without a value are drawn with grey hatching ("No data").
 </Alert>
 
 <Alert status="warning">
-  <b>This map has no neighbourhood names at the Gebiet level.</b> Hamburg's statistische Gebiete
+  <b>Gebiet names on this map are labels, not official names.</b> Hamburg's statistische Gebiete
   carry only a numeric code in the source geodata (unlike Berlin's named Planungsräume or
-  Hamburg's own Stadtteile/Bezirke) — hover any Gebiet for its code and value. There is no
-  per-area drill-down page for Hamburg's Gebiet level yet (Berlin's equivalent needs data — a
-  trajectory history, price/rent — that does not yet exist for Hamburg; see
-  <a href="/hamburg">the Hamburg data hub</a> for the full inventory of what is and isn't built).
+  Hamburg's own Stadtteile/Bezirke), so each one is shown as its Stadtteil plus an OpenStreetMap
+  neighbourhood name that lies inside it, or its code where there is none — hover any Gebiet for
+  its label and value, and click it to open its profile page (or search for it in
+  <a href="/hamburg/area">the full Gebiet list</a>).
   <b>This map is never shown alongside, or blended with, Berlin's own map</b> — Hamburg and Berlin
   each have their own route, their own colour-scale computation, and are never offered as a
   side-by-side or subtracted comparison (see <a href="/methodology">methodology §6</a>).
 </Alert>
 
 <Dropdown name="area_level" title="Area level" defaultValue="subarea_l2">
-  <DropdownOption value="subarea_l2" valueLabel="Statistisches Gebiet — finest detail (no names)"/>
+  <DropdownOption value="subarea_l2" valueLabel="Statistisches Gebiet — finest detail"/>
   <DropdownOption value="subarea_l1" valueLabel="Stadtteil — ~104 named districts"/>
   <DropdownOption value="district" valueLabel="Bezirk — 7 boroughs"/>
 </Dropdown>
@@ -297,6 +306,11 @@ sidebar_position: 1
 select
     city_code,
     area_code,
+    area_name,
+    -- #352 review: the Gebiet code as a separate tooltip line, only where the label doesn't
+    -- already contain it (the '<Stadtteil> · Gebiet <code>' fallback labels do).
+    case when strpos(area_name, 'Gebiet ' || area_code) > 0 then null else area_code end
+        as code_note,
     status_index,
     dynamism_index,
     status_class,
@@ -316,7 +330,10 @@ select
         when 'consolidation-pressure' then 5
         when 'stable-established' then 6
         else 99
-    end as stage_sort
+    end as stage_sort,
+    -- #353: click-through to this Gebiet's profile page, same `${base}`-prefixed column
+    -- convention as /berlin/maps' areas_plr `link` (PolygonMap expects an already-prefixed URL).
+    '${base}/hamburg/area/' || area_code as link
 from gentriduck_marts.gentrification_index
 where variant = 'live_data' and area_level = 'subarea_l2' and city_code = 'HH'
   and period_yyyymm = (
@@ -432,7 +449,13 @@ select
         when m.has_incomplete_population
         then 'Population data incomplete for this area — equal-weighted, not population-weighted'
         else ''
-    end as population_note
+    end as population_note,
+    -- #353: rollup profile pages, /hamburg/area/<level>/<code> (same pattern as /berlin/maps).
+    -- Merged-pair Stadtteil codes (#334, slash-joined) have no profile page -> NULL, no link.
+    case
+        when m.area_code like '%/%' then null
+        else '${base}/hamburg/area/${inputs.area_level.value}/' || m.area_code
+    end as link
 from gentriduck_marts.mart_area_rollup_stage_mix as m
 left join acute as a on m.area_code = a.area_code
 where m.area_level = '${inputs.area_level.value}'
@@ -449,7 +472,7 @@ qualify row_number() over (partition by m.area_code order by m.typology_stage) =
 order by stage_sort
 ```
 
-<AreaMap
+<PolygonMap
     data={isRollup ? areas_rollup : areas_leaf}
     geoJsonUrl={geoJsonUrl}
     geoId="area_code"
@@ -458,17 +481,21 @@ order by stage_sort
     legendType={effectiveIndicator === 'status_class' ? 'categorical' : 'scalar'}
     colorPalette={effectiveIndicator === 'status_class' ? presentStagePalette(isRollup ? areas_rollup : areas_leaf) : undefined}
     title="Hamburg {areaLevelLabel[inputs.area_level.value]} — {effectiveIndicatorLabel}, latest period"
-    startingLat={53.5511}
-    startingLong={9.9937}
-    startingZoom={10}
+    link="link"
     tooltip={areaTooltip}
 />
+
+Click an area on the map to open its {isRollup ? 'profile' : 'Gebiet'} page.
 
 ## The numbers behind the map
 
 ```sql area_table_leaf
 select
-    area_code,
+    area_name,
+    -- #353 (#352 review follow-up): the code only where the label doesn't already contain it,
+    -- same label-contains-code test as code_note above.
+    case when strpos(area_name, 'Gebiet ' || area_code) > 0 then null else area_code end
+        as code_note,
     status_index,
     dynamism_index,
     case status_class
@@ -626,8 +653,9 @@ order by area_name, stage_population_share desc nulls last
 
 {:else}
 
-<DataTable data={area_table_leaf} rows=10>
-    <Column id=area_code title="Gebiet code"/>
+<DataTable data={area_table_leaf} rows=10 search=true>
+    <Column id=area_name title="Statistisches Gebiet"/>
+    <Column id=code_note title="Code (if not in the name)"/>
     <Column id=status_index title="Social status (1=least deprived … 4=most deprived)"/>
     <Column id=dynamism_index title="Speed of change (higher = faster upward change, 3-year window)"/>
     <Column id=stage_label title="Gentrification stage"/>
@@ -635,7 +663,10 @@ order by area_name, stage_population_share desc nulls last
 
 {/if}
 
-Want the commercial-mix (shops/cafés) view instead of the social-status index — POI density and
+Want to see how Hamburg's Gebiete have moved since 2019? Use the
+[time series page](/hamburg/time-series). Clicking a Gebiet on the map above opens its exact
+profile page; browsing by district works on the [area detail page](/hamburg/area-detail). Want
+the commercial-mix (shops/cafés) view instead of the social-status index — POI density and
 Offering Advantage by domain — see the
 [POI & Offering Advantage map](/hamburg/poi-map).
 
@@ -670,13 +701,26 @@ Offering Advantage by domain — see the
   shown here currently falls back to *equal* weighting across its constituent Gebiete rather than
   true population weighting — flagged per-area as "population data incomplete" in the table and
   map tooltip.
-- **No neighbourhood names at the Gebiet level** — Hamburg's statistische Gebiete are shown by
-  numeric code only; see the [Hamburg data hub](/hamburg) for why. Stadtteil/Bezirk do have names.
+- **Gebiet names are labels, not official names** — Hamburg's statistische Gebiete have only a
+  numeric code in the source data, so each is shown as its Stadtteil plus an OpenStreetMap
+  neighbourhood name inside it, or its code; see the [Hamburg data hub](/hamburg) for details.
+  Stadtteil/Bezirk names are the official ones.
 - **Only Hamburg's D1/D2 Sozialmonitoring outcome is shown here** — the demographic (D4)
   composite, land value & rent, and Milieuschutz-equivalent displacement zones are not (yet)
   published as a Hamburg map; see [methodology §6](/methodology) for the full inventory.
 - **This map is never combined with, or compared numerically against, Berlin's map** — see
   [methodology §6](/methodology)'s structural rule against pooled cross-city ranking.
+
+## Where next
+
+- **[Time series](/hamburg/time-series)** — how Hamburg's Gebiete have moved over the 2019–2025
+  trajectory window.
+- **[Area detail](/hamburg/area-detail)** — browse by district, or open one Gebiet's full profile
+  via a map click.
+- **[POI & Offering Advantage map](/hamburg/poi-map)** — the commercial-mix (shops/cafés) view of
+  the same Gebiete.
+- **[Methodology & data sources](/methodology)** — what "gentrification pressure" and the six-stage
+  typology mean, and (§6) how Hamburg's data differs from Berlin's.
 
 ---
 

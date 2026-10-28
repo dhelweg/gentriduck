@@ -56,8 +56,19 @@ GOATCOUNTER_CODE=<other-site-code> npm run build
 - `pages/` — markdown + SQL pages (data-analyst-authored content; web-engineer owns structure).
 - `scripts/export_area_geojson.py` — G1c (#132): joins `dim_area_geometry` + `gentrification_index`
   from the F2 parquet snapshot into static per-`area_level` GeoJSON `FeatureCollection`s under
-  `static/geo/` (gitignored), which Evidence's `AreaMap` component needs as a bundled asset URL
-  (its `geoJsonUrl` prop, unlike other charts, isn't a live query).
+  `static/geo/` (gitignored). Since #351 the geometry is simplified for display (shapely
+  `coverage_simplify`, ~1 m coordinates), which keeps each file around 0.2-1.8 MB instead of 1-13 MB.
+  The display export also leaves out "orphan" areas: an area with no `gentrification_index` row
+  that lies mostly (>50 %) outside its parent level's layer. Today that is only Hamburg Gebiet
+  106001, a placeholder rectangle north of the city in the source data. The governed
+  `dim_area_geometry` parquet keeps it; the source-data question is a separate follow-up.
+- `components/PolygonMap.svelte` — #351: every map on the site. A self-contained SVG polygon map
+  (no Leaflet, no basemap or tile provider, no extra npm dependency) that fetches one of the
+  `static/geo/` files and projects it in the browser. Choropleth props mirror Evidence's old
+  `<AreaMap>` (`data`, `geoJsonUrl`, `geoId`, `areaCol`, `value`, `legendType`, `colorPalette`,
+  `min`, `max`, `link`, `tooltip`, `title`); see the component's header comment for the rest.
+  `components/AreaDrilldownMap.svelte` wraps it for the per-area profile pages (whole city with the
+  area highlighted, plus a close-up with clickable sub-areas).
 - `static/geo/` — generated GeoJSON export (gitignored, rebuilt via the script above); served at
   `/geo/<area_level>.geojson` in the built site.
 - `evidence.config.yaml` — theme + plugin config; **DuckDB-only** by design (ADR-0012) — adding

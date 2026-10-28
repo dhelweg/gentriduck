@@ -1,6 +1,6 @@
 ---
 title: POI & Offering Advantage map
-sidebar_position: 2
+sidebar_position: 5
 ---
 
 <!--
@@ -25,29 +25,36 @@ sidebar_position: 2
     pages/hamburg/maps.md uses -- this page ignores that file's baked-in gentrification-index
     properties and only reads geometry + area_code, the same "geometry vehicle, values joined
     client-side" pattern /berlin/poi-map.md already uses against plr_live_data.geojson).
-  - Tooltip/table lead with the Gebiet CODE, not a name (see pages/hamburg/maps.md's header
-    comment for why -- area_name is genuinely blank at this grain).
-  - No click-through link -- no /hamburg/area/[code] profile page exists (see
-    pages/hamburg/index.md).
-  - Separate <AreaMap> instance/route from Berlin's, per the H3-domain-signoff.md structural guard
+  - #352: the tooltip leads with the Gebiet's derived label (area_name, '<Stadtteil> · <OSM place
+    name>' or '<Stadtteil> · Gebiet <code>', joined from dim_area_geometry in poi_map_data). The
+    code is a small last line only where the label doesn't already contain it (code_note).
+  - #353 (parity): click-through link added, same as /berlin/poi-map -- clicking a Gebiet opens
+    its /hamburg/area/[code] profile page, which since #353 also shows that Gebiet's
+    OA-by-domain radar.
+  - Separate <PolygonMap> instance (#351; formerly <AreaMap>)/route from Berlin's, per the H3-domain-signoff.md structural guard
     (no shared cross-city component instance) -- same principle as pages/hamburg/maps.md.
 -->
 
 <script>
   import { base } from '$app/paths';
+  // #351 review: same fix as /berlin/poi-map. <ButtonGroup defaultValue=...> never reaches
+  // hand-written <ButtonGroupItem> children, so the stock item carries `default` instead, and every
+  // read goes through `poiView` ('stock' unless the reader picked 'development').
+  $: poiView = inputs.view === 'development' ? 'development' : 'stock';
 
   $: areaTooltip = [
+    { id: 'area_name', showColumnName: false, valueClass: 'font-bold text-sm', fmt: 'id' },
     {
       id: inputs.metric.value === 'density'
-        ? (inputs.view === 'stock' ? 'poi_density_per_km2' : 'density_delta')
-        : (inputs.view === 'stock' ? 'oa_domain' : 'oa_delta'),
+        ? (poiView === 'stock' ? 'poi_density_per_km2' : 'density_delta')
+        : (poiView === 'stock' ? 'oa_domain' : 'oa_delta'),
       title:
         (inputs.metric.value === 'density' ? 'POI density / km²' : 'Offering Advantage')
-        + (inputs.view === 'development' ? ' (change vs. previous year)' : ''),
+        + (poiView === 'development' ? ' (change vs. previous year)' : ''),
       fmt: 'num1'
     },
     { id: 'poi_count', title: 'Mapped places (this domain)', fmt: 'num0' },
-    { id: 'area_code', title: 'Gebiet code', valueClass: 'text-xs opacity-60', fmt: 'id' }
+    { id: 'code_note', title: 'Gebiet code', valueClass: 'text-xs opacity-60', fmt: 'id' }
   ];
 
   const divergingPalette = ['#e66101', '#fdb863', '#f7f7f7', '#b2abd2', '#5e3c99'];
@@ -83,12 +90,13 @@ city-agnostic mart that has carried real Hamburg rows since H1 (#40).
 </Alert>
 
 <Alert status="warning">
-  <b>This map has no neighbourhood names, and thinly-mapped Gebiete are left blank.</b> Hamburg's
-  statistische Gebiete carry only a numeric code (see the <a href="/hamburg/maps">gentrification
-  map</a> for why); hover any area for its code. Offering Advantage is a compositional ratio (a
+  <b>Gebiet names are labels, and thinly-mapped Gebiete are hatched grey.</b> Hamburg's
+  statistische Gebiete carry only a numeric code, so each is labelled by its Stadtteil plus an
+  OpenStreetMap neighbourhood name or its code (see the <a href="/hamburg/maps">gentrification
+  map</a>); hover any area for its label. Offering Advantage is a compositional ratio (a
   location quotient) — in a Gebiet-year with very few mapped places overall, a single new or
   removed business can swing its Offering Advantage value disproportionately, so Gebiet-years
-  below the same minimum-mapped-place threshold used for Berlin are shown as an unshaded gap rather
+  below the same minimum-mapped-place threshold used for Berlin are shown as a hatched grey "No data" area rather
   than a potentially misleading value; the raw mapped-place count is always visible in the
   tooltip. <b>OSM's mapping coverage is not spatially neutral: completeness tends to correlate with
   area advantage, and poorer/peripheral areas are typically less thoroughly mapped than
@@ -145,7 +153,7 @@ city-agnostic mart that has carried real Hamburg rows since H1 (#40).
 </Dropdown>
 
 <ButtonGroup name="view" title="Stock vs. development" display="tabs" defaultValue="stock">
-  <ButtonGroupItem value="stock" valueLabel="Stock (this year's value)"/>
+  <ButtonGroupItem value="stock" valueLabel="Stock (this year's value)" default/>
   <ButtonGroupItem value="development" valueLabel="Change since previous year"/>
 </ButtonGroup>
 
@@ -186,64 +194,75 @@ with
             and weight_variant = 'standard'
             and methodology_variant = 'faithful'
             and poi_domain_h = '${inputs.domain.value}'
+    ),
+    -- #352: Gebiet labels (single 'current' vintage for Hamburg).
+    names as (
+        select area_code, area_name
+        from gentriduck_marts.dim_area_geometry
+        where city_code = 'HH' and area_level = 'subarea_l2'
     )
 select
     b.area_code,
+    n.area_name,
+    -- #352 review: the Gebiet code as a separate tooltip line, only where the label doesn't
+    -- already contain it (the '<Stadtteil> · Gebiet <code>' fallback labels do).
+    case when strpos(n.area_name, 'Gebiet ' || b.area_code) > 0 then null else b.area_code end
+        as code_note,
     b.poi_density_per_km2,
     b.poi_count,
     case when b.oa_domain_min_base_flag then null else b.oa_domain_raw end as oa_domain,
     b.density_delta,
     case when b.oa_domain_min_base_flag then null else b.oa_delta_raw end as oa_delta,
-    b.oa_domain_min_base_flag
+    b.oa_domain_min_base_flag,
+    -- #353: basePath-aware click-through, same `${base}`-prefixed column as /berlin/poi-map.
+    '${base}/hamburg/area/' || b.area_code as link
 from base as b
+left join names as n on b.area_code = n.area_code
 where b.snapshot_year = ${inputs.year.value}
 ```
 
-<AreaMap
+<PolygonMap
     data={poi_map_data}
     geoJsonUrl={`${base}/geo/subarea_l2_live_data.geojson`}
     geoId="area_code"
     areaCol="area_code"
     value={
         inputs.metric.value === 'density'
-            ? (inputs.view === 'stock' ? 'poi_density_per_km2' : 'density_delta')
-            : (inputs.view === 'stock' ? 'oa_domain' : 'oa_delta')
+            ? (poiView === 'stock' ? 'poi_density_per_km2' : 'density_delta')
+            : (poiView === 'stock' ? 'oa_domain' : 'oa_delta')
     }
     legendType="scalar"
     colorPalette={
-        inputs.metric.value === 'density' && inputs.view === 'stock'
+        inputs.metric.value === 'density' && poiView === 'stock'
             ? undefined
             : divergingPalette
     }
     min={
         inputs.metric.value === 'oa'
-            ? (inputs.view === 'stock'
+            ? (poiView === 'stock'
                 ? symmetricDomain(poi_map_data, 'oa_domain', 1)[0]
                 : symmetricDomain(poi_map_data, 'oa_delta', 0)[0])
-            : inputs.view === 'development'
+            : poiView === 'development'
                 ? symmetricDomain(poi_map_data, 'density_delta', 0)[0]
                 : undefined
     }
     max={
         inputs.metric.value === 'oa'
-            ? (inputs.view === 'stock'
+            ? (poiView === 'stock'
                 ? symmetricDomain(poi_map_data, 'oa_domain', 1)[1]
                 : symmetricDomain(poi_map_data, 'oa_delta', 0)[1])
-            : inputs.view === 'development'
+            : poiView === 'development'
                 ? symmetricDomain(poi_map_data, 'density_delta', 0)[1]
                 : undefined
     }
-    title="Hamburg statistisches Gebiet — {inputs.metric.value === 'density' ? 'POI density' : 'Offering Advantage'}, {inputs.domain.value}, {inputs.year.value}{inputs.view === 'development' ? ' (change vs. previous year)' : ''}"
-    startingLat={53.5511}
-    startingLong={9.9937}
-    startingZoom={10}
+    title="Hamburg statistisches Gebiet — {inputs.metric.value === 'density' ? 'POI density' : 'Offering Advantage'}, {inputs.domain.value}, {inputs.year.value}{poiView === 'development' ? ' (change vs. previous year)' : ''}"
+    link="link"
     tooltip={areaTooltip}
-    emptySet="warn"
     emptyMessage="No data for this domain/year combination."
 />
 
-There is no per-area drill-down page for Hamburg yet — see the [Hamburg data hub](/hamburg) for
-what is and isn't built.
+Click a Gebiet on the map to open its profile page, which also shows the Gebiet's full
+OA-by-domain profile as a radar chart.
 
 ---
 
@@ -317,7 +336,9 @@ limit 15
 
 - **OSM early-year completeness bias** — the citywide POI-growth chart's early years should be
   read cautiously, for the same reason as Berlin's (see [methodology §6](/methodology)).
-- **No neighbourhood names** — Hamburg's statistische Gebiete are shown by numeric code only.
+- **Gebiet names are labels, not official names** — Hamburg's statistische Gebiete have only a
+  numeric code, so each is shown as its Stadtteil plus an OpenStreetMap neighbourhood name or its
+  code (see the [Hamburg data hub](/hamburg)).
 - **No land value or rent chart on this page (yet)** — Hamburg's price/rent mart now carries
   narrower-in-kind data than Berlin's (Wohnlage tier composition + modelled Mietenspiegel rent,
   I21-i/#303: no BRW/land-value equivalent, 2-tier not 3-tier Wohnlage, current-state-only), but no

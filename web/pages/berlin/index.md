@@ -80,10 +80,12 @@ where variant = 'live_data' and area_level = 'plr' and city_code = 'BER'
     ranked list of the neighbourhoods that moved the most.
   </LinkCard>
   <LinkCard href="/berlin/area-detail" icon="🏘️" title="Area detail — start here" cta="Browse by district →">
-    The primary way in: browse by district (Bezirk), then read a full spotlight — status
-    trajectory, commercial mix, land value &amp; rent — on that district's highest-pressure
-    neighbourhood. Links to <a href="/berlin/area">the full searchable list</a> if you already
-    know the neighbourhood's name.
+    <!-- #353 review: no nested <a> inside the card's own link; spotlight wording follows the
+         #353 domain spot-check R2 (the order is a 3-value reading with ties, not a ranking). -->
+    The primary way in: browse by district (Bezirk), then read a headline spotlight on one
+    neighbourhood with that district's strongest pressure reading, with a link to its full
+    profile. If you already know the neighbourhood's name, the full searchable list (next card) is
+    faster.
   </LinkCard>
   <LinkCard href="/berlin/area" icon="🔍" title="All neighbourhoods (full list)" cta="Search neighbourhoods →">
     A searchable table of all 542 current Planungsräume — a secondary way in for when you already
@@ -93,6 +95,13 @@ where variant = 'live_data' and area_level = 'plr' and city_code = 'BER'
     Where shops, cafés, and other mapped places are concentrated (as raw density or Offering
     Advantage), plus the same two citywide contextual signals — POI growth, land value &amp; rent
     — added up across the whole city.
+  </LinkCard>
+  <!-- #353 (Hamburg-Berlin parity): the coarse-profile hub had no card on either city hub; added
+       to both so each hub links every browse route the other does. -->
+  <LinkCard href="/berlin/area/bezirk" icon="🧭" title="District &amp; area profiles" cta="Browse districts and Ortsteile →">
+    Berlin's 12 Bezirke, their Prognoseräume and Bezirksregionen, and the 97 Ortsteile: population,
+    composition, and how their neighbourhoods are spread across stages — never a re-scored index
+    for the larger area.
   </LinkCard>
 </LinkCards>
 

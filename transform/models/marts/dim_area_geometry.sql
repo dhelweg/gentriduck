@@ -24,13 +24,17 @@
 -- current vintage; area_vintage set to the literal 'current' since this
 -- source has no pre2021/2021 split). Added #269 (I-ortsteile) so Ortsteil
 -- profile pages can render a choropleth polygon, same as PGR/BZR/PLR.
--- 6a. int_hamburg_gebiet_osm_names (DERIVED, #307) -- best-effort OSM-place
--- point-in-polygon name crosswalk for Hamburg statistisches-Gebiet
--- (subarea_l2) rows, which have no name at the WFS source. Left-joined into
--- the hamburg CTE below; only fills area_name where it is otherwise blank
--- (subarea_l2 only) -- district/subarea_l1's real WFS names are untouched.
--- Partial coverage is expected (943 official Gebiete vs informal OSM
--- neighbourhood tagging) -- unmatched Gebiete keep area_name = '' as before.
+-- 6a. int_hamburg_gebiet_names (DERIVED, #352; was the #307 OSM crosswalk
+-- alone) -- display label for Hamburg statistisches-Gebiet (subarea_l2)
+-- rows, which have no name at the WFS source: '<Stadtteil> · <OSM place
+-- name>' where one matches, else '<Stadtteil> · Gebiet <code>'. Left-joined
+-- into the hamburg CTE below; only fills area_name where it is otherwise
+-- blank (subarea_l2 only) -- district/subarea_l1's real WFS names are
+-- untouched. Every Gebiet gets a label (same values as dim_area).
+-- 6b. int_berlin_lor_name_disambiguation (DERIVED, #352) -- the few Berlin
+-- PLR/BZR/PGR names that repeat within one level AND vintage get the parent
+-- name appended (e.g. 'Heerstraße (Charlottenburg West)'). Joined per
+-- vintage into the berlin_plr/bzr/pgr CTEs; all other names unchanged.
 -- 6. berlin_bezirk (DERIVED, not a new source) -- OA-D6 (#240, ADR-0024):
 -- Bezirk (12 districts) has no WFS geometry source of its own. Per the
 -- maintainer's OA-D0 confirmed scope knob #3 ("Geometry = reuse + dissolve
@@ -79,12 +83,18 @@ with
             lor.city_code,
             'plr' as area_level,
             lor.area_code,
-            lor.area_name,
+            coalesce(dis.area_name, lor.area_name) as area_name,
             lor.area_vintage,
             lor.geometry_wkb,
             city.native_crs_epsg
         from {{ ref("stg_berlin_lor") }} as lor
         left join {{ ref("dim_city") }} as city on lor.city_code = city.city_code
+        left join
+            {{ ref("int_berlin_lor_name_disambiguation") }} as dis
+            on lor.city_code = dis.city_code
+            and dis.area_level = 'plr'
+            and lor.area_code = dis.area_code
+            and lor.area_vintage = dis.area_vintage
         where lor.area_code is not null
     ),
 
@@ -93,12 +103,18 @@ with
             lor.city_code,
             'bzr' as area_level,
             lor.area_code,
-            lor.area_name,
+            coalesce(dis.area_name, lor.area_name) as area_name,
             lor.area_vintage,
             lor.geometry_wkb,
             city.native_crs_epsg
         from {{ ref("stg_berlin_lor_bzr") }} as lor
         left join {{ ref("dim_city") }} as city on lor.city_code = city.city_code
+        left join
+            {{ ref("int_berlin_lor_name_disambiguation") }} as dis
+            on lor.city_code = dis.city_code
+            and dis.area_level = 'bzr'
+            and lor.area_code = dis.area_code
+            and lor.area_vintage = dis.area_vintage
         where lor.area_code is not null
     ),
 
@@ -107,12 +123,18 @@ with
             lor.city_code,
             'pgr' as area_level,
             lor.area_code,
-            lor.area_name,
+            coalesce(dis.area_name, lor.area_name) as area_name,
             lor.area_vintage,
             lor.geometry_wkb,
             city.native_crs_epsg
         from {{ ref("stg_berlin_lor_pgr") }} as lor
         left join {{ ref("dim_city") }} as city on lor.city_code = city.city_code
+        left join
+            {{ ref("int_berlin_lor_name_disambiguation") }} as dis
+            on lor.city_code = dis.city_code
+            and dis.area_level = 'pgr'
+            and lor.area_code = dis.area_code
+            and lor.area_vintage = dis.area_vintage
         where lor.area_code is not null
     ),
 
@@ -135,12 +157,11 @@ with
         group by lor.city_code, lor.area_vintage, substr(lor.area_code, 1, 2)
     ),
 
-    -- #307: best-effort OSM-derived name for statistisches-Gebiet (subarea_l2)
-    -- rows, which have no name at the WFS source (see stg_hamburg_geo's own
+    -- #307/#352: display label for statistisches-Gebiet (subarea_l2) rows,
+    -- which have no name at the WFS source (see stg_hamburg_geo's own
     -- area_name column note: "'' for statgebiet, which the source does not
-    -- name"). int_hamburg_gebiet_osm_names is a point-in-polygon crosswalk
-    -- over OSM place=neighbourhood|suburb|quarter nodes -- see that model's
-    -- header for the method and its documented partial-coverage caveat.
+    -- name"). int_hamburg_gebiet_names builds it from the parent Stadtteil
+    -- plus the OSM place name or the Gebiet code -- see that model's header.
     -- Only applied where area_name is already blank (subarea_l2); district/
     -- subarea_l1's real WFS names are never overridden.
     hamburg as (
@@ -152,7 +173,7 @@ with
                 when
                     geo.area_level = 'subarea_l2'
                     and (geo.area_name is null or geo.area_name = '')
-                then osm_names.osm_place_name
+                then gebiet_names.area_name
                 else geo.area_name
             end as area_name,
             geo.area_vintage,
@@ -161,10 +182,10 @@ with
         from {{ ref("stg_hamburg_geo") }} as geo
         left join {{ ref("dim_city") }} as city on geo.city_code = city.city_code
         left join
-            {{ ref("int_hamburg_gebiet_osm_names") }} as osm_names
-            on geo.city_code = osm_names.city_code
-            and geo.area_code = osm_names.area_code
-            and geo.area_level = 'subarea_l2'
+            {{ ref("int_hamburg_gebiet_names") }} as gebiet_names
+            on geo.city_code = gebiet_names.city_code
+            and geo.area_code = gebiet_names.area_code
+            and geo.area_level = gebiet_names.area_level
         where geo.area_code is not null
     ),
 
