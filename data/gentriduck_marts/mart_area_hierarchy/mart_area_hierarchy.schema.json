@@ -1,0 +1,1 @@
+[{"name":"city_code","evidenceType":"string","typeFidelity":"precise"},{"name":"area_level","evidenceType":"string","typeFidelity":"precise"},{"name":"area_code","evidenceType":"string","typeFidelity":"precise"},{"name":"parent_area_level","evidenceType":"string","typeFidelity":"precise"},{"name":"parent_area_code","evidenceType":"string","typeFidelity":"precise"}]
