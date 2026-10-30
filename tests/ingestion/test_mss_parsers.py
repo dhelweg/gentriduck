@@ -11,6 +11,9 @@ and deterministic, matching the style of `test_lor_crosswalk.py`.
 
 from __future__ import annotations
 
+import csv
+from pathlib import Path
+
 from berlin.mss.ingest_mss import (
     UNINHABITED_SENTINEL,
     _map_dynamik,
@@ -177,6 +180,35 @@ def test_canonical_indicator_per_edition_matches_indikatorenhefte():
     assert canonical_indicator(2021, "d2") is None
     assert canonical_indicator(2023, "s2") == "alleinerziehende_anteil"
     assert canonical_indicator(2025, "d2") == "alleinerziehende_dynamik"
+
+
+SEED_MSS_INDICATOR_VOCAB = (
+    Path(__file__).resolve().parents[2] / "transform" / "seeds" / "seed_mss_indicator_vocab.csv"
+)
+
+
+def test_canonical_indicator_agrees_with_dbt_seed():
+    # #360 review: the ingestion mapping and the dbt seed (which staging actually
+    # uses) must not drift apart.
+    with SEED_MSS_INDICATOR_VOCAB.open(encoding="utf-8", newline="") as fh:
+        rows = list(csv.DictReader(fh))
+    assert rows, "seed_mss_indicator_vocab.csv is empty"
+    seed_editions = set()
+    for row in rows:
+        edition = int(row["edition"])
+        seed_editions.add(edition)
+        slot = row["raw_attr"].removesuffix("_x")
+        assert canonical_indicator(edition, slot) == row["indicator"], row
+        assert row["official_code"] == slot.upper(), row
+    # The vacant S2/D2 slot of MSS 2019/2021 has no seed row and no canonical name.
+    for edition in (2019, 2021):
+        assert edition in seed_editions
+        for slot in ("s2", "d2"):
+            assert canonical_indicator(edition, slot) is None
+            assert not any(
+                int(r["edition"]) == edition and r["raw_attr"].removesuffix("_x") == slot
+                for r in rows
+            )
 
 
 def test_parse_features_long_labels_s2_x_as_long_term_unemployment_pre2019():
