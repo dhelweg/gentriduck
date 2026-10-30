@@ -2732,10 +2732,20 @@ models:
           overlapping lor_2021 years today, so a strict both-required rule
           would be permanently empty; see displacement_subindex_is_partial).
           Pressure-positive polarity: high = more long-tenure-resident
-          turnover and/or above-median rent + transfer-dependency pressure --
+          turnover, or a high rent_pressure_proxy (high on EITHER rent level OR
+          transfer dependency, or both -- a compensatory mean of two
+          anti-correlated terms, not co-location; #360 RC-2, redesign #362) --
           consistent orientation with the vulnerability-positive D1/D2/D4
           columns, but a PREDICTOR not an outcome (never blended with
-          status_index/dynamik_index/ewr_composite). Berlin lor_2021 rows
+          status_index/dynamik_index/ewr_composite). CIRCULARITY FIREWALL (#360
+          RC-1; R-A4 condition 1): the rent-pressure term contains MSS S3, a
+          direct MSS Status input (rho 0.80-0.84 with same-edition
+          status_index), so this column must not predict the same-edition
+          Status/Dynamik class or a Dynamik window containing the matched MSS
+          edition; lead-lag use must lag it by >= 1 non-overlapping edition and
+          control for baseline Status. SERIES BREAK: 2009-2020 values are
+          turnover-only, 2021+ values rent-pressure-only (both flagged via
+          displacement_subindex_is_partial) -- never pool them as one series. Berlin lor_2021 rows
           only (int_berlin_displacement_subindex's own scope constraint);
           NULL for lor_pre2021 and Hamburg branches. Not a measured
           displacement outcome -- read jointly with
@@ -3948,17 +3958,22 @@ models:
       combines modelled Mietspiegel rent level (relative to the citywide/PLR
       median, per-year z-score) with the MSS transferbezug_anteil transfer-receipt
       share (ability-to-pay-stress proxy, already vulnerability-positive per the
-      R-A4/#67 geo-signoff) into an equal-weight mean-of-z-scores composite. NOT a
+      R-A4/#67 geo-signoff; MSS S3 excludes registered unemployed people) into an
+      equal-weight mean-of-z-scores composite. See the rent_pressure_proxy column
+      for what a high value does and does not mean (#360 RC-2), and the model
+      header for the circularity firewall (#360 RC-1, redesign #362). NOT a
       rent-to-income ratio (no PLR-grain income series exists; ADR-0007 gap;
       ADR-0019 Alternative C rejected that approach under R-C2 grounding).
 
-      Coverage limitation: as actually ingested, transferbezug_anteil is non-null
-      for MSS editions 2015, 2017, 2023, 2025 and NULL for editions 2019, 2021
-      (narrower suspension window than R-A4/#67's "<=2021" characterization --
-      verified directly against stg_berlin_mss_indicators). rent_pressure_proxy
-      is therefore populated for Wohnlage snapshot_year in (2017, 2023, 2026) and
-      NULL for snapshot_year in (2019, 2021) by construction. z_rent_rel alone is
-      populated for all snapshot years.
+      Coverage (#360 correction): transferbezug_anteil is MSS index indicator S3
+      Transferbezug (non-unemployed SGB II/XII recipients per resident), published
+      in every MSS edition 2015-2025, so rent_pressure_proxy is populated for every
+      Wohnlage snapshot_year (2017, 2019, 2021, 2023, 2026) wherever both inputs
+      exist. Before #360 the column was mis-mapped from WFS slot s2
+      (Langzeitarbeitslosigkeit 2015/2017, vacant 2019/2021, single-parent-household
+      children 2023/2025), which is why 2019/2021 used to be NULL and why the
+      2023/2026 values carried the wrong construct
+      (docs/epic-c/360-mss-indicator-mapping-evidence.md).
 
       Zero consumers as of this model -- not yet wired into any mart or the
       governed gentrification_index (ADR-0019 explicitly defers that integration
@@ -4002,9 +4017,10 @@ models:
           NULL when the source is NULL (wohnlage_low_n).
       - name: transferbezug_anteil
         description: >
-          MSS transfer-receipt (SGB II/XII) share for the matched edition
-          (ability-to-pay-stress input to z_transfer_stress). NULL for matched
-          editions 2019 and 2021 (see model header coverage-limitation note).
+          MSS S3 Transferbezug share (non-unemployed SGB II/XII recipients per
+          resident, %) for the matched edition (ability-to-pay-stress input to
+          z_transfer_stress). Populated for all matched editions since #360; NULL
+          only for uninhabited PLRs.
       - name: transfer_stress_mss_edition
         description: >
           The MSS edition actually matched to this Wohnlage snapshot_year
@@ -4018,17 +4034,22 @@ models:
         description: >
           Per-snapshot_year z-score of transferbezug_anteil across PLRs (higher =
           more transfer-dependent residents; vulnerability-positive, no sign flip
-          -- R-A4/#67 Finding d). NULL for snapshot_year in (2019, 2021); see
-          model header coverage-limitation note.
+          -- R-A4/#67 Finding d). NULL only where transferbezug_anteil is NULL.
       - name: rent_pressure_proxy
         description: >
           mean(z_rent_rel, z_transfer_stress) -- affordability-stress composite
           (ADR-0019 Decision 2). NULL when either input z-score is NULL (no
-          imputation across the transferbezug suspension gap). High = above-median
-          modelled rent combined with an above-median transfer-dependent
-          population share (rent risen/already high where residents can least
-          absorb it) -- an affordability-stress signal, not a measured
-          displacement event and not a rent-to-income ratio.
+          imputation of a missing term). An equal-weight COMPENSATORY mean: after
+          #360 its two terms are strongly anti-correlated (Spearman rho -0.51 to
+          -0.72 across snapshots), so a high value means high on EITHER modelled
+          rent OR transfer dependency (MSS S3, which excludes registered
+          unemployed people), or both. It is NOT evidence that high rent and
+          high transfer dependence occur in the same PLR (only 8-22 % of the top
+          quintile are above average on both; docs/epic-c/360-domain-signoff.md
+          §2 Q3(b); aggregation redesign #362). Must not predict the same-edition
+          MSS Status/Dynamik class (S3 is a Status input; #360 RC-1). An
+          affordability-stress signal, not a measured displacement event and not
+          a rent-to-income ratio.
 
   - name: int_berlin_turnover_proxy
     description: >
@@ -4185,7 +4206,8 @@ models:
       panel) and rent_pressure_proxy (irregular Wohnlage WFS editions) have
       ZERO overlapping lor_2021 years today -- turnover_proxy only has rows
       for 2009-2020 (EWR ingestion gap #197 leaves 2021+ empty/NULL),
-      rent_pressure_proxy's lor_2021 rows only exist for 2023 and 2026. A
+      rent_pressure_proxy's lor_2021 rows are populated only for 2021, 2023
+      and 2026 (2021 since the #360 MSS indicator-mapping fix). A
       strict all-or-nothing composite would therefore be PERMANENTLY EMPTY
       given the data as ingested. displacement_subindex is instead a
       PARTIAL-AVAILABILITY mean of whichever of {turnover_proxy,
@@ -4278,7 +4300,11 @@ models:
           (see model header for why a strict all-or-nothing rule would be
           permanently empty given today's real coverage). Higher = higher
           displacement/affordability pressure from whichever signal(s) are
-          available.
+          available. 2009-2020 rows are turnover-only and 2021+ rows are
+          rent-pressure-only (is_partial_availability = true): different
+          constructs, never pool as one series (#360 geo-DS condition). Not
+          to predict the same-edition MSS Status/Dynamik class (#360 RC-1;
+          see model header).
       - name: n_components_available
         description: 0, 1, or 2 -- how many of {turnover_proxy, rent_pressure_proxy} fed displacement_subindex for this row.
       - name: is_partial_availability

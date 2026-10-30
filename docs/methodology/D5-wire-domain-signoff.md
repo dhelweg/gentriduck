@@ -158,3 +158,35 @@ integrate this branch into `develop`.*
 - `docs/methodology/D5-wire-geo-signoff.md` (paired statistical/spatial review)
 - `docs/adr/0019-berlin-milieuschutz-displacement-source.md`,
   `docs/adr/0008-multi-dimensional-gentrification-model.md`
+
+---
+
+## Correction note (2026-10-30, #360) — appended, signed record above unchanged
+
+*Added by data-engineer under #360 (MSS indicator mapping fix). This note does not change the
+outcome recorded above; the dual sign-off on the #360 fix is a separate record. Evidence:
+`docs/epic-c/360-mss-indicator-mapping-evidence.md`.*
+
+Before #360 the MSS indexind ingestion mapped the WFS slots one position off for every edition
+(`s2`→`transferbezug`, `s3`→`kinderarmut`, `s4`→`alleinerziehende`). Verified against the MSS
+Indikatorenhefte: S1 Arbeitslosigkeit, S3 Transferbezug and S4 Kinderarmut are populated in every
+edition 2015–2025. S2 is Langzeitarbeitslosigkeit in 2015/2017, vacant (always null) in
+2019/2021, and Kinder/Jugendliche in alleinerziehenden Haushalten from 2023.
+
+What this changes in the statements above:
+- The endorsement of `rent_pressure_proxy` as "modelled rent level with MSS transfer-receipt share"
+  matches the corrected input. At review time, the 2023/2026 input was in fact the share of
+  children in single-parent households, a family-structure measure. Since #360 it is S3
+  Transferbezug.
+- D5 coverage since #360: `displacement_subindex` is also populated for reference year 2021 (536
+  PLRs, rent-pressure-only). Recommendation D-R1 is unaffected.
+- **Co-location reading (added after the #360 domain sign-off, RC-2).** The co-location reading
+  endorsed in D-2 ("rent increases translate directly into displacement pressure for
+  transfer-dependent households") does not describe the corrected composite. With the S3 input
+  (which excludes registered unemployed people), `rent_pressure_proxy`'s two z-terms are strongly
+  anti-correlated (ρ −0.51 to −0.72), so a high value means high on either term or both. S3 is
+  also a direct MSS Status input (ρ 0.80–0.84 with the same-edition `status_index`), so D5 must
+  not predict the same-edition Status/Dynamik class (R-A4 condition 1). See
+  `docs/epic-c/360-domain-signoff.md` §2 Q3(a)/(b). The aggregation redesign is tracked in
+  **#362**. The 2021 D5 rows are rent-pressure-only (`displacement_subindex_is_partial`) and must
+  not be pooled with the 2009–2020 turnover-only rows as one series.

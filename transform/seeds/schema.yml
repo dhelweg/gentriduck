@@ -462,6 +462,75 @@ seeds:
               arguments:
                 values: ["lor_pre2021", "lor_2021"]
 
+  - name: seed_mss_indicator_vocab
+    description: >
+      #360: per-edition mapping of the Berlin MSS indexind WFS attributes (index-indicator
+      slots S1-S4 / D1-D4) to canonical indicator names, with the official German label,
+      a short definition and the Indikatorenheft chapter/page it was verified against.
+      Read by stg_berlin_mss_indicators (inner join on edition + raw_attr). The vacant
+      S2/D2 slot of MSS 2019/2021 is intentionally absent; test_mss_indicators_raw_attr_mapped
+      fails if any unmapped attribute carries values. Evidence and sources:
+      docs/epic-c/360-mss-indicator-mapping-evidence.md.
+    meta:
+      dbt_meta_owner: data-engineer
+    data_tests:
+
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns:
+              - edition
+              - raw_attr
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns:
+              - edition
+              - indicator
+    columns:
+      - name: edition
+        description: MSS edition (2015, 2017, 2019, 2021, 2023, 2025).
+        data_tests:
+
+          - not_null
+          - accepted_values:
+              arguments:
+                values: [2015, 2017, 2019, 2021, 2023, 2025]
+                quote: false
+      - name: raw_attr
+        description: WFS indexind attribute name as published in that edition.
+        data_tests:
+
+          - not_null
+      - name: indicator
+        description: Canonical snake_case indicator name exposed by stg_berlin_mss_indicators.
+        data_tests:
+
+          - not_null
+      - name: official_code
+        description: MSS slot code as numbered in that edition's Indikatorenheft.
+        data_tests:
+
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ["S1", "S2", "S3", "S4", "D1", "D2", "D3", "D4"]
+      - name: indicator_kind
+        description: "'status' (level share, %) or 'dynamik' (two-year change, percentage points)."
+        data_tests:
+
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ["status", "dynamik"]
+      - name: label_de
+        description: Official German indicator label (ASCII transliteration).
+      - name: definition_de
+        description: Short official definition (numerator / denominator), ASCII transliteration.
+      - name: source_ref
+        description: Indikatorenheft title, edition, chapter and printed page the row was verified against.
+        data_tests:
+
+          - not_null
+
   - name: seed_gentrification_ground_truth
     description: >
       B2 back-test harness ground-truth seed. Curated list of ~20 Berlin PLRs

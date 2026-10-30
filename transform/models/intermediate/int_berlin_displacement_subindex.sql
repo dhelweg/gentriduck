@@ -11,7 +11,10 @@
 -- rows only for reference_year 2009-2020 (the EWR ingestion gap #197 means
 -- there is currently no lor_2021 EWR data at all for 2021-2023, and
 -- residence_duration_5y_share is NULL for 2024/2025); rent_pressure_proxy's
--- lor_2021 rows exist only for Wohnlage snapshot_year 2023 and 2026. A
+-- lor_2021 rows are populated only for Wohnlage snapshot_year 2021, 2023 and
+-- 2026 (2021 since #360: its MSS transfer input, S3 Transferbezug, was
+-- mis-mapped to the vacant S2 slot before -- see int_berlin_rent_pressure_proxy
+-- header and docs/epic-c/360-mss-indicator-mapping-evidence.md). A
 -- strict all-or-nothing composite (mirroring int_ewr_socioeco's fixed-tier
 -- discipline) would therefore be PERMANENTLY EMPTY given the data as
 -- currently ingested -- not a hypothetical risk, a verified fact. This is
@@ -68,8 +71,16 @@
 -- Polarity (all pressure/vulnerability-positive, consistent orientation,
 -- verified per D5-wire-geo-signoff.md):
 -- higher turnover_proxy         = long-tenure residents leaving faster
--- higher rent_pressure_proxy    = above-median rent + above-median
--- transfer-dependency
+-- higher rent_pressure_proxy    = higher on EITHER modelled rent level OR
+-- transfer dependency (MSS S3 Transferbezug,
+-- which excludes registered unemployed
+-- people), or both -- an equal-weight
+-- compensatory mean of two ANTI-correlated
+-- terms (rho -0.51 to -0.72 after #360), NOT
+-- evidence that high rent and high transfer
+-- dependence co-occur in the same PLR (RC-2,
+-- docs/epic-c/360-domain-signoff.md §2 Q3(b);
+-- aggregation redesign: #362)
 -- higher displacement_subindex  = higher combined displacement/affordability
 -- pressure from whichever signal(s) are
 -- available (NULL only when both are null).
@@ -84,6 +95,21 @@
 -- consumed by int_gentrification_ts as a new PREDICTOR/lead-side field
 -- (ADR-0008), Branch A (lor_2021) only, mirroring D3-brw-wire's own wiring
 -- pattern.
+--
+-- CIRCULARITY FIREWALL (RC-1, 360-domain-signoff.md §2 Q3(a); R-A4 condition
+-- 1; #362): rent_pressure_proxy's transfer term is MSS index indicator S3, a
+-- direct input of the MSS Status index (Spearman rho with the same-edition
+-- status_index 0.80-0.84). displacement_subindex must NOT predict the
+-- same-edition MSS Status or Dynamik class, nor a Dynamik window that contains
+-- the matched MSS edition; any lead-lag use must lag D5 by at least one
+-- non-overlapping MSS edition and control for baseline Status level. Until
+-- #362 is resolved no mart, analysis/*.py script or G2 page may consume it.
+--
+-- SERIES BREAK (#360 geo-DS condition, docs/epic-c/360-geo-signoff.md):
+-- reference years 2009-2020 are turnover-only rows; 2021, 2023, 2025 and 2026
+-- are rent-pressure-only rows (is_partial_availability = true, carried to
+-- int_gentrification_ts.displacement_subindex_is_partial). The two segments are
+-- different constructs and must not be pooled or read as one time series.
 --
 -- dbt_meta_owner: data-engineer
 -- geo-ds-sign-off: PASS (docs/methodology/D5-wire-geo-signoff.md)

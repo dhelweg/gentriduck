@@ -114,3 +114,19 @@ drift, null semantics, and boundary vintage honestly. The conditions above are *
 and one binding firewall** (no same-edition self-prediction), not defects in this ingestion PR.
 R-A4 ingestion is domain-valid to merge once the geo-data-scientist statistical sign-off also
 records PASS.
+
+---
+
+## Correction note (2026-10-28, #360) — appended, signed record above unchanged
+
+*Added by data-engineer under #360. This note does not change the verdict recorded above; the
+dual sign-off on the #360 fix is a separate record.*
+
+Condition 4 above refers to "the `transferbezug_*` null-in-≤2021 columns (WFS `s2_x`)". Verified
+against the MSS Indikatorenhefte (`docs/epic-c/360-mss-indicator-mapping-evidence.md`), the WFS
+attribute `s2_x` is the **S2 slot**: Langzeitarbeitslosigkeit in 2015/2017, vacant (always null)
+in 2019/2021. The single-parent-household indicator occupies S2 from 2023. Transferbezug is S3
+and Kinderarmut is S4 in every edition. Before #360 the warehouse labels for S2–S4 were shifted by
+one slot. The intent of condition 4 holds under the corrected labels: the cross-edition core is
+Arbeitslosigkeit + Transferbezug + Kinderarmut (ADR-0007's three-indicator core), and the vacant
+S2 slot is missing, not zero.
