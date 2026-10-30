@@ -15,24 +15,35 @@ type name before fetching (same pattern as ingest_mss.py for the indizes layer).
 Firm editions (must succeed):   2019, 2021, 2023, 2025
 Best-effort editions (skip on failure): 2013, 2015, 2017
 
-Attribute vocabulary (per-edition WFS column -> canonical indicator name):
-  s1  -> arbeitslose_anteil      (Arbeitslosigkeit SGB II; status level; all editions)
-  s2  -> transferbezug_anteil    (Transferbezug SGB II/XII nicht-Erwerbstätige;
-                                   column name 's2' in 2023+; 's2_x' (always null) pre-2023)
-  s3  -> kinderarmut_anteil      (Kinderarmut, SGB II transfer u15; status level; all editions)
-  s4  -> alleinerziehende_anteil (Kinder in alleinerziehenden Haushalten; all editions
-                                   2015+. Note: ADR-0006 stated 2023+ only, but WFS
-                                   probing confirms the column is populated in all editions.)
-  d1  -> arbeitslose_dynamik     (Dynamik version of s1; all editions)
-  d2  -> transferbezug_dynamik   (Dynamik version of s2; column 'd2'/'d2_x' per edition)
-  d3  -> kinderarmut_dynamik     (Dynamik version of s3; all editions)
-  d4  -> alleinerziehende_dynamik(Dynamik version of s4; all editions 2015+)
+Attribute vocabulary — #360 (verified against the MSS Indikatorenhefte; full evidence in
+docs/epic-c/360-mss-indicator-mapping-evidence.md). The WFS attributes s1..s4 / d1..d4 are
+the MSS index-indicator SLOTS S1..S4 / D1..D4. Slots 1, 3 and 4 hold the same construct in
+every edition; slot 2 changed meaning twice:
 
-Column-name quirk (confirmed by WFS probing):
-  Editions 2015–2021 publish 's2_x' and 'd2_x' instead of 's2'/'d2', and those
-  columns are always null (the indicator was suspended/reformatted in that span).
-  Editions 2023+ publish 's2'/'d2' with valid float values.
-  The adapter looks for 's2' first, then falls back to 's2_x'; same for 'd2'.
+  slot  2015, 2017                      2019, 2021            2023, 2025
+  s1    arbeitslose_anteil              arbeitslose_anteil    arbeitslose_anteil
+        (SGB II + III, 15-<65 J.)       (SGB II only)         (SGB II, 15-<Regelaltersgrenze)
+  s2    langzeitarbeitslose_anteil      VACANT (attr 's2_x',  alleinerziehende_anteil
+        (attr 's2_x', populated)        always null)          (u18 in Alleinerziehenden-HH)
+  s3    transferbezug_anteil (nicht arbeitslose Empfaenger SGB II/XII je EW; all editions)
+  s4    kinderarmut_anteil   (u15 in SGB-II-Bedarfsgemeinschaften je u15; all editions)
+  d1-d4 the matching *_dynamik (change over two years, percentage points)
+
+Sources: MSS Indikatorenblaetter ab MSS 2013 (Stand 23.08.2016) Kap. 3.1/3.2; Indikatoren-
+blaetter zum MSS 2019 (Stand 02.06.2020) S. 9 "Wegfall S2: Langzeitarbeitslosigkeit";
+Indikatorenblaetter MSS 2023/2025 Kap. 3.1; WFS indexind <Abstract> per edition.
+
+Before #360 this adapter mapped s2 -> transferbezug, s3 -> kinderarmut, s4 ->
+alleinerziehende for every edition (labels shifted by one slot). Parquets written before the
+fix carry those legacy labels in `indicator`; dbt staging (stg_berlin_mss_indicators) ignores
+that column and maps from (edition, raw_attr) via seed_mss_indicator_vocab, so both old and
+new parquets stage correctly.
+
+Column-name quirk (confirmed by WFS probing): editions 2015-2021 publish 's2_x'/'d2_x'
+instead of 's2'/'d2'. In 2015/2017 they hold Langzeitarbeitslosigkeit; in 2019/2021 they are
+always null (vacant slot). Editions 2023+ publish 's2'/'d2'. The adapter looks for 's2' first,
+then falls back to 's2_x'; same for 'd2'. Vacant-slot rows are still written (indicator =
+null) so the raw layer records exactly what the WFS published.
 
 Uninhabited PLR sentinel: -9999 (stored as null value, PLR row is kept).
 
@@ -114,29 +125,53 @@ LOR_VINTAGE_MAP = {
 UNINHABITED_SENTINEL = -9999
 
 # ---------------------------------------------------------------------------
-# Indicator vocabulary
+# Indicator vocabulary (#360)
 #
-# Each entry: (canonical_name, primary_attr, fallback_attr)
+# SLOT_ATTRS: (slot, primary_attr, fallback_attr) for each MSS index-indicator slot.
 # primary_attr  — the column name to look up in props first
 # fallback_attr — alternative column name to try if primary is absent (may be None)
 #
-# WFS quirk: editions 2015–2021 publish 's2_x'/'d2_x' (always null) instead of
-# 's2'/'d2'. Editions 2023+ publish 's2'/'d2' with real values.
+# WFS quirk: editions 2015–2021 publish 's2_x'/'d2_x' instead of 's2'/'d2'.
 # The adapter always looks for primary first, then fallback.
+#
+# The construct held by a slot depends on the edition — see canonical_indicator()
+# and the module docstring for the verified mapping and its sources.
 # ---------------------------------------------------------------------------
 
-INDICATOR_VOCAB: list[tuple[str, str, Optional[str]]] = [
-    # Status-level indicators
-    ("arbeitslose_anteil", "s1", None),
-    ("transferbezug_anteil", "s2", "s2_x"),
-    ("kinderarmut_anteil", "s3", None),
-    ("alleinerziehende_anteil", "s4", None),
-    # Dynamik (change) indicators
-    ("arbeitslose_dynamik", "d1", None),
-    ("transferbezug_dynamik", "d2", "d2_x"),
-    ("kinderarmut_dynamik", "d3", None),
-    ("alleinerziehende_dynamik", "d4", None),
+SLOT_ATTRS: list[tuple[str, str, Optional[str]]] = [
+    ("s1", "s1", None),
+    ("s2", "s2", "s2_x"),
+    ("s3", "s3", None),
+    ("s4", "s4", None),
+    ("d1", "d1", None),
+    ("d2", "d2", "d2_x"),
+    ("d3", "d3", None),
+    ("d4", "d4", None),
 ]
+
+# Constructs that hold the same slot in every edition (Indikatorenhefte Kap. 3.1).
+_STABLE_SLOT_CONSTRUCT = {"1": "arbeitslose", "3": "transferbezug", "4": "kinderarmut"}
+
+
+def canonical_indicator(edition: int, slot: str) -> Optional[str]:
+    """
+    Return the canonical indicator name held by WFS ``slot`` (e.g. 's2', 'd3') in ``edition``.
+
+    Returns None for a vacant slot (S2/D2 in MSS 2019 and 2021, after Langzeitarbeitslosigkeit
+    was dropped and before the single-parent-household indicator was introduced in MSS 2023).
+    """
+    kind = "anteil" if slot.startswith("s") else "dynamik"
+    number = slot[1:]
+    if number in _STABLE_SLOT_CONSTRUCT:
+        return f"{_STABLE_SLOT_CONSTRUCT[number]}_{kind}"
+    if number == "2":
+        if edition <= 2017:
+            return f"langzeitarbeitslose_{kind}"
+        if edition >= 2023:
+            return f"alleinerziehende_{kind}"
+        return None
+    raise ValueError(f"Unknown MSS indexind slot: {slot!r}")
+
 
 # Parquet schema for the output files.
 INDICATORS_PARQUET_SCHEMA = pa.schema(
@@ -273,7 +308,9 @@ def parse_features_long(geojson: dict, edition: int) -> list[dict]:
     """
     Parse GeoJSON features into long-format row dicts.
 
-    Each WFS feature produces one row per indicator in INDICATOR_VOCAB.
+    Each WFS feature produces one row per slot in SLOT_ATTRS, labelled with the
+    edition-specific canonical indicator name (None for a vacant slot; see
+    canonical_indicator).
     Uninhabited PLR rows (sentinel -9999) are included with null values.
     Features missing a plr_id are skipped with a warning.
 
@@ -310,7 +347,8 @@ def parse_features_long(geojson: dict, edition: int) -> list[dict]:
         plr_id = str(raw_id).strip().zfill(8)
         plr_name = str(props.get("plr_name") or props.get("PLR_NAME") or "").strip()
 
-        for canonical_name, primary_attr, fallback_attr in INDICATOR_VOCAB:
+        for slot, primary_attr, fallback_attr in SLOT_ATTRS:
+            canonical_name = canonical_indicator(edition, slot)
             # Determine which raw attribute name the WFS actually published.
             if primary_attr in props:
                 used_attr = primary_attr
@@ -331,6 +369,17 @@ def parse_features_long(geojson: dict, edition: int) -> list[dict]:
                 continue
 
             value = _coerce_value(raw_val)
+            if canonical_name is None and value is not None:
+                # A slot the Indikatorenheft documents as vacant carries data:
+                # the published indicator set has changed -- re-verify (#360).
+                log.warning(
+                    "[%d] Vacant slot %r (attr %r) has a value for plr %s -- "
+                    "re-check the MSS indicator mapping (#360)",
+                    edition,
+                    slot,
+                    used_attr,
+                    plr_id,
+                )
 
             rows.append(
                 {

@@ -1885,8 +1885,13 @@ models:
       2015/2017 are best-effort; 2019–2025 are firm).
       Boundary-vintage break: editions <=2019 use lor_pre2021 (447 PLR);
       editions >=2021 use lor_2021 (542 PLR). Uninhabited PLR rows have null values.
-      The transferbezug_* indicators carry null values in editions <=2021 (WFS
-      published 's2_x'/'d2_x' columns which were always null in that span).
+      #360: the canonical indicator is mapped per (edition, raw_attr) via
+      seed_mss_indicator_vocab, verified against each edition's MSS Indikatorenheft
+      (docs/epic-c/360-mss-indicator-mapping-evidence.md). WFS slots 1/3/4 are
+      Arbeitslosigkeit / Transferbezug / Kinderarmut in every edition; slot 2 is
+      Langzeitarbeitslosigkeit in 2015/2017, vacant in 2019/2021 (not staged) and
+      Kinder/Jugendliche in alleinerziehenden Haushalten from 2023. Before #360 the
+      labels for slots 2-4 were shifted by one slot.
       Returns zero rows (typed stub) until parquets are ingested.
       Primary SES predictor input for R-A1 re-grounding of the gentrification index.
     meta:
@@ -1956,36 +1961,59 @@ models:
                 where: "area_code is not null"
       - name: indicator
         description: >
-          Canonical snake_case indicator name. Status-level set:
-          arbeitslose_anteil (unemployment SGB II),
-          transferbezug_anteil (transfer benefit receipt SGB II/XII; null pre-2023),
-          kinderarmut_anteil (child poverty SGB II u15),
-          alleinerziehende_anteil (children in single-parent households; all editions 2015+;
-          present despite ADR-0006 stating 2023+ only — WFS probing confirmed).
-          Dynamik set (change versions): arbeitslose_dynamik, transferbezug_dynamik,
-          kinderarmut_dynamik, alleinerziehende_dynamik (all editions 2015+).
+          Canonical snake_case indicator name (#360, per seed_mss_indicator_vocab).
+          Status-level set:
+          arbeitslose_anteil (S1 Arbeitslosigkeit; all editions; SGB II + SGB III
+          until 2017, SGB II only from 2019 -- definition break, see seed),
+          langzeitarbeitslose_anteil (S2 Langzeitarbeitslosigkeit; 2015 and 2017 only),
+          transferbezug_anteil (S3 Transferbezug: non-unemployed SGB II/XII recipients
+          per resident; all editions),
+          kinderarmut_anteil (S4 Kinderarmut: under-15s in SGB II households; all editions),
+          alleinerziehende_anteil (S2 Kinder/Jugendliche unter 18 in alleinerziehenden
+          Haushalten; 2023 and 2025 only).
+          Dynamik set: the matching *_dynamik (two-year change, percentage points).
         data_tests:
 
           - not_null:
               config:
                 where: "area_code is not null"
           - accepted_values:
-              values:
-                - arbeitslose_anteil
-                - transferbezug_anteil
-                - kinderarmut_anteil
-                - alleinerziehende_anteil
-                - arbeitslose_dynamik
-                - transferbezug_dynamik
-                - kinderarmut_dynamik
-                - alleinerziehende_dynamik
+              arguments:
+                values:
+                  - arbeitslose_anteil
+                  - langzeitarbeitslose_anteil
+                  - transferbezug_anteil
+                  - kinderarmut_anteil
+                  - alleinerziehende_anteil
+                  - arbeitslose_dynamik
+                  - langzeitarbeitslose_dynamik
+                  - transferbezug_dynamik
+                  - kinderarmut_dynamik
+                  - alleinerziehende_dynamik
+              config:
+                where: "area_code is not null"
+      - name: raw_attr
+        description: >
+          Original WFS indexind attribute the value came from ('s1'..'s4', 'd1'..'d4';
+          's2_x'/'d2_x' in 2015/2017). Traceability for the #360 mapping.
+        data_tests:
+
+          - not_null:
+              config:
+                where: "area_code is not null"
+      - name: official_code
+        description: >
+          MSS index-indicator slot code for this edition ('S1'..'S4', 'D1'..'D4'), as
+          numbered in the edition's Indikatorenheft.
+        data_tests:
+
+          - not_null:
               config:
                 where: "area_code is not null"
       - name: indicator_value
         description: >
-          Float indicator value (percentage or ratio as published by WFS).
-          Null for uninhabited PLR rows (WFS sentinel -9999) or where the WFS
-          column was absent/suspended for that edition (transferbezug_* in <=2021).
+          Float indicator value (percentage or percentage-point change as published
+          by WFS). Null for uninhabited PLR rows (WFS sentinel -9999).
       - name: source_attribution
         description: >
           dl-de-zero-2.0 attribution string. Value:
