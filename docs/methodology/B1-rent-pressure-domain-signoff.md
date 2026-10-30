@@ -115,3 +115,28 @@ geo-data-scientist `PASS` above before the PM may integrate into `develop`.*
 - Döring, D. & Ulbricht, S. (2016) — vulnerability/displacement-risk lens, already cited in R-A4/R-A5
 - `docs/methodology/index-definition.md` §1.2 — ecological-fallacy / PLR-aggregate guardrail (G-2)
 - `docs/methodology/B1-rent-pressure-geo-signoff.md` — companion statistical sign-off
+
+---
+
+## Correction note (2026-10-30, #360) — appended, signed record above unchanged
+
+*Added by data-engineer under #360 (MSS indicator mapping fix). This note does not change the
+outcome recorded above; the dual sign-off on the #360 fix is a separate record. Evidence:
+`docs/epic-c/360-mss-indicator-mapping-evidence.md`.*
+
+Before #360 the MSS indexind ingestion mapped the WFS slots one position off for every edition
+(`s2`→`transferbezug`, `s3`→`kinderarmut`, `s4`→`alleinerziehende`). Verified against the MSS
+Indikatorenhefte: S1 Arbeitslosigkeit, S3 Transferbezug and S4 Kinderarmut are populated in every
+edition 2015–2025. S2 is Langzeitarbeitslosigkeit in 2015/2017, vacant (always null) in
+2019/2021, and Kinder/Jugendliche in alleinerziehenden Haushalten from 2023.
+
+What this changes in the statements above:
+- §d ("Coverage-gap framing (NULL for snapshot_year 2019, 2021)", a "genuine MSS `indexind`
+  reporting-window suspension"): Transferbezug was not suspended. The 2019/2021 NULLs were the
+  vacant S2 slot under the wrong label. Since #360, `rent_pressure_proxy` is populated for all
+  Wohnlage snapshot years.
+- The "transfer-receipt share" this review endorsed is now what the proxy actually uses. At review
+  time, the 2023/2026 input was the share of children in single-parent households and the 2017
+  input was Langzeitarbeitslosigkeit. S3 counts **non-unemployed** SGB II/XII recipients;
+  registered unemployed people are in S1. Whether S3 alone is the intended ability-to-pay input is
+  raised for the #360 domain sign-off.

@@ -438,3 +438,26 @@ sight of them.
 ```
 
 **Verdict: CONCERNS**
+
+---
+
+## Correction note (2026-10-30, #360) — appended, signed record above unchanged
+
+*Added by data-engineer under #360 (MSS indicator mapping fix). This note does not change the
+outcome recorded above; the dual sign-off on the #360 fix is a separate record. Evidence:
+`docs/epic-c/360-mss-indicator-mapping-evidence.md`.*
+
+Before #360 the MSS indexind ingestion mapped the WFS slots one position off for every edition
+(`s2`→`transferbezug`, `s3`→`kinderarmut`, `s4`→`alleinerziehende`). Verified against the MSS
+Indikatorenhefte: S1 Arbeitslosigkeit, S3 Transferbezug and S4 Kinderarmut are populated in every
+edition 2015–2025. S2 is Langzeitarbeitslosigkeit in 2015/2017, vacant (always null) in
+2019/2021, and Kinder/Jugendliche in alleinerziehenden Haushalten from 2023.
+
+What this changes in the statements above:
+- The list of Berlin's MSS index indicators ("*Arbeitslosigkeit (SGB II)*, *Transferbezug*,
+  *Kinderarmut*, plus *Kinder/Jugendliche in alleinerziehenden Haushalten* from 2023", citing
+  ADR-0007 §2) is right for 2019 onward. It omits that MSS 2013–2017 had Langzeitarbeitslosigkeit
+  as S2 and counted SGB III unemployment in S1, and that MSS 2019/2021 had only three index
+  indicators. The single-parent indicator is a family-structure measure rather than a
+  labour-market or transfer measure. None of these indicators is a D4 input, so the conclusion
+  that Berlin's D1 shares no input construct with its D4 composite is unaffected.

@@ -113,8 +113,8 @@ SES input layer for R-A1.
 3. **Grain & staging table.** One row per `(edition, plr_id, indicator)` in **long format**
    (mirroring `stg_berlin_ewr`'s `(year, plr_id, indicator, value)` contract, ADR-0003
    Decision 8), staged as **`stg_berlin_mss_indicators`**. Long format is preferred over a wide
-   table because the indicator set changes across editions (4 → 3 at 2019, 3 → 4 at 2023 —
-   corrected #360; Decision in Consequences): a long table absorbs the schema change as data, not a column-count break,
+   table because the indicator set changes across editions (~~3 → 4 at 2023~~ *(corrected
+   #360: 4 → 3 at 2019, 3 → 4 at 2023)*, Decision in Consequences): a long table absorbs the schema change as data, not a column-count break,
    and lets downstream models filter to a stable indicator subset. Each row carries the
    `lor_vintage` tag (`lor_pre2021` / `lor_2021`) so joins pick the contemporaneous boundary,
    exactly as `stg_berlin_mss` does. Berlin-specific attribute names stay in the adapter; marts
@@ -206,9 +206,9 @@ with the MSS outcome** the indicators feed.
   - For any **cross-edition SES time series** (e.g. an R-A1 trend feature), use the **stable
     3-indicator core** present in *all* editions; treat the 4th indicator as a 2023+-only
     enrichment, never as a silently back-filled zero.
-  - A dbt test asserts the indicator vocabulary per edition (as corrected in #360: 4 in
-    2015/2017, 3 in 2019/2021, 4 from 2023) so the break is *visible and tested*, not smoothed
-    over. This mirrors ADR-0006's "indicator-definition
+  - A dbt test asserts the indicator vocabulary per edition (~~3 for ≤2021, 4 for ≥2023~~
+    *(corrected #360: 4 in 2015/2017, 3 in 2019/2021, 4 from 2023)*) so the break is *visible
+    and tested*, not smoothed over. This mirrors ADR-0006's "indicator-definition
     drift is a known discontinuity to document, not smooth over."
 
 - **No income variable — explicit gap.** The `indexind` layer (like the MSS itself) uses
@@ -269,7 +269,7 @@ with the MSS outcome** the indicators feed.
 - ADR-0003 (Berlin geographies + EWR long-format staging precedent): `docs/adr/0003-berlin-geographies-and-open-price-rent-sources.md`
 - Existing MSS WFS adapter (implementation basis for R-A4): `ingestion/berlin/mss/ingest_mss.py`
 - MSS index-indicator technical description (PDF): <https://fbinter.stadt-berlin.de/fb_daten/beschreibung/MSS/MSS_Index-Indikatoren__TechnBeschreibung.pdf>
-- MSS 2023 report (confirms the single-parent-household indicator added in 2023; the 2019 drop of Langzeitarbeitslosigkeit is in the MSS 2019 Indikatorenblaetter, S. 9 — corrected #360): <https://www.berlin.de/sen/sbw/stadtdaten/stadtwissen/monitoring-soziale-stadtentwicklung/bericht-2023/>
+- MSS 2023 report (~~confirms 3→4 indicator change~~ *(corrected #360: confirms 3 → 4 at 2023 only; the 2019 drop of Langzeitarbeitslosigkeit, 4 → 3, is in the MSS 2019 Indikatorenblaetter, S. 9)*, single-parent-household children added): <https://www.berlin.de/sen/sbw/stadtdaten/stadtwissen/monitoring-soziale-stadtentwicklung/bericht-2023/>
 - MSS 2023 WFS endpoint (`indexind` layer): <https://gdi.berlin.de/services/wfs/mss_2023>
 - MSS 2025 WFS GetCapabilities (verify `indexind_542` feature type): <https://gdi.berlin.de/services/wfs/mss_2025?request=GetCapabilities&service=WFS>
 - Regionaler Sozialstrukturatlas / Sozialatlas Berlin (Alternative B, future fill): <https://www.berlin.de/sen/gpg/service/gesundheitsberichterstattung/grundlagen/sozialstrukturatlas/>

@@ -127,16 +127,27 @@ revision (MSS 2023 history table S. 13). In 2019, S1 was redefined and recompute
 - **Ingestion** (`ingestion/berlin/mss/ingest_mss_indicators.py`) now labels slots per edition
   via `canonical_indicator(edition, slot)`. A vacant slot is written with `indicator = null` and
   logs a warning if it ever carries a value. Unit tests:
-  `tests/ingestion/test_mss_parsers.py`.
+  `tests/ingestion/test_mss_parsers.py`. These include a check that `canonical_indicator` agrees
+  with every row of the dbt seed, and that the vacant 2019/2021 S2/D2 slot maps to None.
 - **Column names keep their meaning for consumers.** `transferbezug_anteil` is now actually
   Transferbezug, which is what `int_berlin_rent_pressure_proxy` (D5 "transfer stress") always
   intended. No consumer SQL had to change. Only comments and descriptions were corrected.
 - **Tests:**
-  - `test_mss_indicators_edition_vocab` (rewritten) checks four things: the per-edition
-    vocabulary equals the seed in both directions; no indicator is all-null in an edition;
-    `langzeitarbeitslose_anteil ≤ arbeitslose_anteil` in every PLR; and the citywide mean of
-    `kinderarmut_anteil` is above that of `transferbezug_anteil`. The last two checks would
-    have caught the original shift.
+  - `test_mss_indicators_edition_vocab` (rewritten) runs these checks per edition:
+    - (a) the vocabulary equals the seed in both directions;
+    - (b) no indicator is all-null;
+    - (c) `langzeitarbeitslose_anteil ≤ arbeitslose_anteil` in every PLR;
+    - (d) mean `kinderarmut_anteil` > mean `transferbezug_anteil`;
+    - (e) mean `arbeitslose_anteil` < mean `transferbezug_anteil`;
+    - (f) Spearman ρ(kinderarmut, transferbezug) > 0.9 and ρ(alleinerziehende, transferbezug)
+      < 0.8;
+    - (g) each `*_dynamik` correlates > 0.9 with the two-year change of its own status slot
+      within the same LOR vintage.
+
+    Checks (b) and (d) would have caught the original shift. Checks (e)–(g) were added in
+    review. A mutation run against the built warehouse confirmed they catch an s1↔s3 swap in
+    2019+, an s2↔s4 swap in 2023/2025, a d3↔d4 swap, and the full pre-#360 shift. The
+    unmutated data passes.
   - `test_mss_indicators_raw_attr_mapped` (new) fails if a populated raw attribute has no seed
     mapping.
   - Seed schema tests: uniqueness on `(edition, raw_attr)` and `(edition, indicator)`, plus
@@ -238,9 +249,14 @@ populated PLRs (ρ 0.564; 316 change quintile). 2013–2019 stay NULL by design 
 4. **Raw parquet labels.** Parquets on disk still carry the legacy `indicator` labels until the
    next `uv run poe ingest` of this source. dbt ignores that column. A re-ingest was not run so
    that the before/after comparison is not confounded by upstream re-publication.
-5. **Other sign-offs repeating the old coverage claim** (not edited; for the PM/gate to decide
-   whether to append notes): `B1-rent-pressure-geo-signoff.md` and
-   `B1-rent-pressure-domain-signoff.md` ("NULL for 2019/2021"), `D5-wire-*-signoff.md`
-   (lor_2021 rent-pressure years "2023 and 2026"), `R-A1-*-signoff.md` and
-   `index-definition-*-draft.md` ("transferbezug null → MISSING"), and
-   `docs/epic-h/H1-domain-signoff.md` (ADR-0007 indicator list).
+5. **Other signed records that repeated the old labels or coverage.** Dated, append-only
+   correction notes were added in review round 1 (2026-10-30); the signed text is unchanged:
+   - `B1-rent-pressure-geo-signoff.md` (C2, NULL for 2019/2021);
+   - `B1-rent-pressure-domain-signoff.md` (§d);
+   - `D5-wire-geo-signoff.md` (lor_2021 years "2023 and 2026");
+   - `D5-wire-domain-signoff.md`;
+   - `R-A1-geo-signoff.md` and `R-A1-domain-signoff.md` ("transferbezug null → MISSING");
+   - `docs/epic-h/H1-domain-signoff.md` (Berlin index-indicator list).
+
+   The superseded drafts `index-definition-*-draft.md` were left as they are. The governed
+   `index-definition.md` carries the correction.

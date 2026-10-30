@@ -193,3 +193,23 @@ obligations tracked forward.
 ## Final Verdict
 
 Verdict: PASS WITH CONDITIONS
+
+---
+
+## Correction note (2026-10-30, #360) — appended, signed record above unchanged
+
+*Added by data-engineer under #360 (MSS indicator mapping fix). This note does not change the
+outcome recorded above; the dual sign-off on the #360 fix is a separate record. Evidence:
+`docs/epic-c/360-mss-indicator-mapping-evidence.md`.*
+
+Before #360 the MSS indexind ingestion mapped the WFS slots one position off for every edition
+(`s2`→`transferbezug`, `s3`→`kinderarmut`, `s4`→`alleinerziehende`). Verified against the MSS
+Indikatorenhefte: S1 Arbeitslosigkeit, S3 Transferbezug and S4 Kinderarmut are populated in every
+edition 2015–2025. S2 is Langzeitarbeitslosigkeit in 2015/2017, vacant (always null) in
+2019/2021, and Kinder/Jugendliche in alleinerziehenden Haushalten from 2023.
+
+What this changes in the statements above:
+- Item 7 ("`transferbezug` null → MISSING not zero") and the related model-comment note: the
+  2019/2021 null column is the vacant **S2** slot. Transferbezug (S3) is populated in every
+  edition. The MISSING-not-zero rule stands and now applies to S2. See `index-definition.md`
+  §4.4/§7.2 as corrected.

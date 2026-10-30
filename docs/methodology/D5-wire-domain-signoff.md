@@ -158,3 +158,25 @@ integrate this branch into `develop`.*
 - `docs/methodology/D5-wire-geo-signoff.md` (paired statistical/spatial review)
 - `docs/adr/0019-berlin-milieuschutz-displacement-source.md`,
   `docs/adr/0008-multi-dimensional-gentrification-model.md`
+
+---
+
+## Correction note (2026-10-30, #360) — appended, signed record above unchanged
+
+*Added by data-engineer under #360 (MSS indicator mapping fix). This note does not change the
+outcome recorded above; the dual sign-off on the #360 fix is a separate record. Evidence:
+`docs/epic-c/360-mss-indicator-mapping-evidence.md`.*
+
+Before #360 the MSS indexind ingestion mapped the WFS slots one position off for every edition
+(`s2`→`transferbezug`, `s3`→`kinderarmut`, `s4`→`alleinerziehende`). Verified against the MSS
+Indikatorenhefte: S1 Arbeitslosigkeit, S3 Transferbezug and S4 Kinderarmut are populated in every
+edition 2015–2025. S2 is Langzeitarbeitslosigkeit in 2015/2017, vacant (always null) in
+2019/2021, and Kinder/Jugendliche in alleinerziehenden Haushalten from 2023.
+
+What this changes in the statements above:
+- The endorsement of `rent_pressure_proxy` as "modelled rent level with MSS transfer-receipt share"
+  matches the corrected input. At review time, the 2023/2026 input was in fact the share of
+  children in single-parent households, a family-structure measure. Since #360 it is S3
+  Transferbezug.
+- D5 coverage since #360: `displacement_subindex` is also populated for reference year 2021 (536
+  PLRs, rent-pressure-only). Recommendation D-R1 is unaffected.
