@@ -250,3 +250,35 @@ domain sign-off is also required before the PM may merge.*
 - MSS index-indicator technical description (PDF; per-indicator definitions):
   <https://fbinter.stadt-berlin.de/fb_daten/beschreibung/MSS/MSS_Index-Indikatoren__TechnBeschreibung.pdf>
 - MSS 2021 layer description: <https://fbinter.stadt-berlin.de/fb_daten/beschreibung/MSS/MSS_2021.html>
+
+---
+
+## Correction note (2026-10-28, #360) — appended, signed record above unchanged
+
+*Added by data-engineer under #360. This note does not change the verdict recorded above; the
+dual sign-off on the #360 fix is a separate record.*
+
+The indicator labels in §a, §c and the conditions above came from the pre-#360 ingestion, which
+mapped the WFS slots one position off (`s2`→`transferbezug`, `s3`→`kinderarmut`,
+`s4`→`alleinerziehende`) for every edition. Verified against the MSS Indikatorenhefte (evidence:
+`docs/epic-c/360-mss-indicator-mapping-evidence.md`):
+
+| WFS attr | 2015, 2017 | 2019, 2021 | 2023, 2025 |
+|---|---|---|---|
+| `s1`/`d1` | Arbeitslosigkeit (SGB II + III) | Arbeitslosigkeit (SGB II) | Arbeitslosigkeit (SGB II) |
+| `s2_x`/`d2_x` → `s2`/`d2` | Langzeitarbeitslosigkeit | vacant (always null) | Kinder/Jugendliche in alleinerziehenden Haushalten |
+| `s3`/`d3` | Transferbezug | Transferbezug | Transferbezug |
+| `s4`/`d4` | Kinderarmut | Kinderarmut | Kinderarmut |
+
+What this changes in the statements above:
+- "`transferbezug_*` is null in editions ≤2021" (§c): the 2019/2021 null column is the **vacant S2
+  slot**. Transferbezug (S3) is populated in every edition.
+- "`alleinerziehende_*` does not exist before 2023" (§c): correct for the construct. The rows the
+  warehouse labelled `alleinerziehende_*` from 2015 were Kinderarmut (S4).
+- "Populated stable core (`arbeitslose_*`, `kinderarmut_*`)" (§c, conditions): under the
+  corrected labels the populated core is **`arbeitslose_*`, `transferbezug_*`, `kinderarmut_*`**.
+  This is the three-indicator core ADR-0007 named. The rule behind condition C3 (MISSING, not
+  zero; no cross-gap imputation) still applies, now to the vacant S2 slot.
+- The §a table's construct descriptions are right; only the column-to-slot mapping was wrong.
+- The source line "MSS 2023 report (3→4 indicator change)" is incomplete: MSS 2013–2017 had 4
+  index indicators, MSS 2019/2021 had 3, and MSS 2023+ has 4 again.

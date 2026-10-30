@@ -2,6 +2,10 @@
 
 - **Status:** Accepted
 - **Date:** 2026-06-19
+- **Factual correction:** 2026-10-28 (#360). The indicator table (Decision 2), the
+  indicator-count history (Decision 3, Consequences) and one reference were corrected against
+  the MSS Indikatorenhefte for each edition. No decision changed. Evidence:
+  `docs/epic-c/360-mss-indicator-mapping-evidence.md`.
 
 ## Context
 
@@ -85,6 +89,22 @@ SES input layer for R-A1.
    | Child poverty (SGB II transfer receipt, under-15s) | *Kinderarmut (Transferbezug SGB II der unter 15-Jährigen)* | all |
    | Children/youth in single-parent households | *Kinder/Jugendliche in alleinerziehenden Haushalten* | **2023+** |
 
+   > **Correction (2026-10-28, #360) — as published, per edition** (MSS Indikatorenhefte;
+   > the WFS attributes `s1`–`s4` / `d1`–`d4` are the official slots S1–S4 / D1–D4):
+   >
+   > | Slot (WFS attr) | 2013, 2015, 2017 | 2019, 2021 | 2023, 2025 |
+   > |---|---|---|---|
+   > | S1 (`s1`) | Arbeitslosigkeit, SGB II **and SGB III**, 15–<65 J. | Arbeitslosigkeit, SGB II only (2021: 15–<Regelaltersgrenze) | Arbeitslosigkeit, SGB II, 15–<Regelaltersgrenze |
+   > | S2 (`s2_x` ≤2021, `s2` 2023+) | **Langzeitarbeitslosigkeit** | *vacant* (dropped in MSS 2019; attribute always null) | Kinder/Jugendliche (<18) in alleinerziehenden Haushalten |
+   > | S3 (`s3`) | Transferbezug | Transferbezug | Transferbezug |
+   > | S4 (`s4`) | Kinderarmut | Kinderarmut | Kinderarmut |
+   >
+   > D1–D4 are the two-year changes of S1–S4. The table above is therefore right about the
+   > constructs and the 2023+ single-parent indicator. It omitted Langzeitarbeitslosigkeit
+   > (2013–2017) and the pre-2019 SGB III component of S1. Until #360 the adapter mapped the
+   > slots one position off (`s2`→transferbezug, `s3`→kinderarmut, `s4`→alleinerziehende). The
+   > mapping now lives in `transform/seeds/seed_mss_indicator_vocab.csv`.
+
    Both **status indicators** (the *level* of each variable) and, where published, the
    **dynamik indicators** (the *change* over the two-snapshot observation window) may be
    present per PLR. The adapter captures whichever value columns the layer exposes; the
@@ -93,8 +113,8 @@ SES input layer for R-A1.
 3. **Grain & staging table.** One row per `(edition, plr_id, indicator)` in **long format**
    (mirroring `stg_berlin_ewr`'s `(year, plr_id, indicator, value)` contract, ADR-0003
    Decision 8), staged as **`stg_berlin_mss_indicators`**. Long format is preferred over a wide
-   table because the indicator set changes across editions (3 → 4 at 2023, Decision in
-   Consequences): a long table absorbs the schema change as data, not a column-count break,
+   table because the indicator set changes across editions (4 → 3 at 2019, 3 → 4 at 2023 —
+   corrected #360; Decision in Consequences): a long table absorbs the schema change as data, not a column-count break,
    and lets downstream models filter to a stable indicator subset. Each row carries the
    `lor_vintage` tag (`lor_pre2021` / `lor_2021`) so joins pick the contemporaneous boundary,
    exactly as `stg_berlin_mss` does. Berlin-specific attribute names stay in the adapter; marts
@@ -178,12 +198,17 @@ with the MSS outcome** the indicators feed.
 - **The 3 → 4 indicator-set change at 2023 — how we handle it.** Editions through 2021 publish
   **3** index indicators (unemployment, transfer receipt, child poverty); editions **2023+ add
   a 4th** (children/youth in single-parent households). The **long-format staging table absorbs
-  this as data**: the 4th indicator simply has no rows before 2023. Downstream:
+  this as data**: the 4th indicator simply has no rows before 2023. *(Correction 2026-10-28,
+  #360: MSS 2013–2017 also published 4 index indicators, the 4th being Langzeitarbeitslosigkeit
+  in slot S2; MSS 2019 dropped it, so the sequence is 4 → 3 → 4. The stable 3-indicator core
+  below — unemployment, transfer receipt, child poverty — is present in every edition.)*
+  Downstream:
   - For any **cross-edition SES time series** (e.g. an R-A1 trend feature), use the **stable
     3-indicator core** present in *all* editions; treat the 4th indicator as a 2023+-only
     enrichment, never as a silently back-filled zero.
-  - A dbt test asserts the indicator vocabulary per edition (3 for ≤2021, 4 for ≥2023) so the
-    break is *visible and tested*, not smoothed over. This mirrors ADR-0006's "indicator-definition
+  - A dbt test asserts the indicator vocabulary per edition (as corrected in #360: 4 in
+    2015/2017, 3 in 2019/2021, 4 from 2023) so the break is *visible and tested*, not smoothed
+    over. This mirrors ADR-0006's "indicator-definition
     drift is a known discontinuity to document, not smooth over."
 
 - **No income variable — explicit gap.** The `indexind` layer (like the MSS itself) uses
@@ -244,7 +269,7 @@ with the MSS outcome** the indicators feed.
 - ADR-0003 (Berlin geographies + EWR long-format staging precedent): `docs/adr/0003-berlin-geographies-and-open-price-rent-sources.md`
 - Existing MSS WFS adapter (implementation basis for R-A4): `ingestion/berlin/mss/ingest_mss.py`
 - MSS index-indicator technical description (PDF): <https://fbinter.stadt-berlin.de/fb_daten/beschreibung/MSS/MSS_Index-Indikatoren__TechnBeschreibung.pdf>
-- MSS 2023 report (confirms 3→4 indicator change, single-parent-household children added): <https://www.berlin.de/sen/sbw/stadtdaten/stadtwissen/monitoring-soziale-stadtentwicklung/bericht-2023/>
+- MSS 2023 report (confirms the single-parent-household indicator added in 2023; the 2019 drop of Langzeitarbeitslosigkeit is in the MSS 2019 Indikatorenblaetter, S. 9 — corrected #360): <https://www.berlin.de/sen/sbw/stadtdaten/stadtwissen/monitoring-soziale-stadtentwicklung/bericht-2023/>
 - MSS 2023 WFS endpoint (`indexind` layer): <https://gdi.berlin.de/services/wfs/mss_2023>
 - MSS 2025 WFS GetCapabilities (verify `indexind_542` feature type): <https://gdi.berlin.de/services/wfs/mss_2025?request=GetCapabilities&service=WFS>
 - Regionaler Sozialstrukturatlas / Sozialatlas Berlin (Alternative B, future fill): <https://www.berlin.de/sen/gpg/service/gesundheitsberichterstattung/grundlagen/sozialstrukturatlas/>

@@ -189,9 +189,14 @@ floor(gesamtindex / 10)`; the units digit `∈ {1,3,5}` is the Dynamik WFS code 
 Two structured breaks must be stated on G2, not smoothed over (R-A7 domain C1(e); R-A3 C4):
 1. **447 ↔ 542 PLR boundary break (2019→2021).** Any Status/Dynamik series crossing this boundary
    is not PLR-comparable without the ADR-0003 LOR crosswalk.
-2. **3→4 index-indicator drift (single-parent-household children added 2023).** Pre-2023 and 2023+
-   classes are *comparable in interpretation but not computed from an identical input set*; small
-   cross-2023 movements must not be over-read as real social change.
+2. **Index-indicator drift (4 → 3 → 4).** MSS 2013–2017 computed Status/Dynamik from 4 indicators
+   (Arbeitslosigkeit incl. SGB III, Langzeitarbeitslosigkeit, Transferbezug, Kinderarmut); MSS
+   2019/2021 from 3 (Langzeitarbeitslosigkeit dropped, Arbeitslosigkeit SGB II only); MSS 2023+
+   from 4 again (single-parent-household children added as S2). Classes across these breaks are
+   *comparable in interpretation but not computed from an identical input set*; small movements
+   across 2019 or 2023 must not be over-read as real social change. *(Corrected 2026-10-28, #360;
+   the original text named only the 2023 change. Evidence:
+   `docs/epic-c/360-mss-indicator-mapping-evidence.md`.)*
 
 ### 1.8 Milieuschutz overlay — NOT a stage
 
@@ -439,11 +444,18 @@ block.
 
 - `migration_background_share`: available **≥2017 only** (Mikrozensus definition break; R-A5 §6
   condition 3). Restrict any cross-year D4 comparison involving it to ≥2017; do not back-fill.
-- `transferbezug` (SES indicator, if folded into a future SES extension of D4): **null in 2019 and
-  2021 editions** (suspended). Treat as **MISSING, not zero** — do not impute, do not include in any
-  denominator (R-A4 C3). The populated cross-edition core of the MSS SES battery is just
-  `arbeitslose_*` + `kinderarmut_*` (R-A4 §c); use the full 4-indicator set only for single-edition
-  2023/2025 fits.
+- MSS SES indicators (if folded into a future SES extension of D4) — *corrected 2026-10-28, #360*
+  (the earlier text said `transferbezug` was null in 2019/2021; that was the vacant S2 slot read
+  under the wrong label). As verified against the Indikatorenhefte:
+  - **Populated in every edition 2015–2025:** `arbeitslose_*` (S1), `transferbezug_*` (S3) and
+    `kinderarmut_*` (S4). This three-indicator core is the cross-edition SES battery. S1 has a
+    definition break at 2019 (SGB III dropped) and S1/S3 a denominator refinement at 2021
+    (Regelaltersgrenze); compare levels across those breaks only with that caveat.
+  - **Edition-limited:** `langzeitarbeitslose_*` (S2, 2015/2017 only) and `alleinerziehende_*` (S2,
+    2023/2025 only). The S2 slot is vacant in 2019/2021: treat it as **MISSING, not zero** — do not
+    impute, do not include in any denominator (R-A4 C3). Use a four-indicator set only for
+    single-edition fits on 2015/2017 or 2023/2025, and never treat the two S2 constructs as one
+    series.
 - The five `ewr_composite` inputs are all **vulnerability-positive** after PR #89 (R-A5 §9, Verdict
   PASS) — no per-indicator sign work remains for D4 levels; the composite enters the model with the
   documented common polarity (§5).
@@ -574,9 +586,10 @@ Applied before any fit, calibration, lead-lag, AUC/F computation, or typology as
    indices). **Exclude from ALL regression, calibration, lead-lag, and metric computation** (R-A3 C3).
    They have no outcome and no resident population; including them is a structural-missingness leak.
    **Report the excluded count per edition** in the methodology write-up.
-2. **`transferbezug` NULL in 2019/2021** — treat as **MISSING, not zero**. Do not impute; do not
+2. **Vacant MSS S2 slot in 2019/2021** — treat as **MISSING, not zero**. Do not impute; do not
    include in any denominator (R-A4 C3). The cross-edition populated SES core is `arbeitslose_*` +
-   `kinderarmut_*` only.
+   `transferbezug_*` + `kinderarmut_*`. *(Corrected 2026-10-28, #360: this rule previously named
+   `transferbezug` as the 2019/2021 gap and a two-indicator core; the gap is S2, see §4.4.)*
 3. **Cross-vintage deltas without the crosswalk** — any `Δ` spanning 2019(pre2021) → 2021(lor2021)
    without the §6.4 crosswalk bridge is **EXCLUDED** from the lead-lag (§6.3).
 4. **PLRs with zero POI count across all years** — **excluded from the D3 predictor** (C5 completeness
@@ -681,7 +694,7 @@ thesis Tabelle 6-16).
 | R-A3 R4 | §3.4 (dbt test for {1,3,5} ordering) |
 | R-A4 C1 (no same-edition self-prediction) | §4.2, §5 (Dynamik caveat) |
 | R-A4 C2 (change indicators distinct polarity from levels) | §4.5, §5 (D2/`indexind` note) |
-| R-A4 C3 (transferbezug MISSING-not-zero) | §4.4, §7.2 |
+| R-A4 C3 (vacant-slot MISSING-not-zero; relabelled from "transferbezug" by #360) | §4.4, §7.2 |
 | R-A4 C4 (2023+ indicator drift) | §1.7 |
 | R-A5 §8/§9 condition 3 (levels-vs-changes; migration ≥2017) | §4.3, §4.4 |
 | R-C2 (grounding citations) | §0.4, all sections carry thesis/literature citations |
