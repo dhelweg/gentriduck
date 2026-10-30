@@ -140,3 +140,9 @@ What this changes in the statements above:
   input was Langzeitarbeitslosigkeit. S3 counts **non-unemployed** SGB II/XII recipients;
   registered unemployed people are in S1. Whether S3 alone is the intended ability-to-pay input is
   raised for the #360 domain sign-off.
+- **Co-location reading (added after the #360 domain sign-off, RC-2).** The co-location reading
+  endorsed in §a/§b ("above-median rent combined with above-median transfer dependency") does not
+  describe the corrected composite. With the S3 input (which excludes registered unemployed
+  people), the two z-terms are strongly anti-correlated (ρ −0.51 to −0.72). The equal-weight mean
+  is compensatory, so a high value means high on either term or both. See
+  `docs/epic-c/360-domain-signoff.md` §2 Q3(b). The aggregation redesign is tracked in **#362**.

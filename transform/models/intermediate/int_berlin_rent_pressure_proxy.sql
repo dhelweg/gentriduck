@@ -38,12 +38,32 @@
 -- composite pattern (mean of z-scores, not a sum, to avoid inflating SD -- same
 -- reasoning as that model's header note).
 --
--- Interpretation (domain framing; see B1-rent-pressure-domain-signoff.md): a PLR
--- scores HIGH on this proxy when it combines above-median modelled rent with an
--- above-median transfer-dependent population share -- i.e. rent has risen (or is
--- already high) in an area whose residents are the least able to absorb it. This
--- is an *affordability-stress* signal, not a measured displacement event, and not
--- a rent-to-income ratio (no income series exists; ADR-0007 gap).
+-- Interpretation (corrected #360, RC-2 of docs/epic-c/360-domain-signoff.md
+-- §2 Q3(b); redesign tracked in #362): rent_pressure_proxy is an equal-weight
+-- COMPENSATORY mean. With the correct S3 input its two terms are strongly
+-- ANTI-correlated (Spearman rho(z_rent_rel, z_transfer_stress) = -0.51 to
+-- -0.72 across snapshots 2017-2026). A HIGH value therefore means high on
+-- EITHER term or both -- typically high rent with low transfer dependence, or
+-- low rent with high transfer dependence. It is NOT evidence that high rent and
+-- high transfer dependence occur in the same PLR (only 8-22 % of the top
+-- quintile are above average on both). The B1 "co-location" reading (rent
+-- pressure meeting a resident base least able to absorb it) is not what this
+-- aggregation operationalizes; #362 assesses a conjunctive / residual / KdU
+-- alternative. Until #362 is resolved no mart, analysis/*.py script or G2 page
+-- may consume rent_pressure_proxy or displacement_subindex. It remains an
+-- affordability-stress *signal*, not a measured displacement event and not a
+-- rent-to-income ratio (no income series exists; ADR-0007 gap). The transfer
+-- term excludes registered unemployed people (they are MSS S1).
+--
+-- CIRCULARITY FIREWALL (RC-1 of 360-domain-signoff.md §2 Q3(a); R-A4
+-- condition 1; #362): z_transfer_stress is MSS index indicator S3, a direct
+-- input of the MSS Status index (the D1 outcome; ADR-0007: "The Senate
+-- computes Status/Dynamik from these indicators"). Spearman rho with the
+-- same-edition status_index = 0.80-0.84. Therefore rent_pressure_proxy (and
+-- displacement_subindex built from it) must NOT be used to predict the
+-- same-edition MSS Status or Dynamik class, nor a Dynamik window that contains
+-- the matched MSS edition. Any lead-lag use must lag it by at least one
+-- non-overlapping MSS edition AND control for baseline Status level.
 --
 -- Coverage (#360 correction): S3 Transferbezug is published in every MSS
 -- edition 2015-2025, so transferbezug_anteil is non-null for all ingested

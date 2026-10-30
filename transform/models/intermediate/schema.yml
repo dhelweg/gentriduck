@@ -2732,10 +2732,20 @@ models:
           overlapping lor_2021 years today, so a strict both-required rule
           would be permanently empty; see displacement_subindex_is_partial).
           Pressure-positive polarity: high = more long-tenure-resident
-          turnover and/or above-median rent + transfer-dependency pressure --
+          turnover, or a high rent_pressure_proxy (high on EITHER rent level OR
+          transfer dependency, or both -- a compensatory mean of two
+          anti-correlated terms, not co-location; #360 RC-2, redesign #362) --
           consistent orientation with the vulnerability-positive D1/D2/D4
           columns, but a PREDICTOR not an outcome (never blended with
-          status_index/dynamik_index/ewr_composite). Berlin lor_2021 rows
+          status_index/dynamik_index/ewr_composite). CIRCULARITY FIREWALL (#360
+          RC-1; R-A4 condition 1): the rent-pressure term contains MSS S3, a
+          direct MSS Status input (rho 0.80-0.84 with same-edition
+          status_index), so this column must not predict the same-edition
+          Status/Dynamik class or a Dynamik window containing the matched MSS
+          edition; lead-lag use must lag it by >= 1 non-overlapping edition and
+          control for baseline Status. SERIES BREAK: 2009-2020 values are
+          turnover-only, 2021+ values rent-pressure-only (both flagged via
+          displacement_subindex_is_partial) -- never pool them as one series. Berlin lor_2021 rows
           only (int_berlin_displacement_subindex's own scope constraint);
           NULL for lor_pre2021 and Hamburg branches. Not a measured
           displacement outcome -- read jointly with
@@ -3948,7 +3958,10 @@ models:
       combines modelled Mietspiegel rent level (relative to the citywide/PLR
       median, per-year z-score) with the MSS transferbezug_anteil transfer-receipt
       share (ability-to-pay-stress proxy, already vulnerability-positive per the
-      R-A4/#67 geo-signoff) into an equal-weight mean-of-z-scores composite. NOT a
+      R-A4/#67 geo-signoff; MSS S3 excludes registered unemployed people) into an
+      equal-weight mean-of-z-scores composite. See the rent_pressure_proxy column
+      for what a high value does and does not mean (#360 RC-2), and the model
+      header for the circularity firewall (#360 RC-1, redesign #362). NOT a
       rent-to-income ratio (no PLR-grain income series exists; ADR-0007 gap;
       ADR-0019 Alternative C rejected that approach under R-C2 grounding).
 
@@ -4026,11 +4039,17 @@ models:
         description: >
           mean(z_rent_rel, z_transfer_stress) -- affordability-stress composite
           (ADR-0019 Decision 2). NULL when either input z-score is NULL (no
-          imputation of a missing term). High = above-median
-          modelled rent combined with an above-median transfer-dependent
-          population share (rent risen/already high where residents can least
-          absorb it) -- an affordability-stress signal, not a measured
-          displacement event and not a rent-to-income ratio.
+          imputation of a missing term). An equal-weight COMPENSATORY mean: after
+          #360 its two terms are strongly anti-correlated (Spearman rho -0.51 to
+          -0.72 across snapshots), so a high value means high on EITHER modelled
+          rent OR transfer dependency (MSS S3, which excludes registered
+          unemployed people), or both. It is NOT evidence that high rent and
+          high transfer dependence occur in the same PLR (only 8-22 % of the top
+          quintile are above average on both; docs/epic-c/360-domain-signoff.md
+          §2 Q3(b); aggregation redesign #362). Must not predict the same-edition
+          MSS Status/Dynamik class (S3 is a Status input; #360 RC-1). An
+          affordability-stress signal, not a measured displacement event and not
+          a rent-to-income ratio.
 
   - name: int_berlin_turnover_proxy
     description: >
@@ -4281,7 +4300,11 @@ models:
           (see model header for why a strict all-or-nothing rule would be
           permanently empty given today's real coverage). Higher = higher
           displacement/affordability pressure from whichever signal(s) are
-          available.
+          available. 2009-2020 rows are turnover-only and 2021+ rows are
+          rent-pressure-only (is_partial_availability = true): different
+          constructs, never pool as one series (#360 geo-DS condition). Not
+          to predict the same-edition MSS Status/Dynamik class (#360 RC-1;
+          see model header).
       - name: n_components_available
         description: 0, 1, or 2 -- how many of {turnover_proxy, rent_pressure_proxy} fed displacement_subindex for this row.
       - name: is_partial_availability

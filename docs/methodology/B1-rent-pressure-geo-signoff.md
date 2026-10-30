@@ -154,3 +154,6 @@ What this changes in the statements above:
 - At the time of this review the `z_transfer_stress` input was Langzeitarbeitslosigkeit for 2017
   and the single-parent-household children share for 2023/2026. The polarity argument
   (vulnerability-positive level share, no sign flip) holds for S3 Transferbezug as intended.
+  S3 counts non-unemployed SGB II/XII recipients; it excludes registered unemployed people (S1).
+  For what the composite means after #360 (compensatory, anti-correlated terms; not co-location)
+  and the circularity firewall, see `docs/epic-c/360-domain-signoff.md` §2 Q3 and #362.

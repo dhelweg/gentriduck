@@ -195,9 +195,9 @@ with the MSS outcome** the indicators feed.
   2013–2017. One observation per indicator per PLR per edition; each edition encodes the
   two-snapshot observation window that already underpins the Dynamik measure.
 
-- **The 3 → 4 indicator-set change at 2023 — how we handle it.** Editions through 2021 publish
+- **The 3 → 4 indicator-set change at 2023 — how we handle it.** ~~Editions through 2021 publish
   **3** index indicators (unemployment, transfer receipt, child poverty); editions **2023+ add
-  a 4th** (children/youth in single-parent households). The **long-format staging table absorbs
+  a 4th** (children/youth in single-parent households).~~ The **long-format staging table absorbs
   this as data**: the 4th indicator simply has no rows before 2023. *(Correction 2026-10-28,
   #360: MSS 2013–2017 also published 4 index indicators, the 4th being Langzeitarbeitslosigkeit
   in slot S2; MSS 2019 dropped it, so the sequence is 4 → 3 → 4. The stable 3-indicator core
@@ -206,6 +206,9 @@ with the MSS outcome** the indicators feed.
   - For any **cross-edition SES time series** (e.g. an R-A1 trend feature), use the **stable
     3-indicator core** present in *all* editions; treat the 4th indicator as a 2023+-only
     enrichment, never as a silently back-filled zero.
+  - *(Added #360, from `index-definition.md` §4.4.)* Never splice the two S2 constructs —
+    Langzeitarbeitslosigkeit (2013–2017) and Kinder/Jugendliche in alleinerziehenden Haushalten
+    (2023+) — into one series. They are different indicators that happen to share a slot.
   - A dbt test asserts the indicator vocabulary per edition (~~3 for ≤2021, 4 for ≥2023~~
     *(corrected #360: 4 in 2015/2017, 3 in 2019/2021, 4 from 2023)*) so the break is *visible
     and tested*, not smoothed over. This mirrors ADR-0006's "indicator-definition

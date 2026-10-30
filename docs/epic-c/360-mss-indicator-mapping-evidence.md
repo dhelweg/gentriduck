@@ -59,6 +59,24 @@ page index.
 (The WFS `indexind` Abstracts for 2021 and 2023 describe only the observation window, not the
 indicators.)
 
+**Report-level confirmation of the two S2 changes** (added after the #360 domain sign-off, N3;
+quoted from the PDFs fetched for this ticket, so berlin.de was not queried again):
+
+- *MSS 2019 report* (`bericht-2019/mss_fortschreibung2019_langfassung.pdf`), S. 7: *"So ist der
+  bisherige Index-Indikator Langzeitarbeitslosigkeit aufgrund ausbleibender kleinräumiger
+  Datenbereitstellung nicht mehr Bestandteil des Index-Indikatorensets. Zudem hat sich gezeigt,
+  dass der Index-Indikator Arbeitslosigkeit nach SGB II und SGB III in der reduzierten Form der
+  Arbeitslosen nach SGB II aussagekräftiger ist."* The same passage continues *"Basierend auf den
+  drei Index-Indikatoren …"*. S. 12 repeats the two modifications, and S. 15 adds *"Für die
+  Fortschreibung des MSS 2019 (und auch künftig) stehen keine kleinräumigen Daten zu den
+  Langzeitarbeitslosen mehr zur Verfügung"*.
+- *MSS 2023 report* (`bericht-2023/langfassung_mss2023.pdf`), S. 6: *"So fließt erstmals der
+  Index-Indikator Kinder und Jugendliche in alleinerziehenden Haushalten (als neuer S 2 und D 2) in
+  die Berechnung des Gesamtindex ein, nachdem nun belastbare Grunddaten vorliegen."* It then
+  lists the four index indicators in slot order: Arbeitslosigkeit (nach SGB II); Kinder und
+  Jugendliche in alleinerziehenden Haushalten; Transferbezug der Nichtarbeitslosen (nach SGB II
+  und XII); Kinderarmut (Transferbezug SGB II der unter 15-Jährigen).
+
 ## 3. Data evidence (raw `data/raw/berlin/mss/*_indicators.parquet`)
 
 ### 3.1 Distributions per slot (unweighted PLR means; inhabited PLRs)
@@ -260,3 +278,12 @@ populated PLRs (ρ 0.564; 316 change quintile). 2013–2019 stay NULL by design 
 
    The superseded drafts `index-definition-*-draft.md` were left as they are. The governed
    `index-definition.md` carries the correction.
+6. **Gate follow-ups (2026-10-30).** Geo-DS: PASS (`docs/epic-c/360-geo-signoff.md`). Domain:
+   concerns, wording only (`docs/epic-c/360-domain-signoff.md`). In response:
+   - RC-1 (circularity firewall) and RC-2 (compensatory, anti-correlated `rent_pressure_proxy`;
+     not co-location) are disclosed in the `int_berlin_rent_pressure_proxy` and
+     `int_berlin_displacement_subindex` headers, the intermediate `schema.yml` and
+     index-definition §5 (D5 row).
+   - The D5 series break (2009–2020 turnover-only vs 2021+ rent-pressure-only partial rows) and
+     the exclusion of registered unemployed people from the transfer term are stated there too.
+   - The aggregation redesign is tracked in **#362**.
