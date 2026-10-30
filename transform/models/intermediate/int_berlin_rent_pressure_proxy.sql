@@ -19,6 +19,20 @@
 -- matched MSS edition (higher = more of the resident
 -- population depends on SGB II/XII transfers -- already
 -- vulnerability-positive per R-A4/#67 geo-signoff Finding d)
+--
+-- #360 input definition: transferbezug_anteil is MSS index indicator S3
+-- "Transferbezug" = non-unemployed recipients of SGB II and SGB XII
+-- subsistence benefits per resident, in % (Indikatorenblaetter ab MSS 2013,
+-- Kap. 3.1.3 S. 17; MSS 2017 Kap. 3.1.3 S. 20; MSS 2019 Kap. 3.1.2 S. 18;
+-- MSS 2021 Kap. 3.1.2 S. 21;
+-- MSS 2023 Kap. 3.1.3 S. 26; MSS 2025 Kap. 3.1.3 S. 26). It excludes the
+-- registered unemployed (they are S1), so it captures children, pensioners,
+-- people unable to work and "Aufstocker". Before #360 this column was
+-- mis-mapped from WFS slot s2: Langzeitarbeitslosigkeit in 2015/2017, empty
+-- in 2019/2021 and Kinder/Jugendliche in alleinerziehenden Haushalten in
+-- 2023/2025 -- i.e. the 2023/2026 rent_pressure_proxy carried a
+-- family-structure share labelled as benefit stress
+-- (docs/epic-c/360-mss-indicator-mapping-evidence.md).
 -- rent_pressure_proxy = mean(z_rent_rel, z_transfer_stress)
 -- Equal-weight mean of two unit-variance z-scores mirrors the int_ewr_socioeco
 -- composite pattern (mean of z-scores, not a sum, to avoid inflating SD -- same
@@ -31,18 +45,19 @@
 -- is an *affordability-stress* signal, not a measured displacement event, and not
 -- a rent-to-income ratio (no income series exists; ADR-0007 gap).
 --
--- Coverage limitation (related to, but more precise than, R-A4/#67 condition C3):
--- as actually ingested, transferbezug_anteil is non-null for MSS editions 2015,
--- 2017, 2023, 2025 and NULL for editions 2019 and 2021 (the WFS suspension window
--- is narrower in the ingested data than R-A4's "<=2021" characterization -- verified
--- directly against stg_berlin_mss_indicators, not assumed from that sign-off).
--- Of the Wohnlage snapshot years (2017, 2019, 2021, 2023, 2026), the matched MSS
--- editions are 2017, 2019, 2021, 2023, 2025 respectively (nearest-<= rule below),
--- so rent_pressure_proxy is populated for snapshot_year in (2017, 2023, 2026) and
--- NULL for snapshot_year in (2019, 2021) by construction -- not a bug, a real
--- data-availability gap. z_rent_rel alone is still populated for all years (see
--- column note) so consumers who only need the rent-level signal are not blocked
--- by this gap.
+-- Coverage (#360 correction): S3 Transferbezug is published in every MSS
+-- edition 2015-2025, so transferbezug_anteil is non-null for all ingested
+-- editions (2015, 2017, 2019, 2021, 2023, 2025). The earlier "NULL for 2019 and
+-- 2021" gap (R-A4/#67 C3) was an artefact of the slot mis-mapping (it was the
+-- vacant S2 slot), not a Transferbezug gap. Of the Wohnlage snapshot years
+-- (2017, 2019, 2021, 2023, 2026), the matched MSS editions are 2017, 2019,
+-- 2021, 2023, 2025 respectively (nearest-<= rule below), so rent_pressure_proxy
+-- is now populated for every snapshot_year wherever est_rent_mid and the PLR's
+-- MSS value exist (uninhabited PLRs stay NULL). Definition breaks inside S3
+-- that a cross-edition reader must know: SGB II statistics revision 2016 (MSS
+-- 2017) and the Regelaltersgrenze correction from MSS 2021 (MSS 2021
+-- Indikatorenblaetter, Vorbemerkungen S. 7). z_transfer_stress is a
+-- within-year z-score, so these level shifts do not leak into it.
 --
 -- Vintage/edition matching: nearest MSS edition <= Wohnlage snapshot_year, mirroring
 -- int_price_rent_wohnlage_mietspiegel's own nearest-<=-vintage pattern (geo condition 8
@@ -65,9 +80,9 @@ with
         from {{ ref("int_price_rent_wohnlage_mietspiegel") }}
     ),
 
-    -- Transfer-receipt share (SGB II/XII benefit dependency), one value per
-    -- (city_code, edition, area_code, area_vintage). NULL for editions <=2021
-    -- (see coverage-limitation note above).
+    -- Transfer-receipt share (MSS S3 Transferbezug, SGB II/XII benefit
+    -- dependency), one value per (city_code, edition, area_code, area_vintage).
+    -- Populated in every edition since #360 (see coverage note above).
     transfer_stress as (
         select city_code, edition, area_code, area_vintage, indicator_value
         from {{ ref("stg_berlin_mss_indicators") }}
@@ -141,8 +156,8 @@ select
     matched_edition as transfer_stress_mss_edition,
     z_rent_rel,
     z_transfer_stress,
-    -- rent_pressure_proxy: NULL when either term is NULL (all-editions honesty --
-    -- no imputation across the transferbezug suspension gap, per R-A4/#67 C3).
+    -- rent_pressure_proxy: NULL when either term is NULL (no imputation of a
+    -- missing term, per R-A4/#67 C3).
     case
         when z_rent_rel is null or z_transfer_stress is null
         then null

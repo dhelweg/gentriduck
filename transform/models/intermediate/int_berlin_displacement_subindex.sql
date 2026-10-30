@@ -11,7 +11,10 @@
 -- rows only for reference_year 2009-2020 (the EWR ingestion gap #197 means
 -- there is currently no lor_2021 EWR data at all for 2021-2023, and
 -- residence_duration_5y_share is NULL for 2024/2025); rent_pressure_proxy's
--- lor_2021 rows exist only for Wohnlage snapshot_year 2023 and 2026. A
+-- lor_2021 rows are populated only for Wohnlage snapshot_year 2021, 2023 and
+-- 2026 (2021 since #360: its MSS transfer input, S3 Transferbezug, was
+-- mis-mapped to the vacant S2 slot before -- see int_berlin_rent_pressure_proxy
+-- header and docs/epic-c/360-mss-indicator-mapping-evidence.md). A
 -- strict all-or-nothing composite (mirroring int_ewr_socioeco's fixed-tier
 -- discipline) would therefore be PERMANENTLY EMPTY given the data as
 -- currently ingested -- not a hypothetical risk, a verified fact. This is
@@ -69,7 +72,8 @@
 -- verified per D5-wire-geo-signoff.md):
 -- higher turnover_proxy         = long-tenure residents leaving faster
 -- higher rent_pressure_proxy    = above-median rent + above-median
--- transfer-dependency
+-- transfer-dependency (MSS S3 Transferbezug,
+-- #360)
 -- higher displacement_subindex  = higher combined displacement/affordability
 -- pressure from whichever signal(s) are
 -- available (NULL only when both are null).
