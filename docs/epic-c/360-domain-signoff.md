@@ -290,3 +290,44 @@ All are documentation or SQL-comment changes. No data, logic or test change is r
   `docs/methodology/B1-rent-pressure-domain-signoff.md`, `docs/methodology/D5-wire-domain-signoff.md`
 - Read-only queries on `data/gentriduck.duckdb` (2026-10-30): `stg_berlin_mss_indicators`,
   `stg_berlin_mss`, `int_berlin_rent_pressure_proxy`, `int_berlin_displacement_subindex`.
+
+---
+
+## Re-check (2026-10-30, after `453420e2`)
+
+- **Reviewed:** `git show 453420e2` (9 files, comments and docs only); issue #362. I also scanned
+  `transform/models` and `index-definition.md` for leftover co-location wording. Read-only; no dbt
+  run, no new web fetch.
+
+| Item | Status | Where verified |
+|---|---|---|
+| RC-1 circularity firewall | **Met** | Present in four places: the `int_berlin_rent_pressure_proxy.sql` header, the `int_berlin_displacement_subindex.sql` header, the intermediate `schema.yml` (`int_gentrification_ts.displacement_subindex`, `rent_pressure_proxy` and `displacement_subindex` column descriptions) and the index-definition §5 D5 row. All four carry the required content: S3 is a direct Status input; ρ 0.80–0.84; no same-edition Status/Dynamik prediction; no Dynamik window containing the matched edition; lag by at least one non-overlapping edition plus a baseline-Status control. The binding "no consumer until #362" rule is in the rent-pressure header and the index-definition. |
+| RC-2 co-location wording | **Met** | "Above-median rent combined with above-median transfer" is gone from the models, schema.yml and the index-definition D5 row; the only remaining "co-location" strings are the corrective references. It is replaced by the compensatory, anti-correlated (ρ −0.51 to −0.72), "either term or both" reading, with the 8–22 % top-quintile figure. The rent-pressure "Interpretation" paragraph is rewritten. B1-domain and D5-wire-domain bullets are appended and point to §2 Q3(a)/(b). The B1-geo note is updated as well. |
+| RC-3 follow-up | **Met** | #362 is open and labelled `methodology-bearing`. It lists the three options and states the binding no-consumer rule. |
+| Geo-DS condition (2021 partial rows, never pooled) | Met | Series-break text is in the D5 header, schema.yml and the index-definition D5 row. |
+| "Excludes registered unemployed" | Met | Stated wherever the transfer term is described. |
+| N1 ADR-0007 | Met | The Consequences sentence is struck through, and the never-splice-S2 rule is added. |
+| N3 MSS 2019/2023 quotes | Met | Report-level quotes (MSS 2019 S. 7/12/15; MSS 2023 S. 6) are in evidence §2. They agree with the berlin.de 2019 page text I fetched in the first review. |
+| N2, N4 | Open, non-blocking | Carry both into #362 and #354 (see below). |
+
+**Verdict: PASS**
+
+The #360 mapping fix is domain-valid. The corrected D5 is now described as what it is: a
+compensatory mean that contains an MSS Status input. The circularity firewall and the no-consumer
+rule are written where any future consumer will read them.
+
+The domain half of the R-C1 gate is met for integration of `fix/360-mss-indicator-labels` into
+`develop`. It sits alongside the geo-DS PASS in `docs/epic-c/360-geo-signoff.md`.
+
+Non-blocking notes for the PM (they do not affect this verdict):
+
+- **#362 body has a factual slip.** It says the proxy "combines Angebotsmiete". The rent term is
+  the modelled **Mietspiegel reference rent** (`est_rent_mid`: Bestandsmiete / ortsübliche
+  Vergleichsmiete at a fixed dwelling profile), not asking rent. This matters for the redesign.
+  Mietspiegel rent lags and understates re-letting pressure (Holm 2010; index-definition §5
+  D3-price row). A rent-gap or residual design would read differently on asking rents. Please
+  correct the issue text.
+- **Carry N2 into #362.** It covers the KdU / AV-Wohnen mechanism, the 2023 Bürgergeld one-year
+  Karenzzeit, the Wohngeld gap, and refugee entry into SGB II from June 2022.
+- **Carry N4 into #354.** Build S composites from S1 + S3 + S4 only, and use no D5 predictor until
+  #362 is resolved.
