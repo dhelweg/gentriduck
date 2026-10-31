@@ -478,3 +478,72 @@ not made, the implementation records them as deviations. None of them affects a 
   The "consistent (rejected)" label can stay.
 
 Verdict: PASS
+
+---
+
+## Re-check of Amendment 1 (2026-10-31, pre-results)
+
+I read Amendment 1 (A1.1–A1.5) of `354-355-hypothesis-suite-preregistration.md` and
+`docs/epic-e/354-phase-a-data-prerequisites.md` §8 (O1–O8). I did not open the warehouse, because
+another session is building. Nothing below depends on a new query.
+
+```json
+{ "verdict": "pass",
+  "domain_rationale": "A1.1 keeps the D4 construct intact. The min-base flag stays a measurement-validity rule for 'offering structure'. Imputing a flagged cell with the training-fold mean, inside the pipeline and before standardisation, gives it exactly zero contribution to the linear score: an area whose structure in a domain cannot be measured is treated as uninformative, not as 'structurally different'. Leaving out missing-indicator columns keeps commercial density out of a structure test. This matches the thesis's own choice to evaluate the hypotheses on OA metrics only (§6.2.3: 'Für die Evaluation der Algorithmen sollen nur OA Kennzahlen einfließen'). Cell-level missingness is the right answer to listwise deletion, which would have limited H1/H2 to the dense commercial core and so selected on a correlate of status. Per-1k density is correctly kept out of the primaries. A1.2 removes the presence-conditioning defect. A1.3–A1.5 have no domain effect.",
+  "theory_risks": ["Univariate H1a-c now describe areas with a measurable gastronomy (or sport/recreation) mix, a narrower population than the thesis's 436 PLRs", "Thesis-era fidelity check (R1) would compare a min-base OA with the thesis's unbased OA"],
+  "recommendations": ["N5 scope sentence for H1a-c", "N6 unbased OA row for the R1 fidelity check", "N7 one population-weighted row, not two", "N8 min-base listed as a thesis deviation"] }
+```
+
+**A1.1 against D4.** D4 asked for category-level OA as the H1/H2 primary, so that within-domain
+composition (restaurants vs fast food) can carry the signal, as it did in the thesis. A1.1 keeps
+that and settles the remaining ambiguity in a domain-correct way:
+
+- **Structure, not density.** A missing-indicator column would carry the information "this area has
+  ≥ 10 POIs in domain X". That is commercial density, which A1.1 rightly says the hypothesis does
+  not name. Sensitivity (i) measures what density would add. That is the right place for it,
+  because the gap between the primary and (i) is a useful finding in itself.
+- **What the imputation means.** Fold-mean imputation followed by standardisation puts a flagged cell
+  at 0, so it contributes nothing to the score. A sparse area is therefore classified on the domains
+  where its structure *is* measurable. In practice those are often public facilities and mobility.
+  That is acceptable under H1's wording, and §9 already makes the public sentence depend on the
+  commercial-only row, so no "businesses" claim can come from these areas. In the commercial-only
+  secondary, sparse areas carry almost no information and pull the AUC toward 0.5. That is honest:
+  no structure was observed there.
+- **Feature-list rule.** The ≥ 20%-unflagged rule depends only on flags, never on the outcome, and it
+  is fixed before fitting with a lexicographic order. That satisfies the no-selection condition of
+  D4(a). The per-city/per-panel list will be shorter for Hamburg's smaller Gebiete, so the findings
+  should print it.
+- **Complete-case sensitivity (ii)** keeps the restricted, dense-core result visible without making it
+  the headline. Reporting the status distribution of retained vs dropped areas is what makes the
+  range restriction legible.
+
+**Univariate rows.** Keeping the per-variable base rule for H1a–c is correct for a share-based
+construct, and n ≈ 200–260 is enough. It does narrow the population, and the published sentence has
+to say so (N5).
+
+**A1.2–A1.5.** A1.2 (read `int_poi_oa_native_panel`, not the E1 loader) closes the
+presence-conditioning defect (O2) and is required by §5.1. A1.3 (gaussian mass) affects sensitivity
+rows only and is immaterial to rank statistics. A1.4 (`zscore_slq`) and A1.5 (`top_child`) are not
+inputs to any suite row. The tightened byte-identical rerun rule is welcome. Filing O1, O6 and O7 as
+separate issues is the right disposition. No domain effect.
+
+**Non-blocking points** (text only; apply before phase B or record them as deviations):
+
+- **N5 Scope sentence for H1a–c.** Findings and page text for each category hypothesis must say that
+  the population is *areas with enough POIs in the parent domain to measure the mix* (for H1b: "among
+  neighbourhoods with at least ten gastronomy outlets"). The text must give n retained / n total, and
+  give the retained-vs-dropped status distribution in one line. Without this, readers will take a
+  result on about 45% of PLRs to describe the whole city.
+- **N6 The R1 fidelity check needs an unbased OA row.** The thesis computed Tabellen 6-12 to 6-14 on
+  all 436 PLRs with no minimum base. Comparing them with a min-base OA on 199/436 PLRs mixes pipeline
+  divergence with a sample change. Add one thesis-era sensitivity row per H1a–c: zero-filled OA, no
+  base rule, full frame. Run the R1 check on that row. The flagged primary stays as pre-registered.
+- **N7 One population-weighted row, not two.** A1.1(iii) "per-1k-resident counts for H1a/H1b" is in
+  substance the §5.2 "population-weighted stock" row (the thesis's *einwohnergewichtet*), which already
+  covers H1a–c. State that they are the same row, keep H1c in it, and count it once in the
+  exploratory-row tally.
+- **N8 Thesis deviation.** List the min-base rule (ADR-0017) in the findings' deviations section as a
+  difference from the thesis's operationalisation, which applied none. This is a measurement-validity
+  improvement, not a construct change.
+
+Verdict: PASS

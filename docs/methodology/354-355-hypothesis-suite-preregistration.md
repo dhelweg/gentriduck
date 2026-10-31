@@ -761,6 +761,64 @@ thesis-recheck table. E1 §4 (EWR) remains.
   and Kinderarmut in some edition, the §2.1(1) fallback (verified populated core) applies. That is a
   documented deviation, not a new decision.
 
+## Amendment 1 (2026-10-31, pre-results)
+
+Recorded by geo-DS before any suite result exists (phase A built, phase B not started; no
+hypothesis-level statistic has been computed). Trigger: open points O1, O2, O6, O7, O8 in
+`docs/epic-e/354-phase-a-data-prerequisites.md` §8. Numbers below are taken from that evidence doc.
+
+**A1.1 (O8) Min-base flag: the measurement rule stays, the multivariate row rule is clarified.**
+The flag (parent-domain base ≥ 10, ADR-0017 / #274 D-3) is a *measurement-validity* rule: below
+it a category share has too few trials to be read as offering structure. It is not relaxed.
+§5.1's wording "areas are excluded only by the min-base flag" was written for a single variable
+and is ambiguous for a multi-feature classifier, where listwise deletion would keep only areas
+passing every parent base. That would cut n far below the ~200–260 seen for one category and would
+restrict H1/H2 to the dense commercial core, i.e. select on a correlate of status (range restriction).
+The binding reading from now on:
+
+- **H1a, H1b, H1c (univariate Spearman): unchanged.** Rows with the relevant flag set are dropped
+  after zero-fill. H1b keeps 199/436 (2018 frame) and 236–260/541 (2019–2025). With n ≈ 200 a
+  two-sided ρ = 0.2 is detected at roughly 80% power at α = 0.05, so the primaries stay informative.
+  Counts per 1,000 residents are **not** adopted as the primary: they measure density, not the
+  thesis's offering structure (*Angebotsstruktur*), and would change the construct after the domain
+  review. They are added as a **sensitivity** row (full frame, no base rule) per category hypothesis.
+- **H1, H2 (multivariate AUC): cell-level missingness, not row deletion.** A flagged cell is set to
+  missing. Missing cells are filled with the **training-fold mean** by a `SimpleImputer` inside the
+  sklearn `Pipeline`, before standardisation, so no information crosses folds. **No missing-indicator
+  columns in the primary.** An indicator would add commercial *density* (which domains reach the
+  base) to a test of *structure* and inflate AUC by a construct the hypothesis does not name. Rows
+  are dropped only by the §5.1 exclusions (uninhabited/unscored, D3 guard).
+- **Fixed feature list rule (set from flags only, never from the outcome):** a category enters the
+  per-city/per-panel list if its flag is unset in ≥ 20% of the panel's included areas. Labels are
+  sorted lexicographically. The list is written to the results metadata before any fit.
+- **New sensitivities (outside every family, §5.2):** (i) H1/H2 plus one base-indicator per domain
+  (shows how much density adds); (ii) H1/H2 restricted to areas passing the base in all four
+  commercial domains (complete-case); (iii) per-1k-resident counts for H1a/H1b. Findings must report
+  the n per row and the status distribution of retained vs dropped areas for H1a/H1b.
+
+**A1.2 (O2) Data source.** Confirmed: the suite reads `int_poi_oa_native_panel` (zero-filled, flag
+carried) for every OA feature. `load_oa_category_panel` from E1 must not be used for the suite, since
+it conditions on presence. Reusing its pivot logic on the new panel is fine (§6.2 updated in that sense).
+
+**A1.3 (O1) Kernel mass conservation.** No effect on the confirmatory family: all primaries use the
+`standard` (hard-assignment) variant. `gaussian_500m` appears only in sensitivity rows, where a
++0.05–0.08% city-total excess is immaterial to rank statistics. The vacuous C-1 test is a real defect
+and gets its own issue (canonicalise `city_code`; decide outside-polygon mass), not a phase-B blocker.
+
+**A1.4 (O6) `zscore_slq` NULLs.** The suite uses the ADR-0017 primary OA metric (location quotient)
+and does **not** read `zscore_slq` or `mart_poi_oa_methods`. No effect. Any future row that uses
+`zscore_slq` requires the tolerance fix first (R-C3 determinism).
+
+**A1.5 (O7) Dominance tie-break.** `top_child` / `int_poi_within_group_dominance` is not an input to
+any suite row. No effect. Separate fix recommended (deterministic tie-break). §5.7 is tightened: the
+script must run twice on the same warehouse and produce byte-identical results CSVs; feature lists,
+GroupKFold assignment and bootstrap seeds are derived from sorted keys.
+
+**Materiality.** A1.1's multivariate rule changes the effective H1/H2 sample and adds an imputation
+step to the domain-reviewed primary. It does not change hypotheses, variables, expected signs,
+families or verdict mapping, but it is material enough that **the domain expert must re-check A1.1**
+before phase B integrates. A1.2–A1.5 are clarifications with no design effect.
+
 ## 13. References
 
 - Helweg, D. (2018). *Untersuchung von Gentrifizierung am Beispiel Berlin mittels Big Data Analytics.*
