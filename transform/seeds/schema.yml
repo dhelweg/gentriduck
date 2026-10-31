@@ -1009,3 +1009,63 @@ seeds:
         data_tests:
 
           - not_null
+
+  - name: seed_hh_sozialmonitoring_published_class_counts
+    description: >
+      #354/#355 phase A, prerequisite §2.1(4) (index-definition.md §3.4, R-A3 C1
+      analogue for Hamburg): published number of scored statistische Gebiete per
+      Status class and per Dynamik class, per Sozialmonitoring edition 2016-2025.
+      Source: the official report annexes "Sozialmonitoring Integrierte
+      Stadtteilentwicklung Bericht <E> - Anhang" (machine-readable XLSX,
+      Tabellenblatt I "Indizes"; BSW Hamburg via transparenz.hamburg.de,
+      dl-de/by-2.0), one row per Gebiet, counted per class. Edition 2018 uses
+      the corrected annex ("Anhang korrigiert", correction in sheet II only;
+      sheet I is identical). The 2017 annex writes Dynamik as '+', '0', '-';
+      these are recorded as positiv, stabil, negativ after a row-level check
+      against the WFS (31/31, 768/768, 47/47 Gebiete). No annex is published
+      for 2013-2015, so those editions are not covered. expected_code is the
+      warehouse code int_hamburg_sozialmonitoring_index must assign to the
+      label (status 1=hoch .. 4=sehr niedrig; Dynamik 1=positiv, 2=stabil,
+      3=negativ). The annex's own Status-/Dynamik-summe confirm that ordering
+      (hoch / positiv = lowest sums = least / falling disadvantage). Evidence:
+      docs/epic-e/354-phase-a-data-prerequisites.md §3-§4. Used by
+      test_354_hh_sozialmonitoring_published_class_counts.
+    meta:
+      dbt_meta_owner: data-engineer
+    data_tests:
+
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns:
+              - edition
+              - index_name
+              - class_label
+    columns:
+      - name: edition
+        description: Sozialmonitoring report edition (Berichtsjahr = WFS jahr), 2016-2025.
+        data_tests:
+
+          - not_null
+      - name: index_name
+        description: "'status' or 'dynamik'."
+        data_tests:
+
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ['status', 'dynamik']
+      - name: class_label
+        description: Published class label (hoch|mittel|niedrig|sehr niedrig; positiv|stabil|negativ).
+        data_tests:
+
+          - not_null
+      - name: expected_code
+        description: Numeric code the warehouse must assign to class_label (see model description).
+        data_tests:
+
+          - not_null
+      - name: n_gebiete
+        description: Number of scored statistische Gebiete in this class in the published annex.
+        data_tests:
+
+          - not_null

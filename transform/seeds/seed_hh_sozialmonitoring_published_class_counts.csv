@@ -1,0 +1,71 @@
+edition,index_name,class_label,expected_code,n_gebiete
+2016,status,hoch,1,156
+2016,status,mittel,2,542
+2016,status,niedrig,3,67
+2016,status,sehr niedrig,4,82
+2016,dynamik,positiv,1,79
+2016,dynamik,stabil,2,683
+2016,dynamik,negativ,3,85
+2017,status,hoch,1,158
+2017,status,mittel,2,535
+2017,status,niedrig,3,77
+2017,status,sehr niedrig,4,76
+2017,dynamik,positiv,1,31
+2017,dynamik,stabil,2,768
+2017,dynamik,negativ,3,47
+2018,status,hoch,1,151
+2018,status,mittel,2,542
+2018,status,niedrig,3,79
+2018,status,sehr niedrig,4,76
+2018,dynamik,positiv,1,22
+2018,dynamik,stabil,2,786
+2018,dynamik,negativ,3,40
+2019,status,hoch,1,149
+2019,status,mittel,2,554
+2019,status,niedrig,3,73
+2019,status,sehr niedrig,4,76
+2019,dynamik,positiv,1,31
+2019,dynamik,stabil,2,779
+2019,dynamik,negativ,3,42
+2020,status,hoch,1,141
+2020,status,mittel,2,565
+2020,status,niedrig,3,72
+2020,status,sehr niedrig,4,72
+2020,dynamik,positiv,1,37
+2020,dynamik,stabil,2,774
+2020,dynamik,negativ,3,39
+2021,status,hoch,1,143
+2021,status,mittel,2,564
+2021,status,niedrig,3,71
+2021,status,sehr niedrig,4,75
+2021,dynamik,positiv,1,52
+2021,dynamik,stabil,2,747
+2021,dynamik,negativ,3,54
+2022,status,hoch,1,159
+2022,status,mittel,2,547
+2022,status,niedrig,3,70
+2022,status,sehr niedrig,4,77
+2022,dynamik,positiv,1,61
+2022,dynamik,stabil,2,733
+2022,dynamik,negativ,3,59
+2023,status,hoch,1,153
+2023,status,mittel,2,553
+2023,status,niedrig,3,88
+2023,status,sehr niedrig,4,62
+2023,dynamik,positiv,1,21
+2023,dynamik,stabil,2,798
+2023,dynamik,negativ,3,37
+2024,status,hoch,1,161
+2024,status,mittel,2,547
+2024,status,niedrig,3,84
+2024,status,sehr niedrig,4,65
+2024,dynamik,positiv,1,25
+2024,dynamik,stabil,2,794
+2024,dynamik,negativ,3,38
+2025,status,hoch,1,163
+2025,status,mittel,2,543
+2025,status,niedrig,3,89
+2025,status,sehr niedrig,4,62
+2025,dynamik,positiv,1,41
+2025,dynamik,stabil,2,772
+2025,dynamik,negativ,3,44
