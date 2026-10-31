@@ -5587,3 +5587,397 @@ models:
         data_tests:
 
           - not_null
+
+  # ---------------------------------------------------------------------------
+  # #354/#355 phase A (pre-registration docs/methodology/
+  # 354-355-hypothesis-suite-preregistration.md §2.1(2), §2.1(6)): native
+  # LOR-2021 POI counts / OA for the 2019-2020 OSM snapshots, and the
+  # native panels (every row point-in-polygon on its own vintage) the
+  # hypothesis suite reads. Evidence:
+  # docs/epic-e/354-phase-a-data-prerequisites.md.
+  # ---------------------------------------------------------------------------
+  - name: int_berlin_osm_poi_plr2021_backcast
+    description: >
+      POI-level point-in-polygon re-assignment of the back-cast Berlin OSM
+      snapshots (var berlin_lor2021_backcast_years, default 2019 and 2020) to
+      LOR-2021 PLRs. Same POI rows, taxonomy and join method as int_osm_poi_plr
+      (ST_Within in EPSG:25833, C3-dedup tie-break); only the geometry vintage
+      differs. area_code NULL = outside every LOR-2021 polygon.
+      area_code_pre2021 keeps the pre-2021 PLR of int_osm_poi_plr for the
+      reconciliation.
+    meta:
+      dbt_meta_owner: data-engineer
+    data_tests:
+
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns:
+              - snapshot_year
+              - osm_id
+    columns:
+      - name: snapshot_year
+        description: OSM snapshot year (state at Y-01-01), back-cast years only (<= 2020).
+        data_tests:
+
+          - not_null
+      - name: osm_id
+        description: OSM element id.
+        data_tests:
+
+          - not_null
+      - name: area_code
+        description: LOR-2021 PLR containing the POI; NULL outside every polygon.
+        data_tests:
+
+          - assert_null_rate_below:
+              arguments:
+                column_name: area_code
+                partition_by: snapshot_year
+                max_null_fraction: 0.12
+              config:
+                severity: warn
+      - name: area_vintage
+        description: Always 'lor_2021' (the geometry each POI was tested against).
+        data_tests:
+
+          - accepted_values:
+              arguments:
+                values: ["lor_2021"]
+
+  - name: int_berlin_poi_development_plr2021_backcast
+    description: >
+      Native LOR-2021 POI counts for the back-cast snapshots, in exactly the
+      columns and grain of fct_poi_development (integer counts per full
+      domain/category/type leaf; canonical city_code). Replaces, for the
+      hypothesis suite, the crosswalk-reallocated fractional 2019/2020 counts of
+      int_poi_share_base_2021; reconciled against them by
+      test_354_backcast_native_vs_crosswalk_reconciliation. Kept out of
+      fct_poi_development so no published output changes.
+    meta:
+      dbt_meta_owner: data-engineer
+    data_tests:
+
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns:
+              - city_code
+              - snapshot_year
+              - area_code
+              - area_vintage
+              - poi_domain_h
+              - poi_category_h
+              - poi_type_h
+    columns:
+      - name: city_code
+        description: Canonical city code (ADR-0005); 'BER'.
+        data_tests:
+
+          - accepted_values:
+              arguments:
+                values: ["BER"]
+      - name: area_code
+        description: LOR-2021 PLR code (8-digit).
+        data_tests:
+
+          - not_null
+      - name: poi_count
+        description: Number of POIs of this taxonomy leaf inside the PLR polygon.
+        data_tests:
+
+          - not_null
+
+  - name: int_berlin_osm_poi_plr2021_backcast_weighted
+    description: >
+      Gaussian-kernel POI counts for the back-cast snapshots on LOR-2021
+      representative points, from the shared berlin_poi_kernel_weighted_counts()
+      macro (identical SQL, bandwidth var and leakage guard as
+      int_osm_poi_plr_weighted; only the vintage rule differs).
+    meta:
+      dbt_meta_owner: data-engineer
+    data_tests:
+
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns:
+              - snapshot_year
+              - area_code
+              - poi_domain_h
+              - poi_category_h
+              - poi_type_h
+              - weight_variant
+    columns:
+      - name: area_vintage
+        description: Always 'lor_2021'.
+        data_tests:
+
+          - accepted_values:
+              arguments:
+                values: ["lor_2021"]
+      - name: weighted_count
+        description: Sum of normalised kernel (or leakage-guard) weights.
+        data_tests:
+
+          - not_null
+
+  - name: int_berlin_poi_offering_advantage_plr2021_backcast
+    description: >
+      Offering Advantage on LOR-2021 PLRs for the back-cast snapshots, in exactly
+      the shape of int_poi_offering_advantage (both weight variants, faithful
+      methodology variant), computed by the shared offering_advantage_lq() macro
+      -- the same SQL as int_poi_offering_advantage, so one OA definition.
+      Weighted-vs-hard mass accounting: test_354_backcast_oa_weighted_mass_conservation.
+    meta:
+      dbt_meta_owner: data-engineer
+    data_tests:
+
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns:
+              - city_code
+              - snapshot_year
+              - area_code
+              - area_vintage
+              - poi_domain_h
+              - poi_category_h
+              - poi_type_h
+              - weight_variant
+              - methodology_variant
+    columns:
+      - name: area_code
+        description: LOR-2021 PLR code.
+        data_tests:
+
+          - not_null
+      - name: oa_domain
+        description: Domain-level LQ (see int_poi_offering_advantage).
+        data_tests:
+
+          - not_null
+      - name: oa_category
+        description: Category-level LQ.
+        data_tests:
+
+          - not_null
+      - name: methodology_variant
+        description: Always 'faithful' (ADR-0017 D3/D4).
+        data_tests:
+
+          - accepted_values:
+              arguments:
+                values: ["faithful"]
+
+  - name: int_poi_development_native
+    description: >
+      POI counts in which every row comes from point-in-polygon on the
+      geometry of its own area_vintage: all fct_poi_development rows
+      ('contemporaneous') plus the Berlin LOR-2021 back-cast of 2019/2020
+      ('backcast'). Columns of fct_poi_development plus geometry_pairing. The
+      count source of the suite; a consumer selects one area_vintage per panel
+      so no delta crosses a LOR boundary.
+    meta:
+      dbt_meta_owner: data-engineer
+    data_tests:
+
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns:
+              - city_code
+              - snapshot_year
+              - area_code
+              - area_vintage
+              - poi_domain_h
+              - poi_category_h
+              - poi_type_h
+    columns:
+      - name: area_vintage
+        description: Geometry vintage the POIs were joined against.
+        data_tests:
+
+          - accepted_values:
+              arguments:
+                values: ["lor_pre2021", "lor_2021", "current"]
+      - name: geometry_pairing
+        description: >
+          'contemporaneous' = snapshot joined to the geometry valid at that date;
+          'backcast' = earlier snapshot joined to the later (current) geometry.
+        data_tests:
+
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ["contemporaneous", "backcast"]
+
+  - name: int_poi_offering_advantage_native
+    description: >
+      Leaf-grain (sparse) Offering Advantage, every row from point-in-polygon
+      counts on its own area_vintage: all int_poi_offering_advantage rows plus
+      the Berlin LOR-2021 back-cast, canonical city_code, plus geometry_pairing. Same columns as
+      int_poi_offering_advantage. For the dense, zero-filled panel use
+      int_poi_oa_native_panel.
+    meta:
+      dbt_meta_owner: data-engineer
+    data_tests:
+
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns:
+              - city_code
+              - snapshot_year
+              - area_code
+              - area_vintage
+              - poi_domain_h
+              - poi_category_h
+              - poi_type_h
+              - weight_variant
+              - methodology_variant
+    columns:
+      - name: city_code
+        description: Canonical city code (ADR-0005).
+        data_tests:
+
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ["BER", "HH"]
+      - name: geometry_pairing
+        description: "'contemporaneous' or 'backcast' (see int_poi_development_native)."
+        data_tests:
+
+          - accepted_values:
+              arguments:
+                values: ["contemporaneous", "backcast"]
+
+  - name: int_poi_oa_native_panel
+    description: >
+      Dense, zero-filled domain- and category-level Offering Advantage panel on
+      every native (city, vintage) geometry -- the OA input of the hypothesis suite
+      (pre-registration §5.1 zero-fill rule, §2.1(6)). One row per area x
+      taxonomy entry present city-wide, per (city, vintage, weight variant,
+      methodology variant, year). Absent entries carry oa_value = 0 and
+      is_zero_filled = true; exclusion is by oa_min_base_flag only (D-3, #274).
+      Areas with zero POIs in every year of the slice are not in the universe.
+      Rule and its tests: test_354_oa_native_panel_zero_fill.
+    meta:
+      dbt_meta_owner: data-engineer
+    data_tests:
+
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns:
+              - city_code
+              - area_vintage
+              - weight_variant
+              - methodology_variant
+              - snapshot_year
+              - area_code
+              - oa_level
+              - poi_domain_h
+              - poi_category_h
+    columns:
+      - name: city_code
+        description: Canonical city code.
+        data_tests:
+
+          - not_null
+      - name: area_code
+        description: Area code on the row's area_vintage.
+        data_tests:
+
+          - not_null
+      - name: oa_level
+        description: "'domain' or 'category'."
+        data_tests:
+
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ["domain", "category"]
+      - name: poi_domain_h
+        description: Harmonised POI domain.
+        data_tests:
+
+          - not_null
+      - name: poi_category_h
+        description: Harmonised POI category; NULL on domain-level rows only.
+        data_tests:
+
+          - not_null:
+              config:
+                where: "oa_level = 'category'"
+      - name: oa_value
+        description: >
+          Location quotient (oa_domain or oa_category of the source); 0 where
+          the entry is absent from the area-year (zero-fill).
+        data_tests:
+
+          - not_null
+      - name: is_zero_filled
+        description: TRUE when the row was absent from the sparse source and filled with 0.
+        data_tests:
+
+          - not_null
+      - name: oa_min_base_flag
+        description: >
+          D-3 min-base flag (#274): domain level all_domains_stock_local below
+          oa_min_poi_base_n, category level domain_stock_local below
+          oa_min_poi_base_n. The ONLY row-exclusion rule the suite may apply (§5.1).
+        data_tests:
+
+          - not_null
+      - name: geometry_pairing
+        description: "'contemporaneous' or 'backcast'."
+        data_tests:
+
+          - not_null
+
+  - name: int_poi_c5_share_native
+    description: >
+      C5 share-normalised POI shares per native (city, vintage) slice, dense over
+      areas x years: total_c5_share (= int_poi_share_base.plr_poi_share on every
+      contemporaneous cell; test_354_c5_share_native_matches_share_base) and
+      commercial_c5_share, the pre-registered commercial share c_E of the four
+      consumption domains (var poi_commercial_domains: Gastronomy, Retail,
+      Services, Entertainment; pre-registration §5.1). Levels only; DHS growth
+      is computed in the suite.
+    meta:
+      dbt_meta_owner: data-engineer
+    data_tests:
+
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns:
+              - city_code
+              - area_vintage
+              - snapshot_year
+              - area_code
+    columns:
+      - name: area_code
+        description: Area code on the row's area_vintage.
+        data_tests:
+
+          - not_null
+      - name: total_poi_count
+        description: All POIs inside the area polygon (0 when none that year).
+        data_tests:
+
+          - not_null
+      - name: commercial_poi_count
+        description: POIs of the commercial basket domains inside the area polygon.
+        data_tests:
+
+          - not_null
+      - name: total_c5_share
+        description: total_poi_count / city-wide total, same snapshot and vintage.
+        data_tests:
+
+          - not_null
+      - name: commercial_c5_share
+        description: commercial_poi_count / city-wide commercial total (c_E, §5.1).
+        data_tests:
+
+          - not_null
+      - name: geometry_pairing
+        description: "'contemporaneous' or 'backcast'."
+        data_tests:
+
+          - not_null
