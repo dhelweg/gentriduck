@@ -12,9 +12,13 @@
   This macro introduces NO methodology change: the SQL below is the former
   body of int_poi_offering_advantage (CTE `with_bases` + final SELECT),
   statement-for-statement, except that `from combined_base` became
-  `from {{ base_relation }}` (one SQL comment line was reworded to match). int_poi_offering_advantage's output is verified
-  row-identical before/after the extraction (docs/epic-e/
-  354-phase-a-data-prerequisites.md §6). The construct, its grounding and its
+  `from {{ base_relation }}` (one SQL comment line was reworded to match).
+  int_poi_offering_advantage after the extraction: compiled SQL
+  token-identical to the pre-extraction model; standard rows bit-identical,
+  gaussian rows within pre-existing float-summation jitter (evidence
+  docs/epic-e/354-phase-a-data-prerequisites.md §7).
+  Lint scope: sqlfluff sees only the stub in .sqlfluff, so this macro body is
+  NOT covered by sqlfluff (sqlfmt still formats it). The construct, its grounding and its
   interpretation notes stay documented in int_poi_offering_advantage.sql's
   header (R-C2: reference/system/70_oa_helper.sql, 71_oa.sql; thesis
   pp. 55-56, 91; docs/methodology/spatial-methods.md §11; ADR-0017 D1/D2/D4,

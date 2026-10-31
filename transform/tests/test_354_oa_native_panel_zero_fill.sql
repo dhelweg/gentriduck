@@ -13,7 +13,12 @@
 -- touch observed values;
 -- 3 filled rows: oa_value = 0 and level_stock_local = 0;
 -- 4 filled rows with an empty parent base (0/0 LQ) carry
--- oa_min_base_flag = true, so the flag -- not presence -- excludes them.
+-- oa_min_base_flag = true, so the flag -- not presence -- excludes them;
+-- 5 independent of the panel's own scaffold: per slice-year-level, the
+-- number of NOT-zero-filled rows equals the number of distinct present
+-- cells in the sparse source (int_poi_offering_advantage_native: distinct
+-- (area, domain) resp. (area, domain, category)), and per slice the
+-- panel's area count equals the source's distinct area count.
 -- Severity error.
 {{ config(severity="error") }}
 
@@ -161,6 +166,108 @@ with
                 or level_stock_local != 0
                 or (parent_stock_local = 0 and not oa_min_base_flag)
             )
+    ),
+
+    -- 5a: present cells per slice-year-level, panel vs source.
+    source_present as (
+        select
+            city_code,
+            area_vintage,
+            weight_variant,
+            methodology_variant,
+            snapshot_year,
+            'domain' as oa_level,
+            count(distinct area_code || '|' || poi_domain_h) as n_present
+        from {{ ref("int_poi_offering_advantage_native") }}
+        group by
+            city_code, area_vintage, weight_variant, methodology_variant, snapshot_year
+        union all
+        select
+            city_code,
+            area_vintage,
+            weight_variant,
+            methodology_variant,
+            snapshot_year,
+            'category' as oa_level,
+            count(
+                distinct area_code || '|' || poi_domain_h || '|' || poi_category_h
+            ) as n_present
+        from {{ ref("int_poi_offering_advantage_native") }}
+        group by
+            city_code, area_vintage, weight_variant, methodology_variant, snapshot_year
+    ),
+
+    panel_present as (
+        select
+            city_code,
+            area_vintage,
+            weight_variant,
+            methodology_variant,
+            snapshot_year,
+            oa_level,
+            count(*) filter (where not is_zero_filled) as n_present
+        from panel
+        group by
+            city_code,
+            area_vintage,
+            weight_variant,
+            methodology_variant,
+            snapshot_year,
+            oa_level
+    ),
+
+    check_present_count as (
+        select
+            '5a_present_count_vs_source' as check_name,
+            coalesce(s.city_code, p.city_code) as city_code,
+            coalesce(s.snapshot_year, p.snapshot_year) as snapshot_year,
+            coalesce(s.oa_level, p.oa_level) as oa_level,
+            cast(null as varchar) as area_code,
+            cast(null as varchar) as entry,
+            coalesce(p.n_present, 0) * 1.0 as observed,
+            coalesce(s.n_present, 0) * 1.0 as expected
+        from source_present as s
+        full outer join
+            panel_present as p
+            on s.city_code = p.city_code
+            and s.area_vintage = p.area_vintage
+            and s.weight_variant = p.weight_variant
+            and s.methodology_variant = p.methodology_variant
+            and s.snapshot_year = p.snapshot_year
+            and s.oa_level = p.oa_level
+        where s.n_present is distinct from p.n_present
+    ),
+
+    -- 5b: area universe per slice, panel vs source.
+    source_areas as (
+        select
+            city_code,
+            area_vintage,
+            weight_variant,
+            methodology_variant,
+            count(distinct area_code) as n_areas
+        from {{ ref("int_poi_offering_advantage_native") }}
+        group by city_code, area_vintage, weight_variant, methodology_variant
+    ),
+
+    check_area_count as (
+        select
+            '5b_area_count_vs_source' as check_name,
+            coalesce(s.city_code, a.city_code) as city_code,
+            cast(null as integer) as snapshot_year,
+            cast(null as varchar) as oa_level,
+            cast(null as varchar) as area_code,
+            cast(null as varchar) as entry,
+            coalesce(a.n_areas, 0) * 1.0 as observed,
+            coalesce(s.n_areas, 0) * 1.0 as expected
+        from source_areas as s
+        full outer join
+            slice_areas as a
+            on s.city_code = a.city_code
+            and s.area_vintage = a.area_vintage
+            and s.weight_variant = a.weight_variant
+            and s.methodology_variant = a.methodology_variant
+        where s.n_areas is distinct from a.n_areas
     )
 
 select *
@@ -171,3 +278,9 @@ from check_present
 union all
 select *
 from check_filled
+union all
+select *
+from check_present_count
+union all
+select *
+from check_area_count

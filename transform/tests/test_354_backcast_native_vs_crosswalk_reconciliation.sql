@@ -30,6 +30,16 @@
 {{ config(severity="error") }}
 
 {% set backcast_years = var("berlin_lor2021_backcast_years", [2019, 2020]) %}
+{#- Guard (#354 review): the back-cast must be non-empty and pre-2021 only
+    (>= 2021 snapshots are already native lor_2021 in int_osm_poi_plr). -#}
+{% if backcast_years | length == 0 %}
+    {{ exceptions.raise_compiler_error("berlin_lor2021_backcast_years is empty; the LOR-2021 back-cast needs at least one snapshot year <= 2020") }}
+{% endif %}
+{% for y in backcast_years %}
+    {% if y | int > 2020 %}
+        {{ exceptions.raise_compiler_error("berlin_lor2021_backcast_years contains " ~ y ~ "; back-cast years must be <= 2020") }}
+    {% endif %}
+{% endfor %}
 
 with
     -- (a) POI universe conservation.

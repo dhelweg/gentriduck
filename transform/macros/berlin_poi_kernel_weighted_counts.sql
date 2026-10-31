@@ -15,8 +15,13 @@
   `poi_relation`), the LOR source (`ref("stg_berlin_lor")` -> `lor_relation`)
   and the vintage join rule (-> `vintage_predicate`, a boolean SQL expression
   over aliases `p` = POI, `l` = LOR representative point). int_osm_poi_plr_weighted
-  passes its original rule verbatim, and its output is verified row-identical
-  before/after (docs/epic-e/354-phase-a-data-prerequisites.md §6).
+  passes its original rule verbatim. After the extraction: compiled SQL
+  token-identical to the pre-extraction model; keys and integer columns
+  identical, weighted_count (gaussian rows only) within pre-existing
+  float-summation jitter (evidence
+  docs/epic-e/354-phase-a-data-prerequisites.md §7).
+  Lint scope: sqlfluff sees only the stub in .sqlfluff, so this macro body is
+  NOT covered by sqlfluff (sqlfmt still formats it).
   Grounding (R-C2) stays in int_osm_poi_plr_weighted.sql's header:
   docs/methodology/spatial-methods.md §1-§5, §9.3, §11.3; ADR-0010 D1/D4;
   ADR-0017 D5 C-1.

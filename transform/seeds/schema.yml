@@ -1011,25 +1011,44 @@ seeds:
           - not_null
 
   - name: seed_hh_sozialmonitoring_published_class_counts
-    description: >
+    description: |
       #354/#355 phase A, prerequisite §2.1(4) (index-definition.md §3.4, R-A3 C1
       analogue for Hamburg): published number of scored statistische Gebiete per
       Status class and per Dynamik class, per Sozialmonitoring edition 2016-2025.
+
+      Attribution / licence: Freie und Hansestadt Hamburg, Behörde für
+      Stadtentwicklung und Wohnen, dl-de/by-2.0.
+
       Source: the official report annexes "Sozialmonitoring Integrierte
       Stadtteilentwicklung Bericht <E> - Anhang" (machine-readable XLSX,
-      Tabellenblatt I "Indizes"; BSW Hamburg via transparenz.hamburg.de,
-      dl-de/by-2.0), one row per Gebiet, counted per class. Edition 2018 uses
-      the corrected annex ("Anhang korrigiert", correction in sheet II only;
-      sheet I is identical). The 2017 annex writes Dynamik as '+', '0', '-';
-      these are recorded as positiv, stabil, negativ after a row-level check
+      Tabellenblatt I "Indizes", one row per scored Gebiet), Hamburg
+      Transparenzportal, counted per class. Per edition (annex file -- URL):
+      - 2016: Upload__sozialmonitoring-bericht-2016_anhang-tabelle.xlsx -- https://daten.transparenz.hamburg.de/Dataport.HmbTG.ZS.Webservice.GetRessource100/GetRessource100.svc/945dfd03-8c0e-47f8-9f16-d4847b04554e/Upload__sozialmonitoring-bericht-2016_anhang-tabelle.xlsx
+      - 2017: Upload__sozialmonitoring-bericht-2017_anhang-tabelle.xlsx -- https://daten.transparenz.hamburg.de/Dataport.HmbTG.ZS.Webservice.GetRessource100/GetRessource100.svc/608cd59c-8f4e-4100-a438-c5e1cb308f69/Upload__sozialmonitoring-bericht-2017_anhang-tabelle.xlsx
+      - 2018: Upload__sozialmonitoring-bericht_2018_anhang-tabelle_korrigiert.xlsx -- https://daten.transparenz.hamburg.de/Dataport.HmbTG.ZS.Webservice.GetRessource100/GetRessource100.svc/05f30395-0793-4652-8862-e997103f5aca/Upload__sozialmonitoring-bericht_2018_anhang-tabelle_korrigiert.xlsx
+      - 2019: Upload__Sozialmonitoring-Bericht_2019_Anhang_Tabelle.xlsx -- https://daten.transparenz.hamburg.de/Dataport.HmbTG.ZS.Webservice.GetRessource100/GetRessource100.svc/35025574-c6e5-4d8e-98b6-5da18ef46637/Upload__Sozialmonitoring-Bericht_2019_Anhang_Tabelle.xlsx
+      - 2020: Upload__Sozialmonitoring-Bericht_2020_Anhang_Tabelle.xlsx -- https://daten.transparenz.hamburg.de/Dataport.HmbTG.ZS.Webservice.GetRessource100/GetRessource100.svc/51ede4f2-b8ec-4126-90de-b864d1617c23/Upload__Sozialmonitoring-Bericht_2020_Anhang_Tabelle.xlsx
+      - 2021: Upload__Sozialmonitoring-Bericht_2021_Ergebnistabellen.xlsx -- https://daten.transparenz.hamburg.de/Dataport.HmbTG.ZS.Webservice.GetRessource100/GetRessource100.svc/23c6a735-eed0-415e-9a81-04d4d8bf774b/Upload__Sozialmonitoring-Bericht_2021_Ergebnistabellen.xlsx
+      - 2022: Upload__Sozialmonitoring-Bericht_2022_Ergebnistabellen.XLSX -- https://daten.transparenz.hamburg.de/Dataport.HmbTG.ZS.Webservice.GetRessource100/GetRessource100.svc/5d652062-7958-4fcc-86f9-988e5f8b06c4/Upload__Sozialmonitoring-Bericht_2022_Ergebnistabellen.XLSX
+      - 2023: Upload__Sozialmonitoring-Bericht_2023_Ergebnistabellen.XLSX -- https://daten.transparenz.hamburg.de/Dataport.HmbTG.ZS.Webservice.GetRessource100/GetRessource100.svc/eb081372-202f-4429-8a2a-7989c46c17d6/Upload__Sozialmonitoring-Bericht_2023_Ergebnistabellen.XLSX
+      - 2024: Upload__Sozialmonitoring-Bericht_2024_Ergebnistabellen.XLSX -- https://daten.transparenz.hamburg.de/Dataport.HmbTG.ZS.Webservice.GetRessource100/GetRessource100.svc/04b0dceb-d27f-42ff-8790-8856ce89a004/Upload__Sozialmonitoring-Bericht_2024_Ergebnistabellen.XLSX
+      - 2025: Upload__Sozialmonitoring-Bericht_2025_Ergebnistabellen.XLSX -- https://daten.transparenz.hamburg.de/Dataport.HmbTG.ZS.Webservice.GetRessource100/GetRessource100.svc/ee0ecec9-c569-43ca-bc90-fc3f560ff1a9/Upload__Sozialmonitoring-Bericht_2025_Ergebnistabellen.XLSX
+      Edition 2018 uses the corrected annex ("Anhang korrigiert"; correction in
+      sheet II only, sheet I identical). The 2017 annex writes Dynamik as '+',
+      '0', '-'; recorded as positiv, stabil, negativ after a row-level check
       against the WFS (31/31, 768/768, 47/47 Gebiete). No annex is published
-      for 2013-2015, so those editions are not covered. expected_code is the
-      warehouse code int_hamburg_sozialmonitoring_index must assign to the
-      label (status 1=hoch .. 4=sehr niedrig; Dynamik 1=positiv, 2=stabil,
-      3=negativ). The annex's own Status-/Dynamik-summe confirm that ordering
-      (hoch / positiv = lowest sums = least / falling disadvantage). Evidence:
-      docs/epic-e/354-phase-a-data-prerequisites.md §3-§4. Used by
-      test_354_hh_sozialmonitoring_published_class_counts.
+      for 2013-2015. Only these derived counts are committed; no raw XLSX is in
+      the repository (architect note docs/epic-e/354-architect-note.md).
+
+      expected_code is the warehouse code int_hamburg_sozialmonitoring_index
+      must assign to the label (status 1=hoch .. 4=sehr niedrig; Dynamik
+      1=positiv, 2=stabil, 3=negativ); the annex Status-/Dynamik-summe confirm
+      that ordering. Evidence: docs/epic-e/354-phase-a-data-prerequisites.md
+      §3-§4.
+
+      Usage restriction (architect condition 3): reference data for tests
+      only -- read by test_354_hh_sozialmonitoring_published_class_counts; no
+      model may select from this seed.
     meta:
       dbt_meta_owner: data-engineer
     data_tests:

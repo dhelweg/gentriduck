@@ -115,8 +115,11 @@
     -- verbatim so the native LOR-2021 back-cast
     -- (int_berlin_osm_poi_plr2021_backcast_weighted) reuses the identical
     -- kernel instead of forking it. This model passes its original vintage
-    -- rule unchanged; its output is row-identical before/after
-    -- (docs/epic-e/354-phase-a-data-prerequisites.md).
+    -- rule unchanged. Compiled SQL token-identical to the pre-extraction
+    -- model; this model holds gaussian rows only: keys and integer columns
+    -- identical, weighted_count within pre-existing float-summation jitter
+    -- (evidence
+    -- docs/epic-e/354-phase-a-data-prerequisites.md §7).
     {{
         berlin_poi_kernel_weighted_counts(
             poi_relation=ref("int_osm_poi_plr"),

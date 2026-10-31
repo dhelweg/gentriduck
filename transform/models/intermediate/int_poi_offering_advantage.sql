@@ -285,6 +285,8 @@ with
     -- offering_advantage_lq() macro (transform/macros/offering_advantage_lq.sql),
     -- moved there verbatim so the native LOR-2021 back-cast model
     -- (int_berlin_poi_offering_advantage_plr2021_backcast) reuses the identical
-    -- formula instead of forking it. Output of this model is unchanged
-    -- (row-identical before/after; docs/epic-e/354-phase-a-data-prerequisites.md).
+    -- formula instead of forking it. Compiled SQL token-identical to the
+    -- pre-extraction model; standard rows bit-identical, gaussian rows within
+    -- pre-existing float-summation jitter (evidence
+    -- docs/epic-e/354-phase-a-data-prerequisites.md §7).
     {{ offering_advantage_lq("combined_base") }}
