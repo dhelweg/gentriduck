@@ -197,3 +197,93 @@ def test_missing_cluster_stays_missing() -> None:
     cl = build_cross_lagged(df, k=1, cluster_col="stadtteil_code")
     assert cl["cluster"].isna().sum() == 1
     assert "nan" not in set(cl["cluster"].dropna())
+
+
+# ---------------------------------------------------------------------------
+# #354/#355 extensions (pre-registration §6.1), backward-compatible
+# ---------------------------------------------------------------------------
+
+
+def test_cluster_bootstrap_ci_defaults_unchanged_and_min_clusters():
+    from analysis.directional_inference import bootstrap_p
+
+    rng = np.random.default_rng(0)
+    x = rng.normal(size=120)
+    y = x + rng.normal(size=120)
+    cl = np.array([f"c{i // 10:02d}" for i in range(120)])  # 12 clusters
+    lo, hi, g = cluster_bootstrap_ci(x, y, [], cl, N_BOOT)
+    lo2, hi2, g2, draws = cluster_bootstrap_ci(x, y, [], cl, N_BOOT, return_draws=True)
+    assert (lo, hi, g) == (lo2, hi2, g2) and len(draws) == N_BOOT
+    assert cluster_bootstrap_ci(x, y, [], cl, N_BOOT, min_clusters=20)[:2] == (None, None)
+    assert bootstrap_p(draws, 0.0, N_BOOT) == pytest.approx(1 / (N_BOOT + 1))
+
+
+def test_bootstrap_p_two_sided():
+    from analysis.directional_inference import bootstrap_p
+
+    draws = np.r_[np.full(30, -0.1), np.full(70, 0.1)]
+    assert bootstrap_p(draws, 0.0, 99) == pytest.approx(0.6)
+    assert bootstrap_p([], 0.0, 99) is None
+
+
+def test_auc_score_matches_sklearn():
+    from sklearn.metrics import roc_auc_score
+
+    from analysis.directional_inference import auc_score
+
+    rng = np.random.default_rng(1)
+    y = rng.integers(0, 2, size=200)
+    s = np.round(rng.normal(size=200) + y, 1)  # ties
+    assert auc_score(y, s) == pytest.approx(roc_auc_score(y, s))
+    assert auc_score(np.ones(5), np.arange(5)) is None
+
+
+def test_build_cross_lagged_delta_and_level_cols():
+    rows = pd.DataFrame(
+        {
+            "area_code": ["10000001"] * 3,
+            "lag_k": 1,
+            "w_start": [2019, 2021, 2023],
+            "w_end": [2021, 2023, 2025],
+            "D": [0.1, 0.2, 0.3],
+            "g": [1.0, 2.0, 3.0],
+            "S_end": [5.0, 6.0, 7.0],
+            "S_start": [4.0, 5.0, 6.0],
+        }
+    )
+    cl = build_cross_lagged(
+        rows,
+        k=1,
+        time_cols=("w_start", "w_end"),
+        delta_cols=("D", "g"),
+        level_cols={"S_pivot": ("S_end", "p"), "S_start": ("S_start", "p")},
+    ).sort_values("pivot")
+    assert list(cl["pivot"]) == [2021, 2023]
+    assert list(cl["d_status_p"]) == [0.1, 0.2] and list(cl["d_poi_f"]) == [2.0, 3.0]
+    assert list(cl["S_pivot"]) == [5.0, 6.0] and list(cl["S_start"]) == [4.0, 5.0]
+    assert list(cl["start_p"]) == [2019, 2021] and list(cl["end_f"]) == [2023, 2025]
+
+
+def test_cross_lagged_tests_per_direction_controls():
+    cl = build_cross_lagged(_panel("h3b"), k=1, cluster_col=None)
+    cl["lvl"] = np.random.default_rng(2).normal(size=len(cl))
+    out = cross_lagged_tests(cl, n_boot=N_BOOT, controls={"H3b": ["d_poi_p", "lvl"]})
+    assert out["H3b"]["p_boot"] is not None and out["H3b"]["d4_control"] is False
+    assert (
+        verdict(
+            out["H3b"]["rho"],
+            "positive",
+            ci_low=out["H3b"]["ci_low"],
+            ci_high=out["H3b"]["ci_high"],
+        )
+        == SUPPORTED
+    )
+
+
+def test_direction_conclusion_opposite_sign():
+    assert "opposite sign" in direction_conclusion(NOT_SIGNIFICANT, CONTRADICTED)
+    assert "opposite sign" in direction_conclusion(CONTRADICTED, NOT_SIGNIFICANT)
+    assert (
+        direction_conclusion(NOT_SIGNIFICANT, NOT_SIGNIFICANT)
+        == "no directional evidence either way"
+    )

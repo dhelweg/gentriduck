@@ -189,9 +189,14 @@ floor(gesamtindex / 10)`; the units digit `∈ {1,3,5}` is the Dynamik WFS code 
 Two structured breaks must be stated on G2, not smoothed over (R-A7 domain C1(e); R-A3 C4):
 1. **447 ↔ 542 PLR boundary break (2019→2021).** Any Status/Dynamik series crossing this boundary
    is not PLR-comparable without the ADR-0003 LOR crosswalk.
-2. **3→4 index-indicator drift (single-parent-household children added 2023).** Pre-2023 and 2023+
-   classes are *comparable in interpretation but not computed from an identical input set*; small
-   cross-2023 movements must not be over-read as real social change.
+2. **Index-indicator drift (4 → 3 → 4).** MSS 2013–2017 computed Status/Dynamik from 4 indicators
+   (Arbeitslosigkeit incl. SGB III, Langzeitarbeitslosigkeit, Transferbezug, Kinderarmut); MSS
+   2019/2021 from 3 (Langzeitarbeitslosigkeit dropped, Arbeitslosigkeit SGB II only); MSS 2023+
+   from 4 again (single-parent-household children added as S2). Classes across these breaks are
+   *comparable in interpretation but not computed from an identical input set*; small movements
+   across 2019 or 2023 must not be over-read as real social change. *(Corrected 2026-10-28, #360;
+   the original text named only the 2023 change. Evidence:
+   `docs/epic-c/360-mss-indicator-mapping-evidence.md`.)*
 
 ### 1.8 Milieuschutz overlay — NOT a stage
 
@@ -439,11 +444,18 @@ block.
 
 - `migration_background_share`: available **≥2017 only** (Mikrozensus definition break; R-A5 §6
   condition 3). Restrict any cross-year D4 comparison involving it to ≥2017; do not back-fill.
-- `transferbezug` (SES indicator, if folded into a future SES extension of D4): **null in 2019 and
-  2021 editions** (suspended). Treat as **MISSING, not zero** — do not impute, do not include in any
-  denominator (R-A4 C3). The populated cross-edition core of the MSS SES battery is just
-  `arbeitslose_*` + `kinderarmut_*` (R-A4 §c); use the full 4-indicator set only for single-edition
-  2023/2025 fits.
+- MSS SES indicators (if folded into a future SES extension of D4) — *corrected 2026-10-28, #360*
+  (the earlier text said `transferbezug` was null in 2019/2021; that was the vacant S2 slot read
+  under the wrong label). As verified against the Indikatorenhefte:
+  - **Populated in every edition 2015–2025:** `arbeitslose_*` (S1), `transferbezug_*` (S3) and
+    `kinderarmut_*` (S4). This three-indicator core is the cross-edition SES battery. S1 has a
+    definition break at 2019 (SGB III dropped) and S1/S3 a denominator refinement at 2021
+    (Regelaltersgrenze); compare levels across those breaks only with that caveat.
+  - **Edition-limited:** `langzeitarbeitslose_*` (S2, 2015/2017 only) and `alleinerziehende_*` (S2,
+    2023/2025 only). The S2 slot is vacant in 2019/2021: treat it as **MISSING, not zero** — do not
+    impute, do not include in any denominator (R-A4 C3). Use a four-indicator set only for
+    single-edition fits on 2015/2017 or 2023/2025, and never treat the two S2 constructs as one
+    series.
 - The five `ewr_composite` inputs are all **vulnerability-positive** after PR #89 (R-A5 §9, Verdict
   PASS) — no per-indicator sign work remains for D4 levels; the composite enters the model with the
   documented common polarity (§5).
@@ -493,7 +505,7 @@ integrates both.
 | **D3-price** | `brw_trend` (`int_berlin_brw_trend`, #263; wired into `int_gentrification_ts`, #273) | Per-(city_code, snapshot_year) z-score of `brw_yoy_pct_change` (percentage year-over-year change in `brw_weighted_avg_eur_m2`) | **Change-positive, upgrading-pressure-positive** — high = land value rose faster than the citywide PLR average that year = rent-gap realisation actively occurring (Smith 1979) | As published (change-positive); OPPOSITE convention from a vulnerability composite — never pooled unsigned into one. | **Predictor/lead side** (ADR-0008); distinct from the D3-price LEVEL row above; wired into `int_gentrification_ts` (Berlin lor_2021 branch only, NULL for lor_pre2021/Hamburg, #273) as a predictor column alongside the `*_improved` OA columns. Left at the `int_gentrification_ts` layer only — NOT surfaced on the contract-enforced `gentrification_index` mart: it is a single indicator, not a full status/dynamism replacement, so it does not fit that mart's per-variant contract shape without its own deliberate contract-extension ticket (a future decision, not made here). | Explicit, separately-polarised change indicator discharging this table's own prior deferral (see BRW-level row). Not a measured rent or displacement outcome — read jointly with low-status/low-Wohnlage context (D3-brw-trend-domain-signoff D2). Back-series depth: 7 change-years (2018-2024) as of this ticket. Source: `int_berlin_brw_plr` → `int_berlin_brw_trend` → `int_gentrification_ts`. |
 | **D3-price** | `wohnlage_score` (ordinal mean gut=high) / `pct_einfach` (`mart_price_rent_dimension`) | `wohnlage_score` = pct_einfach×1 + pct_mittel×2 + pct_gut×3; higher = more desirable; `pct_einfach` = share of addresses in the einfach tier | `pct_einfach`: **vulnerability-positive** (high share = more upgrading headroom = more exposed to gentrification; Milieuschutz target profile; Holm 2010). `wohnlage_score`: **desirability-positive** (high = more desirable = consolidated = LOW remaining vulnerability headroom) — opposite polarity to `pct_einfach` | `pct_einfach`: as published (positive). `wohnlage_score`: **FLIP required** for vulnerability composite (high score = low vulnerability). Winsorized z-score. | **Structural-level context covariate** (D4-levels pattern, §4.6). Wohnlage LEVEL (cross-sectional) = vulnerability/headroom PRECONDITION (Blasius & Dangschat 1990 Aufwertung). The Aufwertung OUTCOME is the DECLINING einfach share over vintages — a change signal, built separately if used as such, never as a level. Context-condition on locational desirability: peripheral low quality ≠ gentrification pressure without co-inciding demand. | `wohnlage_score` is an ORDINAL-MEAN APPROXIMATION — tiers are ordered but not equidistant; do not treat as interval-scaled in regression without flagging. Source: `int_berlin_wohnlage_plr` → `mart_price_rent_dimension`. |
 | **D3-price** | `est_rent_mid` / `est_rent_low` / `est_rent_high` (`mart_price_rent_dimension`) | Higher = higher modelled Mietspiegel reference rent per PLR (EUR/m²/month at fixed profile) | **Affordability-negative** — higher = less affordable = more cost pressure; relevant for displacement-susceptibility of existing residents (Holm 2010 ~84% rental Berlin) | As published (positive for affordability pressure). Winsorized z-score. | **Structural-level affordability context covariate** (D4-levels pattern, §4.6). NEVER blended into Status×Dynamik typology. | "modelled/estimated net cold rent at a fixed reference dwelling profile (60–90 m², 1950–1964 construction year) — NOT observed rent paid." Mietspiegel Bestandsmiete/ortsübliche Vergleichsmiete: **lagging, conservative** affordability level of the standing stock; understates leading-edge/new-letting pressure that drives displacement. Disclose on G2 (domain D7). Fixed profile is a modelling choice, not a measurement. Source: `mart_price_rent_dimension` (Wohnlage shares × Mietspiegel rent cells). |
-| **D5** | `displacement_subindex` (`int_berlin_displacement_subindex`, #258; wired into `int_gentrification_ts`) | Partial-availability mean of `turnover_proxy` (EWR long-tenure-share YoY change, negated) and `rent_pressure_proxy` (Mietspiegel rent + MSS transfer-stress composite) | **Pressure-positive** — high = long-tenure residents leaving faster and/or above-median rent combined with above-median transfer-dependency, from whichever signal(s) are available that year | As published (pressure-positive); NULL only when both inputs are null (verified: the two inputs have zero overlapping lor_2021 years today, so a strict-both rule would be permanently empty — see model header). `displacement_subindex_is_partial` flags single-component rows. | **Predictor/lead side** (ADR-0008); Berlin lor_2021 rows only, NULL for lor_pre2021/Hamburg. NOT wired into the contract-enforced `gentrification_index` mart (separate future contract decision) and NOT wired into the D1×D2 typology stage matrix (§1.8 unaffected). | Not a measured displacement outcome — read jointly with `under_milieuschutz`/`milieuschutz_overlap_frac` and low-status context (D5-wire-domain-signoff.md), never alone as a displacement-risk score. Source: `int_berlin_turnover_proxy` + `int_berlin_rent_pressure_proxy` → `int_berlin_displacement_subindex` → `int_gentrification_ts`. |
+| **D5** | `displacement_subindex` (`int_berlin_displacement_subindex`, #258; wired into `int_gentrification_ts`) | Partial-availability mean of `turnover_proxy` (EWR long-tenure-share YoY change, negated) and `rent_pressure_proxy` (Mietspiegel rent + MSS transfer-stress composite; the transfer term is MSS S3 Transferbezug, which excludes registered unemployed people) | **Pressure-positive** — high = long-tenure residents leaving faster, or a high `rent_pressure_proxy`, from whichever signal(s) are available that year. *Corrected #360 (RC-2, `docs/epic-c/360-domain-signoff.md` §2 Q3(b); redesign #362):* `rent_pressure_proxy` is an equal-weight **compensatory** mean of two strongly **anti-correlated** terms (ρ −0.51 to −0.72), so a high value means high on **either** rent level **or** transfer dependency, or both. It is not evidence that high rent and high transfer dependence occur in the same PLR. | As published (pressure-positive); NULL only when both inputs are null (verified: the two inputs have zero overlapping lor_2021 years today, so a strict-both rule would be permanently empty — see model header). `displacement_subindex_is_partial` flags single-component rows. **Series break (#360 geo-DS condition):** 2009–2020 rows are turnover-only and 2021+ rows are rent-pressure-only (partial). They are different constructs and must never be pooled as one series. | **Predictor/lead side** (ADR-0008); Berlin lor_2021 rows only, NULL for lor_pre2021/Hamburg. NOT wired into the contract-enforced `gentrification_index` mart (separate future contract decision) and NOT wired into the D1×D2 typology stage matrix (§1.8 unaffected). **Circularity firewall (#360 RC-1; R-A4 condition 1; #362):** the transfer term is MSS S3, a direct input of the MSS Status index (ρ 0.80–0.84 with the same-edition `status_index`). D5 must not predict the same-edition Status/Dynamik class, nor a Dynamik window that contains the matched MSS edition. Any lead-lag use must lag D5 by ≥1 non-overlapping MSS edition and control for baseline Status. Until #362 is resolved, no mart, `analysis/*.py` script or G2 page consumes it. | Not a measured displacement outcome — read jointly with `under_milieuschutz`/`milieuschutz_overlap_frac` and low-status context (D5-wire-domain-signoff.md), never alone as a displacement-risk score. Source: `int_berlin_turnover_proxy` + `int_berlin_rent_pressure_proxy` → `int_berlin_displacement_subindex` → `int_gentrification_ts`. |
 | **D5** | `under_milieuschutz` / `milieuschutz_overlap_frac` (`int_berlin_milieuschutz_plr_flag`, #70; wired into `int_gentrification_ts` via #258) | Spatial overlap of PLR with current Sec. 172 BauGB Milieuschutz designations | **Policy marker of recognized displacement risk** — TIME-INVARIANT (current-state WFS only, ADR-0019 Open Question #2); NOT itself evidence displacement pressure changed this year | DISCLOSURE-ONLY — never z-scored or folded into `displacement_subindex` (would fabricate temporal signal that does not exist in the source). | **Disclosure overlay** (§1.8) — never a typology stage, never blended into any composite. | "PLRs without the flag are not thereby 'safe from displacement,' only 'not (yet) formally protected'" (ADR-0019 Consequences). Source: `stg_berlin_milieuschutz` + `stg_berlin_lor` → `int_berlin_milieuschutz_plr_flag` → `int_berlin_displacement_subindex` → `int_gentrification_ts`. |
 
 **Worked sign example — D1 end-to-end (thesis → current model):**
@@ -574,9 +586,10 @@ Applied before any fit, calibration, lead-lag, AUC/F computation, or typology as
    indices). **Exclude from ALL regression, calibration, lead-lag, and metric computation** (R-A3 C3).
    They have no outcome and no resident population; including them is a structural-missingness leak.
    **Report the excluded count per edition** in the methodology write-up.
-2. **`transferbezug` NULL in 2019/2021** — treat as **MISSING, not zero**. Do not impute; do not
+2. **Vacant MSS S2 slot in 2019/2021** — treat as **MISSING, not zero**. Do not impute; do not
    include in any denominator (R-A4 C3). The cross-edition populated SES core is `arbeitslose_*` +
-   `kinderarmut_*` only.
+   `transferbezug_*` + `kinderarmut_*`. *(Corrected 2026-10-28, #360: this rule previously named
+   `transferbezug` as the 2019/2021 gap and a two-indicator core; the gap is S2, see §4.4.)*
 3. **Cross-vintage deltas without the crosswalk** — any `Δ` spanning 2019(pre2021) → 2021(lor2021)
    without the §6.4 crosswalk bridge is **EXCLUDED** from the lead-lag (§6.3).
 4. **PLRs with zero POI count across all years** — **excluded from the D3 predictor** (C5 completeness
@@ -681,7 +694,7 @@ thesis Tabelle 6-16).
 | R-A3 R4 | §3.4 (dbt test for {1,3,5} ordering) |
 | R-A4 C1 (no same-edition self-prediction) | §4.2, §5 (Dynamik caveat) |
 | R-A4 C2 (change indicators distinct polarity from levels) | §4.5, §5 (D2/`indexind` note) |
-| R-A4 C3 (transferbezug MISSING-not-zero) | §4.4, §7.2 |
+| R-A4 C3 (vacant-slot MISSING-not-zero; relabelled from "transferbezug" by #360) | §4.4, §7.2 |
 | R-A4 C4 (2023+ indicator drift) | §1.7 |
 | R-A5 §8/§9 condition 3 (levels-vs-changes; migration ≥2017) | §4.3, §4.4 |
 | R-C2 (grounding citations) | §0.4, all sections carry thesis/literature citations |

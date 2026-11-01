@@ -2732,10 +2732,20 @@ models:
           overlapping lor_2021 years today, so a strict both-required rule
           would be permanently empty; see displacement_subindex_is_partial).
           Pressure-positive polarity: high = more long-tenure-resident
-          turnover and/or above-median rent + transfer-dependency pressure --
+          turnover, or a high rent_pressure_proxy (high on EITHER rent level OR
+          transfer dependency, or both -- a compensatory mean of two
+          anti-correlated terms, not co-location; #360 RC-2, redesign #362) --
           consistent orientation with the vulnerability-positive D1/D2/D4
           columns, but a PREDICTOR not an outcome (never blended with
-          status_index/dynamik_index/ewr_composite). Berlin lor_2021 rows
+          status_index/dynamik_index/ewr_composite). CIRCULARITY FIREWALL (#360
+          RC-1; R-A4 condition 1): the rent-pressure term contains MSS S3, a
+          direct MSS Status input (rho 0.80-0.84 with same-edition
+          status_index), so this column must not predict the same-edition
+          Status/Dynamik class or a Dynamik window containing the matched MSS
+          edition; lead-lag use must lag it by >= 1 non-overlapping edition and
+          control for baseline Status. SERIES BREAK: 2009-2020 values are
+          turnover-only, 2021+ values rent-pressure-only (both flagged via
+          displacement_subindex_is_partial) -- never pool them as one series. Berlin lor_2021 rows
           only (int_berlin_displacement_subindex's own scope constraint);
           NULL for lor_pre2021 and Hamburg branches. Not a measured
           displacement outcome -- read jointly with
@@ -3948,17 +3958,22 @@ models:
       combines modelled Mietspiegel rent level (relative to the citywide/PLR
       median, per-year z-score) with the MSS transferbezug_anteil transfer-receipt
       share (ability-to-pay-stress proxy, already vulnerability-positive per the
-      R-A4/#67 geo-signoff) into an equal-weight mean-of-z-scores composite. NOT a
+      R-A4/#67 geo-signoff; MSS S3 excludes registered unemployed people) into an
+      equal-weight mean-of-z-scores composite. See the rent_pressure_proxy column
+      for what a high value does and does not mean (#360 RC-2), and the model
+      header for the circularity firewall (#360 RC-1, redesign #362). NOT a
       rent-to-income ratio (no PLR-grain income series exists; ADR-0007 gap;
       ADR-0019 Alternative C rejected that approach under R-C2 grounding).
 
-      Coverage limitation: as actually ingested, transferbezug_anteil is non-null
-      for MSS editions 2015, 2017, 2023, 2025 and NULL for editions 2019, 2021
-      (narrower suspension window than R-A4/#67's "<=2021" characterization --
-      verified directly against stg_berlin_mss_indicators). rent_pressure_proxy
-      is therefore populated for Wohnlage snapshot_year in (2017, 2023, 2026) and
-      NULL for snapshot_year in (2019, 2021) by construction. z_rent_rel alone is
-      populated for all snapshot years.
+      Coverage (#360 correction): transferbezug_anteil is MSS index indicator S3
+      Transferbezug (non-unemployed SGB II/XII recipients per resident), published
+      in every MSS edition 2015-2025, so rent_pressure_proxy is populated for every
+      Wohnlage snapshot_year (2017, 2019, 2021, 2023, 2026) wherever both inputs
+      exist. Before #360 the column was mis-mapped from WFS slot s2
+      (Langzeitarbeitslosigkeit 2015/2017, vacant 2019/2021, single-parent-household
+      children 2023/2025), which is why 2019/2021 used to be NULL and why the
+      2023/2026 values carried the wrong construct
+      (docs/epic-c/360-mss-indicator-mapping-evidence.md).
 
       Zero consumers as of this model -- not yet wired into any mart or the
       governed gentrification_index (ADR-0019 explicitly defers that integration
@@ -4002,9 +4017,10 @@ models:
           NULL when the source is NULL (wohnlage_low_n).
       - name: transferbezug_anteil
         description: >
-          MSS transfer-receipt (SGB II/XII) share for the matched edition
-          (ability-to-pay-stress input to z_transfer_stress). NULL for matched
-          editions 2019 and 2021 (see model header coverage-limitation note).
+          MSS S3 Transferbezug share (non-unemployed SGB II/XII recipients per
+          resident, %) for the matched edition (ability-to-pay-stress input to
+          z_transfer_stress). Populated for all matched editions since #360; NULL
+          only for uninhabited PLRs.
       - name: transfer_stress_mss_edition
         description: >
           The MSS edition actually matched to this Wohnlage snapshot_year
@@ -4018,17 +4034,22 @@ models:
         description: >
           Per-snapshot_year z-score of transferbezug_anteil across PLRs (higher =
           more transfer-dependent residents; vulnerability-positive, no sign flip
-          -- R-A4/#67 Finding d). NULL for snapshot_year in (2019, 2021); see
-          model header coverage-limitation note.
+          -- R-A4/#67 Finding d). NULL only where transferbezug_anteil is NULL.
       - name: rent_pressure_proxy
         description: >
           mean(z_rent_rel, z_transfer_stress) -- affordability-stress composite
           (ADR-0019 Decision 2). NULL when either input z-score is NULL (no
-          imputation across the transferbezug suspension gap). High = above-median
-          modelled rent combined with an above-median transfer-dependent
-          population share (rent risen/already high where residents can least
-          absorb it) -- an affordability-stress signal, not a measured
-          displacement event and not a rent-to-income ratio.
+          imputation of a missing term). An equal-weight COMPENSATORY mean: after
+          #360 its two terms are strongly anti-correlated (Spearman rho -0.51 to
+          -0.72 across snapshots), so a high value means high on EITHER modelled
+          rent OR transfer dependency (MSS S3, which excludes registered
+          unemployed people), or both. It is NOT evidence that high rent and
+          high transfer dependence occur in the same PLR (only 8-22 % of the top
+          quintile are above average on both; docs/epic-c/360-domain-signoff.md
+          §2 Q3(b); aggregation redesign #362). Must not predict the same-edition
+          MSS Status/Dynamik class (S3 is a Status input; #360 RC-1). An
+          affordability-stress signal, not a measured displacement event and not
+          a rent-to-income ratio.
 
   - name: int_berlin_turnover_proxy
     description: >
@@ -4185,7 +4206,8 @@ models:
       panel) and rent_pressure_proxy (irregular Wohnlage WFS editions) have
       ZERO overlapping lor_2021 years today -- turnover_proxy only has rows
       for 2009-2020 (EWR ingestion gap #197 leaves 2021+ empty/NULL),
-      rent_pressure_proxy's lor_2021 rows only exist for 2023 and 2026. A
+      rent_pressure_proxy's lor_2021 rows are populated only for 2021, 2023
+      and 2026 (2021 since the #360 MSS indicator-mapping fix). A
       strict all-or-nothing composite would therefore be PERMANENTLY EMPTY
       given the data as ingested. displacement_subindex is instead a
       PARTIAL-AVAILABILITY mean of whichever of {turnover_proxy,
@@ -4278,7 +4300,11 @@ models:
           (see model header for why a strict all-or-nothing rule would be
           permanently empty given today's real coverage). Higher = higher
           displacement/affordability pressure from whichever signal(s) are
-          available.
+          available. 2009-2020 rows are turnover-only and 2021+ rows are
+          rent-pressure-only (is_partial_availability = true): different
+          constructs, never pool as one series (#360 geo-DS condition). Not
+          to predict the same-edition MSS Status/Dynamik class (#360 RC-1;
+          see model header).
       - name: n_components_available
         description: 0, 1, or 2 -- how many of {turnover_proxy, rent_pressure_proxy} fed displacement_subindex for this row.
       - name: is_partial_availability
@@ -5558,6 +5584,400 @@ models:
         description: >
           TRUE if any pivoted indicator for this area/year was suppressed at
           source (propagated, not silently zeroed).
+        data_tests:
+
+          - not_null
+
+  # ---------------------------------------------------------------------------
+  # #354/#355 phase A (pre-registration docs/methodology/
+  # 354-355-hypothesis-suite-preregistration.md §2.1(2), §2.1(6)): native
+  # LOR-2021 POI counts / OA for the 2019-2020 OSM snapshots, and the
+  # native panels (every row point-in-polygon on its own vintage) the
+  # hypothesis suite reads. Evidence:
+  # docs/epic-e/354-phase-a-data-prerequisites.md.
+  # ---------------------------------------------------------------------------
+  - name: int_berlin_osm_poi_plr2021_backcast
+    description: >
+      POI-level point-in-polygon re-assignment of the back-cast Berlin OSM
+      snapshots (var berlin_lor2021_backcast_years, default 2019 and 2020) to
+      LOR-2021 PLRs. Same POI rows, taxonomy and join method as int_osm_poi_plr
+      (ST_Within in EPSG:25833, C3-dedup tie-break); only the geometry vintage
+      differs. area_code NULL = outside every LOR-2021 polygon.
+      area_code_pre2021 keeps the pre-2021 PLR of int_osm_poi_plr for the
+      reconciliation.
+    meta:
+      dbt_meta_owner: data-engineer
+    data_tests:
+
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns:
+              - snapshot_year
+              - osm_id
+    columns:
+      - name: snapshot_year
+        description: OSM snapshot year (state at Y-01-01), back-cast years only (<= 2020).
+        data_tests:
+
+          - not_null
+      - name: osm_id
+        description: OSM element id.
+        data_tests:
+
+          - not_null
+      - name: area_code
+        description: LOR-2021 PLR containing the POI; NULL outside every polygon.
+        data_tests:
+
+          - assert_null_rate_below:
+              arguments:
+                column_name: area_code
+                partition_by: snapshot_year
+                max_null_fraction: 0.12
+              config:
+                severity: warn
+      - name: area_vintage
+        description: Always 'lor_2021' (the geometry each POI was tested against).
+        data_tests:
+
+          - accepted_values:
+              arguments:
+                values: ["lor_2021"]
+
+  - name: int_berlin_poi_development_plr2021_backcast
+    description: >
+      Native LOR-2021 POI counts for the back-cast snapshots, in exactly the
+      columns and grain of fct_poi_development (integer counts per full
+      domain/category/type leaf; canonical city_code). Replaces, for the
+      hypothesis suite, the crosswalk-reallocated fractional 2019/2020 counts of
+      int_poi_share_base_2021; reconciled against them by
+      test_354_backcast_native_vs_crosswalk_reconciliation. Kept out of
+      fct_poi_development so no published output changes.
+    meta:
+      dbt_meta_owner: data-engineer
+    data_tests:
+
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns:
+              - city_code
+              - snapshot_year
+              - area_code
+              - area_vintage
+              - poi_domain_h
+              - poi_category_h
+              - poi_type_h
+    columns:
+      - name: city_code
+        description: Canonical city code (ADR-0005); 'BER'.
+        data_tests:
+
+          - accepted_values:
+              arguments:
+                values: ["BER"]
+      - name: area_code
+        description: LOR-2021 PLR code (8-digit).
+        data_tests:
+
+          - not_null
+      - name: poi_count
+        description: Number of POIs of this taxonomy leaf inside the PLR polygon.
+        data_tests:
+
+          - not_null
+
+  - name: int_berlin_osm_poi_plr2021_backcast_weighted
+    description: >
+      Gaussian-kernel POI counts for the back-cast snapshots on LOR-2021
+      representative points, from the shared berlin_poi_kernel_weighted_counts()
+      macro (identical SQL, bandwidth var and leakage guard as
+      int_osm_poi_plr_weighted; only the vintage rule differs).
+    meta:
+      dbt_meta_owner: data-engineer
+    data_tests:
+
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns:
+              - snapshot_year
+              - area_code
+              - poi_domain_h
+              - poi_category_h
+              - poi_type_h
+              - weight_variant
+    columns:
+      - name: area_vintage
+        description: Always 'lor_2021'.
+        data_tests:
+
+          - accepted_values:
+              arguments:
+                values: ["lor_2021"]
+      - name: weighted_count
+        description: Sum of normalised kernel (or leakage-guard) weights.
+        data_tests:
+
+          - not_null
+
+  - name: int_berlin_poi_offering_advantage_plr2021_backcast
+    description: >
+      Offering Advantage on LOR-2021 PLRs for the back-cast snapshots, in exactly
+      the shape of int_poi_offering_advantage (both weight variants, faithful
+      methodology variant), computed by the shared offering_advantage_lq() macro
+      -- the same SQL as int_poi_offering_advantage, so one OA definition.
+      Weighted-vs-hard mass accounting: test_354_backcast_oa_weighted_mass_conservation.
+    meta:
+      dbt_meta_owner: data-engineer
+    data_tests:
+
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns:
+              - city_code
+              - snapshot_year
+              - area_code
+              - area_vintage
+              - poi_domain_h
+              - poi_category_h
+              - poi_type_h
+              - weight_variant
+              - methodology_variant
+    columns:
+      - name: area_code
+        description: LOR-2021 PLR code.
+        data_tests:
+
+          - not_null
+      - name: oa_domain
+        description: Domain-level LQ (see int_poi_offering_advantage).
+        data_tests:
+
+          - not_null
+      - name: oa_category
+        description: Category-level LQ.
+        data_tests:
+
+          - not_null
+      - name: methodology_variant
+        description: Always 'faithful' (ADR-0017 D3/D4).
+        data_tests:
+
+          - accepted_values:
+              arguments:
+                values: ["faithful"]
+
+  - name: int_poi_development_native
+    description: >
+      POI counts in which every row comes from point-in-polygon on the
+      geometry of its own area_vintage: all fct_poi_development rows
+      ('contemporaneous') plus the Berlin LOR-2021 back-cast of 2019/2020
+      ('backcast'). Columns of fct_poi_development plus geometry_pairing. The
+      count source of the suite; a consumer selects one area_vintage per panel
+      so no delta crosses a LOR boundary.
+    meta:
+      dbt_meta_owner: data-engineer
+    data_tests:
+
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns:
+              - city_code
+              - snapshot_year
+              - area_code
+              - area_vintage
+              - poi_domain_h
+              - poi_category_h
+              - poi_type_h
+    columns:
+      - name: area_vintage
+        description: Geometry vintage the POIs were joined against.
+        data_tests:
+
+          - accepted_values:
+              arguments:
+                values: ["lor_pre2021", "lor_2021", "current"]
+      - name: geometry_pairing
+        description: >
+          'contemporaneous' = snapshot joined to the geometry valid at that date;
+          'backcast' = earlier snapshot joined to the later (current) geometry.
+        data_tests:
+
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ["contemporaneous", "backcast"]
+
+  - name: int_poi_offering_advantage_native
+    description: >
+      Leaf-grain (sparse) Offering Advantage, every row from point-in-polygon
+      counts on its own area_vintage: all int_poi_offering_advantage rows plus
+      the Berlin LOR-2021 back-cast, canonical city_code, plus geometry_pairing. Same columns as
+      int_poi_offering_advantage. For the dense, zero-filled panel use
+      int_poi_oa_native_panel.
+    meta:
+      dbt_meta_owner: data-engineer
+    data_tests:
+
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns:
+              - city_code
+              - snapshot_year
+              - area_code
+              - area_vintage
+              - poi_domain_h
+              - poi_category_h
+              - poi_type_h
+              - weight_variant
+              - methodology_variant
+    columns:
+      - name: city_code
+        description: Canonical city code (ADR-0005).
+        data_tests:
+
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ["BER", "HH"]
+      - name: geometry_pairing
+        description: "'contemporaneous' or 'backcast' (see int_poi_development_native)."
+        data_tests:
+
+          - accepted_values:
+              arguments:
+                values: ["contemporaneous", "backcast"]
+
+  - name: int_poi_oa_native_panel
+    description: >
+      Dense, zero-filled domain- and category-level Offering Advantage panel on
+      every native (city, vintage) geometry -- the OA input of the hypothesis suite
+      (pre-registration §5.1 zero-fill rule, §2.1(6)). One row per area x
+      taxonomy entry present city-wide, per (city, vintage, weight variant,
+      methodology variant, year). Absent entries carry oa_value = 0 and
+      is_zero_filled = true; exclusion is by oa_min_base_flag only (D-3, #274).
+      Areas with zero POIs in every year of the slice are not in the universe.
+      Rule and its tests: test_354_oa_native_panel_zero_fill.
+    meta:
+      dbt_meta_owner: data-engineer
+    data_tests:
+
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns:
+              - city_code
+              - area_vintage
+              - weight_variant
+              - methodology_variant
+              - snapshot_year
+              - area_code
+              - oa_level
+              - poi_domain_h
+              - poi_category_h
+    columns:
+      - name: city_code
+        description: Canonical city code.
+        data_tests:
+
+          - not_null
+      - name: area_code
+        description: Area code on the row's area_vintage.
+        data_tests:
+
+          - not_null
+      - name: oa_level
+        description: "'domain' or 'category'."
+        data_tests:
+
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ["domain", "category"]
+      - name: poi_domain_h
+        description: Harmonised POI domain.
+        data_tests:
+
+          - not_null
+      - name: poi_category_h
+        description: Harmonised POI category; NULL on domain-level rows only.
+        data_tests:
+
+          - not_null:
+              config:
+                where: "oa_level = 'category'"
+      - name: oa_value
+        description: >
+          Location quotient (oa_domain or oa_category of the source); 0 where
+          the entry is absent from the area-year (zero-fill).
+        data_tests:
+
+          - not_null
+      - name: is_zero_filled
+        description: TRUE when the row was absent from the sparse source and filled with 0.
+        data_tests:
+
+          - not_null
+      - name: oa_min_base_flag
+        description: >
+          D-3 min-base flag (#274): domain level all_domains_stock_local below
+          oa_min_poi_base_n, category level domain_stock_local below
+          oa_min_poi_base_n. The ONLY row-exclusion rule the suite may apply (§5.1).
+        data_tests:
+
+          - not_null
+      - name: geometry_pairing
+        description: "'contemporaneous' or 'backcast'."
+        data_tests:
+
+          - not_null
+
+  - name: int_poi_c5_share_native
+    description: >
+      C5 share-normalised POI shares per native (city, vintage) slice, dense over
+      areas x years: total_c5_share (= int_poi_share_base.plr_poi_share on every
+      contemporaneous cell; test_354_c5_share_native_matches_share_base) and
+      commercial_c5_share, the pre-registered commercial share c_E of the four
+      consumption domains (var poi_commercial_domains: Gastronomy, Retail,
+      Services, Entertainment; pre-registration §5.1). Levels only; DHS growth
+      is computed in the suite.
+    meta:
+      dbt_meta_owner: data-engineer
+    data_tests:
+
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns:
+              - city_code
+              - area_vintage
+              - snapshot_year
+              - area_code
+    columns:
+      - name: area_code
+        description: Area code on the row's area_vintage.
+        data_tests:
+
+          - not_null
+      - name: total_poi_count
+        description: All POIs inside the area polygon (0 when none that year).
+        data_tests:
+
+          - not_null
+      - name: commercial_poi_count
+        description: POIs of the commercial basket domains inside the area polygon.
+        data_tests:
+
+          - not_null
+      - name: total_c5_share
+        description: total_poi_count / city-wide total, same snapshot and vintage.
+        data_tests:
+
+          - not_null
+      - name: commercial_c5_share
+        description: commercial_poi_count / city-wide commercial total (c_E, §5.1).
+        data_tests:
+
+          - not_null
+      - name: geometry_pairing
+        description: "'contemporaneous' or 'backcast'."
         data_tests:
 
           - not_null

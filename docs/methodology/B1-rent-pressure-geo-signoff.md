@@ -129,3 +129,31 @@ domain sign-off is also required before the PM may integrate into `develop`.*
 - `transform/models/intermediate/int_ewr_socioeco.sql` (z-score-composite pattern precedent)
 - `transform/models/intermediate/int_price_rent_wohnlage_mietspiegel.sql` (nearest-<=-vintage
   matching precedent, geo condition 8)
+
+---
+
+## Correction note (2026-10-30, #360) — appended, signed record above unchanged
+
+*Added by data-engineer under #360 (MSS indicator mapping fix). This note does not change the
+outcome recorded above; the dual sign-off on the #360 fix is a separate record. Evidence:
+`docs/epic-c/360-mss-indicator-mapping-evidence.md`.*
+
+Before #360 the MSS indexind ingestion mapped the WFS slots one position off for every edition
+(`s2`→`transferbezug`, `s3`→`kinderarmut`, `s4`→`alleinerziehende`). Verified against the MSS
+Indikatorenhefte: S1 Arbeitslosigkeit, S3 Transferbezug and S4 Kinderarmut are populated in every
+edition 2015–2025. S2 is Langzeitarbeitslosigkeit in 2015/2017, vacant (always null) in
+2019/2021, and Kinder/Jugendliche in alleinerziehenden Haushalten from 2023.
+
+What this changes in the statements above:
+- Condition C2 ("handle `rent_pressure_proxy IS NULL` for `snapshot_year` in (2019, 2021)") and
+  the coverage analysis behind it describe the vacant S2 slot read under the `transferbezug_anteil`
+  label, not a Transferbezug gap. Since #360, `transferbezug_anteil` is S3 Transferbezug and
+  `rent_pressure_proxy` is populated for every Wohnlage `snapshot_year` (2017, 2019, 2021, 2023,
+  2026), apart from uninhabited PLRs. The rule behind C2 (handle NULLs explicitly; never drop or
+  zero-fill them) still applies to those remaining NULLs.
+- At the time of this review the `z_transfer_stress` input was Langzeitarbeitslosigkeit for 2017
+  and the single-parent-household children share for 2023/2026. The polarity argument
+  (vulnerability-positive level share, no sign flip) holds for S3 Transferbezug as intended.
+  S3 counts non-unemployed SGB II/XII recipients; it excludes registered unemployed people (S1).
+  For what the composite means after #360 (compensatory, anti-correlated terms; not co-location)
+  and the circularity firewall, see `docs/epic-c/360-domain-signoff.md` §2 Q3 and #362.

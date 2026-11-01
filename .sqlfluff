@@ -53,6 +53,15 @@ winsorize = "{% macro winsorize(expr, lower=-3, upper=3) %}least(greatest({{ exp
 # time; sqlfluff only needs valid SQL shape here, same convention as every other stub
 # above).
 typology_stage = "{% macro typology_stage(status_index_col, dynamik_index_col) %}case when {{ status_index_col }} = {{ dynamik_index_col }} then 'stable-established' else 'mixed' end{% endmacro %}"
+# #354/#355 phase A: stubs for the two macros extracted verbatim from
+# int_poi_offering_advantage / int_osm_poi_plr_weighted
+# (transform/macros/offering_advantage_lq.sql, berlin_poi_kernel_weighted_counts.sql)
+# so the plain-jinja templater can parse their call sites. offering_advantage_lq is
+# called after a trailing comma in a WITH list, so its stub emits one more CTE plus the
+# final SELECT; the kernel stub emits a complete statement. Real SQL only matters at
+# dbt-execute time (same convention as every stub above).
+offering_advantage_lq = "{% macro offering_advantage_lq(base_relation) %}with_bases as (select * from {{ base_relation }}) select * from with_bases{% endmacro %}"
+berlin_poi_kernel_weighted_counts = "{% macro berlin_poi_kernel_weighted_counts(poi_relation, lor_relation, vintage_predicate, bandwidth_m) %}select * from {{ poi_relation }}{% endmacro %}"
 
 [sqlfluff:templater:jinja:context]
 # Default value for file_count used in stg_osm_poi.sql graceful-degradation logic.

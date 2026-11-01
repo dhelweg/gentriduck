@@ -155,3 +155,24 @@ still required independently before the PM merges (R-C1 dual gate).
 ## Final Verdict
 
 Verdict: PASS WITH CONDITIONS
+
+---
+
+## Correction note (2026-10-30, #360) — appended, signed record above unchanged
+
+*Added by data-engineer under #360 (MSS indicator mapping fix). This note does not change the
+outcome recorded above; the dual sign-off on the #360 fix is a separate record. Evidence:
+`docs/epic-c/360-mss-indicator-mapping-evidence.md`.*
+
+Before #360 the MSS indexind ingestion mapped the WFS slots one position off for every edition
+(`s2`→`transferbezug`, `s3`→`kinderarmut`, `s4`→`alleinerziehende`). Verified against the MSS
+Indikatorenhefte: S1 Arbeitslosigkeit, S3 Transferbezug and S4 Kinderarmut are populated in every
+edition 2015–2025. S2 is Langzeitarbeitslosigkeit in 2015/2017, vacant (always null) in
+2019/2021, and Kinder/Jugendliche in alleinerziehenden Haushalten from 2023.
+
+What this changes in the statements above:
+- Row 7 / the missingness note ("`transferbezug` 2019/2021 → MISSING, never zero"): the 2019/2021
+  gap is the vacant **S2** slot, not Transferbezug. The rule (MISSING, never zero, never in a
+  denominator) still holds and now applies to S2. The populated cross-edition SES core is S1 + S3 +
+  S4 (`arbeitslose_*`, `transferbezug_*`, `kinderarmut_*`). See `index-definition.md` §4.4/§7.2 as
+  corrected.

@@ -14,6 +14,20 @@
 -- (NOT biennial like Berlin's MSS — ADR-0014 Pillar-2 cadence note; finer
 -- lead-lag resolution than Berlin's pipeline).
 --
+-- Reference date (#354/#355 phase A, prerequisite §2.1(3), checked 2026-10-30;
+-- evidence docs/epic-e/354-phase-a-data-prerequisites.md §3):
+-- edition E (WFS `jahr` = `berichtsjahr`) carries data as of 31 Dec (E-1).
+-- Source metadata: every Transparenzportal record "Sozialmonitoring ...
+-- Bericht E" and its annex, editions 2016-2025, has temporal_coverage_from =
+-- (E-1)-12-31; the 2018-2020 annex records state "Stand der Daten:
+-- 31.12.(E-1)"; the annex population column is headed "Bevoelkerung
+-- 31.12.(E-1)" and equals the WFS `bevoelkerung` for every Gebiet. The WFS
+-- `jahr_timestamp` (E-01-01) is the report year, not the data date. The
+-- Dynamik of edition E spans 31.12.(E-4) -> 31.12.(E-1) (annex label e.g.
+-- "D4 Arbeitslose 2021-2024" in edition 2025), i.e. OSM snapshots [E-3, E]
+-- (pre-registration §4.3). No report is published for 2013-2015; the same
+-- convention is assumed there.
+--
 -- Storage path: data/raw/hamburg/sozialmonitoring/sozialmonitoring.parquet
 -- (gitignored, ADR-0001/A8).
 -- Licence: dl-de/by-2.0 (attribution required; see source_attribution column).
