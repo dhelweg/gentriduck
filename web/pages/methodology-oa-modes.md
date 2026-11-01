@@ -97,6 +97,11 @@ sidebar_position: 21
   - A live re-run of the OA-D5 cross-mode correlation study: §7's numbers remain the static,
     already-generated findings-doc figures; this pass does not add a live statistics engine.
   - Getis-Ord Gi* hotspot clustering: still gated behind ADR-0025 (proposed), unchanged from pass 1.
+
+  #354 phase C (2026-11): the "Only nested LQ is validated" bullet said the thesis's multi-feature H1
+  test "was not re-run"; the pre-registered suite re-ran it and H1 holds in both periods
+  (docs/epic-e/E1b-berlin-hypothesis-suite-findings.md). Copy-only fix; the single-number basket
+  result is unchanged and now cites E1 directly (/thesis-recheck no longer shows it).
 -->
 
 <!--
@@ -703,8 +708,10 @@ live query:
   category, 0.54 by business type; 2016 snapshot). That is a check that the *construct* is rebuilt
   faithfully — not that the thesis's hypotheses hold: used as a single-number proxy for H1 (social
   status is related to the local mix of businesses), a four-domain basket of the same quotient is
-  significant in the *opposite* direction; the thesis's own multi-feature test was not re-run (see
-  the [thesis re-check page](/thesis-recheck)). The other eight methods, including density/per-capita,
+  significant in the *opposite* direction (see the
+  [E1 regression findings](https://github.com/dhelweg/gentriduck/blob/main/docs/epic-e/E1-regression-findings.md)).
+  The thesis's own multi-feature test, re-run in the November 2026 re-test, does hold in both
+  periods (see the [thesis re-check page](/thesis-recheck)). The other eight methods, including density/per-capita,
   have no 2018 precedent to validate against by design — see §2 above.
 - **Getis-Ord Gi\* remains unavailable, verified directly against the seed registry.**
   `seed_oa_calculation_methods.csv` has no `getis_ord` row yet — #285 checked this directly rather

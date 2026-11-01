@@ -26,6 +26,11 @@ title: Gentriduck — Gentrification Index for Berlin & Hamburg
   without touching the live_data/city_code='BER'-scoped queries below, which stay Berlin-only by
   design (methodology §6's no-pooled-cross-city-comparison rule). No SQL/frontmatter structure
   changed.
+  #354 phase C (2026-11): the thesis summary paragraph and the commerce <-> status caveat now follow
+  the pre-registered hypothesis suite (docs/epic-e/E1b-berlin-hypothesis-suite-findings.md, wording
+  bound by docs/epic-e/354-domain-signoff.md §4-§5): H3b "status first" is not reproduced in either
+  era, H1/H1b hold, fast food is a *share* of the gastronomy mix (never outlet counts/density). Copy
+  only; no SQL changed.
 -->
 
 <Hero
@@ -75,15 +80,13 @@ agent definition, every architecture decision, and every line of SQL that produc
 **Does the 2018 thesis's result still hold in 2025? Partly — and that's the interesting part.**
 
 The original thesis asked whether the churn of shops, cafés and restaurants in a Berlin
-neighbourhood tracks its social change. Its clearest finding still holds: **more fast-food outlets go
-with lower social status**. Its timing claim — that a neighbourhood's social change comes *before*
-its commercial change — holds on Berlin's official social monitor for 2021–2025, but not on its
-2013–2019 editions, which include the thesis's own and so are the like-for-like re-test (a
-lower-powered one: it counts moves between four status classes, not the thesis's finer Dynamik
-index). On Berlin's resident register, which measures population composition rather than social
-status, commerce and composition move together with neither clearly leading. The relationship is
-real, but fragile — sensitive to which social measure
-you use and to the period you look at. We show that tension openly rather than papering over it.
+neighbourhood tracks its social change. Re-tested in 2026 with a design fixed in advance, on both
+the thesis's own era (2013–2019) and 2019–2025, two of its findings hold: an area's social status is
+linked to its local business mix, modestly, and **fast food makes up a larger share of the
+gastronomy mix where officially measured disadvantage is higher**. Its timing claims do not: we find
+no detectable ordering between commercial change and change in officially measured disadvantage, in
+either direction. We show where the thesis holds and where it does not, openly, rather than papering
+over it.
 
 **→ [The 2018 thesis, re-checked hypothesis by hypothesis](/thesis-recheck)** — the full comparison
 of what the thesis claimed, what it found, and what our rebuild finds today.
@@ -269,9 +272,11 @@ gentrification. The full methodology, thresholds, and PLR-by-PLR detail are in
   describes an aggregate area of a few thousand residents, never a person, household, or building,
   and the project uses risk/pressure language throughout rather than a claim that displacement has
   occurred (full statement: [methodology](/methodology) §6).
-- The commerce ↔ social-status relationship above is real but fragile — sensitive to which social
-  measure and which period you use. [The 2018 thesis, re-checked](/thesis-recheck) shows that
-  tension hypothesis by hypothesis rather than behind one headline number.
+- The commerce ↔ social-status relationship above is an association, and a modest one: the local
+  business mix goes with an area's social status, but we find no detectable ordering between
+  commercial change and change in officially measured disadvantage.
+  [The 2018 thesis, re-checked](/thesis-recheck) shows this hypothesis by hypothesis rather than
+  behind one headline number.
 
 ---
 

@@ -1,0 +1,8 @@
+# #354 phase C: in-memory DuckDB reading small, COMMITTED analysis result tables under docs/
+# (not the gitignored parquet marts -- those are `gentriduck_marts`). Same engine and serving model
+# as gentriduck_marts (ADR-0012): read at `npm run sources` time, bundled into the static build,
+# queried in the browser by DuckDB-WASM. No live database, no token.
+name: gentriduck_findings
+type: duckdb
+options:
+  filename: ":memory:"

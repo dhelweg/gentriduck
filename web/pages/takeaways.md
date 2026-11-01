@@ -17,6 +17,15 @@ sidebar_position: 16
   the SPEC's own Gate section requires the dual sign-off since it makes public claims derived from
   the governed index) -- see docs/epic-i/I5-takeaways-{domain,geo}-signoff.md, both Verdict: PASS,
   before this page is merged into develop (R-C1).
+
+  #354 phase C (2026-11): takeaway 1 rewritten because its timing sentence ("the thesis's direction
+  holds on Berlin's official monitor for 2021-2025") and fast-food sentences (raw-count / "more
+  fast-food outlets") are contradicted by the pre-registered hypothesis suite
+  (docs/epic-e/E1b-berlin-hypothesis-suite-findings.md). New wording is restricted to
+  docs/epic-e/354-domain-signoff.md §5 (H1 "an association, not a signal of where an area is
+  heading"; H1b "share of the gastronomy mix", per-resident count shows no clear link; H2 "current
+  level predicts that change better on its own"; H3 "no detectable ordering in either direction").
+  Hamburg is no longer cited here: the old Hamburg timing result came from E5, superseded pending #355.
 -->
 
 <Hero
@@ -35,19 +44,20 @@ page or document that has already been through this project's [methodology gate]
 
 ## The five takeaways
 
-### 1. Commercial change tracks social change — and can serve as an early signal, but not a strong one
+### 1. The local commercial mix goes with social status — but it does not signal where an area is heading
 
-**What the data shows:** the fast-food association (H1b) is the single most robust result across
-every re-test this project has run: it is correctly signed, statistically significant on both a
-raw business count and the thesis's own Offering-Advantage location-quotient, and it survives
-aggregation up to Bezirksregion scale. The timing story — does social change come before commercial
-change? — is mixed: the thesis's direction holds on Berlin's official monitor for 2021–2025 but not
-on its 2013–2019 editions (the thesis's own, a lower-powered re-test) or in Hamburg. On Berlin's
-resident register, which measures population composition rather than social status, commerce and
-composition move together with neither clearly leading. Areas with more fast-food outlets tend to
-have lower official status scores — an area-level pattern, not a statement about any business or its
-owners. **Read as: watch commercial mix, especially fast-food presence, as one signal among several —
-not as a stand-alone predictor.**
+**What the data shows:** re-tested in 2026 with a design fixed in advance, on both the 2018
+thesis's own era (2013–2019) and 2019–2025, an area's social status is linked to its local business
+mix, modestly — an association, not a signal of where an area is heading. The fast-food finding
+(H1b) holds in both periods: among neighbourhoods with at least ten gastronomy outlets, fast food
+makes up a larger share of the gastronomy mix where officially measured disadvantage is higher. The
+number of fast-food outlets per resident shows no clear link, and this is an area-level pattern, not
+a statement about any business or its owners. The timing story — which comes first, commercial
+change or change in officially measured disadvantage? — shows no detectable ordering in either
+direction, in either era, and an area's current status level predicts its next change better than
+its commercial mix does. **Read as: treat the commercial mix, especially fast food's share of the
+gastronomy mix, as one description of an area's current situation among several — not as a
+predictor of change.**
 → [The 2018 thesis, re-checked](/thesis-recheck) — the full hypothesis-by-hypothesis comparison.
 
 ### 2. Small-area (PLR-level) monitoring catches what district averages hide
