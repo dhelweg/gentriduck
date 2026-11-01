@@ -195,6 +195,25 @@ W1_NOTE = (
     "bounce-back (§3.4)"
 )
 
+# §3.1 / §4.3: the Dynamik of status edition E covers OSM snapshots [E - span, E].
+DYNAMIK_SPAN = {"BER": 2, "HH": 3}
+# Year of the level each status-level column refers to (for the §5.8(2) control check).
+LEVEL_YEAR_COL = {
+    "S_start": "s_start_year",
+    "S_cls_start": "s_cls_start_year",
+    "S_end": "s_end_year",
+    "S_cls_end": "s_end_year",
+}
+# Data-year columns of each change series on a window row (start, end).
+CHANGE_YEAR_COLS = {
+    "D": ("d_start_year", "d_end_year"),
+    "D_cls": ("d_start_year", "d_end_year"),
+    "g_commercial_c5": ("c5_year_s", "c5_year_e"),
+    "g_total_c5": ("c5_year_s", "c5_year_e"),
+    "g_cafe_c5": ("oa_year_s", "oa_year_e"),
+    "d_oa_basket": ("oa_year_s", "oa_year_e"),
+}
+
 PANELS: dict[tuple[str, str], Panel] = {
     ("BER", "modern"): Panel(
         city="BER",
@@ -378,10 +397,25 @@ def assert_temporal_order(
     control_year: np.ndarray | None = None,
 ) -> None:
     """§5.8(2): predictor window end <= outcome window start (H2, H3a, H3b); identical windows
-    for H3c; the H3b start-of-window control dates from <= the predictor window start."""
+    for H3c; the H3b start-of-window control dates from <= the predictor window start.
+
+    The arrays must be the DATA years carried on each row (OA / C5 snapshot actually joined,
+    status edition behind D and its Dynamik start, the year the level control refers to),
+    never the window labels used as merge keys. Rows without a data year carry no value and
+    are dropped by every estimator, so they are skipped here.
+    """
     ps, pe, os_, oe = (
         np.asarray(a, dtype=float) for a in (pred_start, pred_end, out_start, out_end)
     )
+    ok = (
+        _years_ok(ps, pe, os_, oe)
+        if control_year is None
+        else _years_ok(ps, pe, os_, oe, control_year)
+    )
+    assert ok.any(), f"{kind}: no row carries data years"  # noqa: S101 -- R-C3
+    ps, pe, os_, oe = ps[ok], pe[ok], os_[ok], oe[ok]
+    if control_year is not None:
+        control_year = np.asarray(control_year, dtype=float)[ok]
     if kind in ("H2", "H3a", "H3b"):
         assert np.all(pe <= os_), f"{kind}: predictor window ends after the outcome window starts"  # noqa: S101 -- R-C3
     elif kind == "H3c":
@@ -391,6 +425,13 @@ def assert_temporal_order(
         assert np.all(cy <= ps), (  # noqa: S101 -- R-C3
             "H3b: start-of-window control dates after the predictor window start"
         )
+
+
+def _years_ok(*arrays) -> np.ndarray:
+    mask = np.ones(len(np.asarray(arrays[0])), dtype=bool)
+    for a in arrays:
+        mask &= np.isfinite(np.asarray(a, dtype=float))
+    return mask
 
 
 def assert_single_vintage(panel_vintage: str, *vintages: np.ndarray) -> None:
@@ -677,7 +718,7 @@ def _load_types(con, city: str, vintage: str, years: list[int]) -> pd.DataFrame:
                poi_type_h, SUM(poi_count) AS poi_count
         FROM main.int_poi_development_native
         WHERE city_code = ? AND area_vintage = ? AND snapshot_year IN ({ylist})
-          AND (poi_domain_h = ? OR poi_category_h = 'Fast Food')
+          AND (poi_domain_h = ? OR poi_domain_h = 'Gastronomy')
         GROUP BY ALL
         ORDER BY area_code, snapshot_year, poi_domain_h, poi_category_h, poi_type_h
         """,
@@ -744,6 +785,12 @@ def load_berlin(con, panel: Panel) -> PanelData:
         how="outer",
     ).sort_values(["area_code", "edition"])
     status = status.reset_index(drop=True)
+    # §5.8(2) data years: D_E covers [E-2, E] (§3.1); the rebuilt level anteil_E - dynamik_E
+    # refers to Dec(E-3), i.e. OSM snapshot E-2 (§3.1).
+    status["d_start_year"] = status["edition"] - DYNAMIK_SPAN["BER"]
+    status["s_start_year"] = np.where(
+        status["S_start_rebuilt"].notna(), status["edition"] - DYNAMIK_SPAN["BER"], np.nan
+    )
 
     if panel.h1_status == "thesis_2018":
         # §6.5: the thesis's own continuous status_index (MSS Dec 2016; higher = worse,
@@ -823,6 +870,9 @@ def load_hamburg(con, panel: Panel) -> PanelData:
     status["S"] = status["S_cls"].astype(float)
     status["D"] = status["D_cls"].astype(float)
     status["S_start_rebuilt"] = np.nan
+    # §4.3: the Dynamik of edition E covers [E-3, E]; the level control is looked up per row.
+    status["d_start_year"] = status["edition"] - DYNAMIK_SPAN["HH"]
+    status["s_start_year"] = np.nan
     h1 = status.loc[status["edition"] == panel.h1_edition, ["area_code", "S", "S_cls"]]
     h1 = h1.rename(columns={"S": "status"}).sort_values("area_code")
     pop = soz.rename(columns={"edition": "year", "population": "residents"})[
@@ -880,7 +930,10 @@ def oa_wide(pdata: PanelData, year: int) -> pd.DataFrame:
     dom = sub[sub["oa_level"] == "domain"]
     cat = sub[sub["oa_level"] == "category"].copy()
     cat["key"] = cat["poi_domain_h"] + "|" + cat["poi_category_h"]
-    blocks = [vint.rename("vintage")]
+    oa_year = sub.groupby("area_code")["snapshot_year"].agg(
+        lambda s: float(s.iloc[0]) if s.nunique() == 1 else np.nan
+    )
+    blocks = [vint.rename("vintage"), oa_year.rename("oa_year")]
     for frame, keycol, tag in ((dom, "poi_domain_h", "dom"), (cat, "key", "cat")):
         for col, prefix in (
             ("oa_value", f"oa_{tag}:"),
@@ -949,17 +1002,21 @@ def _status_at(pdata: PanelData, edition: int) -> pd.DataFrame:
     return pdata.status[pdata.status["edition"] == edition].set_index("area_code")
 
 
-def _status_start(pdata: PanelData, s: int, e: int) -> tuple[pd.Series, pd.Series]:
+def _status_start(pdata: PanelData, s: int, e: int) -> dict[str, pd.Series]:
     """Status level at the start of window (s, e): Berlin rebuilt S_(e-2) (§3.1); Hamburg
-    class at edition s = e-3 (§4.3). Also the published class at s (secondary)."""
+    class at edition s = e-3 (§4.3). Also the published class at s (secondary). Each level
+    comes with the data year it refers to (§5.8(2))."""
     end = _status_at(pdata, e)
     start = _status_at(pdata, s)
-    cls_start = start["S_cls"].astype(float) if not start.empty else pd.Series(dtype=float)
+    empty = pd.Series(dtype=float)
+    cls_start = start["S_cls"].astype(float) if not start.empty else empty
+    cls_year = start["edition"].astype(float) if not start.empty else empty
     if pdata.panel.city == "BER":
-        lvl = end["S_start_rebuilt"]
+        lvl, lvl_year = end["S_start_rebuilt"], end["s_start_year"].astype(float)
     else:
-        lvl = start["S"] if not start.empty else pd.Series(dtype=float)
-    return lvl, cls_start
+        lvl = start["S"] if not start.empty else empty
+        lvl_year = cls_year
+    return {"lvl": lvl, "lvl_year": lvl_year, "cls": cls_start, "cls_year": cls_year}
 
 
 def h2_frame(pdata: PanelData, windows: Sequence[tuple[int, int]]) -> pd.DataFrame:
@@ -970,24 +1027,32 @@ def h2_frame(pdata: PanelData, windows: Sequence[tuple[int, int]]) -> pd.DataFra
         end = _status_at(pdata, e)
         if end.empty:
             continue
-        lvl, cls_start = _status_start(pdata, s, e)
+        st0 = _status_start(pdata, s, e)
         st = pd.DataFrame(
             {
                 "D": end["D"],
                 "D_cls": end["D_cls"].astype(float),
-                "S_start": lvl.reindex(end.index),
-                "S_cls_start": cls_start.reindex(end.index),
+                "S_start": st0["lvl"].reindex(end.index),
+                "S_cls_start": st0["cls"].reindex(end.index),
+                # §5.8(2) data years: status edition behind D and its Dynamik start
+                "out_start": end["d_start_year"].astype(float),
+                "out_end": end["edition"].astype(float),
             }
         )
         wide = oa_wide(pdata, s)
         df = st.join(wide, how="inner").reset_index().rename(columns={"index": "area_code"})
         df["w_start"], df["w_end"] = s, e
-        df["pred_start"], df["pred_end"], df["out_start"], df["out_end"] = s, s, s, e
+        # predictor = OA at the snapshot actually joined (prevOSM_stock)
+        df["pred_start"] = df["oa_year"]
+        df["pred_end"] = df["oa_year"]
         rows.append(df)
     if not rows:
         return pd.DataFrame()
     out = pd.concat(rows, ignore_index=True)
     out = out.sort_values(["area_code", "w_end"]).reset_index(drop=True)
+    assert_temporal_order(
+        "H2", out["pred_start"], out["pred_end"], out["out_start"], out["out_end"]
+    )
     return _attach_cluster_vintage(pdata, out)
 
 
@@ -999,20 +1064,28 @@ def _basket(wide: pd.DataFrame) -> pd.Series:
 
 def window_rows(pdata: PanelData, windows: Sequence[tuple[int, int]]) -> pd.DataFrame:
     """One row per (area, window) with status change, commercial change and levels."""
-    c5 = pdata.c5.set_index(["area_code", "snapshot_year"])
+    c5 = pdata.c5.assign(c5_year=pdata.c5["snapshot_year"].astype(float)).set_index(
+        ["area_code", "snapshot_year"]
+    )
     rows = []
     for s, e in windows:
         end = _status_at(pdata, e)
         if end.empty:
             continue
-        lvl, cls_start = _status_start(pdata, s, e)
+        st0 = _status_start(pdata, s, e)
         df = pd.DataFrame(index=end.index)
         df["D"] = end["D"]
         df["D_cls"] = end["D_cls"].astype(float)
         df["S_end"] = end["S"]
         df["S_cls_end"] = end["S_cls"].astype(float)
-        df["S_start"] = lvl.reindex(df.index)
-        df["S_cls_start"] = cls_start.reindex(df.index)
+        df["S_start"] = st0["lvl"].reindex(df.index)
+        df["S_cls_start"] = st0["cls"].reindex(df.index)
+        # §5.8(2) data years carried on the row
+        df["d_start_year"] = end["d_start_year"].astype(float)
+        df["d_end_year"] = end["edition"].astype(float)
+        df["s_end_year"] = end["edition"].astype(float)
+        df["s_start_year"] = st0["lvl_year"].reindex(df.index)
+        df["s_cls_start_year"] = st0["cls_year"].reindex(df.index)
         cs = c5.xs(s, level="snapshot_year") if s in c5.index.get_level_values(1) else None
         ce = c5.xs(e, level="snapshot_year") if e in c5.index.get_level_values(1) else None
         if cs is None or ce is None:
@@ -1022,7 +1095,10 @@ def window_rows(pdata: PanelData, windows: Sequence[tuple[int, int]]) -> pd.Data
         df["g_commercial_c5"] = dhs_growth(cs["commercial_c5_share"], ce["commercial_c5_share"])
         df["g_total_c5"] = dhs_growth(cs["total_c5_share"], ce["total_c5_share"])
         df["vintage_s"], df["vintage_e"] = cs["area_vintage"], ce["area_vintage"]
+        df["c5_year_s"], df["c5_year_e"] = cs["c5_year"], ce["c5_year"]
         ws, we = oa_wide(pdata, s), oa_wide(pdata, e)
+        df["oa_year_s"] = ws["oa_year"].reindex(df.index) if "oa_year" in ws else np.nan
+        df["oa_year_e"] = we["oa_year"].reindex(df.index) if "oa_year" in we else np.nan
         # §5.2 R4: café C5 share = area café count / city café count (same C5 construct).
         cafe_s = ws.get(f"stock_cat:{CAFE_KEY}") / ws.get(f"city_cat:{CAFE_KEY}")
         cafe_e = we.get(f"stock_cat:{CAFE_KEY}") / we.get(f"city_cat:{CAFE_KEY}")
@@ -1047,9 +1123,15 @@ def window_rows(pdata: PanelData, windows: Sequence[tuple[int, int]]) -> pd.Data
 def cross_lag_frame(
     rows: pd.DataFrame, status_col: str, poi_col: str, s_pivot_col: str, s_start_col: str
 ) -> pd.DataFrame:
-    """build_cross_lagged (directional_inference, extended §6.1) on window rows."""
+    """build_cross_lagged (directional_inference, extended §6.1) on window rows.
+
+    Besides the levels it carries the DATA years of both change series on the P and F rows
+    and the year each level control refers to, so `assert_cross_lag_order` checks §5.8(2) on
+    data, not on the window labels that are the merge key."""
     if rows.empty:
         return pd.DataFrame()
+    ds, de = CHANGE_YEAR_COLS[status_col]
+    gs, ge = CHANGE_YEAR_COLS[poi_col]
     cl = build_cross_lagged(
         rows,
         k=1,
@@ -1058,9 +1140,19 @@ def cross_lag_frame(
         level_cols={
             "S_pivot": (s_pivot_col, "p"),
             "S_start": (s_start_col, "p"),
+            "S_pivot_year": (LEVEL_YEAR_COL[s_pivot_col], "p"),
+            "S_start_year": (LEVEL_YEAR_COL[s_start_col], "p"),
             "d4": ("d4_end", "p"),
             "p_end": ("w_end", "p"),
             "f_start": ("w_start", "f"),
+            "status_start_p": (ds, "p"),
+            "status_end_p": (de, "p"),
+            "status_start_f": (ds, "f"),
+            "status_end_f": (de, "f"),
+            "poi_start_p": (gs, "p"),
+            "poi_end_p": (ge, "p"),
+            "poi_start_f": (gs, "f"),
+            "poi_end_f": (ge, "f"),
         },
         cluster_col="cluster",
     )
@@ -1076,6 +1168,33 @@ def cross_lag_frame(
         ve.get((a, p), None) for a, p in zip(cl["area_code"], cl["pivot"], strict=True)
     ]
     return cl.sort_values(["area_code", "pivot"]).reset_index(drop=True)
+
+
+def assert_cross_lag_order(cl: pd.DataFrame, which: str, timing: str) -> None:
+    """§5.8(2) on a cross_lag_frame, from data years. H3a: POI change over P ends no later
+    than the status change over F starts. H3b: status change over P ends no later than the
+    POI change over F starts, and the start-of-window level control refers to a year no
+    later than the start of the predictor window."""
+    if which == "H3a":
+        assert_temporal_order(
+            "H3a", cl["poi_start_p"], cl["poi_end_p"], cl["status_start_f"], cl["status_end_f"]
+        )
+    else:
+        assert_temporal_order(
+            "H3b",
+            cl["status_start_p"],
+            cl["status_end_p"],
+            cl["poi_start_f"],
+            cl["poi_end_f"],
+            control_year=cl["S_start_year"] if timing == "window_start" else None,
+        )
+
+
+def assert_same_window(rows: pd.DataFrame, poi_col: str, status_col: str) -> None:
+    """§5.8(2) H3c: the POI change and the status change span the same data years."""
+    gs, ge = CHANGE_YEAR_COLS[poi_col]
+    ds, de = CHANGE_YEAR_COLS[status_col]
+    assert_temporal_order("H3c", rows[gs], rows[ge], rows[ds], rows[de])
 
 
 # ---------------------------------------------------------------------------
@@ -1288,7 +1407,7 @@ class SuiteRun:
         self.meta["feature_lists"]["H1_commercial"] = [
             f for f in feats if f.split("|")[0] in COMMERCIAL_DOMAINS
         ]
-        x = oa_features(fr, feats, "cat").add_prefix("oa_cat:")
+        x = oa_features(fr, feats, "cat")
         bin_desc = (
             "binary status (>0 vs <=0)" if p.h1_status != "classes" else "binary {3,4} vs {1,2}"
         )
@@ -1306,7 +1425,7 @@ class SuiteRun:
         )
         # §5.2 secondary: domain-level, commercial-only; A1.1 (i) base indicators, (ii)
         # complete-case; Berlin published-class version.
-        xd = oa_features(fr, doms, "dom").add_prefix("oa_dom:")
+        xd = oa_features(fr, doms, "dom")
         self._auc_row(
             "H1",
             "secondary",
@@ -1319,7 +1438,7 @@ class SuiteRun:
             notes=["a null here reads 'not detected at domain resolution'"],
         )
         comm = self.meta["feature_lists"]["H1_commercial"]
-        xc = oa_features(fr, comm, "cat").add_prefix("oa_cat:")
+        xc = oa_features(fr, comm, "cat")
         self._auc_row(
             "H1",
             "secondary",
@@ -1422,7 +1541,7 @@ class SuiteRun:
         fr = fr.reset_index().rename(columns={"index": "bzr"})
         feats = fixed_feature_list(fr, "cat")
         self.meta["feature_lists"]["H1_bzr"] = feats
-        x = oa_features(fr, feats, "cat").add_prefix("oa_cat:")
+        x = oa_features(fr, feats, "cat")
         y = (fr["status"] > 0).astype(int)
         groups = fr[fr.columns[0]].astype(str).str[:2]
         self._auc_row(
@@ -1723,7 +1842,7 @@ class SuiteRun:
             out_name = "D"
         feats = fixed_feature_list(fr, "cat")
         self.meta["feature_lists"]["H2_category"] = feats
-        x = oa_features(fr, feats, "cat").add_prefix("oa_cat:")
+        x = oa_features(fr, feats, "cat")
         out_desc = "; ".join(_fmt_status_desc(d, e, "D") for _s, e in p.windows) + f" -> {ydesc}"
         self._auc_row(
             "H2",
@@ -1740,7 +1859,7 @@ class SuiteRun:
         )
         doms = fixed_feature_list(fr, "dom")
         self.meta["feature_lists"]["H2_domain"] = doms
-        xd = oa_features(fr, doms, "dom").add_prefix("oa_dom:")
+        xd = oa_features(fr, doms, "dom")
         self._auc_row(
             "H2",
             "secondary",
@@ -1853,7 +1972,7 @@ class SuiteRun:
             if p.class_windows and tuple(p.class_windows) != tuple(p.windows):
                 frc = h2_frame(d, p.class_windows)
                 frc = frc[frc["D_cls"].notna()].reset_index(drop=True)
-                xc = oa_features(frc, feats, "cat").add_prefix("oa_cat:")
+                xc = oa_features(frc, feats, "cat")
                 self._auc_row(
                     "H2",
                     "secondary",
@@ -1911,14 +2030,7 @@ class SuiteRun:
             pred, outc = f"{status_name}@P", f"{poi_name}@F"
         # construct guard: status-side names map to STATUS_NAMES, POI side to POI_PREFIXES
         self.guard([pred if which == "H3a" else poi_name], ctrl_names, status_name)
-        assert_temporal_order(
-            which,
-            cl["start_p"],
-            cl["p_end"],
-            cl["f_start"],
-            cl["end_f"],
-            control_year=cl["start_p"] if (which == "H3b" and timing == "window_start") else None,
-        )
+        assert_cross_lag_order(cl, which, timing)
         ctrl = [cl["D_P_col"] if c == "D_P" else cl[c] for c in controls]
         return (
             rho_test(
@@ -2064,7 +2176,15 @@ class SuiteRun:
                     "g_commercial_c5",
                     status_name,
                     d4_piv,
-                    [note, *base_notes],
+                    [
+                        note,
+                        *self.shock_notes(
+                            [w for w in p.windows if w[1] in d4_piv or w[0] in d4_piv]
+                        ),
+                        *self.break_notes(
+                            [e for s0, e in p.windows if e in d4_piv or s0 in d4_piv]
+                        ),
+                    ],
                     prim_timing[which],
                     d4=True,
                 )
@@ -2199,7 +2319,9 @@ class SuiteRun:
                         "D_cls",
                         piv_c,
                         [
-                            "published-class version (§5.2); rows without a class at the control date drop"
+                            "published-class version (§5.2); rows without a class at the control date drop",
+                            *self.shock_notes(p.class_windows),
+                            *self.break_notes([e for _s, e in p.class_windows]),
                         ],
                         prim_timing[which],
                         cls=True,
@@ -2265,11 +2387,11 @@ class SuiteRun:
             )
             return
         assert_single_vintage(p.vintage, rows["vintage_s"], rows["vintage_e"])
-        assert_temporal_order("H3c", rows["w_start"], rows["w_end"], rows["w_start"], rows["w_end"])
         dcol = "D_cls" if p.city == "HH" else "D"
 
         def one(poi_col, sub, role, op, nts, outc=status_name, dc=dcol):
             self.guard([poi_col], [], outc)
+            assert_same_window(sub, poi_col, dc)
             res = rho_test(
                 sub[poi_col].to_numpy(float),
                 sub[dc].to_numpy(float),
@@ -2321,7 +2443,11 @@ class SuiteRun:
                     rc,
                     "secondary",
                     "H3c on published Dynamik class",
-                    ["published-class version (§5.2)"],
+                    [
+                        "published-class version (§5.2)",
+                        *self.shock_notes(p.class_windows),
+                        *self.break_notes([e for _s, e in p.class_windows]),
+                    ],
                     outc="D_cls",
                     dc="D_cls",
                 )
@@ -2453,12 +2579,15 @@ def _verdict_for(row: dict, primary: bool) -> tuple[str, list[str]]:
         if row["ci_low"] is None:
             return NO_DATA, notes
         v = verdict(est - th, exp, ci_low=row["ci_low"] - th, ci_high=row["ci_high"] - th)
-    if row["estimator"] in ("oof_auc_logit", "delta_auc") and v == CONTRADICTED:
-        # §5.1: CONTRADICTED is impossible for the non-directional AUC tests.
+    if row["estimator"] == "oof_auc_logit" and v == CONTRADICTED:
+        # §5.1: CONTRADICTED is impossible for the non-directional H1/H2 AUC tests.
         notes.append(
-            "estimate significantly below the null; CONTRADICTED is undefined for a non-directional test"
+            "AUC significantly below 0.5; CONTRADICTED is undefined for the non-directional H1/H2"
         )
         v = NOT_SIGNIFICANT
+    elif row["estimator"] == "delta_auc" and v == CONTRADICTED:
+        # §5.2 H2 incremental is directional (does OA ADD to status level?).
+        notes.append("adding OA significantly lowers out-of-fold AUC once status level is included")
     return v, notes
 
 
@@ -2851,11 +2980,16 @@ def _deviations(meta_mod: dict, meta_th: dict) -> list[str]:
         "**H1b without döner/kebab (R3): not testable.** The taxonomy carries only one Fast Food "
         "type ('Other Fast Food') at the H1 snapshots, so no kebab type can be removed; the row is "
         'reported as NO DATA with that reason (§5.2: "if the taxonomy carries it").',
-        "**H2 incremental with a wholly negative delta-AUC CI.** §5.6 maps H2 to 'stronger than "
-        "thesis' only when the delta-AUC CI excludes 0, and to 'explained by current status "
-        "level' when it includes 0. A CI entirely below 0 (OA lowers out-of-fold AUC once status "
-        "level is in the model) is read with the second label, because OA then adds nothing "
-        "beyond status level; 'stronger than thesis' requires a CI entirely above 0.",
+        "**H2 incremental with a wholly negative delta-AUC CI: pending explicit ratification "
+        "by geo-DS + domain (post-results clarification of §5.6).** §5.6 maps H2 to 'stronger "
+        "than thesis' only when the delta-AUC CI excludes 0, and to 'explained by current status "
+        "level' when it includes 0; it does not spell out a CI entirely below 0. The thesis-era "
+        "delta AUC is such a case (the row is reported as CONTRADICTED: adding OA significantly "
+        "lowers out-of-fold AUC once status level is included). The H2 'Holds?' label keeps "
+        "'consistent (still unclear): explained by current status level', on the reading that "
+        "OA then adds nothing beyond status level and 'stronger than thesis' needs a CI entirely "
+        "above 0. **This reading was settled after seeing the low-B smoke run**, so it is not "
+        "pre-registered; the gate reviewers decide whether to ratify it.",
         "**Hamburg panels not reported here.** The code supports `--city HH` (`HH/full`, "
         "`HH/modern`, phase-shift chains); Hamburg results and findings are #355's.",
     ]
@@ -3183,8 +3317,11 @@ def write_berlin_findings(path: Path, records: list[dict], meta: dict) -> None:
         if r["verdict"] in (SUPPORTED, CONTRADICTED, NOT_SIGNIFICANT):
             n_expl += 1
         note = r["notes"].replace("|", "/")
+        est_cell = f"{_f(r['estimate'])} [{_f(r['ci_low'])}, {_f(r['ci_high'])}]"
+        if r["verdict"] == NO_DATA:
+            est_cell = "– (not reported: NO DATA)"
         a(
-            f"| {r['panel']} | {r['hypothesis']} | {r['role']} | {r['operationalisation']} | {_f(r['estimate'])} [{_f(r['ci_low'])}, {_f(r['ci_high'])}] | {r['n']} | {r['verdict'] or 'descriptive'} | {note} |"
+            f"| {r['panel']} | {r['hypothesis']} | {r['role']} | {r['operationalisation']} | {est_cell} | {r['n']} | {r['verdict'] or 'descriptive'} | {note} |"
         )
     a("")
     a(

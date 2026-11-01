@@ -416,3 +416,158 @@ def test_write_results_keeps_other_panels(tmp_path):
     other = [dict(r, panel="thesis-era") for r in recs]
     allr = S.write_results(other, path, [("BER", "thesis-era")])
     assert [r["panel"] for r in allr] == ["modern"] * 8 + ["thesis-era"] * 8
+
+
+# ---------------------------------------------------------------------------
+# §5.8(2) on real data years: frames built from a crafted PanelData (review M1)
+# ---------------------------------------------------------------------------
+
+
+def _crafted_panel_data() -> S.PanelData:
+    """A tiny BER/modern-shaped PanelData: 40 PLRs in 20 BZRs, snapshots 2019-2025."""
+    panel = S.PANELS[("BER", "modern")]
+    rng = np.random.default_rng(11)
+    codes = [f"{100000 + i // 2:06d}{i % 2:02d}" for i in range(40)]
+    status = []
+    for ed in (2021, 2023, 2025):
+        for c in codes:
+            status.append(
+                {
+                    "area_code": c,
+                    "edition": ed,
+                    "S": rng.normal(),
+                    "D": rng.normal(),
+                    "S_start_rebuilt": rng.normal(),
+                    "S_cls": float(rng.integers(1, 5)),
+                    "D_cls": float(rng.integers(1, 4)),
+                    "d_start_year": ed - 2,
+                    "s_start_year": float(ed - 2),
+                }
+            )
+    oa, c5 = [], []
+    for y in (2019, 2021, 2023, 2025):
+        for c in codes:
+            for dom in S.COMMERCIAL_DOMAINS:
+                oa.append(
+                    (
+                        c,
+                        y,
+                        "lor_2021",
+                        "domain",
+                        dom,
+                        "",
+                        rng.uniform(0.5, 1.5),
+                        False,
+                        20.0,
+                        80.0,
+                        2000.0,
+                        8000.0,
+                    )
+                )
+            oa.append(
+                (
+                    c,
+                    y,
+                    "lor_2021",
+                    "category",
+                    "Gastronomy",
+                    "Cafe",
+                    rng.uniform(0.5, 1.5),
+                    False,
+                    5.0,
+                    20.0,
+                    500.0,
+                    2000.0,
+                )
+            )
+            c5.append((c, y, "lor_2021", rng.uniform(0.01, 0.05), rng.uniform(0.01, 0.05)))
+    oa_cols = [
+        "area_code",
+        "snapshot_year",
+        "area_vintage",
+        "oa_level",
+        "poi_domain_h",
+        "poi_category_h",
+        "oa_value",
+        "oa_min_base_flag",
+        "level_stock_local",
+        "parent_stock_local",
+        "level_stock_city",
+        "parent_stock_city",
+    ]
+    return S.PanelData(
+        panel=panel,
+        status=pd.DataFrame(status),
+        h1_status=pd.DataFrame({"area_code": codes, "status": rng.normal(size=40), "S_cls": 2.0}),
+        oa=pd.DataFrame(oa, columns=oa_cols),
+        c5=pd.DataFrame(
+            c5,
+            columns=[
+                "area_code",
+                "snapshot_year",
+                "area_vintage",
+                "commercial_c5_share",
+                "total_c5_share",
+            ],
+        ),
+        types=pd.DataFrame(
+            columns=[
+                "area_code",
+                "snapshot_year",
+                "area_vintage",
+                "poi_domain_h",
+                "poi_category_h",
+                "poi_type_h",
+                "poi_count",
+            ]
+        ),
+        pop=pd.DataFrame(columns=["area_code", "year", "residents"]),
+        d4=pd.DataFrame({"area_code": codes, "year": 2020, "ewr_composite": rng.normal(size=40)}),
+        clusters=pd.DataFrame({"area_code": codes, "cluster": [c[:6] for c in codes]}),
+        source_attrs={},
+    )
+
+
+def test_h2_frame_carries_data_years_and_rejects_a_wrong_oa_snapshot():
+    pdata = _crafted_panel_data()
+    fr = S.h2_frame(pdata, pdata.panel.windows)
+    assert set(fr["pred_end"]) == {2019.0, 2021.0, 2023.0}  # OA snapshot actually joined
+    assert set(fr["out_start"]) == {2019.0, 2021.0, 2023.0}  # Dynamik start of edition
+    # loader bug simulation: the window-start OA slot holds the window-END snapshot
+    bad = _crafted_panel_data()
+    bad._wide_cache[2019] = S.oa_wide(bad, 2021)
+    with pytest.raises(AssertionError, match="predictor window ends after"):
+        S.h2_frame(bad, bad.panel.windows)
+
+
+def test_cross_lag_guard_fires_on_a_swapped_level_column():
+    pdata = _crafted_panel_data()
+    rows = S.window_rows(pdata, pdata.panel.windows)
+    good = S.cross_lag_frame(rows, "D", "g_commercial_c5", "S_end", "S_start")
+    S.assert_cross_lag_order(good, "H3a", "pivot")
+    S.assert_cross_lag_order(good, "H3b", "window_start")
+    # S_end (published at the pivot) passed as the start-of-window control
+    swapped = S.cross_lag_frame(rows, "D", "g_commercial_c5", "S_end", "S_end")
+    with pytest.raises(AssertionError, match="start-of-window control"):
+        S.assert_cross_lag_order(swapped, "H3b", "window_start")
+
+
+def test_cross_lag_and_h3c_guards_fire_on_wrong_status_years():
+    pdata = _crafted_panel_data()
+    rows = S.window_rows(pdata, pdata.panel.windows)
+    S.assert_same_window(rows, "g_commercial_c5", "D")
+    # status change of the later windows taken from a 4-year span starting before the pivot
+    bad = rows.copy()
+    bad.loc[bad["w_start"] >= 2021, "d_start_year"] -= 2
+    cl = S.cross_lag_frame(bad, "D", "g_commercial_c5", "S_end", "S_start")
+    with pytest.raises(AssertionError, match="predictor window ends after"):
+        S.assert_cross_lag_order(cl, "H3a", "pivot")
+    with pytest.raises(AssertionError, match="windows differ"):
+        S.assert_same_window(bad, "g_commercial_c5", "D")
+
+
+def test_delta_auc_is_directional():
+    row = _row("delta_auc", {"estimate": -0.018, "ci_low": -0.035, "ci_high": -0.003}, hyp="H2")
+    v, notes = S._verdict_for(row, primary=False)
+    assert v == CONTRADICTED
+    assert notes == ["adding OA significantly lowers out-of-fold AUC once status level is included"]
