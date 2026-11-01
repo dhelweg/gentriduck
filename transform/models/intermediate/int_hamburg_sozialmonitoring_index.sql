@@ -53,6 +53,18 @@
 -- as Berlin's is_uninhabited=true rows being filtered downstream, just achieved
 -- by row absence instead of a NULL flag.
 --
+-- Reference date and ordering check (#354/#355 phase A, prerequisites
+-- §2.1(3)/(4); docs/epic-e/354-phase-a-data-prerequisites.md §3-§4):
+-- edition E = data as of 31 Dec (E-1) (Transparenzportal metadata
+-- temporal_coverage_from = (E-1)-12-31 for every report 2016-2025; see
+-- stg_hamburg_sozialmonitoring header); Dynamik window 31.12.(E-4) ->
+-- 31.12.(E-1). The label -> code mapping below is reconciled against the
+-- published report annexes 2016-2025: 100% per-Gebiet agreement of status and
+-- Dynamik class, and the annex Status-/Dynamik-summe order the classes as
+-- coded here (hoch / positiv = lowest sums = least / falling disadvantage).
+-- Guards: test_354_hh_sozialmonitoring_published_class_counts,
+-- test_354_hh_sozialmonitoring_label_code_consistency.
+--
 -- area_vintage: hard-coded 'current' (Hamburg's single live-WFS geometry
 -- edition, ADR-0014 Pillar 1) -- stg_hamburg_sozialmonitoring itself carries no
 -- vintage column since Sozialmonitoring Gebiet ids are stable across the

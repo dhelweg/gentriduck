@@ -89,6 +89,15 @@ from directional_inference import (  # noqa: E402
     verdict,
 )
 
+# #354/#355 (pre-registration docs/methodology/354-355-hypothesis-suite-preregistration.md
+# §1.1, §6.2): this dict stays the single source of hypothesis text and citations. Suite
+# fields added per entry: `wording_de` (thesis §4.5, verbatim), `thesis_verdict`
+# (Tabelle 6-16), `form` -- H1/H2 are NON-DIRECTIONAL in the thesis wording ("hängt
+# zusammen", "haben einen Einfluss"), H3a/H3b are ORDERING claims with no sign, the rest
+# directional -- `suite_expected_dir` (sign of the suite's estimator: AUC - 0.5 for
+# H1/H2, rho otherwise; §5.1) and `literature`. `expected_dir` / `expected_sig` keep
+# E1's proxy-sign convention unchanged, so E1's statistics do not move (its citation list
+# gains the H1a/H1c entries on the next regeneration).
 THESIS_HYPOTHESES: dict[str, dict] = {
     "H1": {
         # D1 POLARITY: status_index is inverse-numeric — higher value = lower social status
@@ -100,6 +109,24 @@ THESIS_HYPOTHESES: dict[str, dict] = {
         "citation": "Thesis p.55; verdict Tabelle 6-16 (PDF p.91): H1 proven (check mark). POI supply positively correlates with social status; because status_index is inverse-numeric (higher=worse, index-definition.md §5 polarity table), expected Spearman(poi, status_index) is negative",
         "expected_dir": "negative",
         "expected_sig": True,
+        "wording_de": "Der soziale Status einer Nachbarschaft hängt mit den lokalen Angebotsstrukturen zusammen.",
+        "thesis_verdict": "✓",
+        "form": "nondirectional",
+        "suite_expected_dir": "positive",
+        "literature": "",
+    },
+    "H1a": {
+        # #349 / #354 pre-registration §1.1: cafés ~ status, positive with STATUS, so
+        # negative with the inverse-numeric status index (index-definition.md §5).
+        "desc": "Café offering structure ~ MSS social status (status index)",
+        "citation": "Thesis §4.5 H1a (Papachristos et al. 2011); verdict Tabelle 6-16 (PDF p.91): 0 (Tabelle 6-12, significant but very small correlations, §6.3.1.1). More cafés -> higher status -> lower status index, expected direction negative",
+        "expected_dir": "negative",
+        "expected_sig": False,
+        "wording_de": "Umgebungen mit vielen Cafés haben einen vergleichsweise hohen sozialen Status.",
+        "thesis_verdict": "0",
+        "form": "directional",
+        "suite_expected_dir": "negative",
+        "literature": "Papachristos et al. (2011)",
     },
     "H1b": {
         # D1 POLARITY: fast-food is a contested proxy for low-status / displacement pressure
@@ -110,6 +137,24 @@ THESIS_HYPOTHESES: dict[str, dict] = {
         "citation": "Thesis p.55 H1b; verdict Tabelle 6-16: proven (check mark). Fast-food as contested proxy for low-status / displacement pressure (see gentrification literature); more fast-food → lower status → higher status_index (inverse-numeric, index-definition.md §5), expected direction positive",
         "expected_dir": "positive",
         "expected_sig": True,
+        "wording_de": "Umgebungen mit vielen Fast Food Geschäften haben einen vergleichsweise niedrigeren sozialen Status.",
+        "thesis_verdict": "✓",
+        "form": "directional",
+        "suite_expected_dir": "positive",
+        "literature": "Pearce et al. (2007)",
+    },
+    "H1c": {
+        # #349 / #354 pre-registration §1.1, §1.3: sport facilities ~ status. The thesis
+        # variable is the domain "Sports and Recreation" OA (Tabelle 6-14).
+        "desc": "Sports-and-recreation offering structure ~ MSS social status (status index)",
+        "citation": "Thesis §4.5 H1c (Powell et al. 2006); verdict Tabelle 6-16 (PDF p.91): 0 (Tabelle 6-14, very small mixed-sign correlations; pre-registration §1.3). More sport facilities -> higher status -> lower status index, expected direction negative",
+        "expected_dir": "negative",
+        "expected_sig": False,
+        "wording_de": "Umgebungen mit vielen Sportmöglichkeiten haben einen vergleichsweise hohen sozialen Status.",
+        "thesis_verdict": "0",
+        "form": "directional",
+        "suite_expected_dir": "negative",
+        "literature": "Powell et al. (2006)",
     },
     "H2": {
         # D1 POLARITY: delta_status_ordinal = status_index_tk - status_index_t.
@@ -120,6 +165,11 @@ THESIS_HYPOTHESES: dict[str, dict] = {
         "citation": "Thesis p.55 H2; verdict Tabelle 6-16: INCONCLUSIVE (0, 'kein klares Bild' -- best model only mediocre). Current POI supply predicts future social-status improvement; delta_status_ordinal = tk - t (positive = worsened, index-definition.md §5 polarity), so expected direction is negative",
         "expected_dir": "negative",
         "expected_sig": False,  # directional only; thesis did not confirm significance for H2 in isolation
+        "wording_de": "Die aktuellen lokalen Angebotsstrukturen haben einen Einfluss auf die zukünftige Veränderung des sozialen Status.",
+        "thesis_verdict": "0",
+        "form": "nondirectional",
+        "suite_expected_dir": "positive",
+        "literature": "",
     },
     "H3a": {
         # D1 POLARITY + C5: delta_dynamism_t (C5-corrected) leads delta_status_ordinal.
@@ -129,6 +179,11 @@ THESIS_HYPOTHESES: dict[str, dict] = {
         "citation": "Thesis Tabelle 6-16 (PDF p.91): H3a REJECTED (cross mark, 'wenig spricht fuer H3a'). Cross-lagged partial Spearman rho(dPOI_P, dStatus_F | dStatus_P, D4) with a Bezirksregion cluster-bootstrap CI (analysis/directional_inference.py); POI = C5-corrected dynamism (index-definition.md §2.4) or OA; delta_status_ordinal inverse-numeric so expected direction is negative",
         "expected_dir": "negative",
         "expected_sig": False,  # thesis rejected this
+        "wording_de": "Die Veränderung des sozialen Status folgt der Veränderung der lokalen Angebotsstruktur, ist diesem also zeitlich nachgelagert.",
+        "thesis_verdict": "✗",
+        "form": "ordering",
+        "suite_expected_dir": "negative",
+        "literature": "Dangschat (1988)",
     },
     "H3b": {
         # D1 POLARITY: Δstatus leads ΔPOI. Status IMPROVES (delta_status_ordinal < 0) →
@@ -138,6 +193,11 @@ THESIS_HYPOTHESES: dict[str, dict] = {
         "citation": "Thesis Tabelle 6-16 (PDF p.91): H3b TENTATIVELY supported -- '(check mark)', 'eher bestaetigt', 'leichte Tendenz' -- not confirmed. Cross-lagged partial Spearman rho(dStatus_P, dPOI_F | dPOI_P, D4) with a Bezirksregion cluster-bootstrap CI (analysis/directional_inference.py); improved status = negative delta, so expected direction is negative",
         "expected_dir": "negative",
         "expected_sig": True,
+        "wording_de": "Die Veränderung des sozialen Status geht der Veränderung der lokalen Angebotsstruktur voraus.",
+        "thesis_verdict": "(✓)",
+        "form": "ordering",
+        "suite_expected_dir": "negative",
+        "literature": "Dangschat (1988)",
     },
     "H3c": {
         # D1 POLARITY: dynamism_score_t ~ status_index_t. Higher dynamism → more gentrified
@@ -146,6 +206,11 @@ THESIS_HYPOTHESES: dict[str, dict] = {
         "citation": "Thesis Tabelle 6-16 (PDF p.91): H3c INCONCLUSIVE (0, 'kein klares Bild'). Simultaneous co-movement; status_index inverse-numeric (index-definition.md §5), expected direction negative",
         "expected_dir": "negative",
         "expected_sig": False,  # unclear per thesis
+        "wording_de": "Die Veränderung des sozialen Status geschieht zeitgleich mit der Veränderung der lokalen Angebotsstruktur.",
+        "thesis_verdict": "0",
+        "form": "directional",
+        "suite_expected_dir": "negative",
+        "literature": "",
     },
 }
 
