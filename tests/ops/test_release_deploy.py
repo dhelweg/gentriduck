@@ -6,15 +6,17 @@ tests/ops/test_release_deploy.py
 
 No real data, dbt, network or deploy. Pure helpers are tested on plain inputs.
 `main(--dry-run --no-fetch)` runs against a throwaway git repo whose `origin/main` is a local ref
-(`git update-ref`), with fake `data/serving` parquet, map GeoJSON and a `data/.warehouse-source`.
-Covered:
-  - SKIP when tree + inputs + warehouse all match, incl. a tree-equal merge commit;
-  - REBUILD when the tree, the serving data, the GoatCounter code or the warehouse record changed,
-    or the build has no inputs fingerprint;
-  - refusal to rebuild when the warehouse wasn't built from origin/main's tree;
+(`git update-ref`), with fake `data/serving` parquet, map GeoJSON, a `data/.warehouse-source` and
+export stamps. Covered:
+  - SKIP when tree + inputs match and the build's data was exported from a warehouse certified
+    for origin/main, incl. a tree-equal merge commit and a later unrelated `poe build`;
+  - REBUILD when the tree, the serving data or the GoatCounter code changed, the build has no
+    inputs fingerprint or export stamps, or its data was exported from another tree's warehouse;
+  - refusal to rebuild when the CURRENT warehouse wasn't built from origin/main's tree;
   - the precondition refusals (HEAD not at origin/main, dirty tree, origin/main missing);
-  - Python/Node parity of the inputs fingerprint, via the real postbuild-build-source.mjs (skipped
-    if `node` isn't on PATH).
+  - `poe build` provenance: in-progress voiding (incl. an interrupted build), args classification;
+  - Python/Node parity of the inputs fingerprint and the embedded export stamps, via the real
+    postbuild-build-source.mjs (skipped if `node` isn't on PATH).
 Dry-run never executes a step, so neither `poe export-*`, `npm` nor `deploy-gh-pages.sh` runs.
 """
 
@@ -31,11 +33,18 @@ import pytest
 from ops import dbt_build
 from ops.build_provenance import (
     BUILD_SOURCE_NAME,
+    GEO_STAMP_REL,
+    SERVING_STAMP_REL,
     WAREHOUSE_SOURCE_REL,
+    classify_dbt_args,
+    clear_export_stamp,
+    export_problem,
     inputs_fingerprint,
     next_warehouse_record,
+    read_json,
     relevant_dirty,
     warehouse_problem,
+    write_export_stamp,
 )
 from ops.release_deploy import decide, main, smoke_check
 
@@ -46,7 +55,15 @@ INPUTS = "f" * 64
 WAREHOUSE = {"tree": TREE, "commit": "c" * 40, "clean": True, "complete": True, "recorded_at": "t"}
 
 
-def _src(tree=TREE, dirty=False, inputs=INPUTS, warehouse=WAREHOUSE):
+def _stamp(warehouse=WAREHOUSE):
+    return {"warehouse": warehouse, "source": WAREHOUSE_SOURCE_REL, "exported_at": "t"}
+
+
+def _exports(warehouse=WAREHOUSE):
+    return {"serving": _stamp(warehouse), "geo": _stamp(warehouse)}
+
+
+def _src(tree=TREE, dirty=False, inputs=INPUTS, exports=None):
     return {
         "tree": tree,
         "commit": "c" * 40,
@@ -54,7 +71,7 @@ def _src(tree=TREE, dirty=False, inputs=INPUTS, warehouse=WAREHOUSE):
         "dirty": dirty,
         "dirty_count": int(dirty),
         "inputs": inputs,
-        "warehouse": warehouse,
+        "exports": _exports() if exports is None else exports,
     }
 
 
@@ -92,18 +109,11 @@ def test_relevant_dirty_warehouse_rule_only_counts_transform():
 # --------------------------------------------------------------------------- decide
 
 
-def _decide(src, *, present=True, force=False, inputs=INPUTS, warehouse=WAREHOUSE):
-    return decide(
-        src,
-        TREE,
-        build_present=present,
-        force=force,
-        current_inputs=inputs,
-        current_warehouse=warehouse,
-    )
+def _decide(src, *, present=True, force=False, inputs=INPUTS):
+    return decide(src, TREE, build_present=present, force=force, current_inputs=inputs)
 
 
-def test_decide_skips_only_when_tree_inputs_and_warehouse_match():
+def test_decide_skips_when_tree_inputs_and_export_stamps_match():
     d = _decide(_src())
     assert not d.rebuild
     assert "== origin/main tree" in d.reason and "unchanged" in d.reason
@@ -115,7 +125,6 @@ def test_decide_skips_only_when_tree_inputs_and_warehouse_match():
         ({"force": True}, "--force-rebuild"),
         ({"present": False}, "missing or empty"),
         ({"inputs": "e" * 64}, "build inputs changed"),  # data changed since the build
-        ({"warehouse": {**WAREHOUSE, "recorded_at": "later"}}, "warehouse record changed"),
     ],
 )
 def test_decide_rebuilds_on_changed_environment(kwargs, why):
@@ -133,7 +142,9 @@ def test_decide_rebuilds_on_changed_environment(kwargs, why):
         ({k: v for k, v in _src().items() if k != "dirty"}, "dirty"),  # absent `dirty` = unsafe
         (_src(tree=OTHER), "!= origin/main tree"),
         (_src(inputs=None), "no inputs fingerprint"),  # built before the fingerprint existed
-        (_src(warehouse=None), "warehouse record changed"),
+        ({k: v for k, v in _src().items() if k != "exports"}, "no export stamps"),
+        (_src(exports={"serving": _stamp()}), "no geo export stamp"),
+        (_src(exports={"serving": _stamp(None), "geo": _stamp()}), "serving export: no data/"),
     ],
 )
 def test_decide_rebuilds_on_unproven_build(src, why):
@@ -142,11 +153,21 @@ def test_decide_rebuilds_on_unproven_build(src, why):
     assert why in d.reason
 
 
-def test_decide_rebuilds_when_warehouse_not_from_main():
-    stale = {**WAREHOUSE, "tree": OTHER}
-    d = _decide(_src(warehouse=stale), warehouse=stale)
+def test_decide_rebuilds_when_exported_from_other_tree_even_if_warehouse_recertified():
+    """Re-review MED 2: data exported from warehouse F; the warehouse was later re-certified for
+    T (= origin/main). The build still holds F's data, so it must rebuild."""
+    from_f = {**WAREHOUSE, "tree": OTHER}
+    d = _decide(_src(exports=_exports(from_f)))
     assert d.rebuild
-    assert "warehouse built from tree bbbbbbbbbbbb" in d.reason
+    assert "serving export: warehouse built from tree bbbbbbbbbbbb" in d.reason
+
+
+def test_export_problem():
+    assert export_problem(_stamp(), TREE, "serving") is None
+    assert "no geo export stamp" in export_problem(None, TREE, "geo")
+    assert "not a complete one" in export_problem(
+        _stamp({**WAREHOUSE, "complete": False}), TREE, "geo"
+    )
 
 
 # --------------------------------------------------------------------------- warehouse record
@@ -160,9 +181,31 @@ def test_warehouse_problem():
     assert "warehouse built from tree" in warehouse_problem(WAREHOUSE, OTHER)
 
 
-def _next(existing, rc=0, standard=True, tree=TREE, clean=True):
+@pytest.mark.parametrize(
+    ("args", "kind"),
+    [
+        ([], "full"),
+        (["--full-refresh"], "full"),
+        (["--fail-fast", "--threads", "4"], "full"),
+        (["--threads=8", "--full-refresh"], "full"),
+        (["--select", "int_gentrification_ts+", "mart_x"], "partial"),
+        (["-s", "a", "--full-refresh"], "partial"),
+        (["--select=a+", "--exclude", "b"], "partial"),
+        (["-m", "a"], "partial"),
+        (["--vars", "{bw: 500}"], "void"),
+        (["--target", "prod"], "void"),
+        (["--select", "a", "--defer", "--state", "target/"], "void"),
+        (["--full-refresh", "stray"], "void"),
+        (["--help"], "void"),
+    ],
+)
+def test_classify_dbt_args(args, kind):
+    assert classify_dbt_args(args) == kind
+
+
+def _next(existing, rc=0, kind="full", tree=TREE, clean=True):
     return next_warehouse_record(
-        existing, tree=tree, commit="c", clean=clean, returncode=rc, standard=standard, now="n"
+        existing, tree=tree, commit="c", clean=clean, returncode=rc, kind=kind, now="n"
     )
 
 
@@ -178,16 +221,17 @@ def test_next_warehouse_record_full_build_certifies():
 
 
 def test_next_warehouse_record_partial_build_same_tree_keeps_certificate():
-    assert _next(WAREHOUSE, standard=False) is None
+    assert _next(WAREHOUSE, kind="partial") is WAREHOUSE
 
 
 @pytest.mark.parametrize(
     ("kwargs", "reason"),
     [
-        ({"standard": False, "tree": OTHER}, "partial"),  # --select on another tree
-        ({"standard": False, "clean": False}, "partial"),
+        ({"kind": "partial", "tree": OTHER}, "partial"),  # --select on another tree
+        ({"kind": "partial", "clean": False}, "partial"),
+        ({"kind": "void"}, "change what or where"),  # --vars/--target/... on the same tree
         ({"rc": 1}, "exited 1"),  # failed full build
-        ({"rc": 1, "standard": False}, "exited 1"),
+        ({"rc": 1, "kind": "partial"}, "exited 1"),
     ],
 )
 def test_next_warehouse_record_voids_otherwise(kwargs, reason):
@@ -214,10 +258,8 @@ def _fake_build(web: Path, pages: int = 3, extra: dict | None = None, **src) -> 
     return build
 
 
-def _smoke(build, min_pages=1, inputs=INPUTS, warehouse=WAREHOUSE):
-    return smoke_check(
-        build, main_tree=TREE, min_pages=min_pages, expected_inputs=inputs, warehouse=warehouse
-    )
+def _smoke(build, min_pages=1, inputs=INPUTS):
+    return smoke_check(build, main_tree=TREE, min_pages=min_pages, expected_inputs=inputs)
 
 
 def test_smoke_check_passes_on_good_build(tmp_path):
@@ -254,10 +296,10 @@ def test_smoke_check_fails_on_inputs_mismatch(tmp_path):
     assert any("!= current inputs" in p for p in problems)
 
 
-def test_smoke_check_fails_on_warehouse_mismatch(tmp_path):
-    stale = {**WAREHOUSE, "tree": OTHER}
-    problems = _smoke(_fake_build(tmp_path, warehouse=stale), warehouse=stale)
-    assert any("warehouse built from tree" in p for p in problems)
+def test_smoke_check_fails_on_export_stamp_from_other_tree(tmp_path):
+    build = _fake_build(tmp_path, exports=_exports({**WAREHOUSE, "tree": OTHER}))
+    problems = _smoke(build)
+    assert any("export: warehouse built from tree" in p for p in problems)
 
 
 # --------------------------------------------------------------------------- inputs fingerprint
@@ -278,7 +320,8 @@ def test_fingerprint_tracks_parquet_geo_and_goatcounter(tmp_path):
     base = inputs_fingerprint(tmp_path, env={})
     assert inputs_fingerprint(tmp_path, env={}) == base  # deterministic
     (tmp_path / "data" / "serving" / "notes.txt").write_text("changed", encoding="utf-8")
-    assert inputs_fingerprint(tmp_path, env={}) == base  # non-parquet in serving ignored
+    write_export_stamp(tmp_path, SERVING_STAMP_REL, WAREHOUSE, source="x")
+    assert inputs_fingerprint(tmp_path, env={}) == base  # non-parquet in serving (incl. stamp)
     assert inputs_fingerprint(tmp_path, env={"GOATCOUNTER_CODE": "x"}) != base
     _write_inputs(tmp_path, parquet=b"PAR1-v2")
     assert inputs_fingerprint(tmp_path, env={}) != base
@@ -293,6 +336,15 @@ def test_fingerprint_goatcounter_file_vs_env(tmp_path):
     from_file = inputs_fingerprint(tmp_path, env={})
     assert inputs_fingerprint(tmp_path, env={"GOATCOUNTER_CODE": "abc"}) == from_file
     assert inputs_fingerprint(tmp_path, env={"GOATCOUNTER_CODE": ""}) == from_file  # empty = unset
+
+
+def test_export_stamp_write_and_clear(tmp_path):
+    write_export_stamp(tmp_path, GEO_STAMP_REL, WAREHOUSE, source=SERVING_STAMP_REL)
+    stamp = read_json(tmp_path / GEO_STAMP_REL)
+    assert stamp["warehouse"] == WAREHOUSE and stamp["source"] == SERVING_STAMP_REL
+    clear_export_stamp(tmp_path, GEO_STAMP_REL)
+    clear_export_stamp(tmp_path, GEO_STAMP_REL)  # idempotent
+    assert not (tmp_path / GEO_STAMP_REL).exists()
 
 
 # --------------------------------------------------------------------------- main() dry-run
@@ -313,10 +365,23 @@ def _tree(repo: Path, rev: str = "HEAD") -> str:
     return _git(repo, "rev-parse", f"{rev}^{{tree}}")
 
 
+def _write_warehouse(repo: Path, **overrides) -> dict:
+    rec = {**WAREHOUSE, **overrides}
+    (repo / WAREHOUSE_SOURCE_REL).write_text(json.dumps(rec), encoding="utf-8")
+    return rec
+
+
+def _export(repo: Path) -> None:
+    """What export-serving + export-area-geojson do to the stamps."""
+    warehouse = read_json(repo / WAREHOUSE_SOURCE_REL)
+    write_export_stamp(repo, SERVING_STAMP_REL, warehouse, source=WAREHOUSE_SOURCE_REL)
+    write_export_stamp(repo, GEO_STAMP_REL, warehouse, source=SERVING_STAMP_REL)
+
+
 @pytest.fixture
 def repo(tmp_path, monkeypatch):
     """A repo at a commit `origin/main` points to, with gitignored data/ and web/build/ as in the
-    real one, fake serving inputs, and a warehouse record certifying origin/main's tree."""
+    real one, fake serving inputs exported from a warehouse certified for origin/main's tree."""
     monkeypatch.delenv("GOATCOUNTER_CODE", raising=False)
     r = tmp_path / "repo"
     (r / "web" / "pages").mkdir(parents=True)
@@ -331,19 +396,17 @@ def repo(tmp_path, monkeypatch):
     _git(r, "update-ref", "refs/remotes/origin/main", "HEAD")
     _write_inputs(r)
     _write_warehouse(r, tree=_tree(r))
+    _export(r)
     return r
 
 
-def _write_warehouse(repo: Path, **overrides) -> dict:
-    rec = {**WAREHOUSE, **overrides}
-    (repo / WAREHOUSE_SOURCE_REL).write_text(json.dumps(rec), encoding="utf-8")
-    return rec
-
-
 def _good_build(repo: Path, **src) -> Path:
-    """A build whose .build-source matches the repo's current tree, inputs and warehouse."""
-    warehouse = json.loads((repo / WAREHOUSE_SOURCE_REL).read_text(encoding="utf-8"))
-    fields = {"tree": _tree(repo), "inputs": inputs_fingerprint(repo), "warehouse": warehouse}
+    """A build whose .build-source matches the repo's tree, inputs and export stamps."""
+    exports = {
+        "serving": read_json(repo / SERVING_STAMP_REL),
+        "geo": read_json(repo / GEO_STAMP_REL),
+    }
+    fields = {"tree": _tree(repo), "inputs": inputs_fingerprint(repo), "exports": exports}
     return _fake_build(repo / "web", **{**fields, **src})
 
 
@@ -351,7 +414,7 @@ def _run(repo: Path, *extra: str) -> int:
     return main(["--dry-run", "--no-fetch", "--min-pages", "3", *extra], repo=repo)
 
 
-def test_dry_run_skip_path_when_tree_inputs_and_warehouse_match(repo, capsys):
+def test_dry_run_skip_path_when_tree_inputs_and_exports_match(repo, capsys):
     _good_build(repo)
     assert _run(repo) == 0
     out = capsys.readouterr().out
@@ -360,6 +423,15 @@ def test_dry_run_skip_path_when_tree_inputs_and_warehouse_match(repo, capsys):
     assert "smoke check passed (3 HTML pages" in out
     assert "would run" in out and "deploy-gh-pages.sh" in out
     assert "nothing built or deployed" in out
+
+
+def test_skip_survives_unrelated_later_poe_build(repo, capsys):
+    """Re-review MED 2: e.g. the pre-push hook re-runs `poe build` on the same tree after the web
+    build. The warehouse record's recorded_at changes, but the exported data didn't, so SKIP."""
+    _good_build(repo)
+    _write_warehouse(repo, tree=_tree(repo), recorded_at="much later")
+    assert _run(repo) == 0
+    assert "SKIP rebuild" in capsys.readouterr().out
 
 
 def test_leading_double_dash_is_accepted(repo, capsys):
@@ -380,7 +452,7 @@ def test_dry_run_skip_path_accepts_tree_equal_merge_commit(repo, capsys):
 
 
 def test_dry_run_rebuilds_when_serving_data_changed(repo, capsys):
-    """The reviewer's repro: a new parquet vintage after the build must not deploy the old build."""
+    """The first review's repro: a new parquet vintage after the build must not deploy the old one."""
     build = _good_build(repo)
     _write_inputs(repo, parquet=b"PAR1-new-vintage")
     before = sorted(p.relative_to(build) for p in build.rglob("*"))
@@ -391,6 +463,19 @@ def test_dry_run_rebuilds_when_serving_data_changed(repo, capsys):
         assert step in out, step
     assert "would run the smoke check" in out
     assert sorted(p.relative_to(build) for p in build.rglob("*")) == before  # nothing ran
+
+
+def test_dry_run_rebuilds_when_exported_from_f_and_warehouse_recertified_t(repo, capsys):
+    """Re-review MED 2: the build's data came from warehouse F; the warehouse is now certified for
+    T = origin/main. REBUILD (re-export from T); the current-warehouse check then passes."""
+    _write_warehouse(repo, tree=OTHER)  # warehouse F
+    _export(repo)  # data exported from F
+    _good_build(repo)  # build embeds F's stamps
+    _write_warehouse(repo, tree=_tree(repo), recorded_at="later")  # re-certified for T
+    assert _run(repo) == 0
+    out = capsys.readouterr().out
+    assert "REBUILD: serving export: warehouse built from tree bbbbbbbbbbbb" in out
+    assert "export-serving" in out and "deploy-gh-pages.sh" in out
 
 
 def test_dry_run_rebuilds_when_goatcounter_override_set(repo, capsys, monkeypatch):
@@ -414,13 +499,6 @@ def test_dry_run_rebuilds_when_tree_differs(repo, capsys):
     assert "deploy-gh-pages.sh" in out
 
 
-def test_dry_run_rebuilds_when_warehouse_rebuilt_since(repo, capsys):
-    _good_build(repo)
-    _write_warehouse(repo, tree=_tree(repo), recorded_at="later")
-    assert _run(repo) == 0
-    assert "REBUILD: the warehouse record changed" in capsys.readouterr().out
-
-
 def test_no_npm_ci_if_node_modules_present(repo, capsys):
     (repo / "web" / "node_modules").mkdir()
     assert _run(repo) == 0
@@ -440,17 +518,17 @@ def test_force_rebuild_overrides_skip(repo, capsys):
     ("warehouse", "why"),
     [
         ({"tree": OTHER}, "warehouse built from tree bbbbbbbbbbbb"),
-        ({"complete": False, "reason": "partial/non-standard dbt build"}, "not a complete one"),
+        ({"complete": False, "reason": "dbt build in progress"}, "not a complete one"),
         ({"clean": False}, "uncommitted transform/ edits"),
         (None, "no data/.warehouse-source"),
     ],
 )
-def test_refuses_rebuild_when_warehouse_not_built_from_main(repo, capsys, warehouse, why):
+def test_refuses_rebuild_when_current_warehouse_not_from_main(repo, capsys, warehouse, why):
     if warehouse is None:
         (repo / WAREHOUSE_SOURCE_REL).unlink()
     else:
         _write_warehouse(repo, **{"tree": _tree(repo), **warehouse})
-    assert _run(repo) == 1
+    assert _run(repo) == 1  # no web/build -> REBUILD -> current-warehouse check refuses
     captured = capsys.readouterr()
     assert "REBUILD" in captured.out
     assert "refusing to rebuild" in captured.err and why in captured.err
@@ -486,26 +564,103 @@ def test_smoke_failure_blocks_deploy_on_skip_path(repo, capsys):
     assert "deploy-gh-pages.sh" not in captured.out
 
 
-# --------------------------------------------------------------------------- dbt_build.record
+# --------------------------------------------------------------------------- dbt_build
 
 
-def test_dbt_build_record_writes_keeps_and_voids(repo):
-    path = repo / WAREHOUSE_SOURCE_REL
-    path.unlink()
-    dbt_build.record(repo, 0, ["--full-refresh"])
-    rec = json.loads(path.read_text(encoding="utf-8"))
-    assert rec["tree"] == _tree(repo) and rec["complete"] and rec["clean"]
-    dbt_build.record(repo, 0, ["--select", "x+"])  # partial build of the same clean tree
-    assert json.loads(path.read_text(encoding="utf-8")) == rec
-    dbt_build.record(repo, 1, [])  # failed build
-    assert json.loads(path.read_text(encoding="utf-8"))["complete"] is False
+def _warehouse_file(repo: Path) -> dict:
+    return json.loads((repo / WAREHOUSE_SOURCE_REL).read_text(encoding="utf-8"))
 
 
-def test_dbt_build_record_marks_uncommitted_transform_edits(repo):
+def _fake_dbt(monkeypatch, behaviour):
+    """Patch subprocess.run so only the dbt call is faked; git calls still run for real."""
+    real_run = subprocess.run
+
+    def fake(cmd, *args, **kwargs):
+        if cmd and cmd[0] == "git":
+            return real_run(cmd, *args, **kwargs)
+        return behaviour(cmd)
+
+    monkeypatch.setattr(subprocess, "run", fake)
+
+
+def test_dbt_build_marks_in_progress_before_dbt_runs(repo, monkeypatch):
+    monkeypatch.setattr(dbt_build, "REPO_ROOT", repo)
+    seen = {}
+
+    def dbt(cmd):
+        seen["during"] = _warehouse_file(repo)
+        seen["cmd"] = cmd
+        return subprocess.CompletedProcess(cmd, 0)
+
+    _fake_dbt(monkeypatch, dbt)
+    assert dbt_build.main(["--full-refresh"]) == 0
+    assert seen["during"]["complete"] is False
+    assert seen["during"]["reason"] == "dbt build in progress"
+    assert seen["cmd"][1:] == [
+        "build", "--project-dir", "transform", "--profiles-dir", "transform", "--full-refresh"
+    ]  # fmt: skip
+    final = _warehouse_file(repo)
+    assert final["complete"] is True and final["tree"] == _tree(repo)
+
+
+def test_dbt_build_interrupted_leaves_void_record(repo, monkeypatch):
+    """Re-review HIGH 1: a killed/interrupted build must not leave `complete: true` behind."""
+    monkeypatch.setattr(dbt_build, "REPO_ROOT", repo)
+    assert _warehouse_file(repo)["complete"] is True  # a valid certificate before the run
+
+    def dbt(cmd):
+        raise KeyboardInterrupt
+
+    _fake_dbt(monkeypatch, dbt)
+    with pytest.raises(KeyboardInterrupt):
+        dbt_build.main([])
+    rec = _warehouse_file(repo)
+    assert rec["complete"] is False
+    assert rec["reason"] == "dbt build in progress"
+
+
+def test_dbt_build_partial_same_tree_restores_certificate(repo, monkeypatch):
+    monkeypatch.setattr(dbt_build, "REPO_ROOT", repo)
+    before = _warehouse_file(repo)
+    _fake_dbt(monkeypatch, lambda cmd: subprocess.CompletedProcess(cmd, 0))
+    assert dbt_build.main(["--select", "x+"]) == 0
+    assert _warehouse_file(repo) == before
+
+
+@pytest.mark.parametrize(
+    ("args", "rc", "reason"),
+    [
+        ([], 1, "exited 1"),
+        (["--vars", "{a: 1}"], 0, "change what or where"),
+        (["--target", "prod"], 0, "change what or where"),
+    ],
+)
+def test_dbt_build_voids_on_failure_or_void_args(repo, monkeypatch, args, rc, reason):
+    monkeypatch.setattr(dbt_build, "REPO_ROOT", repo)
+    _fake_dbt(monkeypatch, lambda cmd: subprocess.CompletedProcess(cmd, rc))
+    assert dbt_build.main(args) == rc  # dbt's exit code is passed through
+    rec = _warehouse_file(repo)
+    assert rec["complete"] is False and reason in rec["reason"]
+
+
+def test_dbt_build_record_failure_never_masks_dbt_rc(repo, monkeypatch):
+    monkeypatch.setattr(dbt_build, "REPO_ROOT", repo)
+    _fake_dbt(monkeypatch, lambda cmd: subprocess.CompletedProcess(cmd, 3))
+
+    def boom(*a, **k):
+        raise RuntimeError("disk on fire")
+
+    monkeypatch.setattr(dbt_build, "finish", boom)
+    assert dbt_build.main([]) == 3
+
+
+def test_dbt_build_marks_uncommitted_transform_edits(repo, monkeypatch):
+    monkeypatch.setattr(dbt_build, "REPO_ROOT", repo)
     (repo / "transform").mkdir()
     (repo / "transform" / "new_model.sql").write_text("select 1\n", encoding="utf-8")
-    dbt_build.record(repo, 0, [])
-    rec = json.loads((repo / WAREHOUSE_SOURCE_REL).read_text(encoding="utf-8"))
+    _fake_dbt(monkeypatch, lambda cmd: subprocess.CompletedProcess(cmd, 0))
+    assert dbt_build.main([]) == 0
+    rec = _warehouse_file(repo)
     assert rec["complete"] and rec["clean"] is False
 
 
@@ -515,8 +670,8 @@ def test_dbt_build_record_marks_uncommitted_transform_edits(repo):
 @pytest.mark.skipif(shutil.which("node") is None, reason="node not on PATH")
 def test_postbuild_mjs_matches_python_and_enables_skip(repo, capsys):
     """Run the real web/scripts/postbuild-build-source.mjs in the temp repo, then check that its
-    fingerprint equals Python's and that release-deploy SKIPs on the result, then REBUILDs after
-    the serving data changes."""
+    fingerprint equals Python's, that it embeds the export stamps, and that release-deploy SKIPs
+    on the result, then REBUILDs after the serving data changes."""
     scripts = repo / "web" / "scripts"
     scripts.mkdir()
     shutil.copy(REPO_ROOT / "web" / "scripts" / "postbuild-build-source.mjs", scripts)
@@ -524,6 +679,7 @@ def test_postbuild_mjs_matches_python_and_enables_skip(repo, capsys):
     _git(repo, "commit", "-q", "-m", "add postbuild")
     _git(repo, "update-ref", "refs/remotes/origin/main", "HEAD")
     _write_warehouse(repo, tree=_tree(repo))
+    _export(repo)
     _fake_build(repo / "web")  # pages; .build-source gets overwritten by the script below
     env = {k: v for k, v in os.environ.items() if k != "GOATCOUNTER_CODE"}
     subprocess.run(  # noqa: S603 -- fixed argv
@@ -537,10 +693,42 @@ def test_postbuild_mjs_matches_python_and_enables_skip(repo, capsys):
     assert src["inputs"] == inputs_fingerprint(repo, env={})
     assert src["tree"] == _tree(repo) and src["dirty"] is False and src["dirty_count"] == 0
     assert "dirty_paths" not in src  # not published
-    assert src["warehouse"] == json.loads((repo / WAREHOUSE_SOURCE_REL).read_text(encoding="utf-8"))
+    assert src["exports"] == {
+        "serving": read_json(repo / SERVING_STAMP_REL),
+        "geo": read_json(repo / GEO_STAMP_REL),
+    }
 
     assert _run(repo) == 0
     assert "SKIP rebuild" in capsys.readouterr().out
     _write_inputs(repo, parquet=b"PAR1-new-vintage")
     assert _run(repo) == 0
     assert "REBUILD: build inputs changed" in capsys.readouterr().out
+
+
+# --------------------------------------------------------------------------- export stamps (real)
+
+
+def test_export_serving_writes_stamp_and_interrupted_export_leaves_none(tmp_path, monkeypatch):
+    duckdb = pytest.importorskip("duckdb")
+    from transform import export_serving_parquet as es
+
+    db = tmp_path / "data" / "gentriduck.duckdb"
+    db.parent.mkdir(parents=True)
+    con = duckdb.connect(str(db))
+    con.execute("create table main.m as select 1 as x")
+    con.close()
+    monkeypatch.setattr(es, "REPO_ROOT", tmp_path)
+    monkeypatch.setattr(es, "DUCKDB_PATH", db)
+    monkeypatch.setattr(es, "OUT_DIR", tmp_path / "data" / "serving")
+    monkeypatch.setattr(es, "MART_MODELS", ["m"])
+    _write_warehouse(tmp_path)
+
+    es.main()
+    assert (tmp_path / "data" / "serving" / "m.parquet").is_file()
+    stamp = read_json(tmp_path / SERVING_STAMP_REL)
+    assert stamp["warehouse"] == WAREHOUSE and stamp["source"] == WAREHOUSE_SOURCE_REL
+
+    monkeypatch.setattr(es, "MART_MODELS", ["m", "missing_table"])
+    with pytest.raises(duckdb.Error):
+        es.main()  # fails mid-export
+    assert not (tmp_path / SERVING_STAMP_REL).exists()  # no stamp -> release-deploy rebuilds

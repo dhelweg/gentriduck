@@ -246,13 +246,17 @@ uv run poe release-deploy               # check → skip-or-rebuild → smoke ch
    records of things the tree hash can't see:
    - `inputs`: sha256 over `data/serving/*.parquet`, `web/static/geo/**` and the effective
      GoatCounter code (`GOATCOUNTER_CODE` if set, else `web/goatcounter-code.txt`);
-   - `warehouse`: a copy of `data/.warehouse-source` (see below).
+   - `exports`: the export stamps of the bundled data (see *Export stamps* below), which
+     record the warehouse the data was exported from.
 
    The rebuild is skipped when all of these hold:
    - the build ran on a clean tree equal to `origin/main^{tree}`;
    - the recomputed inputs fingerprint is unchanged, so a new data vintage always rebuilds;
-   - the warehouse record is unchanged and proves a complete, clean `poe build` from
-     `origin/main`'s tree.
+   - both embedded export stamps show the data was exported from a warehouse with a complete,
+     clean `poe build` of `origin/main`'s tree.
+
+   The *current* warehouse record isn't part of the skip decision. An unrelated later
+   `poe build` (e.g. the pre-push hook) doesn't change what `web/build` contains.
 
    This is the common case after a release with no new data: the PM already built and checked
    the site from `develop`, and the release merge didn't change the tree. Otherwise it
@@ -263,24 +267,42 @@ uv run poe release-deploy               # check → skip-or-rebuild → smoke ch
    exports would otherwise publish marts built from different model code.
 3. **Smoke-checks** `web/build`. It must be non-empty, have at least 500 HTML pages
    (`--min-pages`), and contain no `cartocdn` string (#351 removed the CARTO basemap). Its
-   `.build-source` must match `origin/main`'s tree, the current inputs fingerprint and the
-   current warehouse record.
+   `.build-source` must match `origin/main`'s tree and the current inputs fingerprint, and its
+   export stamps must be valid for `origin/main`.
 4. **Deploys** via `ops/deploy-gh-pages.sh`. The script is unchanged, so its SEC-2 (#191)
    hard-asserted gh-pages-only force-push is still the only push.
 
 **Warehouse provenance (`data/.warehouse-source`).** `poe build` and `poe build-full-refresh`,
 and so `poe refresh`/`resync` and the pre-push hook, now run `dbt build` through
 `ops/dbt_build.py`. Extra args still pass through (`poe build --select x+`), and dbt's exit code
-is unchanged. Afterwards the wrapper records the git tree the warehouse was built from, plus a
-`clean` flag (no uncommitted changes under `transform/`) and a `complete` flag:
-- a successful full build sets `complete: true`;
-- a failed build, or a `--select`/`--target`/other non-standard one, sets `complete: false`;
-- the exception is a successful partial build of the same clean tree, which keeps the existing
-  record.
+is unchanged. The wrapper records the git tree the warehouse was built from, plus a `clean`
+flag (no uncommitted changes under `transform/`) and a `complete` flag:
+- **Before dbt starts**, it sets `complete: false, reason: "dbt build in progress"`. A killed
+  or interrupted build (Ctrl-C, `taskkill`, crash) therefore never leaves a valid certificate.
+- **After dbt exits**:
+  - a successful full build (no extra args, or only `--full-refresh`, `--fail-fast`,
+    `--threads`) sets `complete: true`;
+  - a successful partial build (`--select`/`-s`/`-m`/`--models`/`--exclude`) of the same clean
+    tree restores the existing certificate;
+  - anything else voids it (`complete: false`): a failed build, a partial build of another
+    tree, or any other arg such as `--vars`, `--target`, `--defer` or `--state`.
 
-**First release after #361:** no machine has `data/.warehouse-source` yet, and older builds
-lack the fingerprint. So the first `release-deploy` will rebuild and refuse until you run
-`uv run poe build` once on a clean checkout of `main`.
+The provenance covers only `poe build` and `poe build-full-refresh` (and so `refresh`/`resync`).
+**`poe materialize-oa-getis-ord`, `poe oa-bandwidth-sweep` and any direct `dbt` call bypass the
+wrapper** and don't touch the record. Inside `refresh`/`resync`, `materialize-oa-getis-ord`
+re-materializes two models from the same tree right after the certified build. If you run dbt
+directly against the warehouse, run `uv run poe build` afterwards before a release.
+
+**Export stamps.** `poe export-serving` copies the warehouse record into
+`data/serving/.export-source`. `poe export-area-geojson` copies the serving stamp's warehouse
+into `data/.geo-export-source`; it lives in `data/` rather than `web/static/geo/`, so it isn't
+published with the site. Each export deletes its stamp before it starts, so an interrupted
+export leaves none, which forces a rebuild. `npm run build` embeds both stamps in
+`.build-source`.
+
+**First release after #361:** no machine has the warehouse record or export stamps yet, and
+older builds lack the fingerprint. So the first `release-deploy` will rebuild, and it refuses
+until you run `uv run poe build` once on a clean checkout of `main`.
 
 Flags go straight after the task name, e.g. `uv run poe release-deploy --dry-run`. A single
 leading `--` (`uv run poe release-deploy -- --dry-run`) is also accepted.
@@ -292,8 +314,8 @@ leading `--` (`uv run poe release-deploy -- --dry-run`) is also accepted.
 - `--min-pages N` overrides the smoke-check page floor.
 
 The task never runs `poe refresh`/`poe build` itself. For a new data vintage, run
-`uv run poe refresh` on `main` first. The new parquet changes the inputs fingerprint and the
-new warehouse record changes `warehouse`, so `release-deploy` rebuilds on its own.
+`uv run poe refresh` on `main` first. The new parquet changes the inputs fingerprint, so
+`release-deploy` rebuilds on its own.
 
 **Permission and ADR (pending maintainer approval):** `ops/deploy-gh-pages.sh` is a production
 publish, so auto mode blocks it unless the maintainer asks for it. #361 proposes adding exactly

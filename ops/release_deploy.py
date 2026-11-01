@@ -15,8 +15,11 @@ ADR-0012 Amendment A) must be rebuilt from `main` and republished. Nothing deplo
         - the build ran on a clean tree equal to `origin/main^{tree}`;
         - its `inputs` fingerprint (serving parquet + map GeoJSON + effective GoatCounter code,
           `ops.build_provenance.inputs_fingerprint()`) equals the current one;
-        - its `warehouse` record equals the current `data/.warehouse-source`, and that record
-          proves a complete, clean `poe build` from `origin/main`'s tree.
+        - its embedded export stamps (`data/serving/.export-source`, `data/.geo-export-source`)
+          prove the bundled data was exported from a warehouse with a complete, clean
+          `poe build` of `origin/main`'s tree. The CURRENT warehouse record doesn't matter
+          here: an unrelated later `poe build` (e.g. the pre-push hook) doesn't change what
+          `web/build` contains.
       Otherwise it rebuilds: `poe export-serving`, `poe export-area-geojson`, `npm ci` (only if
       `web/node_modules` is missing), `npm run sources`, `npm run build`. Before rebuilding it
       refuses unless `data/.warehouse-source` proves the warehouse was built from
@@ -24,7 +27,8 @@ ADR-0012 Amendment A) must be rebuilt from `main` and republished. Nothing deplo
   (c) Smoke check (`smoke_check()`): non-empty build, at least `--min-pages` HTML pages, no
       `cartocdn` string in any text asset (#351 removed the CARTO basemap; its reappearance means
       a regression to Evidence's tile-based `<AreaMap>`), and `.build-source` matches
-      `origin/main`'s tree, the current inputs fingerprint and the current warehouse record.
+      `origin/main`'s tree, the current inputs fingerprint and export stamps that are valid for
+      `origin/main`.
   (d) Deploy: `ops/deploy-gh-pages.sh`, unchanged. Its SEC-2 (#191) hard-asserted
       gh-pages-only force-push stays the only push this task performs.
 
@@ -54,10 +58,12 @@ if str(REPO_ROOT) not in sys.path:
 
 from ops.build_provenance import (  # noqa: E402 -- after the sys.path insert above
     BUILD_SOURCE_NAME,
+    EXPORT_STAMPS,
     WAREHOUSE_SOURCE_REL,
     WEB_DIRTY_RULE,
     ProvenanceError,
     dirty_lines,
+    export_problem,
     git,
     inputs_fingerprint,
     read_json,
@@ -99,10 +105,9 @@ def decide(
     build_present: bool,
     force: bool,
     current_inputs: str | None,
-    current_warehouse: dict | None,
 ) -> Decision:
-    """Skip the rebuild only if the existing build provably matches origin/main's tree, today's
-    gitignored inputs and a warehouse built from origin/main."""
+    """Skip the rebuild only if the existing build provably matches origin/main's tree and today's
+    gitignored inputs, and its data was exported from a warehouse built from origin/main."""
     if force:
         return Decision(True, "--force-rebuild given")
     if not build_present:
@@ -127,11 +132,7 @@ def decide(
             "build inputs changed since the build (data/serving, web/static/geo or the "
             f"GoatCounter code): {inputs[:12]} != {str(current_inputs)[:12]}",
         )
-    if build_source.get("warehouse") != current_warehouse:
-        return Decision(
-            True, f"the warehouse record changed since the build ({WAREHOUSE_SOURCE_REL})"
-        )
-    problem = warehouse_problem(current_warehouse, main_tree)
+    problem = exports_problem(build_source, main_tree)
     if problem:
         return Decision(True, problem)
     commit = str(build_source.get("commit") or "?")[:12]
@@ -139,8 +140,20 @@ def decide(
     return Decision(
         False,
         f"web/build was built from tree {tree[:12]} (commit {commit}, {built_at}) == origin/main "
-        f"tree; inputs {inputs[:12]} unchanged; warehouse built from origin/main",
+        f"tree; inputs {inputs[:12]} unchanged; data exported from a warehouse built from origin/main",
     )
+
+
+def exports_problem(build_source: dict, main_tree: str) -> str | None:
+    """None if every export stamp embedded in .build-source is valid for main_tree."""
+    exports = build_source.get("exports")
+    if not isinstance(exports, dict):
+        return f"{BUILD_SOURCE_NAME} has no export stamps"
+    for label in EXPORT_STAMPS:
+        problem = export_problem(exports.get(label), main_tree, label)
+        if problem:
+            return problem
+    return None
 
 
 def build_present(build_dir: Path) -> bool:
@@ -153,7 +166,6 @@ def smoke_check(
     main_tree: str,
     min_pages: int,
     expected_inputs: str,
-    warehouse: dict | None,
 ) -> list[str]:
     """Return a list of problems (empty = pass). Read-only."""
     if not build_present(build_dir):
@@ -190,11 +202,7 @@ def smoke_check(
                 f"{BUILD_SOURCE_NAME} inputs {str(src.get('inputs'))[:12]} != current inputs "
                 f"{expected_inputs[:12]} (data/serving, web/static/geo, GoatCounter code)"
             )
-        if src.get("warehouse") != warehouse:
-            problems.append(
-                f"{BUILD_SOURCE_NAME} warehouse record != current {WAREHOUSE_SOURCE_REL}"
-            )
-        problem = warehouse_problem(src.get("warehouse"), main_tree)
+        problem = exports_problem(src, main_tree)
         if problem:
             problems.append(problem)
     if not problems:
@@ -337,7 +345,6 @@ def main(argv: list[str] | None = None, repo: Path = REPO_ROOT) -> int:
             build_present=present,
             force=args.force_rebuild,
             current_inputs=current_inputs,
-            current_warehouse=warehouse,
         )
         verb = "REBUILD" if decision.rebuild else "SKIP rebuild"
         say(f"release-deploy: {verb}: {decision.reason}")
@@ -362,7 +369,6 @@ def main(argv: list[str] | None = None, repo: Path = REPO_ROOT) -> int:
                 main_tree=main_tree,
                 min_pages=args.min_pages,
                 expected_inputs=str(expected),
-                warehouse=warehouse,
             )
             if problems:
                 raise ReleaseDeployError("smoke check failed:\n  " + "\n  ".join(problems))

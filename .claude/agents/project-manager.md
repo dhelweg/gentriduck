@@ -72,7 +72,7 @@ You **self-integrate completed, reviewed work autonomously**; the human gate is 
   or a published mart, run **`uv run poe release-deploy`** from a clean checkout at `origin/main`
   (or a `develop` tip with the same tree). Don't wait to be asked. It skips the rebuild when
   `web/build` already matches `main`: same tree, same serving data/GeoJSON/GoatCounter
-  fingerprint, and a warehouse built from `main`. It smoke-checks the build, then runs
+  fingerprint, and data exported from a warehouse built from `main`. It smoke-checks the build, then runs
   `ops/deploy-gh-pages.sh`. If it refuses with "run `uv run poe build` on main first", do exactly
   that on a clean checkout of `main` and re-run. Never deploy a `develop` build whose tree
   differs from `main`. See `ops/README.md` → *Deploy*. The permission rule

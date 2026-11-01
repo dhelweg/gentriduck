@@ -273,8 +273,9 @@ web-build = { sequence = ["npm ci", "npm run sources", "python ../ops/time_web_b
 # Checks the checkout is at origin/main (or tree-equal to it) and clean. Skips the rebuild only
 # when web/build/.build-source (written by web/scripts/postbuild-build-source.mjs) records a clean
 # build from origin/main's tree, the same gitignored-inputs fingerprint (data/serving parquet,
-# web/static/geo, GoatCounter code) and the current data/.warehouse-source (written by `build`)
-# for origin/main's tree. Otherwise it refuses unless the warehouse was built from origin/main,
+# web/static/geo, GoatCounter code) and export stamps showing the data came from a warehouse
+# `build` certified for origin/main's tree. Otherwise it refuses unless the current warehouse
+# record (data/.warehouse-source) is for origin/main,
 # then runs export-serving -> export-area-geojson -> npm run sources -> npm run build. Then a
 # smoke check (page count, no `cartocdn`, provenance) and ops/deploy-gh-pages.sh (SEC-2
 # gh-pages-only push unchanged). `--dry-run` prints the plan and builds/deploys nothing;

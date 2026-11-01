@@ -11,6 +11,9 @@ without a rebuild:
      in `web/build/.build-source`; the skip path recomputes it.
    - `data/.warehouse-source`: written by `poe build` (ops/dbt_build.py). It records the tree the
      local warehouse was built from, so a rebuild can't export marts built from other code.
+   - export stamps (`data/serving/.export-source`, `data/.geo-export-source`): written by the
+     export scripts, recording which warehouse their output came from. The build embeds them;
+     the skip path checks them.
 
 `inputs_fingerprint()` and `relevant_dirty()` are mirrored in
 web/scripts/postbuild-build-source.mjs. Keep the two in sync;
@@ -49,6 +52,8 @@ def git(repo: Path, *args: str, strip: bool = True) -> str:
         cwd=repo,
         capture_output=True,
         text=True,
+        encoding="utf-8",
+        errors="replace",  # non-UTF-8 paths or messages must not crash provenance
     )
     if result.returncode != 0:
         raise ProvenanceError(f"git {' '.join(args)} failed: {result.stderr.strip()}")
@@ -169,6 +174,49 @@ def warehouse_problem(record: dict | None, main_tree: str) -> str | None:
     return None
 
 
+# dbt build args that keep the run a build of the warehouse as the default target, from this tree:
+#   FULL_ARGS change only speed/strictness; SELECTION_ARGS build a subset (a "partial" build).
+# Anything else (--vars, --target, --defer, --state, ...) changes what gets built or where, so it
+# voids the certificate. Value-taking flags may be given as `--flag value...` or `--flag=value`.
+FULL_FLAGS = frozenset({"--full-refresh", "--fail-fast"})
+FULL_VALUE_FLAGS = frozenset({"--threads"})
+SELECTION_VALUE_FLAGS = frozenset({"--select", "-s", "--models", "-m", "--exclude"})
+
+
+def classify_dbt_args(args: list[str]) -> str:
+    """'full', 'partial' or 'void' for the extra args passed to `poe build`."""
+    kind = "full"
+    takes_values = False  # the previous flag accepts the following non-flag tokens
+    for arg in args:
+        if not arg.startswith("-"):
+            if not takes_values:
+                return "void"  # a stray positional we don't understand
+            continue
+        flag, has_inline_value, _ = arg.partition("=")
+        if flag in SELECTION_VALUE_FLAGS:
+            kind = "partial"
+            takes_values = not has_inline_value
+        elif flag in FULL_VALUE_FLAGS:
+            takes_values = not has_inline_value
+        elif flag in FULL_FLAGS and not has_inline_value:
+            takes_values = False
+        else:
+            return "void"
+    return kind
+
+
+def in_progress_record(*, tree: str, commit: str, clean: bool, now: str) -> dict:
+    """Written BEFORE dbt starts, so an interrupted/killed build never leaves a valid certificate."""
+    return {
+        "tree": tree,
+        "commit": commit,
+        "clean": clean,
+        "recorded_at": now,
+        "complete": False,
+        "reason": "dbt build in progress",
+    }
+
+
 def next_warehouse_record(
     existing: dict | None,
     *,
@@ -176,28 +224,72 @@ def next_warehouse_record(
     commit: str,
     clean: bool,
     returncode: int,
-    standard: bool,
+    kind: str,
     now: str,
-) -> dict | None:
-    """What `poe build` should write to data/.warehouse-source. None = leave the file as it is.
+) -> dict:
+    """What `poe build` writes to data/.warehouse-source once dbt has finished.
 
-    - A successful standard build (no args besides --full-refresh) certifies the warehouse.
-    - A failed build or a non-standard one (--select, --exclude, --target, ...) can't certify it.
-      It leaves an existing certificate alone only if that certificate is for this same clean tree
-      and the run succeeded. Otherwise it writes `complete: false`, so a release rebuild refuses
-      until a full `poe build`.
+    `existing` is the record as it was BEFORE this run (not the in-progress marker).
+    - A successful 'full' build (see classify_dbt_args) certifies the warehouse.
+    - A successful 'partial' build (--select/--exclude) of the same clean tree that the existing
+      certificate is for keeps that certificate (it is returned unchanged).
+    - Anything else (failed, 'void' args, partial build of another or unclean tree) writes
+      `complete: false`, so a release rebuild refuses until a full `poe build`.
     """
     base = {"tree": tree, "commit": commit, "clean": clean, "recorded_at": now}
-    if returncode == 0 and standard:
+    if returncode == 0 and kind == "full":
         return {**base, "complete": True}
     if (
         returncode == 0
+        and kind == "partial"
         and clean
         and existing
         and existing.get("complete")
         and existing.get("clean")
         and existing.get("tree") == tree
     ):
-        return None
-    reason = f"dbt build exited {returncode}" if returncode else "partial/non-standard dbt build"
+        return existing
+    if returncode:
+        reason = f"dbt build exited {returncode}"
+    elif kind == "void":
+        reason = "dbt build with args that change what or where it builds"
+    else:
+        reason = "partial dbt build"
     return {**base, "complete": False, "reason": reason}
+
+
+# --------------------------------------------------------------------------- export stamps
+#
+# The serving parquet and the map GeoJSON are exported from the warehouse (GeoJSON via the
+# parquet). Each export writes a stamp recording the warehouse record its output came from, so the
+# skip path can check what `web/build` was really built from, independent of whatever the
+# warehouse record says now (an unrelated later `poe build`, e.g. the pre-push hook, must not
+# matter if the exported data didn't change).
+#   data/serving/.export-source  <- copy of data/.warehouse-source at export-serving time
+#   data/.geo-export-source      <- the serving stamp's warehouse at export-area-geojson time.
+#     It sits outside web/static/geo/ so it isn't bundled into (and published with) the site and
+#     doesn't enter the inputs fingerprint.
+# Each export deletes its stamp first, so an interrupted export leaves no stamp (-> rebuild).
+
+SERVING_STAMP_REL = "data/serving/.export-source"
+GEO_STAMP_REL = "data/.geo-export-source"
+EXPORT_STAMPS = {"serving": SERVING_STAMP_REL, "geo": GEO_STAMP_REL}
+
+
+def clear_export_stamp(repo: Path, rel: str) -> None:
+    (repo / rel).unlink(missing_ok=True)
+
+
+def write_export_stamp(repo: Path, rel: str, warehouse: dict | None, source: str) -> None:
+    path = repo / rel
+    path.parent.mkdir(parents=True, exist_ok=True)
+    stamp = {"warehouse": warehouse, "source": source, "exported_at": utc_now()}
+    path.write_text(json.dumps(stamp, indent=2) + "\n", encoding="utf-8")
+
+
+def export_problem(stamp: dict | None, main_tree: str, label: str) -> str | None:
+    """None if an export stamp proves its output came from a warehouse built from main_tree."""
+    if not stamp:
+        return f"no {label} export stamp (exported before #361 or interrupted)"
+    problem = warehouse_problem(stamp.get("warehouse"), main_tree)
+    return f"{label} export: {problem}" if problem else None

@@ -10,10 +10,13 @@
 //     web/static/geo/**, the effective GoatCounter code). Same byte stream as
 //     ops/build_provenance.py:inputs_fingerprint(); tests/ops/test_release_deploy.py checks that
 //     the two agree.
-//   - warehouse: a copy of data/.warehouse-source (written by `poe build`, ops/dbt_build.py): the
-//     tree the dbt warehouse behind the exported marts was built from.
+//   - exports: the export stamps of the bundled data, { serving, geo }, copied from
+//     data/serving/.export-source (transform/export_serving_parquet.py) and
+//     data/.geo-export-source (web/scripts/export_area_geojson.py). Each holds the
+//     data/.warehouse-source record (written by `poe build`, ops/dbt_build.py) of the warehouse the
+//     data was exported from. See ops/build_provenance.py "export stamps".
 //
-// Format (JSON): { tree, commit, built_at (UTC), dirty, dirty_count, inputs, warehouse }.
+// Format (JSON): { tree, commit, built_at (UTC), dirty, dirty_count, inputs, exports }.
 // `dirty` is true when the working tree had changes that could leak into the build (tracked edits
 // anywhere, or untracked files under web/). The filter must match
 // ops/build_provenance.py:relevant_dirty() (WEB_DIRTY_RULE) and its IGNORED_DIRTY_PATHS. The dirty
@@ -96,9 +99,9 @@ async function inputsFingerprint() {
   return h.digest('hex');
 }
 
-async function warehouseRecord() {
+async function readStamp(...parts) {
   try {
-    const data = JSON.parse(await readFile(join(REPO_ROOT, 'data', '.warehouse-source'), 'utf8'));
+    const data = JSON.parse(await readFile(join(REPO_ROOT, ...parts), 'utf8'));
     return data && typeof data === 'object' && !Array.isArray(data) ? data : null;
   } catch {
     return null;
@@ -137,14 +140,17 @@ try {
   console.warn(`postbuild-build-source: could not fingerprint inputs (${err.message}); recording null.`);
   record.inputs = null;
 }
-record.warehouse = await warehouseRecord();
+record.exports = {
+  serving: await readStamp('data', 'serving', '.export-source'),
+  geo: await readStamp('data', '.geo-export-source'),
+};
 
 try {
   await writeFile(join(BUILD_DIR, '.build-source'), JSON.stringify(record, null, 2) + '\n');
   console.log(
     `postbuild-build-source: tree ${String(record.tree).slice(0, 12)} commit ${String(record.commit).slice(0, 12)}` +
       ` dirty=${record.dirty} inputs ${String(record.inputs).slice(0, 12)}` +
-      ` warehouse ${String(record.warehouse?.tree).slice(0, 12)} -> build/.build-source`,
+      ` exported from warehouse ${String(record.exports.serving?.warehouse?.tree).slice(0, 12)} -> build/.build-source`,
   );
 } catch (err) {
   console.warn(`postbuild-build-source: could not write build/.build-source (${err.message}); release-deploy will rebuild.`);
