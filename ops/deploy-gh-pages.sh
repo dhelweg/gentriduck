@@ -15,6 +15,11 @@
 #     cd web && npm ci && npm run sources && npm run build   # -> web/build/ (incl. noindex meta)
 #     cd .. && ops/deploy-gh-pages.sh          # publish web/build -> gh-pages
 #
+# #361: `uv run poe release-deploy` (ops/release_deploy.py) wraps this whole sequence for the
+# release close-out. It checks the checkout is at origin/main, skips the rebuild when
+# web/build/.build-source shows the build came from origin/main's tree, smoke-checks the build,
+# then calls this script unchanged.
+#
 # One-time GitHub setup (maintainer, in the repo's web UI): Settings -> Pages ->
 # "Build and deployment" -> Source: "Deploy from a branch" -> Branch: gh-pages / (root).
 #

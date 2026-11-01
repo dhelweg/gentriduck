@@ -3,8 +3,8 @@
   "version": "0.0.1",
   "scripts": {
     "clean": "node -e \"require('fs').rmSync('build',{recursive:true,force:true})\"",
-    "build": "npm run clean && evidence build && node scripts/postbuild-noindex.mjs && node scripts/postbuild-analytics.mjs",
-    "build:strict": "npm run clean && evidence build:strict && node scripts/postbuild-noindex.mjs && node scripts/postbuild-analytics.mjs",
+    "build": "npm run clean && evidence build && node scripts/postbuild-noindex.mjs && node scripts/postbuild-analytics.mjs && node scripts/postbuild-build-source.mjs",
+    "build:strict": "npm run clean && evidence build:strict && node scripts/postbuild-noindex.mjs && node scripts/postbuild-analytics.mjs && node scripts/postbuild-build-source.mjs",
     "dev": "evidence dev --open /",
     "test": "evidence build",
     "sources": "evidence sources",

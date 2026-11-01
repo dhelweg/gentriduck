@@ -265,6 +265,15 @@ resync = { sequence = ["verify-data", "deps", "ingest", "build-full-refresh", "o
 # no new tool, same discipline as #251's ingestion driver). Exit code is unchanged
 # (a failed build still fails this poe sequence).
 web-build = { sequence = ["npm ci", "npm run sources", "python ../ops/time_web_build.py"], cwd = "web", default_item_type = "cmd" }
+# #361: one-step release close-out after the maintainer merges the weekly `develop -> main` PR.
+# Checks the checkout is at origin/main (or tree-equal to it) and clean; skips the rebuild when
+# web/build/.build-source (written by web/scripts/postbuild-build-source.mjs) records a clean build
+# from origin/main's tree; otherwise export-serving -> export-area-geojson -> npm run sources ->
+# npm run build. Then a smoke check (page count, no `cartocdn`, provenance) and
+# ops/deploy-gh-pages.sh (SEC-2 gh-pages-only push unchanged). `--dry-run` prints the plan and
+# builds/deploys nothing; `--force-rebuild` after a data refresh (the tree hash can't see
+# gitignored data). See ops/release_deploy.py and ops/README.md's Deploy section.
+release-deploy = "python ops/release_deploy.py"
 # O2 (#82) / ADR-0013: single-command reproducible whitepaper build (Quarto + Typst,
 # quarto-cli installed into the repo-local .venv). Renders docs/whitepaper/whitepaper.qmd to
 # HTML + PDF under the gitignored data/whitepaper/. Content is a staged slice (see the

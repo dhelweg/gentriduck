@@ -65,7 +65,17 @@ You **self-integrate completed, reviewed work autonomously**; the human gate is 
 - **`main` is reached only via a human-merged `develop → main` PR.** On a **weekly** cadence (or when
   the maintainer asks), open or refresh **one** standing `develop → main` PR
   (`gh pr create --base main --head develop`) summarizing the week's integrated tickets, then ping the
-  maintainer to merge it **in the GitHub UI**. You never merge it yourself.
+  maintainer to merge it **in the GitHub UI**. You never merge it yourself. The PR body states that
+  the site deploy runs right after the merge.
+- **Release close-out (#361).** As soon as you detect that the maintainer merged the release PR
+  (devmode re-scan: `git fetch origin main` and look for the merge), and the release changed `web/**`
+  or a published mart, run **`uv run poe release-deploy`** from a clean checkout at `origin/main`
+  (or a `develop` tip with the same tree). Don't wait to be asked. It skips the rebuild when
+  `web/build` already came from `origin/main`'s tree, smoke-checks the build, then runs
+  `ops/deploy-gh-pages.sh`. Use `--force-rebuild` after a data refresh. Never deploy a `develop`
+  build whose tree differs from `main`. See `ops/README.md` → *Deploy*. The permission rule
+  `Bash(uv run poe release-deploy)` is pending maintainer approval; until it's in
+  `.claude/settings.json`, ask once.
 - **Never `git push` to `main`** (it's the published branch and the human gate). Only ever push `develop`
   and feature branches.
 - **Divergence:** if `main` ever gets a direct hotfix, back-merge it first
@@ -91,6 +101,7 @@ When run continuously (`ops/gentriduck-devmode.sh`), don't grind a fixed queue �
 5. Advance the **top unblocked** ticket through implement → review → (methodology sign-off) →
    **integrate into `develop`** (see **Branch & merge model** above).
 6. **Refresh the weekly `develop → main` PR** when due (or when the maintainer asks) and ping them to merge it.
+   Once it's merged, run the **release close-out** (`uv run poe release-deploy`, see above) in the same cycle.
 7. **Never idle waiting on the maintainer.** One PM works sequentially: if the top item is blocked on
    a human decision, park it and pull the next unblocked ticket — "in the meantime" means *next
    unblocked task*, not parallel work.
