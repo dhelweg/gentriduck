@@ -70,9 +70,10 @@ where these 2018 hypotheses matter less than the live picture.
   design fixed in advance, once on the thesis's own era (2013–2019) and once on 2019–2025. Two of its
   findings hold in both: an area's social status is linked to its local business mix, modestly (H1),
   and fast food makes up a larger <i>share</i> of the gastronomy mix where officially measured
-  disadvantage is higher (H1b). None of its timing claims holds up: we find no detectable ordering
-  between commercial change and change in officially measured disadvantage, in either direction
-  (H3a–c). The link between today's mix and the next change (H2) is explained by an area's current
+  disadvantage is higher (H1b). On timing, we find no detectable ordering between commercial change
+  and change in officially measured disadvantage, in either direction (H3a–c): the thesis's tentative
+  finding that a fall in disadvantage comes first (H3b) is not reproduced, and its rejection of
+  "commerce first" (H3a) holds. The link between today's mix and the next change (H2) is explained by an area's current
   status level, which matches how the thesis itself read it. One result this page used to report, that
   a fall in disadvantage came before commercial change on recent data, is not reproduced; see the
   corrections below.
@@ -95,7 +96,7 @@ blended everything into one score, while this project keeps **what we're trying 
 status) strictly separate from **the commercial signal used to explain it** (see the
 [methodology page](/methodology)); and this re-check uses the thesis's actual predictor for the
 status hypotheses (H1, H2) — the **Offering Advantage**, a location quotient of how over- or
-under-represented a business category is in a given area, as the thesis computed it — rather than a
+under-represented a category of shops, services or public facilities is in a given area, as the thesis computed it — rather than a
 plain POI count. The timing hypotheses (H3a–c) use growth in commercial businesses only (shops,
 gastronomy, services, entertainment).
 
@@ -116,7 +117,11 @@ businesses only.
 Stadtentwicklung: unemployment, welfare receipt and child poverty. For *change* we say "change in
 officially measured disadvantage". It can fall for many reasons besides gentrification: jobs,
 children growing older, new-build residents, refugee accommodation closing, or benefit rule changes.
-Our change measure follows the official Dynamik ordering as closely as its three classes allow.
+Our change measure is a continuous score built from the same three indicators. Its rank agreement
+with the official three-class Dynamik ordering is about 0.7, which is 95–100% of the highest
+agreement any continuous score can reach, because most areas share one class. That also means the
+0.8 agreement we set in advance could not be reached in any edition and was missed. Where the score
+and the classes disagree, we report both.
 
 ```sql suite_cells
 -- #354 phase C: one row per (panel, hypothesis), read from the committed results CSV via the
@@ -179,7 +184,8 @@ order by h.sort_order
 ```
 
 ```sql suite_run
-select distinct run_sha from ${suite_cells}
+-- string_agg so a mixed-run CSV shows every run_sha instead of hiding all but one.
+select string_agg(distinct run_sha, ', ') as run_sha from ${suite_cells}
 ```
 
 <DataTable data={suite_table} rows=8 sortable=false downloadable=false wrapTitles=true formatColumnTitles=false>
@@ -237,9 +243,8 @@ official status index were very small and of mixed sign. At planning-area level,
 slightly with lower official status; at district-region level, the population-weighted count went
 slightly with higher status. The thesis text describes the planning-area result as in line with the
 hypothesis; under the index's own sign convention it is not. The "undecided" verdict is unaffected.
-In OpenStreetMap this category consists mostly of playgrounds and public table-tennis tables.
-
-These are provided where many families live, including large estates. Our check on organised sport
+In OpenStreetMap this category is mostly public playgrounds and table-tennis tables, which are
+provided where many families live, including large estates. Our check on organised sport
 facilities alone had too little data to report.
 
 </Details>
@@ -259,8 +264,10 @@ correlation running through the current status level.
 
 We find no detectable ordering in either direction. Business change did not measurably come before
 change in officially measured disadvantage, nor the other way round, and they did not measurably move
-together within the same period (all effects negligible, |ρ| ≤ 0.06). This holds for both eras, for
-each window separately, and on the official classes. It rules out a strong ordering, not a small one.
+together within the same period (all main-test effects negligible, |ρ| ≤ 0.06). This holds for both
+eras and for each starting point separately. On the official classes, one of the many secondary
+checks came out weakly the other way for H3b in the thesis era (ρ 0.10); about 4–5 such checks are
+expected by chance, so we do not read it as a finding. It rules out a strong ordering, not a small one.
 Every window contains shocks and rule changes (pandemic, refugee arrivals entering the benefit
 statistics in 2016–18 and 2022, the 2023 Bürgergeld reform).
 

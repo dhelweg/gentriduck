@@ -55,7 +55,7 @@ number of fast-food outlets per resident shows no clear link, and this is an are
 a statement about any business or its owners. The timing story — which comes first, commercial
 change or change in officially measured disadvantage? — shows no detectable ordering in either
 direction, in either era, and an area's current status level predicts its next change better than
-its commercial mix does. **Read as: treat the commercial mix, especially fast food's share of the
+its mix of shops, services and public facilities does, and adding that mix adds nothing. **Read as: treat the commercial mix, especially fast food's share of the
 gastronomy mix, as one description of an area's current situation among several — not as a
 predictor of change.**
 → [The 2018 thesis, re-checked](/thesis-recheck) — the full hypothesis-by-hypothesis comparison.

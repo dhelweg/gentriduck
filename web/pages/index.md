@@ -83,9 +83,10 @@ The original thesis asked whether the churn of shops, cafés and restaurants in 
 neighbourhood tracks its social change. Re-tested in 2026 with a design fixed in advance, on both
 the thesis's own era (2013–2019) and 2019–2025, two of its findings hold: an area's social status is
 linked to its local business mix, modestly, and **fast food makes up a larger share of the
-gastronomy mix where officially measured disadvantage is higher**. Its timing claims do not: we find
-no detectable ordering between commercial change and change in officially measured disadvantage, in
-either direction. We show where the thesis holds and where it does not, openly, rather than papering
+gastronomy mix where officially measured disadvantage is higher**. Its tentative timing finding, that
+a fall in disadvantage comes before commercial change, is not reproduced: we find no detectable
+ordering between commercial change and change in officially measured disadvantage, in either
+direction. We show where the thesis holds and where it does not, openly, rather than papering
 over it.
 
 **→ [The 2018 thesis, re-checked hypothesis by hypothesis](/thesis-recheck)** — the full comparison
