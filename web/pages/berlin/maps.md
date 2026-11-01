@@ -32,7 +32,7 @@ sidebar_position: 2
   change needed there.
 
   #309: carved the `standard`/`bzr` (2018 thesis, Dec 2016 snapshot) map out of this page entirely
-  -- it now lives as a small, fixed map on /thesis-recheck, next to the six-hypothesis writeup,
+  -- it now lives as a small, fixed map on /thesis-recheck, next to the hypothesis writeup,
   where it actually belongs.
 
   #310 (map granularity selector): reintroduces a real `area_level` picker, as #309's carve-out

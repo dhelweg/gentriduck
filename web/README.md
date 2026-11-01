@@ -53,6 +53,10 @@ GOATCOUNTER_CODE=<other-site-code> npm run build
 ## Layout
 - `sources/gentriduck_marts/` — DuckDB source (`:memory:`, reads `../data/serving/*.parquet`
   directly via `read_parquet`); one `.sql` file per published mart.
+- `sources/gentriduck_findings/` — #354: the same DuckDB connector (`:memory:`), for small
+  committed, signed-off analysis result tables under `docs/` (today
+  `docs/epic-e/thesis-hypothesis-suite-results.csv`, read via `read_csv`), so pages never hand-copy
+  published statistics. Only signed-off tables belong here; large or raw data stays gitignored.
 - `pages/` — markdown + SQL pages (data-analyst-authored content; web-engineer owns structure).
 - `scripts/export_area_geojson.py` — G1c (#132): joins `dim_area_geometry` + `gentrification_index`
   from the F2 parquet snapshot into static per-`area_level` GeoJSON `FeatureCollection`s under

@@ -12,6 +12,11 @@ sidebar_position: 20
   is now a redirect stub (`pages/methodology-comparison.md`). No indicator/weight/normalization
   change of any kind in this edit — this remains a restatement of the governed methodology
   (`docs/methodology/index-definition.md`), same as before I3.
+  #354 phase C (2026-11): two copy-only touches, no methodology change. §1's "supports that ordering
+  only on recent official data" sentence is replaced (the pre-registered suite does not reproduce
+  H3b in either era: docs/epic-e/E1b-berlin-hypothesis-suite-findings.md, domain sign-off §4), and
+  §7's "rho +0.15, n=433" pointer now cites E1 directly, because /thesis-recheck no longer shows
+  that single-number H1 proxy.
 -->
 
 <Hero compact eyebrow="Chapter 3 — The Evidence · reference / rulebook" title="Methodology & data sources" lede="What Gentriduck measures, where the numbers come from, and where they should not be trusted too far — the plain-language decoder every other Chapter-3 page on this site links back to." />
@@ -46,8 +51,8 @@ processes with an order to them:
 Döring & Ulbricht (2016) operationalised gentrification susceptibility for Berlin's planning
 areas, and the 2018 thesis tentatively found (its summary table rates it "rather confirmed") that the **social cycle leads the
 commercial cycle**: a neighbourhood's social composition tends to change *before* its commercial
-landscape visibly follows. This project's re-check supports that ordering only on recent official
-data — see [the thesis re-check](/thesis-recheck). "Gentrification pressure," in this
+landscape visibly follows. A 2026 re-test with a design fixed in advance does not reproduce that
+ordering, for the thesis era or for 2019–2025 — see [the thesis re-check](/thesis-recheck). "Gentrification pressure," in this
 project, means: **is a small area's official social-status classification improving, and does its
 commercial/demographic profile look like an area earlier or later in that same process?** It is a
 *signal*, drawn from the official record and from OpenStreetMap, not a certainty. The site
@@ -455,7 +460,8 @@ same-outcome comparison possible for the first time:
   **statistically significant but wrong-signed** (n=435 areas — same result as before,
   repeated here as the left side of the comparison). This comparison was run in July 2026,
   before the October 2026 OpenStreetMap deletion fix; the re-run on corrected data gives the
-  same wrong-signed result (rho +0.15, n=433 — see the [thesis re-check](/thesis-recheck)).
+  same wrong-signed result (rho +0.15, n=433 — see the
+  [E1 regression findings](https://github.com/dhelweg/gentriduck/blob/main/docs/epic-e/E1-regression-findings.md)).
 - **Improved** (the curated, theory-weighted basket), now computed *natively* for 2018
   thesis-era boundaries, against the *same* 2018 golden data: **essentially no
   correlation** (rho ≈ 0.007, n=436, not statistically significant) — numerically
