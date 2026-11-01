@@ -887,5 +887,832 @@
         "sources_S": "S_2019 = mean z(arbeitslose_anteil[s1], transferbezug_anteil[s3], kinderarmut_anteil[s4])"
       }
     ]
+  },
+  "HH/full": {
+    "city": "HH",
+    "coefficients": {
+      "H1": [
+        [
+          "oa_cat:Tourism|Accommodation",
+          0.2438
+        ],
+        [
+          "oa_cat:Public Space|Phone",
+          0.1641
+        ],
+        [
+          "oa_cat:Public Space|Post",
+          0.1534
+        ],
+        [
+          "oa_cat:Public Space|Recycling",
+          0.1293
+        ],
+        [
+          "oa_cat:Public Space|Other",
+          0.1275
+        ],
+        [
+          "oa_cat:Public Space|Mail",
+          -0.1131
+        ],
+        [
+          "oa_cat:Public Space|Bench",
+          -0.079
+        ],
+        [
+          "oa_cat:Public Space|Toilet",
+          -0.0785
+        ],
+        [
+          "oa_cat:Tourism|Sights",
+          -0.0613
+        ],
+        [
+          "oa_cat:Mobility|Individual",
+          -0.0406
+        ]
+      ],
+      "H2": [
+        [
+          "oa_cat:Public Space|Post",
+          -0.1681
+        ],
+        [
+          "oa_cat:Public Space|Bench",
+          0.1021
+        ],
+        [
+          "oa_cat:Mobility|Individual",
+          -0.0989
+        ],
+        [
+          "oa_cat:Mobility|Public Transport",
+          -0.0949
+        ],
+        [
+          "oa_cat:Public Space|Other",
+          0.0927
+        ],
+        [
+          "oa_cat:Public Space|Toilet",
+          0.0794
+        ],
+        [
+          "oa_cat:Public Space|Recycling",
+          0.0674
+        ],
+        [
+          "oa_cat:Public Space|Phone",
+          0.039
+        ],
+        [
+          "oa_cat:Public Space|Mail",
+          0.0326
+        ]
+      ]
+    },
+    "coverage": {
+      "H1a": {
+        "dropped": "share in status classes 3-4 18%",
+        "n_retained": 100,
+        "n_total": 857,
+        "retained": "share in status classes 3-4 17%"
+      },
+      "H1b": {
+        "dropped": "share in status classes 3-4 18%",
+        "n_retained": 100,
+        "n_total": 857,
+        "retained": "share in status classes 3-4 17%"
+      },
+      "H1c": {
+        "dropped": "share in status classes 3-4 24%",
+        "n_retained": 808,
+        "n_total": 857,
+        "retained": "share in status classes 3-4 17%"
+      }
+    },
+    "definition_breaks": {},
+    "direction": "no directional evidence either way",
+    "feature_lists": {
+      "H1_category": [
+        "Mobility|Individual",
+        "Mobility|Public Transport",
+        "Public Space|Bench",
+        "Public Space|Mail",
+        "Public Space|Other",
+        "Public Space|Phone",
+        "Public Space|Post",
+        "Public Space|Recycling",
+        "Public Space|Toilet",
+        "Tourism|Accommodation",
+        "Tourism|Info",
+        "Tourism|Sights"
+      ],
+      "H1_commercial": [],
+      "H1_domain": [
+        "Entertainment",
+        "Gastronomy",
+        "Mobility",
+        "Office",
+        "Other",
+        "Public Service",
+        "Public Space",
+        "Religion",
+        "Retail",
+        "Services",
+        "Sports and Recreation",
+        "Tourism",
+        "Vacancy"
+      ],
+      "H2_category": [
+        "Mobility|Individual",
+        "Mobility|Public Transport",
+        "Public Space|Bench",
+        "Public Space|Mail",
+        "Public Space|Other",
+        "Public Space|Phone",
+        "Public Space|Post",
+        "Public Space|Recycling",
+        "Public Space|Toilet"
+      ],
+      "H2_domain": [
+        "Entertainment",
+        "Gastronomy",
+        "Mobility",
+        "Office",
+        "Other",
+        "Public Service",
+        "Public Space",
+        "Religion",
+        "Retail",
+        "Services",
+        "Sports and Recreation",
+        "Tourism",
+        "Vacancy"
+      ]
+    },
+    "feature_lists_prefit": {
+      "H1_category": [
+        "Mobility|Individual",
+        "Mobility|Public Transport",
+        "Public Space|Bench",
+        "Public Space|Mail",
+        "Public Space|Other",
+        "Public Space|Phone",
+        "Public Space|Post",
+        "Public Space|Recycling",
+        "Public Space|Toilet",
+        "Tourism|Accommodation",
+        "Tourism|Info",
+        "Tourism|Sights"
+      ],
+      "H2_category": [
+        "Mobility|Individual",
+        "Mobility|Public Transport",
+        "Public Space|Bench",
+        "Public Space|Mail",
+        "Public Space|Other",
+        "Public Space|Phone",
+        "Public Space|Post",
+        "Public Space|Recycling",
+        "Public Space|Toilet"
+      ]
+    },
+    "h2_incremental": {
+      "auc_base": 0.576587,
+      "auc_full": 0.546293,
+      "ci_high": 0.00507,
+      "ci_low": -0.061372,
+      "estimate": -0.030294
+    },
+    "hh_classes": [
+      {
+        "ceiling_dynamik": 0.766386,
+        "ceiling_status": 0.853845,
+        "dynamik_counts": {
+          "1": 110,
+          "2": 618,
+          "3": 105
+        },
+        "edition": 2013,
+        "matches_published": null,
+        "n": 833,
+        "status_counts": {
+          "1": 152,
+          "2": 534,
+          "3": 65,
+          "4": 82
+        }
+      },
+      {
+        "ceiling_dynamik": 0.684236,
+        "ceiling_status": 0.853086,
+        "dynamik_counts": {
+          "1": 86,
+          "2": 679,
+          "3": 74
+        },
+        "edition": 2014,
+        "matches_published": null,
+        "n": 839,
+        "status_counts": {
+          "1": 149,
+          "2": 539,
+          "3": 68,
+          "4": 83
+        }
+      },
+      {
+        "ceiling_dynamik": 0.67911,
+        "ceiling_status": 0.849661,
+        "dynamik_counts": {
+          "1": 87,
+          "2": 682,
+          "3": 70
+        },
+        "edition": 2015,
+        "matches_published": null,
+        "n": 839,
+        "status_counts": {
+          "1": 149,
+          "2": 543,
+          "3": 66,
+          "4": 81
+        }
+      },
+      {
+        "ceiling_dynamik": 0.68836,
+        "ceiling_status": 0.854589,
+        "dynamik_counts": {
+          "1": 79,
+          "2": 683,
+          "3": 85
+        },
+        "edition": 2016,
+        "matches_published": true,
+        "n": 847,
+        "status_counts": {
+          "1": 156,
+          "2": 542,
+          "3": 67,
+          "4": 82
+        }
+      },
+      {
+        "ceiling_dynamik": 0.501655,
+        "ceiling_status": 0.859713,
+        "dynamik_counts": {
+          "1": 31,
+          "2": 768,
+          "3": 47
+        },
+        "edition": 2017,
+        "matches_published": true,
+        "n": 846,
+        "status_counts": {
+          "1": 158,
+          "2": 535,
+          "3": 77,
+          "4": 76
+        }
+      },
+      {
+        "ceiling_dynamik": 0.451189,
+        "ceiling_status": 0.855409,
+        "dynamik_counts": {
+          "1": 22,
+          "2": 786,
+          "3": 40
+        },
+        "edition": 2018,
+        "matches_published": true,
+        "n": 848,
+        "status_counts": {
+          "1": 151,
+          "2": 542,
+          "3": 79,
+          "4": 76
+        }
+      },
+      {
+        "ceiling_dynamik": 0.485263,
+        "ceiling_status": 0.847579,
+        "dynamik_counts": {
+          "1": 31,
+          "2": 779,
+          "3": 42
+        },
+        "edition": 2019,
+        "matches_published": true,
+        "n": 852,
+        "status_counts": {
+          "1": 149,
+          "2": 554,
+          "3": 73,
+          "4": 76
+        }
+      },
+      {
+        "ceiling_dynamik": 0.494761,
+        "ceiling_status": 0.836977,
+        "dynamik_counts": {
+          "1": 37,
+          "2": 774,
+          "3": 39
+        },
+        "edition": 2020,
+        "matches_published": true,
+        "n": 850,
+        "status_counts": {
+          "1": 141,
+          "2": 565,
+          "3": 72,
+          "4": 72
+        }
+      },
+      {
+        "ceiling_dynamik": 0.572638,
+        "ceiling_status": 0.839626,
+        "dynamik_counts": {
+          "1": 52,
+          "2": 747,
+          "3": 54
+        },
+        "edition": 2021,
+        "matches_published": true,
+        "n": 853,
+        "status_counts": {
+          "1": 143,
+          "2": 564,
+          "3": 71,
+          "4": 75
+        }
+      },
+      {
+        "ceiling_dynamik": 0.60395,
+        "ceiling_status": 0.853542,
+        "dynamik_counts": {
+          "1": 61,
+          "2": 733,
+          "3": 59
+        },
+        "edition": 2022,
+        "matches_published": true,
+        "n": 853,
+        "status_counts": {
+          "1": 159,
+          "2": 547,
+          "3": 70,
+          "4": 77
+        }
+      },
+      {
+        "ceiling_dynamik": 0.435561,
+        "ceiling_status": 0.850413,
+        "dynamik_counts": {
+          "1": 21,
+          "2": 798,
+          "3": 37
+        },
+        "edition": 2023,
+        "matches_published": true,
+        "n": 856,
+        "status_counts": {
+          "1": 153,
+          "2": 553,
+          "3": 88,
+          "4": 62
+        }
+      },
+      {
+        "ceiling_dynamik": 0.452339,
+        "ceiling_status": 0.85555,
+        "dynamik_counts": {
+          "1": 25,
+          "2": 794,
+          "3": 38
+        },
+        "edition": 2024,
+        "matches_published": true,
+        "n": 857,
+        "status_counts": {
+          "1": 161,
+          "2": 547,
+          "3": 84,
+          "4": 65
+        }
+      },
+      {
+        "ceiling_dynamik": 0.518429,
+        "ceiling_status": 0.858637,
+        "dynamik_counts": {
+          "1": 41,
+          "2": 772,
+          "3": 44
+        },
+        "edition": 2025,
+        "matches_published": true,
+        "n": 857,
+        "status_counts": {
+          "1": 163,
+          "2": 543,
+          "3": 89,
+          "4": 62
+        }
+      }
+    ],
+    "label": "Hamburg full chain (Sozialmonitoring 2016/2019/2022/2025)",
+    "n_clusters_total": 99,
+    "n_gebiete_stadtteil_label_varies": 41,
+    "notes": [],
+    "osm_city_totals": {
+      "2011": 14938,
+      "2012": 18075,
+      "2013": 22310,
+      "2014": 24807,
+      "2015": 26803,
+      "2016": 29762,
+      "2017": 32246,
+      "2018": 33847,
+      "2019": 38857,
+      "2020": 42469,
+      "2021": 45102,
+      "2022": 47544,
+      "2023": 50248,
+      "2024": 53969,
+      "2025": 60205
+    },
+    "panel": "full",
+    "pivot_diff": {
+      "H3a": {
+        "ci_high": 0.165299,
+        "ci_low": -0.051137,
+        "estimate": 0.056413,
+        "first": 2016,
+        "heterogeneous": false,
+        "last": 2022
+      },
+      "H3b": {
+        "ci_high": 0.148,
+        "ci_low": -0.08237,
+        "estimate": 0.035223,
+        "first": 2016,
+        "heterogeneous": false,
+        "last": 2022
+      }
+    },
+    "sport_types_h1": [
+      [
+        "Recreation|Playground",
+        592
+      ],
+      [
+        "Sport|Table Tennis",
+        307
+      ],
+      [
+        "Sport|Fitness Center",
+        148
+      ],
+      [
+        "Sport|Sports Center",
+        67
+      ],
+      [
+        "Recreation|Sauna",
+        21
+      ],
+      [
+        "Sport|Basketball",
+        9
+      ],
+      [
+        "Sport|Swimming",
+        2
+      ],
+      [
+        "Sport|Tennis",
+        2
+      ],
+      [
+        "Recreation|Water Sports",
+        1
+      ],
+      [
+        "Sport|Martial Arts",
+        1
+      ]
+    ],
+    "validity": []
+  },
+  "HH/modern": {
+    "city": "HH",
+    "coefficients": {
+      "H1": [
+        [
+          "oa_cat:Tourism|Accommodation",
+          0.2438
+        ],
+        [
+          "oa_cat:Public Space|Phone",
+          0.1641
+        ],
+        [
+          "oa_cat:Public Space|Post",
+          0.1534
+        ],
+        [
+          "oa_cat:Public Space|Recycling",
+          0.1293
+        ],
+        [
+          "oa_cat:Public Space|Other",
+          0.1275
+        ],
+        [
+          "oa_cat:Public Space|Mail",
+          -0.1131
+        ],
+        [
+          "oa_cat:Public Space|Bench",
+          -0.079
+        ],
+        [
+          "oa_cat:Public Space|Toilet",
+          -0.0785
+        ],
+        [
+          "oa_cat:Tourism|Sights",
+          -0.0613
+        ],
+        [
+          "oa_cat:Mobility|Individual",
+          -0.0406
+        ]
+      ],
+      "H2": [
+        [
+          "oa_cat:Public Space|Post",
+          -0.4932
+        ],
+        [
+          "oa_cat:Public Space|Other",
+          0.2417
+        ],
+        [
+          "oa_cat:Public Space|Bench",
+          -0.1889
+        ],
+        [
+          "oa_cat:Public Space|Recycling",
+          -0.1531
+        ],
+        [
+          "oa_cat:Mobility|Public Transport",
+          -0.0956
+        ],
+        [
+          "oa_cat:Public Space|Toilet",
+          -0.0886
+        ],
+        [
+          "oa_cat:Public Space|Phone",
+          0.0806
+        ],
+        [
+          "oa_cat:Public Space|Mail",
+          0.051
+        ],
+        [
+          "oa_cat:Mobility|Individual",
+          0.0008
+        ]
+      ]
+    },
+    "coverage": {
+      "H1a": {
+        "dropped": "share in status classes 3-4 18%",
+        "n_retained": 100,
+        "n_total": 857,
+        "retained": "share in status classes 3-4 17%"
+      },
+      "H1b": {
+        "dropped": "share in status classes 3-4 18%",
+        "n_retained": 100,
+        "n_total": 857,
+        "retained": "share in status classes 3-4 17%"
+      },
+      "H1c": {
+        "dropped": "share in status classes 3-4 24%",
+        "n_retained": 808,
+        "n_total": 857,
+        "retained": "share in status classes 3-4 17%"
+      }
+    },
+    "definition_breaks": {},
+    "direction": "no directional evidence either way",
+    "feature_lists": {
+      "H1_category": [
+        "Mobility|Individual",
+        "Mobility|Public Transport",
+        "Public Space|Bench",
+        "Public Space|Mail",
+        "Public Space|Other",
+        "Public Space|Phone",
+        "Public Space|Post",
+        "Public Space|Recycling",
+        "Public Space|Toilet",
+        "Tourism|Accommodation",
+        "Tourism|Info",
+        "Tourism|Sights"
+      ],
+      "H1_commercial": [],
+      "H1_domain": [
+        "Entertainment",
+        "Gastronomy",
+        "Mobility",
+        "Office",
+        "Other",
+        "Public Service",
+        "Public Space",
+        "Religion",
+        "Retail",
+        "Services",
+        "Sports and Recreation",
+        "Tourism",
+        "Vacancy"
+      ],
+      "H2_category": [
+        "Mobility|Individual",
+        "Mobility|Public Transport",
+        "Public Space|Bench",
+        "Public Space|Mail",
+        "Public Space|Other",
+        "Public Space|Phone",
+        "Public Space|Post",
+        "Public Space|Recycling",
+        "Public Space|Toilet"
+      ],
+      "H2_domain": [
+        "Entertainment",
+        "Gastronomy",
+        "Mobility",
+        "Office",
+        "Other",
+        "Public Service",
+        "Public Space",
+        "Religion",
+        "Retail",
+        "Services",
+        "Sports and Recreation",
+        "Tourism",
+        "Vacancy"
+      ]
+    },
+    "feature_lists_prefit": {
+      "H1_category": [
+        "Mobility|Individual",
+        "Mobility|Public Transport",
+        "Public Space|Bench",
+        "Public Space|Mail",
+        "Public Space|Other",
+        "Public Space|Phone",
+        "Public Space|Post",
+        "Public Space|Recycling",
+        "Public Space|Toilet",
+        "Tourism|Accommodation",
+        "Tourism|Info",
+        "Tourism|Sights"
+      ],
+      "H2_category": [
+        "Mobility|Individual",
+        "Mobility|Public Transport",
+        "Public Space|Bench",
+        "Public Space|Mail",
+        "Public Space|Other",
+        "Public Space|Phone",
+        "Public Space|Post",
+        "Public Space|Recycling",
+        "Public Space|Toilet"
+      ]
+    },
+    "h2_incremental": {
+      "auc_base": 0.537849,
+      "auc_full": 0.518003,
+      "ci_high": 0.049677,
+      "ci_low": -0.095726,
+      "estimate": -0.019845
+    },
+    "hh_classes": [
+      {
+        "ceiling_dynamik": 0.485263,
+        "ceiling_status": 0.847579,
+        "dynamik_counts": {
+          "1": 31,
+          "2": 779,
+          "3": 42
+        },
+        "edition": 2019,
+        "matches_published": true,
+        "n": 852,
+        "status_counts": {
+          "1": 149,
+          "2": 554,
+          "3": 73,
+          "4": 76
+        }
+      },
+      {
+        "ceiling_dynamik": 0.60395,
+        "ceiling_status": 0.853542,
+        "dynamik_counts": {
+          "1": 61,
+          "2": 733,
+          "3": 59
+        },
+        "edition": 2022,
+        "matches_published": true,
+        "n": 853,
+        "status_counts": {
+          "1": 159,
+          "2": 547,
+          "3": 70,
+          "4": 77
+        }
+      },
+      {
+        "ceiling_dynamik": 0.518429,
+        "ceiling_status": 0.858637,
+        "dynamik_counts": {
+          "1": 41,
+          "2": 772,
+          "3": 44
+        },
+        "edition": 2025,
+        "matches_published": true,
+        "n": 857,
+        "status_counts": {
+          "1": 163,
+          "2": 543,
+          "3": 89,
+          "4": 62
+        }
+      }
+    ],
+    "label": "Hamburg pivot 2022 (era-split comparison)",
+    "n_clusters_total": 99,
+    "n_gebiete_stadtteil_label_varies": 41,
+    "notes": [],
+    "osm_city_totals": {
+      "2019": 38857,
+      "2022": 47544,
+      "2025": 60205
+    },
+    "panel": "modern",
+    "pivot_diff": {},
+    "sport_types_h1": [
+      [
+        "Recreation|Playground",
+        592
+      ],
+      [
+        "Sport|Table Tennis",
+        307
+      ],
+      [
+        "Sport|Fitness Center",
+        148
+      ],
+      [
+        "Sport|Sports Center",
+        67
+      ],
+      [
+        "Recreation|Sauna",
+        21
+      ],
+      [
+        "Sport|Basketball",
+        9
+      ],
+      [
+        "Sport|Swimming",
+        2
+      ],
+      [
+        "Sport|Tennis",
+        2
+      ],
+      [
+        "Recreation|Water Sports",
+        1
+      ],
+      [
+        "Sport|Martial Arts",
+        1
+      ]
+    ],
+    "validity": []
   }
 }

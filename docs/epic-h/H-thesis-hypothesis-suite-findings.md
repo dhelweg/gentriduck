@@ -1,0 +1,399 @@
+# H — Hamburg thesis hypothesis suite (#355): full chain 2013–2025 and pivot 2022, side by side
+
+> **Generated** by `analysis/thesis_hypothesis_suite.py --city HH` — do not hand-edit. Re-run the script to regenerate (§7.2).
+
+- **Run:** `run_sha` a75cccd9a33e; seed 42; B = 1999 cluster-bootstrap draws; α = 0.05.
+- **Binding design:** `docs/methodology/354-355-hypothesis-suite-preregistration.md` (rev. 2 + Amendments 1 and 2; Hamburg: §4, §5, §7.2, §10.3), the domain review (`docs/methodology/354-355-preregistration-domain-review.md`, D8 Hamburg additions) and the #354 sign-offs (`docs/epic-e/354-geo-signoff.md`, `354-domain-signoff.md`).
+- **Data:** Sozialmonitoring status and Dynamik **classes** from `int_hamburg_sozialmonitoring_index` (WFS `de.hh.up:sozialmonitoring`, `statusindex` / `dynamikindex`; status 1 = hoch … 4 = sehr niedrig, Dynamik 1 = positiv / 2 = stabil / 3 = negativ, so a higher code means more, or growing, disadvantage); OA from `int_poi_oa_native_panel` (`HH`, `current`, `standard`, zero-filled, min-base flag); commercial C5 shares from `int_poi_c5_share_native`; D4 (sensitivity only) from `int_ewr_socioeco_hamburg.ewr_composite`, which excludes `unemployment_share` (#329).
+- **Grain / cluster:** statistisches Gebiet (scored Gebiete, > 300 residents); clusters = Stadtteil (99), §4.2. Effective N is reported as clusters.
+- **Results table:** `docs/epic-e/thesis-hypothesis-suite-results.csv` (`city = HH`, panels `full` and `modern`); feature lists, coverage, class counts and coefficients: `docs/epic-e/thesis-hypothesis-suite-metadata.json`.
+- **Supersedes** `docs/epic-h/E5-hamburg-lead-lag-findings.md` / `analysis/e5_hamburg_lead_lag.py` in full (§1.4, §6.3; see §15).
+- **Gate:** methodology-bearing (R-C1): geo-DS and domain `Verdict: PASS` required before integration into `develop`.
+
+## 1. Headline: the eight hypotheses, full chain and pivot 2022 side by side
+
+Primary test per hypothesis (§5.1); significance = Benjamini–Hochberg-adjusted bootstrap p < 0.05 across the panel's 8 primaries (§5.5). **`HH/full` is the primary family** (maintainer decision §10.3). **`HH/modern` (pivot 2022) is the era-split comparison** with its own family of 8: it is not a second confirmatory claim. ρ: a higher class = more disadvantage. *Italic* = "Matches Berlin 2018?" (§5.6 labels; a transfer test, §4.4).
+
+| Hyp | Thesis verdict (Berlin 2018, Tabelle 6-16) | Hamburg full chain 2013–2025 (primary) | Hamburg pivot 2022 (era split) |
+|---|---|---|---|
+| H1 | ✓ | AUC 0.559 [0.502, 0.630], n = 857 (99 Stadtteile), p_BH = 0.0704: **NOT SIGNIFICANT** (negligible); *not reproduced at the corrected threshold (nominally significant)* | AUC 0.559 [0.502, 0.630], n = 857 (99 Stadtteile), p_BH = 0.0880: **NOT SIGNIFICANT** (negligible); *not reproduced at the corrected threshold (nominally significant)* |
+| H1a | 0 | ρ -0.272 [-0.451, -0.057], n = 100 (40 Stadtteile), p_BH = 0.0240: **SUPPORTED** (small); *stronger than thesis* | ρ -0.272 [-0.451, -0.057], n = 100 (40 Stadtteile), p_BH = 0.0320: **SUPPORTED** (small); *stronger than thesis* |
+| H1b | ✓ | ρ 0.416 [0.217, 0.561], n = 100 (40 Stadtteile), p_BH = 0.0040: **SUPPORTED** (moderate); *holds* | ρ 0.416 [0.217, 0.561], n = 100 (40 Stadtteile), p_BH = 0.0040: **SUPPORTED** (moderate); *holds* |
+| H1c | 0 | ρ 0.135 [0.046, 0.218], n = 808 (99 Stadtteile), p_BH = 0.0080: **CONTRADICTED** (small); *opposite direction (thesis: undecided); consistent with the sign of the thesis's own planning-area OA correlations (Tabelle 6-14)* | ρ 0.135 [0.046, 0.218], n = 808 (99 Stadtteile), p_BH = 0.0080: **CONTRADICTED** (small); *opposite direction (thesis: undecided); consistent with the sign of the thesis's own planning-area OA correlations (Tabelle 6-14)* |
+| H2 | 0 | AUC 0.440 [0.397, 0.481], n = 3409 (99 Stadtteile), p_BH = 0.0213: **NOT SIGNIFICANT** (negligible) — AUC significantly below 0.5, not CONTRADICTED for a non-directional test (§5.1; §4); *consistent (still unclear)* | AUC 0.549 [0.491, 0.607], n = 1710 (99 Stadtteile), p_BH = 0.1174: **NOT SIGNIFICANT** (negligible); *consistent (still unclear)* |
+| H3a | ✗ | ρ -0.005 [-0.044, 0.038], n = 2153 (99 Stadtteile), p_BH = 0.7784: **NOT SIGNIFICANT** (negligible); *consistent (rejected)* | ρ 0.032 [-0.048, 0.113], n = 728 (99 Stadtteile), p_BH = 0.4372: **NOT SIGNIFICANT** (negligible); *consistent (rejected)* |
+| H3b | (✓) | ρ 0.013 [-0.023, 0.052], n = 2107 (99 Stadtteile), p_BH = 0.5443: **NOT SIGNIFICANT** (negligible); *not reproduced* | ρ 0.033 [-0.046, 0.112], n = 713 (99 Stadtteile), p_BH = 0.4372: **NOT SIGNIFICANT** (negligible); *not reproduced* |
+| H3c | 0 | ρ -0.027 [-0.059, 0.007], n = 2890 (99 Stadtteile), p_BH = 0.1534: **NOT SIGNIFICANT** (negligible); *consistent (still unclear)* | ρ -0.044 [-0.089, 0.004], n = 1461 (99 Stadtteile), p_BH = 0.1169: **NOT SIGNIFICANT** (negligible); *consistent (still unclear)* |
+
+The H1 family (H1, H1a–c) uses the same 2025 cross-section in both panels, so its estimates and CIs are identical; only the BH adjustment differs, because each panel is its own family of 8.
+
+- **Hamburg full chain 2013–2025 (primary), H3a/H3b together:** no directional evidence either way.
+- **Hamburg pivot 2022 (era split), H3a/H3b together:** no directional evidence either way.
+
+**What FDR means (§5.5).** Within each panel, Benjamini–Hochberg bounds the expected share of false claims among the rows marked significant; it does not protect each row individually. `p_holm` (Holm 1979, family-wise) is in the CSV for transparency and does not decide verdicts.
+Primaries significant under BH but not under Holm ("significant at FDR 5%; not at family-wise 5%"): full H1a, modern H1a.
+Rows labelled "nominally significant" (unadjusted p < 0.05, not significant after BH): full H1, modern H1.
+
+### Operationalisation, grain and n per hypothesis (§4.4)
+
+| Hyp | Testable | Hamburg operationalisation | Full chain: window, pivots, n (Stadtteile) | Pivot 2022: window, pivots, n (Stadtteile) | Caveat |
+|---|---|---|---|---|---|
+| H1 | Yes | Out-of-fold AUC (5-fold GroupKFold by Stadtteil) of a fixed L2 logit on all category-level OA passing the A1.1 feature rule; binary status = class {3, 4} vs {1, 2}; edition 2025 × OSM 2025-01-01 | OSM 2025 x status 2025; n = 857 (99) | OSM 2025 x status 2025; n = 857 (99) | The binary is about 18/82; AUC is threshold-free but has a wider CI |
+| H1a | Yes | Spearman (mid-ranks) of OA category Cafe vs the four-class status, edition 2025 × OSM 2025; Gastronomy base ≥ 10 | OSM 2025 x status 2025; n = 100 (40) | OSM 2025 x status 2025; n = 100 (40) | Ordinal outcome; the statement names the construct (§4.5) |
+| H1b | Yes | Spearman of OA category Fast Food vs status class; Gastronomy base ≥ 10 | OSM 2025 x status 2025; n = 100 (40) | OSM 2025 x status 2025; n = 100 (40) | Ordinal outcome; the statement names the construct (§4.5) |
+| H1c | Yes | Spearman of OA domain Sports and Recreation vs status class; all-domain base ≥ 10 | OSM 2025 x status 2025; n = 808 (99) | OSM 2025 x status 2025; n = 808 (99) | Ordinal outcome; the statement names the construct (§4.5) |
+| H2 | Yes | Out-of-fold AUC, Dynamik_E 'negativ' vs rest (predicts worsening) ~ category OA at snapshot E−3, pooled over the panel's windows; secondary 'positiv' vs rest (predicts improvement) | 2013-2025; n = 3409 (99) | 2019-2025; n = 1710 (99) | Low power: positives about 4–10% per edition; CI NA or wider than 0.25 → NOT SIGNIFICANT |
+| H3a | Yes | Partial Spearman(g(commercial C5)_P, Dynamik class_F | Dynamik class_P, status class at the pivot) | 2013-2025, pivots 2016/2019/2022; n = 2153 (99) | 2019-2025, pivots 2022; n = 728 (99) | 3-year windows (Berlin: 2 years) |
+| H3b | Yes | Partial Spearman(Dynamik class_P, g(commercial C5)_F | g(commercial C5)_P, status class at the start of P = edition E−3) | 2013-2025, pivots 2016/2019/2022; n = 2107 (99) | 2019-2025, pivots 2022; n = 713 (99) | 3-year windows (Berlin: 2 years) |
+| H3c | Yes | Spearman(g(commercial C5)_W, Dynamik class_W), same 3-year window, pooled | 2013-2025; n = 2890 (99) | 2019-2025; n = 1461 (99) | Change vs change; read with H3a/H3b (§9) |
+
+Grain: statistisches Gebiet for every row; the H3 rows pool area-pivots (H3a/H3b) or area-windows (H2, H3c), and the Stadtteil cluster bootstrap resamples whole Stadtteile, so repeated Gebiete across windows stay in one cluster (§4.2).
+
+## 2. Comparability and construct (binding text, §4.5)
+
+Hamburg and Berlin verdicts are **not like-for-like** (pre-registration §4.5, binding text):
+
+1. The monitor construction differs: Hamburg's seven indicators include migration background and
+   school leaving.
+2. The change window differs (3 vs 2 years).
+3. The status measure differs (Hamburg classes vs Berlin continuous composites).
+4. The grain differs (Gebiet ≈ 2,200 residents vs PLR ≈ 7,000).
+5. The era differs (`HH/full` 2013–2025 vs Berlin modern 2019–2025; `HH/modern` is the era-matched
+   comparison).
+
+A diverging verdict is not evidence that the cities' processes differ, **and a matching verdict is
+not evidence that they are the same**: with different constructs, agreement can be coincidental.
+Because Hamburg's status index includes *Kinder und Jugendliche mit Migrationshintergrund*, a Hamburg
+H1b result is partly a fast-food ↔ migrant-children association. Every Hamburg H1a–c statement must
+name the construct, so that the result cannot be read as an ethnic rather than a socio-economic
+association (2026-10 domain R8).
+
+**No hypothesis is untestable in Hamburg** (§4.4). What is missing is resolution (classes only) and a
+2018 baseline, so **a Hamburg result is an out-of-sample transfer test, not a replication.** The
+"Holds?" column is therefore named **"Matches Berlin 2018?"** and uses the same labels (§5.6).
+
+**Cross-city reading, labels only** (read with the five caveats above; the page design of §7.2). Berlin 2019–2025 = `BER/modern` (`docs/epic-e/E1b-berlin-hypothesis-suite-findings.md`).
+
+| Hyp | Thesis (Berlin 2018) | Berlin 2019–2025: Holds? | Hamburg full chain: Matches Berlin 2018? | Hamburg pivot 2022: Matches Berlin 2018? |
+|---|---|---|---|---|
+| H1 | ✓ | holds | not reproduced at the corrected threshold (nominally significant) | not reproduced at the corrected threshold (nominally significant) |
+| H1a | 0 | consistent (still unclear) | stronger than thesis | stronger than thesis |
+| H1b | ✓ | holds | holds | holds |
+| H1c | 0 | opposite direction (thesis: undecided); consistent with the sign of the thesis's own planning-area OA correlations (Tabelle 6-14) | opposite direction (thesis: undecided); consistent with the sign of the thesis's own planning-area OA correlations (Tabelle 6-14) | opposite direction (thesis: undecided); consistent with the sign of the thesis's own planning-area OA correlations (Tabelle 6-14) |
+| H2 | 0 | consistent (still unclear): explained by current status level (cf. the thesis's 'Scheinkorrelation', §6.3.2.1) | consistent (still unclear) | consistent (still unclear) |
+| H3a | ✗ | consistent (rejected) | consistent (rejected) | consistent (rejected) |
+| H3b | (✓) | not reproduced | not reproduced | not reproduced |
+| H3c | 0 | consistent (still unclear) | consistent (still unclear) | consistent (still unclear) |
+
+## 3. Notes per hypothesis
+
+Status in every H1a–c sentence below is the **Hamburg Sozialmonitoring Statusindex**: a composite of seven indicators that include the share of children and young people with a migration background and school-leaving outcomes (§4.5). An association with it is an association with that composite, not with any one group.
+
+- **H1a: café share of the gastronomy mix vs the Sozialmonitoring status class (a composite including migration background and school leaving).** ρ -0.272 [-0.451, -0.057], SUPPORTED (small); Matches Berlin 2018?: *stronger than thesis*.
+- **H1b: fast-food share of the gastronomy mix vs the Sozialmonitoring status class (a composite including migration background and school leaving).** ρ 0.416 [0.217, 0.561], SUPPORTED (moderate); Matches Berlin 2018?: *holds*.
+- **H1c: share of sport and recreation facilities among all POIs vs the Sozialmonitoring status class (a composite including migration background and school leaving).** ρ 0.135 [0.046, 0.218], CONTRADICTED (small); Matches Berlin 2018?: *opposite direction (thesis: undecided); consistent with the sign of the thesis's own planning-area OA correlations (Tabelle 6-14)*.
+
+- **H1a coverage (N5).** Among Gebiete with at least ten gastronomy outlets (the parent base needed to measure the mix): n retained 100 of 857. Retained: share in status classes 3-4 17%; dropped: share in status classes 3-4 18% (classes 3–4 = more disadvantaged). The result describes these Gebiete, not the whole city.
+- **H1b coverage (N5).** Among Gebiete with at least ten gastronomy outlets (the parent base needed to measure the mix): n retained 100 of 857. Retained: share in status classes 3-4 17%; dropped: share in status classes 3-4 18% (classes 3–4 = more disadvantaged). The result describes these Gebiete, not the whole city.
+- **H1c coverage (N5).** Among Gebiete with at least ten POIs of any domain (the parent base needed to measure the mix): n retained 808 of 857. Retained: share in status classes 3-4 17%; dropped: share in status classes 3-4 24% (classes 3–4 = more disadvantaged). The result describes these Gebiete, not the whole city.
+
+- **H1a (R2).** In the thesis, the only significant café row was population-weighted stock at PLR (Pearson −0.14), and the OA rows were null (PLR OA ρ = −0.02). Papachristos et al. (2011) concerns the *growth* of coffee shops; the café-growth cross-lag is an exploratory row (R4).
+- **H1b.** A deprivation hypothesis (Pearce et al. 2007, New Zealand), phrased at area level. The anti-stigmatisation check without döner/kebab types (R3): NO DATA (not testable: the taxonomy carries no matching type at this snapshot (Fast Food types: Other Fast Food)). The H1b wording therefore stays at the fast-food share of the gastronomy mix, with no ethnic or migrant-economy language.
+- **H1c.** The thesis's binding H1c text (§1.3) is in `docs/epic-e/E1b-berlin-hypothesis-suite-findings.md`; the 0 verdict refers to Berlin. In Hamburg's OSM 2025, "Sports and Recreation" is again mostly public provision (Playground 592, Table Tennis 307, Fitness Center 148, Sports Center 67). Playgrounds and outdoor tables are planned public provision, dense in family-heavy estates: a plausible reason for an association with lower status, not a tested one. The node-only limitation (#337) probably hits this category hardest. The organised-sport row without table tennis (D3b): NO DATA (fewer than 20 clusters (n = 4 Gebiete in 4 Stadtteile); §5.3 gives NO DATA).
+- **H1 (both panels).** AUC 0.559 [0.502, 0.630] is significant before but not after BH, so §5.6 labels it 'not reproduced at the corrected threshold (nominally significant)'. Its size is 'negligible' (AUC < 0.60): even a significant result of this size would map to 'weaker than thesis'. The label is the pre-registered one; this sentence only gives its size.
+- **H1 public wording (Hamburg full chain 2013–2025 (primary)).** Commercial-only H1 row: NO DATA (no feature passes the A1.1 >= 20% unflagged rule) → public text may say only "the local mix of shops, services and public facilities" (§9).
+- **H1 public wording (Hamburg pivot 2022 (era split)).** Commercial-only H1 row: NO DATA (no feature passes the A1.1 >= 20% unflagged rule) → public text may say only "the local mix of shops, services and public facilities" (§9).
+
+## 4. H2: two contrasts and the low-power rule (§4.4)
+
+H2 is non-directional, but its binary target says which change is predicted. The primary predicts **worsening** (Dynamik 'negativ' vs rest); the pre-registered secondary predicts **improvement** ('positiv' vs rest). Under #358, 'negativ' is filtering, not the gentrification-relevant change. **Low-power rule (§4.4):** if the CI is NA or wider than 0.25, the row is NOT SIGNIFICANT with a 'low power' note.
+
+| Edition (Dynamik window) | positiv | stabil | negativ | Gebiete |
+|---|---|---|---|---|
+| 2016 (Dec 2012 → Dec 2015) | 79 | 683 | 85 | 847 |
+| 2019 (Dec 2015 → Dec 2018) | 31 | 779 | 42 | 852 |
+| 2022 (Dec 2018 → Dec 2021) | 61 | 733 | 59 | 853 |
+| 2025 (Dec 2021 → Dec 2024) | 41 | 772 | 44 | 857 |
+
+| Panel | Contrast | AUC [95% CI] | n (positives) | Verdict | Notes |
+|---|---|---|---|---|---|
+| Hamburg full chain 2013–2025 (primary) | negativ vs rest (predicts worsening), primary | 0.440 [0.397, 0.481] | 3409 (230) | NOT SIGNIFICANT | AUC significantly below 0.5 (§5.1) |
+| Hamburg full chain 2013–2025 (primary) | positiv vs rest (predicts improvement), secondary | 0.550 [0.509, 0.593] | 3409 (212) | SUPPORTED |  |
+| Hamburg pivot 2022 (era split) | negativ vs rest (predicts worsening), primary | 0.549 [0.491, 0.607] | 1710 (103) | NOT SIGNIFICANT |  |
+| Hamburg pivot 2022 (era split) | positiv vs rest (predicts improvement), secondary | 0.607 [0.543, 0.666] | 1710 (102) | SUPPORTED |  |
+
+- **H2 incremental (Hamburg full chain 2013–2025 (primary)).** Out-of-fold AUC, status class at the window start alone → plus the category OA mix: 0.577 -> 0.546 (delta -0.030 [-0.061, +0.005]). Amendment 2 applies unchanged: only ci_low > 0 counts as an increment; otherwise H2 reads 'explained by current status level' when SUPPORTED.
+- **H2 incremental (Hamburg pivot 2022 (era split)).** Out-of-fold AUC, status class at the window start alone → plus the category OA mix: 0.538 -> 0.518 (delta -0.020 [-0.096, +0.050]). Amendment 2 applies unchanged: only ci_low > 0 counts as an increment; otherwise H2 reads 'explained by current status level' when SUPPORTED.
+
+- **Below-chance out-of-fold AUC (full, primary: Dynamik class negativ (3) vs rest (predicts worsening), pooled windows).** AUC 0.440 [0.397, 0.481] lies wholly below 0.5. H2 is non-directional (§1.1), so CONTRADICTED is undefined (§5.1, as implemented in #354); the row is NOT SIGNIFICANT and maps to 'consistent (still unclear)'. It is not read as evidence that the OA mix predicts the opposite change. The CI resamples fixed out-of-fold scores and ignores refit variance (geo sign-off 354 §6), so it is somewhat narrow for a value this close to 0.5. See §16.
+
+## 5. H3a/H3b per pivot and pivot heterogeneity
+
+| Panel | Hyp | Pivot | ρ [95% CI] | n | verdict (CI) |
+|---|---|---|---|---|---|
+| full | H3a | 2016 | -0.025 [-0.113, 0.061] | 703 | NOT SIGNIFICANT |
+| full | H3a | 2019 | -0.010 [-0.084, 0.070] | 722 | NOT SIGNIFICANT |
+| full | H3a | 2022 | 0.032 [-0.048, 0.113] | 728 | NOT SIGNIFICANT |
+| full | H3b | 2016 | -0.002 [-0.067, 0.071] | 686 | NOT SIGNIFICANT |
+| full | H3b | 2019 | 0.006 [-0.063, 0.076] | 708 | NOT SIGNIFICANT |
+| full | H3b | 2022 | 0.033 [-0.046, 0.112] | 713 | NOT SIGNIFICANT |
+| modern | H3a | 2022 | 0.032 [-0.048, 0.113] | 728 | NOT SIGNIFICANT |
+| modern | H3b | 2022 | 0.033 [-0.046, 0.112] | 713 | NOT SIGNIFICANT |
+
+- full H3a: ρ(pivot 2022) − ρ(pivot 2016) = 0.056 [-0.051, 0.165] → no detectable heterogeneity.
+- full H3b: ρ(pivot 2022) − ρ(pivot 2016) = 0.035 [-0.082, 0.148] → no detectable heterogeneity.
+- `HH/modern` has one pivot (2022), so no pivot difference exists there.
+
+## 6. Phase-shift sensitivity (§4.3)
+
+The main chain (editions 2016/2019/2022/2025) against the two shifted chains, outside every family. To compare like with like, significance here is the unadjusted 95% CI excluding 0 on every phase (the headline uses BH). A result that holds on one phase only is **fragile**.
+
+| Hyp | 2016/2019/2022/2025 (main) | 2014/2017/2020/2023 | 2015/2018/2021/2024 | Reading |
+|---|---|---|---|---|
+| H3a | -0.005 [-0.044, 0.038]; pivots 2016/2019/2022 | -0.008 [-0.046, 0.031]; pivots 2014/2017/2020 | 0.022 [-0.022, 0.063]; pivots 2015/2018/2021 | not significant on any phase |
+| H3b | 0.013 [-0.023, 0.052]; pivots 2016/2019/2022 | -0.008 [-0.062, 0.046]; pivots 2017/2020 | 0.011 [-0.044, 0.064]; pivots 2018/2021 | not significant on any phase |
+| H3c | -0.027 [-0.059, 0.007] | -0.022 [-0.061, 0.019] | -0.033 [-0.071, 0.007] | not significant on any phase |
+
+## 7. Hamburg shock timing (binding, §4.3 / D7)
+
+No window is shock-free, and the findings must not imply otherwise (pre-registration §4.3, the
+Hamburg counterpart of §3.4; domain review D7). Sozialmonitoring edition E carries data as of
+31 Dec (E−1) (phase A §3), so the Dynamik of edition E spans Dec (E−4) → Dec (E−1).
+
+- **Window ending 2016 (Dec 2012 → Dec 2015).** The 2015 refugee arrivals begin at its end. Asylum
+  seekers are not in SGB II before recognition, so most of their entry into SGB II falls in the next
+  window.
+- **Window ending 2019 (Dec 2015 → Dec 2018).** People who arrived as refugees in 2015–16 moved into
+  SGB II after recognition, mainly 2016–2018 (the Hamburg counterpart of the #354 thesis-era line,
+  domain sign-off 354 C3). The effect is local, near large accommodation sites. The 2019 edition also
+  changes indicator definitions (S3 adds AsylbLG recipients; S7's school-leaving categories are
+  renamed; phase A §5). Whether the 2019 Dynamik is computed on consistent definitions cannot be
+  checked from the class-only WFS.
+- **Window ending 2022 (Dec 2018 → Dec 2021) contains the pandemic** (binding, §4.3). Pandemic job
+  losses hit hospitality, culture and tourism workers, so Dynamik over this window can correlate with
+  gastronomy through the labour market rather than through a change in who lives there. Every row
+  that includes this window names the mechanism in `notes`.
+- **Window ending 2025 (Dec 2021 → Dec 2024) contains the 1 June 2022 Rechtskreiswechsel and the
+  1 January 2023 Bürgergeld and Wohngeld-Plus reforms** (binding, §4.3), plus continuing refugee
+  entry into SGB II. The Rechtskreiswechsel moved Ukrainian refugees into SGB II (BA-Statistik 2022).
+  The reforms changed who counts in the benefit-based indicators, with unknown and possibly opposite
+  small-area effects.
+- **`HH/modern` contains both the window ending 2022 and the window ending 2025, so it is the most
+  shock-exposed panel** (binding, §4.3). Its pivot-2022 cross-lag pairs the pandemic window (P) with
+  the Rechtskreiswechsel/reform window (F).
+- **H1 cross-section (edition 2025 = Dec 2024 levels)** includes refugee-related SGB II receipt
+  concentrated near large accommodation sites. Hamburg's status index also counts children and young
+  people with a migration background, so refugee children can move a Gebiet's status class directly.
+  This is a modest effect on a level, and it belongs in the limitation line.
+- **Phase-shift chains** cross the same shocks at other offsets: the shifted windows ending
+  2017, 2018, 2020, 2021 contain part of the 2016–2018 refugee entry; those ending 2021, 2023, 2024 contain the pandemic;
+  those ending 2023, 2024 contain the Rechtskreiswechsel, and 2024 also the 2023 reforms. Their
+  rows carry the same notes.
+
+The warehouse has no open small-area refugee-accommodation source, so this is disclosed as a
+limitation, not corrected.
+
+## 8. Pivot-2016 caveat (R6) and OSM completeness
+
+**Pivot 2016 is the pivot most exposed to OSM completeness artefacts** (pre-registration §4.3, R6). POIs inside Hamburg's Gebiete in the OA panel, per snapshot, with the share of 2025: 2013: 22,310 (37%), 2016: 29,762 (49%), 2019: 38,857 (65%), 2022: 47,544 (79%), 2025: 60,205 (100%). The pivot-2016 P window starts at the 2013 snapshot, while coverage was still diffusing unevenly across the city. C5 shares and OA are ratio measures, robust to city-wide growth (index-definition §2.4) but not to spatially uneven mapping diffusion. The full-chain H3a/H3b primaries pool pivot 2016 with 2019 and 2022; §5 shows each pivot separately, and `HH/modern` shows pivot 2022 without it. The 2013 status class used as the pivot-2016 H3b control also rests on an assumed reference date (§9).
+
+## 9. Data prerequisites carried from phase A (`docs/epic-e/354-phase-a-data-prerequisites.md`)
+
+- **Reference date (§2.1(3)).** Edition E carries data as of 31 Dec (E−1), confirmed from the source metadata for every edition with a published report (2016–2025, phase A §3) and **assumed** for 2013–2015, which have no published report (O3). It matters for the 2013 status class (pivot-2016 H3b control; H2 incremental level for the window starting 2013) and for the 2013–2015 editions in the phase-shift chains.
+- **Class ordering (§2.1(4)).** Per-Gebiet agreement with the published report annexes is 100% for status, Dynamik and population, 2016–2025; the annex Status-summe and Dynamik-summe order the classes exactly as coded (positiv = falling disadvantage = 1; hoch = least disadvantage = 1). Guarded by `test_354_hh_sozialmonitoring_published_class_counts` and `test_354_hh_sozialmonitoring_label_code_consistency`. The table below recounts the classes the suite consumed and compares them with the published counts in `seed_hh_sozialmonitoring_published_class_counts`.
+- **Indicator values (§2.1(5), binding).** *"The open Sozialmonitoring report annexes (2016–2025) publish all seven status indicators and six Dynamik indicators per statistisches Gebiet as z-scores; the WFS used by the warehouse publishes classes only."* (phase A §5, binding check §2.1(5) / D8g)
+  The suite therefore runs on classes only (§4.1); the annex z-scores are not ingested. A continuous composite (the domain-preferred labour-market and transfer core S3–S6) needs an architect check for the new artefact (phase A O4) and its own sign-off (§4.4). It is a follow-up, not part of #355.
+
+| Edition | hoch | mittel | niedrig | sehr niedrig | positiv | stabil | negativ | Gebiete | = published annex? | tie ceiling, status | tie ceiling, Dynamik |
+|---|---|---|---|---|---|---|---|---|---|---|---|
+| 2013 | 152 | 534 | 65 | 82 | 110 | 618 | 105 | 833 | no annex (O3) | 0.854 | 0.766 |
+| 2014 | 149 | 539 | 68 | 83 | 86 | 679 | 74 | 839 | no annex (O3) | 0.853 | 0.684 |
+| 2015 | 149 | 543 | 66 | 81 | 87 | 682 | 70 | 839 | no annex (O3) | 0.850 | 0.679 |
+| 2016 | 156 | 542 | 67 | 82 | 79 | 683 | 85 | 847 | yes | 0.855 | 0.688 |
+| 2017 | 158 | 535 | 77 | 76 | 31 | 768 | 47 | 846 | yes | 0.860 | 0.502 |
+| 2018 | 151 | 542 | 79 | 76 | 22 | 786 | 40 | 848 | yes | 0.855 | 0.451 |
+| 2019 | 149 | 554 | 73 | 76 | 31 | 779 | 42 | 852 | yes | 0.848 | 0.485 |
+| 2020 | 141 | 565 | 72 | 72 | 37 | 774 | 39 | 850 | yes | 0.837 | 0.495 |
+| 2021 | 143 | 564 | 71 | 75 | 52 | 747 | 54 | 853 | yes | 0.840 | 0.573 |
+| 2022 | 159 | 547 | 70 | 77 | 61 | 733 | 59 | 853 | yes | 0.854 | 0.604 |
+| 2023 | 153 | 553 | 88 | 62 | 21 | 798 | 37 | 856 | yes | 0.850 | 0.436 |
+| 2024 | 161 | 547 | 84 | 65 | 25 | 794 | 38 | 857 | yes | 0.856 | 0.452 |
+| 2025 | 163 | 543 | 89 | 62 | 41 | 772 | 44 | 857 | yes | 0.859 | 0.518 |
+
+## 10. Tie-ceiling context (domain sign-off 354 R5)
+
+Against a tied class variable, no continuous measure can reach |ρ| = 1. The ceiling is the Spearman of the class with an ideal measure that orders every Gebiet consistently with its class (table above; method of domain sign-off 354 §3). For the 2025 status class (H1a–c) it is 0.86. For the Dynamik classes of the main chain (H3a–c outcomes and controls), about 85% 'stabil', it is 0.49–0.69. **Context only:** the Cohen effect labels and every verdict are applied as pre-registered, on the raw ρ. A 'negligible' Hamburg H3 ρ is negligible on an outcome that cannot exceed this ceiling; it is not rescaled.
+
+## 11. AUC comparability and top coefficients (binding text, §1.2)
+
+The thesis's headline AUCs (Berlin 2018) are not comparable to the suite's (pre-registration §1.2,
+binding text D4c). They come from BZR grain for H1, H2 and H3b (137 areas), random 10-fold CV
+(§6.2.3), the best of about 19 algorithms (§6.2.4) and up to 85 OA features. The Hamburg suite uses
+Gebiet grain, Stadtteil-grouped CV and one pre-specified model, each of which lowers AUC, on a
+different city and status construct (§4.5). **No table may set the thesis AUC against a suite AUC as a
+measure of weakening.** In place of the thesis's "Features sinnvoll?" column, the ten largest
+standardised coefficients (mean over the five training folds) are listed with their signs.
+
+- **Hamburg full chain 2013–2025 (primary) H1:** Tourism|Accommodation (+0.244), Public Space|Phone (+0.164), Public Space|Post (+0.153), Public Space|Recycling (+0.129), Public Space|Other (+0.128), Public Space|Mail (-0.113), Public Space|Bench (-0.079), Public Space|Toilet (-0.079), Tourism|Sights (-0.061), Mobility|Individual (-0.041)
+- **Hamburg full chain 2013–2025 (primary) H2:** Public Space|Post (-0.168), Public Space|Bench (+0.102), Mobility|Individual (-0.099), Mobility|Public Transport (-0.095), Public Space|Other (+0.093), Public Space|Toilet (+0.079), Public Space|Recycling (+0.067), Public Space|Phone (+0.039), Public Space|Mail (+0.033)
+- **Hamburg pivot 2022 (era split) H2:** Public Space|Post (-0.493), Public Space|Other (+0.242), Public Space|Bench (-0.189), Public Space|Recycling (-0.153), Mobility|Public Transport (-0.096), Public Space|Toilet (-0.089), Public Space|Phone (+0.081), Public Space|Mail (+0.051), Mobility|Individual (+0.001)
+
+**Fixed feature lists (A1.1)**: a category enters if its min-base flag is unset in ≥ 20% of the design's included rows; sorted lexicographically. Gebiete are smaller than Berlin PLRs, so fewer categories pass.
+
+- Hamburg full chain 2013–2025 (primary) H1_category (12): Mobility|Individual, Mobility|Public Transport, Public Space|Bench, Public Space|Mail, Public Space|Other, Public Space|Phone, Public Space|Post, Public Space|Recycling, Public Space|Toilet, Tourism|Accommodation, Tourism|Info, Tourism|Sights
+- Hamburg full chain 2013–2025 (primary) H1_commercial (0): none
+- Hamburg full chain 2013–2025 (primary) H2_category (9): Mobility|Individual, Mobility|Public Transport, Public Space|Bench, Public Space|Mail, Public Space|Other, Public Space|Phone, Public Space|Post, Public Space|Recycling, Public Space|Toilet
+- Hamburg pivot 2022 (era split) H2_category (9): Mobility|Individual, Mobility|Public Transport, Public Space|Bench, Public Space|Mail, Public Space|Other, Public Space|Phone, Public Space|Post, Public Space|Recycling, Public Space|Toilet
+
+## 12. Secondary, sensitivity and exploratory rows
+
+None of these can change a headline verdict. They are uncorrected and use the unadjusted 95% cluster-bootstrap CI (§5.4).
+
+| Panel | Hyp | Role | Operationalisation | Estimate [95% CI] | n | Verdict | Notes |
+|---|---|---|---|---|---|---|---|
+| full | H1 | secondary | domain-level OA (13 domains) => binary status | 0.593 [0.539, 0.656] | 857 | SUPPORTED | a null here reads 'not detected at domain resolution'; n_pos=151 |
+| full | H1 | secondary | commercial-only category OA (4 commercial domains) => binary status | – (not reported: NO DATA) | 857 | NO DATA | decides the public 'businesses' wording (§9); no feature passes the A1.1 >= 20% unflagged rule |
+| full | H1 | sensitivity | category OA + one base indicator per domain (A1.1 (i)) | 0.583 [0.525, 0.642] | 857 | SUPPORTED | shows how much commercial density adds to structure; n_pos=151 |
+| full | H1 | sensitivity | category OA, complete-case: base passed in all four commercial domains (A1.1 (ii)) | – (not reported: NO DATA) | 3 | NO DATA | n_pos=2 |
+| full | H1a | sensitivity | Spearman(Gastronomy|Cafe POIs per 1,000 residents, status), full frame, no base rule (population-weighted stock, N7) | -0.054 [-0.144, 0.045] | 857 | NOT SIGNIFICANT | population-weighted stock row (thesis 'einwohnergewichtet', §5.2) = A1.1 (iii) per-1k row; counted once (N7) |
+| full | H1b | sensitivity | Spearman(Gastronomy|Fast Food POIs per 1,000 residents, status), full frame, no base rule (population-weighted stock, N7) | 0.109 [0.030, 0.195] | 857 | SUPPORTED | population-weighted stock row (thesis 'einwohnergewichtet', §5.2) = A1.1 (iii) per-1k row; counted once (N7) |
+| full | H1c | sensitivity | Spearman(Sports and Recreation POIs per 1,000 residents, status), full frame, no base rule (population-weighted stock, N7) | 0.106 [0.028, 0.183] | 857 | CONTRADICTED | population-weighted stock row (thesis 'einwohnergewichtet', §5.2) = A1.1 (iii) per-1k row; counted once (N7) |
+| full | H1c | sensitivity | Spearman(Sport category without table tennis (organised/commercial facilities, closer to Powell et al.; D3b), status); types removed from numerator and parent: Table Tennis | – (not reported: NO DATA) | 4 | NO DATA |  |
+| full | H1b | sensitivity | Fast Food without döner/kebab types (anti-stigmatisation check, R3) | – (not reported: NO DATA) | 0 | NO DATA | not testable: the taxonomy carries no matching type at this snapshot (Fast Food types: Other Fast Food) |
+| full | H2 | secondary | domain-level OA at window start => binary Dynamik | 0.536 [0.498, 0.576] | 3409 | NOT SIGNIFICANT | includes recognised 2015-16 refugees entering SGB II, mainly 2016-2018 (local, near large accommodation sites; domain sign-off 354 C3); includes the 2020-21 pandemic: Dynamik can correlate with gastronomy through hospitality/culture job losses rather than through a change in who lives there (§4.3, counterpart of §3.4); includes the 1 June 2022 Rechtskreiswechsel (Ukrainian refugees into SGB II; BA-Statistik 2022); includes the 1 Jan 2023 Bürgergeld and Wohngeld-Plus reforms and continuing refugee entry into SGB II (§4.3, D7); a null here reads 'not detected at domain resolution'; n_pos=230 |
+| full | H2 | sensitivity | category OA + one base indicator per domain (A1.1 (i)) | 0.487 [0.441, 0.534] | 3409 | NOT SIGNIFICANT | includes recognised 2015-16 refugees entering SGB II, mainly 2016-2018 (local, near large accommodation sites; domain sign-off 354 C3); includes the 2020-21 pandemic: Dynamik can correlate with gastronomy through hospitality/culture job losses rather than through a change in who lives there (§4.3, counterpart of §3.4); includes the 1 June 2022 Rechtskreiswechsel (Ukrainian refugees into SGB II; BA-Statistik 2022); includes the 1 Jan 2023 Bürgergeld and Wohngeld-Plus reforms and continuing refugee entry into SGB II (§4.3, D7); n_pos=230 |
+| full | H2 | sensitivity | category OA, complete-case in the four commercial domains (A1.1 (ii)) | – (not reported: NO DATA) | 5 | NO DATA | includes recognised 2015-16 refugees entering SGB II, mainly 2016-2018 (local, near large accommodation sites; domain sign-off 354 C3); includes the 2020-21 pandemic: Dynamik can correlate with gastronomy through hospitality/culture job losses rather than through a change in who lives there (§4.3, counterpart of §3.4); includes the 1 June 2022 Rechtskreiswechsel (Ukrainian refugees into SGB II; BA-Statistik 2022); includes the 1 Jan 2023 Bürgergeld and Wohngeld-Plus reforms and continuing refugee entry into SGB II (§4.3, D7); n_pos=1; low power (CI NA or wider than 0.25, §4.4) |
+| full | H2 | secondary | H2 incremental: delta AUC of (status level at window start + category OA) over status level alone | -0.030 [-0.061, 0.005] | 3380 | NOT SIGNIFICANT | includes recognised 2015-16 refugees entering SGB II, mainly 2016-2018 (local, near large accommodation sites; domain sign-off 354 C3); includes the 2020-21 pandemic: Dynamik can correlate with gastronomy through hospitality/culture job losses rather than through a change in who lives there (§4.3, counterpart of §3.4); includes the 1 June 2022 Rechtskreiswechsel (Ukrainian refugees into SGB II; BA-Statistik 2022); includes the 1 Jan 2023 Bürgergeld and Wohngeld-Plus reforms and continuing refugee entry into SGB II (§4.3, D7); out-of-fold AUC: status level alone 0.577; with the category OA mix 0.546 |
+| full | H2 | exploratory | directional continuity: Spearman(OA basket of 4 commercial domains at window start, status change over the window) | -0.050 [-0.085, -0.013] | 2876 | SUPPORTED | includes recognised 2015-16 refugees entering SGB II, mainly 2016-2018 (local, near large accommodation sites; domain sign-off 354 C3); includes the 2020-21 pandemic: Dynamik can correlate with gastronomy through hospitality/culture job losses rather than through a change in who lives there (§4.3, counterpart of §3.4); includes the 1 June 2022 Rechtskreiswechsel (Ukrainian refugees into SGB II; BA-Statistik 2022); includes the 1 Jan 2023 Bürgergeld and Wohngeld-Plus reforms and continuing refugee entry into SGB II (§4.3, D7) |
+| full | H2 | secondary | category OA at window start => Dynamik class positiv (1) vs rest (predicts improvement) | 0.550 [0.509, 0.593] | 3409 | SUPPORTED | includes recognised 2015-16 refugees entering SGB II, mainly 2016-2018 (local, near large accommodation sites; domain sign-off 354 C3); includes the 2020-21 pandemic: Dynamik can correlate with gastronomy through hospitality/culture job losses rather than through a change in who lives there (§4.3, counterpart of §3.4); includes the 1 June 2022 Rechtskreiswechsel (Ukrainian refugees into SGB II; BA-Statistik 2022); includes the 1 Jan 2023 Bürgergeld and Wohngeld-Plus reforms and continuing refugee entry into SGB II (§4.3, D7); n_pos=212 |
+| full | H3a | sensitivity | H3a with the alternative level control (window_start) | -0.008 [-0.047, 0.036] | 2134 | NOT SIGNIFICANT | includes recognised 2015-16 refugees entering SGB II, mainly 2016-2018 (local, near large accommodation sites; domain sign-off 354 C3); includes the 2020-21 pandemic: Dynamik can correlate with gastronomy through hospitality/culture job losses rather than through a change in who lives there (§4.3, counterpart of §3.4); includes the 1 June 2022 Rechtskreiswechsel (Ukrainian refugees into SGB II; BA-Statistik 2022); includes the 1 Jan 2023 Bürgergeld and Wohngeld-Plus reforms and continuing refugee entry into SGB II (§4.3, D7) |
+| full | H3a | sensitivity | H3a primary controls + D4 | -0.005 [-0.045, 0.038] | 2126 | NOT SIGNIFICANT | D4 at pivot-1 (EWR composite); D4 is Stadtteil-grain, about 99 independent values; includes recognised 2015-16 refugees entering SGB II, mainly 2016-2018 (local, near large accommodation sites; domain sign-off 354 C3); includes the 2020-21 pandemic: Dynamik can correlate with gastronomy through hospitality/culture job losses rather than through a change in who lives there (§4.3, counterpart of §3.4); includes the 1 June 2022 Rechtskreiswechsel (Ukrainian refugees into SGB II; BA-Statistik 2022); includes the 1 Jan 2023 Bürgergeld and Wohngeld-Plus reforms and continuing refugee entry into SGB II (§4.3, D7) |
+| full | H3a | sensitivity | H3a at pivot 2016 only | -0.025 [-0.113, 0.061] | 703 | NOT SIGNIFICANT |  |
+| full | H3a | sensitivity | H3a at pivot 2019 only | -0.010 [-0.084, 0.070] | 722 | NOT SIGNIFICANT | includes recognised 2015-16 refugees entering SGB II, mainly 2016-2018 (local, near large accommodation sites; domain sign-off 354 C3) |
+| full | H3a | sensitivity | H3a at pivot 2022 only | 0.032 [-0.048, 0.113] | 728 | NOT SIGNIFICANT | includes the 2020-21 pandemic: Dynamik can correlate with gastronomy through hospitality/culture job losses rather than through a change in who lives there (§4.3, counterpart of §3.4) |
+| full | H3a | sensitivity | pivot difference: rho(pivot 2022) - rho(pivot 2016) (§3.4) | 0.056 [-0.051, 0.165] | 1431 | descriptive | no detectable pivot heterogeneity (CI includes 0) |
+| full | H3a | exploratory | H3a level-stratified: high status at window start | -0.076 [-0.163, 0.023] | 339 | NOT SIGNIFICANT | high = status class 1 at window start; low/mid = {2,3,4} |
+| full | H3a | exploratory | H3a level-stratified: low/mid status at window start | -0.003 [-0.046, 0.045] | 1795 | NOT SIGNIFICANT | high = status class 1 at window start; low/mid = {2,3,4} |
+| full | H3a | secondary | H3a with total-share growth of all POIs (continuity with E1/E5) | 0.022 [-0.012, 0.057] | 2543 | NOT SIGNIFICANT | includes recognised 2015-16 refugees entering SGB II, mainly 2016-2018 (local, near large accommodation sites; domain sign-off 354 C3); includes the 2020-21 pandemic: Dynamik can correlate with gastronomy through hospitality/culture job losses rather than through a change in who lives there (§4.3, counterpart of §3.4); includes the 1 June 2022 Rechtskreiswechsel (Ukrainian refugees into SGB II; BA-Statistik 2022); includes the 1 Jan 2023 Bürgergeld and Wohngeld-Plus reforms and continuing refugee entry into SGB II (§4.3, D7) |
+| full | H3a | secondary | H3a with OA-basket change (mean OA of the 4 commercial domains) | -0.017 [-0.058, 0.022] | 2060 | NOT SIGNIFICANT | includes recognised 2015-16 refugees entering SGB II, mainly 2016-2018 (local, near large accommodation sites; domain sign-off 354 C3); includes the 2020-21 pandemic: Dynamik can correlate with gastronomy through hospitality/culture job losses rather than through a change in who lives there (§4.3, counterpart of §3.4); includes the 1 June 2022 Rechtskreiswechsel (Ukrainian refugees into SGB II; BA-Statistik 2022); includes the 1 Jan 2023 Bürgergeld and Wohngeld-Plus reforms and continuing refugee entry into SGB II (§4.3, D7) |
+| full | H3a | exploratory | H3a with café-growth cross-lag, g(café C5 share) (R4) | 0.004 [-0.056, 0.060] | 943 | NOT SIGNIFICANT | includes recognised 2015-16 refugees entering SGB II, mainly 2016-2018 (local, near large accommodation sites; domain sign-off 354 C3); includes the 2020-21 pandemic: Dynamik can correlate with gastronomy through hospitality/culture job losses rather than through a change in who lives there (§4.3, counterpart of §3.4); includes the 1 June 2022 Rechtskreiswechsel (Ukrainian refugees into SGB II; BA-Statistik 2022); includes the 1 Jan 2023 Bürgergeld and Wohngeld-Plus reforms and continuing refugee entry into SGB II (§4.3, D7) |
+| full | H3b | sensitivity | H3b with the alternative level control (pivot) | 0.010 [-0.031, 0.054] | 2124 | NOT SIGNIFICANT | includes recognised 2015-16 refugees entering SGB II, mainly 2016-2018 (local, near large accommodation sites; domain sign-off 354 C3); includes the 2020-21 pandemic: Dynamik can correlate with gastronomy through hospitality/culture job losses rather than through a change in who lives there (§4.3, counterpart of §3.4); includes the 1 June 2022 Rechtskreiswechsel (Ukrainian refugees into SGB II; BA-Statistik 2022); includes the 1 Jan 2023 Bürgergeld and Wohngeld-Plus reforms and continuing refugee entry into SGB II (§4.3, D7) |
+| full | H3b | sensitivity | H3b primary controls + D4 | 0.019 [-0.022, 0.058] | 2081 | NOT SIGNIFICANT | D4 at pivot-1 (EWR composite); D4 is Stadtteil-grain, about 99 independent values; includes recognised 2015-16 refugees entering SGB II, mainly 2016-2018 (local, near large accommodation sites; domain sign-off 354 C3); includes the 2020-21 pandemic: Dynamik can correlate with gastronomy through hospitality/culture job losses rather than through a change in who lives there (§4.3, counterpart of §3.4); includes the 1 June 2022 Rechtskreiswechsel (Ukrainian refugees into SGB II; BA-Statistik 2022); includes the 1 Jan 2023 Bürgergeld and Wohngeld-Plus reforms and continuing refugee entry into SGB II (§4.3, D7) |
+| full | H3b | sensitivity | H3b at pivot 2016 only | -0.002 [-0.067, 0.071] | 686 | NOT SIGNIFICANT |  |
+| full | H3b | sensitivity | H3b at pivot 2019 only | 0.006 [-0.063, 0.076] | 708 | NOT SIGNIFICANT | includes recognised 2015-16 refugees entering SGB II, mainly 2016-2018 (local, near large accommodation sites; domain sign-off 354 C3) |
+| full | H3b | sensitivity | H3b at pivot 2022 only | 0.033 [-0.046, 0.112] | 713 | NOT SIGNIFICANT | includes the 2020-21 pandemic: Dynamik can correlate with gastronomy through hospitality/culture job losses rather than through a change in who lives there (§4.3, counterpart of §3.4) |
+| full | H3b | sensitivity | pivot difference: rho(pivot 2022) - rho(pivot 2016) (§3.4) | 0.035 [-0.082, 0.148] | 1399 | descriptive | no detectable pivot heterogeneity (CI includes 0) |
+| full | H3b | exploratory | H3b level-stratified: high status at window start | 0.048 [-0.064, 0.148] | 330 | NOT SIGNIFICANT | high = status class 1 at window start; low/mid = {2,3,4} |
+| full | H3b | exploratory | H3b level-stratified: low/mid status at window start | 0.011 [-0.030, 0.051] | 1777 | NOT SIGNIFICANT | high = status class 1 at window start; low/mid = {2,3,4} |
+| full | H3b | secondary | H3b with total-share growth of all POIs (continuity with E1/E5) | -0.041 [-0.080, -0.002] | 2521 | SUPPORTED | includes recognised 2015-16 refugees entering SGB II, mainly 2016-2018 (local, near large accommodation sites; domain sign-off 354 C3); includes the 2020-21 pandemic: Dynamik can correlate with gastronomy through hospitality/culture job losses rather than through a change in who lives there (§4.3, counterpart of §3.4); includes the 1 June 2022 Rechtskreiswechsel (Ukrainian refugees into SGB II; BA-Statistik 2022); includes the 1 Jan 2023 Bürgergeld and Wohngeld-Plus reforms and continuing refugee entry into SGB II (§4.3, D7) |
+| full | H3b | secondary | H3b with OA-basket change (mean OA of the 4 commercial domains) | -0.021 [-0.061, 0.018] | 2037 | NOT SIGNIFICANT | includes recognised 2015-16 refugees entering SGB II, mainly 2016-2018 (local, near large accommodation sites; domain sign-off 354 C3); includes the 2020-21 pandemic: Dynamik can correlate with gastronomy through hospitality/culture job losses rather than through a change in who lives there (§4.3, counterpart of §3.4); includes the 1 June 2022 Rechtskreiswechsel (Ukrainian refugees into SGB II; BA-Statistik 2022); includes the 1 Jan 2023 Bürgergeld and Wohngeld-Plus reforms and continuing refugee entry into SGB II (§4.3, D7) |
+| full | H3b | exploratory | H3b with café-growth cross-lag, g(café C5 share) (R4) | 0.033 [-0.034, 0.094] | 894 | NOT SIGNIFICANT | includes recognised 2015-16 refugees entering SGB II, mainly 2016-2018 (local, near large accommodation sites; domain sign-off 354 C3); includes the 2020-21 pandemic: Dynamik can correlate with gastronomy through hospitality/culture job losses rather than through a change in who lives there (§4.3, counterpart of §3.4); includes the 1 June 2022 Rechtskreiswechsel (Ukrainian refugees into SGB II; BA-Statistik 2022); includes the 1 Jan 2023 Bürgergeld and Wohngeld-Plus reforms and continuing refugee entry into SGB II (§4.3, D7) |
+| full | H3c | secondary | H3c with total-share growth | -0.004 [-0.042, 0.035] | 3404 | NOT SIGNIFICANT | includes recognised 2015-16 refugees entering SGB II, mainly 2016-2018 (local, near large accommodation sites; domain sign-off 354 C3); includes the 2020-21 pandemic: Dynamik can correlate with gastronomy through hospitality/culture job losses rather than through a change in who lives there (§4.3, counterpart of §3.4); includes the 1 June 2022 Rechtskreiswechsel (Ukrainian refugees into SGB II; BA-Statistik 2022); includes the 1 Jan 2023 Bürgergeld and Wohngeld-Plus reforms and continuing refugee entry into SGB II (§4.3, D7) |
+| full | H3c | secondary | H3c with OA-basket change | 0.001 [-0.041, 0.043] | 2856 | NOT SIGNIFICANT | includes recognised 2015-16 refugees entering SGB II, mainly 2016-2018 (local, near large accommodation sites; domain sign-off 354 C3); includes the 2020-21 pandemic: Dynamik can correlate with gastronomy through hospitality/culture job losses rather than through a change in who lives there (§4.3, counterpart of §3.4); includes the 1 June 2022 Rechtskreiswechsel (Ukrainian refugees into SGB II; BA-Statistik 2022); includes the 1 Jan 2023 Bürgergeld and Wohngeld-Plus reforms and continuing refugee entry into SGB II (§4.3, D7) |
+| full | H3c | sensitivity | H3c window 2013-2016 only | -0.041 [-0.105, 0.032] | 705 | NOT SIGNIFICANT |  |
+| full | H3c | sensitivity | H3c window 2016-2019 only | 0.046 [-0.026, 0.117] | 724 | NOT SIGNIFICANT | includes recognised 2015-16 refugees entering SGB II, mainly 2016-2018 (local, near large accommodation sites; domain sign-off 354 C3) |
+| full | H3c | sensitivity | H3c window 2019-2022 only | -0.022 [-0.099, 0.057] | 729 | NOT SIGNIFICANT | includes the 2020-21 pandemic: Dynamik can correlate with gastronomy through hospitality/culture job losses rather than through a change in who lives there (§4.3, counterpart of §3.4) |
+| full | H3c | sensitivity | H3c window 2022-2025 only | -0.048 [-0.109, 0.014] | 732 | NOT SIGNIFICANT | includes the 1 June 2022 Rechtskreiswechsel (Ukrainian refugees into SGB II; BA-Statistik 2022); includes the 1 Jan 2023 Bürgergeld and Wohngeld-Plus reforms and continuing refugee entry into SGB II (§4.3, D7) |
+| full | H3a | sensitivity | H3a phase-shift chain 2014/2017/2020/2023 | -0.008 [-0.046, 0.031] | 2112 | NOT SIGNIFICANT | phase-shift sensitivity (§4.3); a result holding on one phase only is fragile; includes recognised 2015-16 refugees entering SGB II, mainly 2016-2018 (local, near large accommodation sites; domain sign-off 354 C3); includes recognised 2015-16 refugees entering SGB II, mainly 2016-2018 (local, near large accommodation sites; domain sign-off 354 C3); includes the 2020-21 pandemic: Dynamik can correlate with gastronomy through hospitality/culture job losses rather than through a change in who lives there (§4.3, counterpart of §3.4); includes the 1 June 2022 Rechtskreiswechsel (Ukrainian refugees into SGB II; BA-Statistik 2022) |
+| full | H3b | sensitivity | H3b phase-shift chain 2014/2017/2020/2023 | -0.008 [-0.062, 0.046] | 1393 | NOT SIGNIFICANT | phase-shift sensitivity (§4.3); a result holding on one phase only is fragile; pivot 2014 has no complete rows: the start-of-window status class (edition 2011) predates the first Sozialmonitoring edition in the warehouse (2013); includes recognised 2015-16 refugees entering SGB II, mainly 2016-2018 (local, near large accommodation sites; domain sign-off 354 C3); includes recognised 2015-16 refugees entering SGB II, mainly 2016-2018 (local, near large accommodation sites; domain sign-off 354 C3); includes the 2020-21 pandemic: Dynamik can correlate with gastronomy through hospitality/culture job losses rather than through a change in who lives there (§4.3, counterpart of §3.4); includes the 1 June 2022 Rechtskreiswechsel (Ukrainian refugees into SGB II; BA-Statistik 2022) |
+| full | H3c | sensitivity | H3c phase-shift chain 2014/2017/2020/2023 | -0.022 [-0.061, 0.019] | 2844 | NOT SIGNIFICANT | phase-shift sensitivity (§4.3); includes recognised 2015-16 refugees entering SGB II, mainly 2016-2018 (local, near large accommodation sites; domain sign-off 354 C3); includes recognised 2015-16 refugees entering SGB II, mainly 2016-2018 (local, near large accommodation sites; domain sign-off 354 C3); includes the 2020-21 pandemic: Dynamik can correlate with gastronomy through hospitality/culture job losses rather than through a change in who lives there (§4.3, counterpart of §3.4); includes the 1 June 2022 Rechtskreiswechsel (Ukrainian refugees into SGB II; BA-Statistik 2022) |
+| full | H3a | sensitivity | H3a phase-shift chain 2015/2018/2021/2024 | 0.022 [-0.022, 0.063] | 2134 | NOT SIGNIFICANT | phase-shift sensitivity (§4.3); a result holding on one phase only is fragile; includes recognised 2015-16 refugees entering SGB II, mainly 2016-2018 (local, near large accommodation sites; domain sign-off 354 C3); includes recognised 2015-16 refugees entering SGB II, mainly 2016-2018 (local, near large accommodation sites; domain sign-off 354 C3); includes the 2020-21 pandemic: Dynamik can correlate with gastronomy through hospitality/culture job losses rather than through a change in who lives there (§4.3, counterpart of §3.4); includes the 2020-21 pandemic: Dynamik can correlate with gastronomy through hospitality/culture job losses rather than through a change in who lives there (§4.3, counterpart of §3.4); includes the 1 June 2022 Rechtskreiswechsel (Ukrainian refugees into SGB II; BA-Statistik 2022); includes the 1 Jan 2023 Bürgergeld and Wohngeld-Plus reforms and continuing refugee entry into SGB II (§4.3, D7) |
+| full | H3b | sensitivity | H3b phase-shift chain 2015/2018/2021/2024 | 0.011 [-0.044, 0.064] | 1405 | NOT SIGNIFICANT | phase-shift sensitivity (§4.3); a result holding on one phase only is fragile; pivot 2015 has no complete rows: the start-of-window status class (edition 2012) predates the first Sozialmonitoring edition in the warehouse (2013); includes recognised 2015-16 refugees entering SGB II, mainly 2016-2018 (local, near large accommodation sites; domain sign-off 354 C3); includes recognised 2015-16 refugees entering SGB II, mainly 2016-2018 (local, near large accommodation sites; domain sign-off 354 C3); includes the 2020-21 pandemic: Dynamik can correlate with gastronomy through hospitality/culture job losses rather than through a change in who lives there (§4.3, counterpart of §3.4); includes the 2020-21 pandemic: Dynamik can correlate with gastronomy through hospitality/culture job losses rather than through a change in who lives there (§4.3, counterpart of §3.4); includes the 1 June 2022 Rechtskreiswechsel (Ukrainian refugees into SGB II; BA-Statistik 2022); includes the 1 Jan 2023 Bürgergeld and Wohngeld-Plus reforms and continuing refugee entry into SGB II (§4.3, D7) |
+| full | H3c | sensitivity | H3c phase-shift chain 2015/2018/2021/2024 | -0.033 [-0.071, 0.007] | 2872 | NOT SIGNIFICANT | phase-shift sensitivity (§4.3); includes recognised 2015-16 refugees entering SGB II, mainly 2016-2018 (local, near large accommodation sites; domain sign-off 354 C3); includes recognised 2015-16 refugees entering SGB II, mainly 2016-2018 (local, near large accommodation sites; domain sign-off 354 C3); includes the 2020-21 pandemic: Dynamik can correlate with gastronomy through hospitality/culture job losses rather than through a change in who lives there (§4.3, counterpart of §3.4); includes the 2020-21 pandemic: Dynamik can correlate with gastronomy through hospitality/culture job losses rather than through a change in who lives there (§4.3, counterpart of §3.4); includes the 1 June 2022 Rechtskreiswechsel (Ukrainian refugees into SGB II; BA-Statistik 2022); includes the 1 Jan 2023 Bürgergeld and Wohngeld-Plus reforms and continuing refugee entry into SGB II (§4.3, D7) |
+| modern | H1 | secondary | domain-level OA (13 domains) => binary status | 0.593 [0.539, 0.656] | 857 | SUPPORTED | a null here reads 'not detected at domain resolution'; n_pos=151 |
+| modern | H1 | secondary | commercial-only category OA (4 commercial domains) => binary status | – (not reported: NO DATA) | 857 | NO DATA | decides the public 'businesses' wording (§9); no feature passes the A1.1 >= 20% unflagged rule |
+| modern | H1 | sensitivity | category OA + one base indicator per domain (A1.1 (i)) | 0.583 [0.525, 0.642] | 857 | SUPPORTED | shows how much commercial density adds to structure; n_pos=151 |
+| modern | H1 | sensitivity | category OA, complete-case: base passed in all four commercial domains (A1.1 (ii)) | – (not reported: NO DATA) | 3 | NO DATA | n_pos=2 |
+| modern | H1a | sensitivity | Spearman(Gastronomy|Cafe POIs per 1,000 residents, status), full frame, no base rule (population-weighted stock, N7) | -0.054 [-0.144, 0.045] | 857 | NOT SIGNIFICANT | population-weighted stock row (thesis 'einwohnergewichtet', §5.2) = A1.1 (iii) per-1k row; counted once (N7) |
+| modern | H1b | sensitivity | Spearman(Gastronomy|Fast Food POIs per 1,000 residents, status), full frame, no base rule (population-weighted stock, N7) | 0.109 [0.030, 0.195] | 857 | SUPPORTED | population-weighted stock row (thesis 'einwohnergewichtet', §5.2) = A1.1 (iii) per-1k row; counted once (N7) |
+| modern | H1c | sensitivity | Spearman(Sports and Recreation POIs per 1,000 residents, status), full frame, no base rule (population-weighted stock, N7) | 0.106 [0.028, 0.183] | 857 | CONTRADICTED | population-weighted stock row (thesis 'einwohnergewichtet', §5.2) = A1.1 (iii) per-1k row; counted once (N7) |
+| modern | H1c | sensitivity | Spearman(Sport category without table tennis (organised/commercial facilities, closer to Powell et al.; D3b), status); types removed from numerator and parent: Table Tennis | – (not reported: NO DATA) | 4 | NO DATA |  |
+| modern | H1b | sensitivity | Fast Food without döner/kebab types (anti-stigmatisation check, R3) | – (not reported: NO DATA) | 0 | NO DATA | not testable: the taxonomy carries no matching type at this snapshot (Fast Food types: Other Fast Food) |
+| modern | H2 | secondary | domain-level OA at window start => binary Dynamik | 0.495 [0.446, 0.545] | 1710 | NOT SIGNIFICANT | includes the 2020-21 pandemic: Dynamik can correlate with gastronomy through hospitality/culture job losses rather than through a change in who lives there (§4.3, counterpart of §3.4); includes the 1 June 2022 Rechtskreiswechsel (Ukrainian refugees into SGB II; BA-Statistik 2022); includes the 1 Jan 2023 Bürgergeld and Wohngeld-Plus reforms and continuing refugee entry into SGB II (§4.3, D7); a null here reads 'not detected at domain resolution'; n_pos=103 |
+| modern | H2 | sensitivity | category OA + one base indicator per domain (A1.1 (i)) | 0.562 [0.500, 0.624] | 1710 | NOT SIGNIFICANT | includes the 2020-21 pandemic: Dynamik can correlate with gastronomy through hospitality/culture job losses rather than through a change in who lives there (§4.3, counterpart of §3.4); includes the 1 June 2022 Rechtskreiswechsel (Ukrainian refugees into SGB II; BA-Statistik 2022); includes the 1 Jan 2023 Bürgergeld and Wohngeld-Plus reforms and continuing refugee entry into SGB II (§4.3, D7); n_pos=103 |
+| modern | H2 | sensitivity | category OA, complete-case in the four commercial domains (A1.1 (ii)) | – (not reported: NO DATA) | 4 | NO DATA | includes the 2020-21 pandemic: Dynamik can correlate with gastronomy through hospitality/culture job losses rather than through a change in who lives there (§4.3, counterpart of §3.4); includes the 1 June 2022 Rechtskreiswechsel (Ukrainian refugees into SGB II; BA-Statistik 2022); includes the 1 Jan 2023 Bürgergeld and Wohngeld-Plus reforms and continuing refugee entry into SGB II (§4.3, D7); n_pos=1; low power (CI NA or wider than 0.25, §4.4) |
+| modern | H2 | secondary | H2 incremental: delta AUC of (status level at window start + category OA) over status level alone | -0.020 [-0.096, 0.050] | 1702 | NOT SIGNIFICANT | includes the 2020-21 pandemic: Dynamik can correlate with gastronomy through hospitality/culture job losses rather than through a change in who lives there (§4.3, counterpart of §3.4); includes the 1 June 2022 Rechtskreiswechsel (Ukrainian refugees into SGB II; BA-Statistik 2022); includes the 1 Jan 2023 Bürgergeld and Wohngeld-Plus reforms and continuing refugee entry into SGB II (§4.3, D7); out-of-fold AUC: status level alone 0.538; with the category OA mix 0.518 |
+| modern | H2 | exploratory | directional continuity: Spearman(OA basket of 4 commercial domains at window start, status change over the window) | -0.017 [-0.062, 0.031] | 1553 | NOT SIGNIFICANT | includes the 2020-21 pandemic: Dynamik can correlate with gastronomy through hospitality/culture job losses rather than through a change in who lives there (§4.3, counterpart of §3.4); includes the 1 June 2022 Rechtskreiswechsel (Ukrainian refugees into SGB II; BA-Statistik 2022); includes the 1 Jan 2023 Bürgergeld and Wohngeld-Plus reforms and continuing refugee entry into SGB II (§4.3, D7) |
+| modern | H2 | secondary | category OA at window start => Dynamik class positiv (1) vs rest (predicts improvement) | 0.607 [0.543, 0.666] | 1710 | SUPPORTED | includes the 2020-21 pandemic: Dynamik can correlate with gastronomy through hospitality/culture job losses rather than through a change in who lives there (§4.3, counterpart of §3.4); includes the 1 June 2022 Rechtskreiswechsel (Ukrainian refugees into SGB II; BA-Statistik 2022); includes the 1 Jan 2023 Bürgergeld and Wohngeld-Plus reforms and continuing refugee entry into SGB II (§4.3, D7); n_pos=102 |
+| modern | H3a | sensitivity | H3a with the alternative level control (window_start) | 0.027 [-0.051, 0.108] | 725 | NOT SIGNIFICANT | includes the 2020-21 pandemic: Dynamik can correlate with gastronomy through hospitality/culture job losses rather than through a change in who lives there (§4.3, counterpart of §3.4); includes the 1 June 2022 Rechtskreiswechsel (Ukrainian refugees into SGB II; BA-Statistik 2022); includes the 1 Jan 2023 Bürgergeld and Wohngeld-Plus reforms and continuing refugee entry into SGB II (§4.3, D7) |
+| modern | H3a | sensitivity | H3a primary controls + D4 | 0.037 [-0.044, 0.117] | 719 | NOT SIGNIFICANT | D4 at pivot-1 (EWR composite); D4 is Stadtteil-grain, about 99 independent values; includes the 2020-21 pandemic: Dynamik can correlate with gastronomy through hospitality/culture job losses rather than through a change in who lives there (§4.3, counterpart of §3.4); includes the 1 June 2022 Rechtskreiswechsel (Ukrainian refugees into SGB II; BA-Statistik 2022); includes the 1 Jan 2023 Bürgergeld and Wohngeld-Plus reforms and continuing refugee entry into SGB II (§4.3, D7) |
+| modern | H3a | sensitivity | H3a at pivot 2022 only | 0.032 [-0.048, 0.113] | 728 | NOT SIGNIFICANT | includes the 2020-21 pandemic: Dynamik can correlate with gastronomy through hospitality/culture job losses rather than through a change in who lives there (§4.3, counterpart of §3.4) |
+| modern | H3a | exploratory | H3a level-stratified: high status at window start | -0.143 [-0.295, 0.053] | 113 | NOT SIGNIFICANT | high = status class 1 at window start; low/mid = {2,3,4} |
+| modern | H3a | exploratory | H3a level-stratified: low/mid status at window start | 0.045 [-0.038, 0.129] | 612 | NOT SIGNIFICANT | high = status class 1 at window start; low/mid = {2,3,4} |
+| modern | H3a | secondary | H3a with total-share growth of all POIs (continuity with E1/E5) | 0.020 [-0.037, 0.071] | 850 | NOT SIGNIFICANT | includes the 2020-21 pandemic: Dynamik can correlate with gastronomy through hospitality/culture job losses rather than through a change in who lives there (§4.3, counterpart of §3.4); includes the 1 June 2022 Rechtskreiswechsel (Ukrainian refugees into SGB II; BA-Statistik 2022); includes the 1 Jan 2023 Bürgergeld and Wohngeld-Plus reforms and continuing refugee entry into SGB II (§4.3, D7) |
+| modern | H3a | secondary | H3a with OA-basket change (mean OA of the 4 commercial domains) | 0.012 [-0.062, 0.093] | 753 | NOT SIGNIFICANT | includes the 2020-21 pandemic: Dynamik can correlate with gastronomy through hospitality/culture job losses rather than through a change in who lives there (§4.3, counterpart of §3.4); includes the 1 June 2022 Rechtskreiswechsel (Ukrainian refugees into SGB II; BA-Statistik 2022); includes the 1 Jan 2023 Bürgergeld and Wohngeld-Plus reforms and continuing refugee entry into SGB II (§4.3, D7) |
+| modern | H3a | exploratory | H3a with café-growth cross-lag, g(café C5 share) (R4) | 0.002 [-0.103, 0.118] | 337 | NOT SIGNIFICANT | includes the 2020-21 pandemic: Dynamik can correlate with gastronomy through hospitality/culture job losses rather than through a change in who lives there (§4.3, counterpart of §3.4); includes the 1 June 2022 Rechtskreiswechsel (Ukrainian refugees into SGB II; BA-Statistik 2022); includes the 1 Jan 2023 Bürgergeld and Wohngeld-Plus reforms and continuing refugee entry into SGB II (§4.3, D7) |
+| modern | H3b | sensitivity | H3b with the alternative level control (pivot) | 0.029 [-0.049, 0.108] | 715 | NOT SIGNIFICANT | includes the 2020-21 pandemic: Dynamik can correlate with gastronomy through hospitality/culture job losses rather than through a change in who lives there (§4.3, counterpart of §3.4); includes the 1 June 2022 Rechtskreiswechsel (Ukrainian refugees into SGB II; BA-Statistik 2022); includes the 1 Jan 2023 Bürgergeld and Wohngeld-Plus reforms and continuing refugee entry into SGB II (§4.3, D7) |
+| modern | H3b | sensitivity | H3b primary controls + D4 | 0.032 [-0.049, 0.113] | 705 | NOT SIGNIFICANT | D4 at pivot-1 (EWR composite); D4 is Stadtteil-grain, about 99 independent values; includes the 2020-21 pandemic: Dynamik can correlate with gastronomy through hospitality/culture job losses rather than through a change in who lives there (§4.3, counterpart of §3.4); includes the 1 June 2022 Rechtskreiswechsel (Ukrainian refugees into SGB II; BA-Statistik 2022); includes the 1 Jan 2023 Bürgergeld and Wohngeld-Plus reforms and continuing refugee entry into SGB II (§4.3, D7) |
+| modern | H3b | sensitivity | H3b at pivot 2022 only | 0.033 [-0.046, 0.112] | 713 | NOT SIGNIFICANT | includes the 2020-21 pandemic: Dynamik can correlate with gastronomy through hospitality/culture job losses rather than through a change in who lives there (§4.3, counterpart of §3.4) |
+| modern | H3b | exploratory | H3b level-stratified: high status at window start | 0.109 [-0.049, 0.274] | 109 | NOT SIGNIFICANT | high = status class 1 at window start; low/mid = {2,3,4} |
+| modern | H3b | exploratory | H3b level-stratified: low/mid status at window start | 0.030 [-0.055, 0.114] | 604 | NOT SIGNIFICANT | high = status class 1 at window start; low/mid = {2,3,4} |
+| modern | H3b | secondary | H3b with total-share growth of all POIs (continuity with E1/E5) | -0.090 [-0.158, -0.024] | 847 | SUPPORTED | includes the 2020-21 pandemic: Dynamik can correlate with gastronomy through hospitality/culture job losses rather than through a change in who lives there (§4.3, counterpart of §3.4); includes the 1 June 2022 Rechtskreiswechsel (Ukrainian refugees into SGB II; BA-Statistik 2022); includes the 1 Jan 2023 Bürgergeld and Wohngeld-Plus reforms and continuing refugee entry into SGB II (§4.3, D7) |
+| modern | H3b | secondary | H3b with OA-basket change (mean OA of the 4 commercial domains) | 0.030 [-0.052, 0.104] | 749 | NOT SIGNIFICANT | includes the 2020-21 pandemic: Dynamik can correlate with gastronomy through hospitality/culture job losses rather than through a change in who lives there (§4.3, counterpart of §3.4); includes the 1 June 2022 Rechtskreiswechsel (Ukrainian refugees into SGB II; BA-Statistik 2022); includes the 1 Jan 2023 Bürgergeld and Wohngeld-Plus reforms and continuing refugee entry into SGB II (§4.3, D7) |
+| modern | H3b | exploratory | H3b with café-growth cross-lag, g(café C5 share) (R4) | 0.073 [-0.035, 0.178] | 325 | NOT SIGNIFICANT | includes the 2020-21 pandemic: Dynamik can correlate with gastronomy through hospitality/culture job losses rather than through a change in who lives there (§4.3, counterpart of §3.4); includes the 1 June 2022 Rechtskreiswechsel (Ukrainian refugees into SGB II; BA-Statistik 2022); includes the 1 Jan 2023 Bürgergeld and Wohngeld-Plus reforms and continuing refugee entry into SGB II (§4.3, D7) |
+| modern | H3c | secondary | H3c with total-share growth | -0.022 [-0.076, 0.032] | 1707 | NOT SIGNIFICANT | includes the 2020-21 pandemic: Dynamik can correlate with gastronomy through hospitality/culture job losses rather than through a change in who lives there (§4.3, counterpart of §3.4); includes the 1 June 2022 Rechtskreiswechsel (Ukrainian refugees into SGB II; BA-Statistik 2022); includes the 1 Jan 2023 Bürgergeld and Wohngeld-Plus reforms and continuing refugee entry into SGB II (§4.3, D7) |
+| modern | H3c | secondary | H3c with OA-basket change | 0.013 [-0.038, 0.066] | 1545 | NOT SIGNIFICANT | includes the 2020-21 pandemic: Dynamik can correlate with gastronomy through hospitality/culture job losses rather than through a change in who lives there (§4.3, counterpart of §3.4); includes the 1 June 2022 Rechtskreiswechsel (Ukrainian refugees into SGB II; BA-Statistik 2022); includes the 1 Jan 2023 Bürgergeld and Wohngeld-Plus reforms and continuing refugee entry into SGB II (§4.3, D7) |
+| modern | H3c | sensitivity | H3c window 2019-2022 only | -0.022 [-0.099, 0.057] | 729 | NOT SIGNIFICANT | includes the 2020-21 pandemic: Dynamik can correlate with gastronomy through hospitality/culture job losses rather than through a change in who lives there (§4.3, counterpart of §3.4) |
+| modern | H3c | sensitivity | H3c window 2022-2025 only | -0.048 [-0.109, 0.014] | 732 | NOT SIGNIFICANT | includes the 1 June 2022 Rechtskreiswechsel (Ukrainian refugees into SGB II; BA-Statistik 2022); includes the 1 Jan 2023 Bürgergeld and Wohngeld-Plus reforms and continuing refugee entry into SGB II (§4.3, D7) |
+
+**Exploratory-row tally (§5.5).** 72 non-primary rows carry a verdict across both Hamburg panels (descriptive and NO DATA rows excluded; the population-weighted row counts once per H1a–c, N7; the H1 family's non-primary rows appear in both panels). At α = 0.05 about 3.6 would be expected significant by chance alone.
+
+## 13. What the suite must not claim (binding text, §9)
+
+What these results must not be used to claim (pre-registration §9, binding):
+
+- **No "pressure" wording for Dynamik in either direction (#358).** Dynamik is the "improving /
+  worsening official measure of disadvantage". Negative Dynamik is filtering, at most a rent-gap
+  precondition (Smith 1979).
+- **Status improvement ≠ gentrification.** Measured disadvantage can fall through in-situ labour-market
+  gains, children ageing out of child poverty, new-build in-movers, the closure or relocation of
+  refugee accommodation, or benefit-rule changes, as well as through compositional upgrading. Public
+  text calls the outcome "change in officially measured disadvantage".
+- No causal or displacement language. Status-first means that a fall in measured disadvantage precedes
+  commercial change, not that anyone was displaced.
+- **H3a and H3b are not mutually exclusive.** Both SUPPORTED reads as co-evolution, consistent with
+  Dangschat.
+- **H3c SUPPORTED means co-movement within one window.** It cannot by itself establish simultaneity and
+  is read together with H3a/H3b.
+- **H1 public wording** is "the local mix of shops, services and public facilities", unless the
+  commercial-only H1 row also holds; only then may it say "businesses".
+- Fast-food findings are phrased at area level. H1b is a deprivation hypothesis (Pearce et al. 2007
+  is a New Zealand study of fast-food access and deprivation), not a displacement one.
+- The thesis's AUCs are not set against suite AUCs (§1.2).
+- Hamburg verdicts are transfer tests, not replications (§4.4–4.5).
+- Hamburg H1a–c sentences name the construct: status is the Sozialmonitoring Statusindex, which includes migration background and school leaving (§4.5, §9).
+
+## 14. Limitations
+
+- **Classes only.** The Sozialmonitoring WFS publishes classes, so every Hamburg status variable is ordinal (index-definition §3.1–3.2: rank methods, no OLS on class codes, no averaging of classes across Gebiete). There is no Hamburg 2018 baseline.
+- **#337 node→way:** every row is POI-based; OSM features mapped as ways are not yet counted as points. Deferred; disclosed for all rows.
+- **OSM completeness:** Hamburg's mapped POIs roughly tripled between 2013 and 2025 (§8). Ratio measures absorb city-wide growth, not spatially uneven diffusion.
+- **D4** (`ewr_composite`) is Stadtteil-grain disaggregated to Gebiete, so it carries about 99 independent values; `foreigners_share` overlaps the migration-background indicator, so D4 is a sensitivity only (§4.1).
+- **Indicator definitions** change from the 2019 edition (S3 adds AsylbLG; S4 labelled 'Arbeitslose (SGB II)' in the 2019 and 2021 annexes; S7 categories renamed; phase A §5). The published classes carry these changes; the class-only WFS cannot show their size.
+- **Refugee accommodation:** no open small-area source; disclosed, not corrected (§7).
+
+## 15. E5 superseded
+
+This suite supersedes `docs/epic-h/E5-hamburg-lead-lag-findings.md` and `analysis/e5_hamburg_lead_lag.py` in full (pre-registration §1.4, §6.3). E5 differenced annual status classes against a 3-year Dynamik concept, so its annual k = 1 cross-lag used overlapping Dynamik windows (rejected, §8), and its Section 2 ran OLS on ordinal class codes, which index-definition §3.2 forbids. Its numbers must not be cited. The script stays in the repository, marked superseded, for the audit trail; it is no longer part of `poe analysis`, and the E5 findings header points here.
+
+## 16. Deviations from the pre-registration
+
+Dated 2026-11-01. None changes a hypothesis, variable, expected sign, family or verdict rule. Items that are consequences of fixed rules are listed with the rule that produced them.
+
+1. **Inherited from #354 (accepted in `docs/epic-e/354-geo-signoff.md` §1, items 1–3 and 6–10), applied unchanged to Hamburg:** the ADR-0017 min-base rule as a thesis deviation (N8); N3 (AUC rows need at least 'poor', AUC ≥ 0.60, for the ✓ rule); N4 (an H3a that is NOT SIGNIFICANT after BH with unadjusted p < 0.05 carries 'nominally significant'); N7 (one population-weighted row per H1a–c, counted once); fixed feature lists per design frame (A1.1 rule on each design's own rows, flags only, written to the metadata before any fit); coefficients as the mean of the five training-fold fits (no full-sample fit, §5.8(4)); area-windows with DHS growth 0/0 drop; the `form` / `suite_expected_dir` fields of `THESIS_HYPOTHESES`. N1 and N2 are Berlin-only. Moran's I is a Berlin-only diagnostic in §8, so its absence is not a deviation here.
+2. **Amendment 2 applies unchanged** (H2 'stronger than thesis' needs ΔAUC ci_low > 0; a CI that includes 0 or lies wholly below 0 maps to 'consistent (still unclear): explained by current status level'). It was recorded after the Berlin results and ratified by geo-DS and domain on 2026-11-01 as binding for #355 and not to be re-opened after the Hamburg results. Disclosure: a low-B Hamburg smoke run of this code path existed in #354 phase B (its notes, in `docs/handoff/2026-11-01-hypothesis-suite.md`: H2 low power, H1a/H1b n ≈ 100, commercial-only H1 row without data). No rule was changed after it.
+3. **Tie-ceiling context (domain sign-off 354 R5).** §10 reports the highest Spearman any continuous measure can reach against each Sozialmonitoring class variable. It was in the code before the first Hamburg run on this branch, is context only, and changes no verdict and no effect label (the Cohen labels are applied as pre-registered).
+4. **Shock notes on Hamburg rows.** §4.3 requires the Hamburg counterpart of §3.4. Rows that include the windows ending 2022 (pandemic) or 2025 (Rechtskreiswechsel, 2023 reforms) carry the mechanism in `notes`, and so do the windows covering the 2016–2018 refugee entry into SGB II (the counterpart of the #354 thesis-era line, C3). Notes only; no estimate is affected.
+5. **H2 incremental status level in Hamburg** = the status class at the window start (edition E−3), the Hamburg analogue of Berlin's S at the window start (§4.3 uses the same class as the H3b level control). §5.2 does not spell out the Hamburg level.
+6. **Low-power rule on all Hamburg H2 AUC rows.** The §4.4 rule (CI NA or wider than 0.25 → NOT SIGNIFICANT with a 'low power' note) is applied to the H2 secondary and sensitivity AUC rows (positiv vs rest, domain level, base indicators, complete-case) as well as to the primary. The same rule; it can only weaken a claim.
+7. **Stadtteil cluster membership.** A Gebiet's cluster is the Stadtteil named in its latest edition. The label varies across editions for 41 Gebiete (spelling variants such as 'GroßFlottbek' / 'Groß Flottbek', and Stadtteile split or renamed, such as 'Hamm' → 'Hamm-Nord'); the latest edition gives 99 clusters. §4.2 names the Stadtteil but not which edition decides.
+8. **Phase-shift chains: first H3b pivot without data.** The H3b window-start control at pivot 2014 (chain 2014/17/20/23) and 2015 (chain 2015/18/21/24) is the status class of edition 2011 or 2012, which predates the first Sozialmonitoring edition in the warehouse (2013). Those H3b phase rows therefore rest on the two later pivots; the row's `pivots` field lists the pivots actually used. A consequence of the data, not a design change.
+9. **E5 retired on this branch.** §6.3 retires `analysis/e5_hamburg_lead_lag.py` 'once the suite passes the gate'. This branch removes it from `poe analysis` and puts the pointer in the E5 findings header, but integration into `develop` is itself gated (R-C1), so E5 leaves the published pipeline only when the gate passes. The script stays in the repository, marked superseded, for the audit trail.
+10. **Text-only generator additions made after seeing Hamburg results (2026-11-01).** After the first Hamburg runs on this branch (a B = 49 crash test and the B = 1999 run), the findings generator gained: the below-chance AUC disclosure (§4 and the next item), the H1 size sentence (§3), plain reasons for rows without data, and two lookup fixes for the D3b/R3 sentences in §3. The statistics code, the rows, the verdicts and the labels are unchanged by them.
+11. **H2 out-of-fold AUC significantly below 0.5 (full primary) → NOT SIGNIFICANT.** The pre-registration writes 'CONTRADICTED impossible' for H1 (§5.1) and makes H2 non-directional (§1.1, §5.1); the #354 code applies the rule to both AUC tests (`_verdict_for`, covered for H2 by `test_auc_below_null_is_never_contradicted`). It binds here for the first time, so it is listed for the reviewers. No rule was changed after seeing the result.
+12. **H1 secondary row without data (full, modern):** commercial-only category OA (4 commercial domains) => binary status. Reason: no feature passes the A1.1 >= 20% unflagged rule. A consequence of a rule fixed before any fit (§5.2, §5.3, A1.1); it is not relaxed after seeing the row (geo sign-off 354 item 12).
+13. **H1 sensitivity row without data (full, modern):** category OA, complete-case: base passed in all four commercial domains (A1.1 (ii)). Reason: fewer than 20 clusters (n = 3 Gebiete in 3 Stadtteile); §5.3 gives NO DATA. A consequence of a rule fixed before any fit (§5.2, §5.3, A1.1); it is not relaxed after seeing the row (geo sign-off 354 item 12).
+14. **H1c sensitivity row without data (full, modern):** Spearman(Sport category without table tennis (organised/commercial facilities, closer to Powell et al.; D3b), status); types removed from numerator and parent: Table Tennis. Reason: fewer than 20 clusters (n = 4 Gebiete in 4 Stadtteile); §5.3 gives NO DATA. A consequence of a rule fixed before any fit (§5.2, §5.3, A1.1); it is not relaxed after seeing the row (geo sign-off 354 item 12).
+15. **H1b sensitivity row without data (full, modern):** Fast Food without döner/kebab types (anti-stigmatisation check, R3). Reason: not testable: the taxonomy carries no matching type at this snapshot (Fast Food types: Other Fast Food). A consequence of a rule fixed before any fit (§5.2, §5.3, A1.1); it is not relaxed after seeing the row (geo sign-off 354 item 12).
+16. **H2 sensitivity row without data (full, modern):** category OA, complete-case in the four commercial domains (A1.1 (ii)). Reason: fewer than 20 clusters (n = 5 Gebiete in 2 Stadtteile); §5.3 gives NO DATA. A consequence of a rule fixed before any fit (§5.2, §5.3, A1.1); it is not relaxed after seeing the row (geo sign-off 354 item 12).
+
