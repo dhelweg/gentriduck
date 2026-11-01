@@ -368,6 +368,11 @@
       "estimate": -0.00389
     },
     "label": "2019-2025 (MSS 2021/2023/2025, LOR 2021)",
+    "mean_arbeitslose_dynamik": {
+      "2021": 1.0869,
+      "2023": -0.6266,
+      "2025": 0.3477
+    },
     "notes": [],
     "panel": "modern",
     "pivot_diff": {
@@ -390,6 +395,13 @@
     },
     "validity": [
       {
+        "ceiling_D": 0.6783,
+        "ceiling_S": 0.8231,
+        "dynamik_class_shares": {
+          "1": 0.0896,
+          "2": 0.8134,
+          "3": 0.097
+        },
         "edition": 2021,
         "n_D": 536,
         "n_S": 536,
@@ -399,6 +411,13 @@
         "sources_S": "S_2021 = mean z(arbeitslose_anteil[s1], transferbezug_anteil[s3], kinderarmut_anteil[s4])"
       },
       {
+        "ceiling_D": 0.7387,
+        "ceiling_S": 0.8461,
+        "dynamik_class_shares": {
+          "1": 0.1362,
+          "2": 0.7668,
+          "3": 0.097
+        },
         "edition": 2023,
         "n_D": 536,
         "n_S": 536,
@@ -408,6 +427,13 @@
         "sources_S": "S_2023 = mean z(arbeitslose_anteil[s1], transferbezug_anteil[s3], kinderarmut_anteil[s4])"
       },
       {
+        "ceiling_D": 0.7501,
+        "ceiling_S": 0.8366,
+        "dynamik_class_shares": {
+          "1": 0.1234,
+          "2": 0.757,
+          "3": 0.1196
+        },
         "edition": 2025,
         "n_D": 535,
         "n_S": 535,
@@ -781,6 +807,11 @@
       "estimate": -0.018334
     },
     "label": "re-analysis of the thesis era with current methods (MSS 2015/2017/2019, LOR pre-2021)",
+    "mean_arbeitslose_dynamik": {
+      "2015": -0.6821,
+      "2017": -0.8987,
+      "2019": -0.97
+    },
     "notes": [],
     "panel": "thesis-era",
     "pivot_diff": {
@@ -808,6 +839,13 @@
     },
     "validity": [
       {
+        "ceiling_D": 0.6908,
+        "ceiling_S": 0.8678,
+        "dynamik_class_shares": {
+          "1": 0.1103,
+          "2": 0.8046,
+          "3": 0.0851
+        },
         "edition": 2015,
         "n_D": 435,
         "n_S": 435,
@@ -817,6 +855,13 @@
         "sources_S": "S_2015 = mean z(arbeitslose_anteil[s1], transferbezug_anteil[s3], kinderarmut_anteil[s4])"
       },
       {
+        "ceiling_D": 0.7261,
+        "ceiling_S": 0.8567,
+        "dynamik_class_shares": {
+          "1": 0.1124,
+          "2": 0.7775,
+          "3": 0.1101
+        },
         "edition": 2017,
         "n_D": 436,
         "n_S": 436,
@@ -826,6 +871,13 @@
         "sources_S": "S_2017 = mean z(arbeitslose_anteil[s1], transferbezug_anteil[s3], kinderarmut_anteil[s4])"
       },
       {
+        "ceiling_D": 0.6704,
+        "ceiling_S": 0.8491,
+        "dynamik_class_shares": {
+          "1": 0.1055,
+          "2": 0.8188,
+          "3": 0.0757
+        },
         "edition": 2019,
         "n_D": 436,
         "n_S": 436,
