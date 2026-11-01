@@ -2826,7 +2826,7 @@ def _deviations(meta_mod: dict, meta_th: dict) -> list[str]:
         '**Fixed feature lists per design frame.** A1.1\'s "per-city/per-panel" ≥ 20% rule is '
         "evaluated on each design's own included rows (H1 cross-section; H2 pooled area-windows; "
         "BZR rows for R7), because the H1 and H2 frames are different snapshots. The rule still "
-        "uses flags only, never the outcome; the lists are printed below and were written to "
+        "uses flags only, never the outcome; the lists are printed in §6 and were written to "
         "the metadata JSON before any fit.",
         "**Coefficients without a full-sample fit.** The top-10 standardised coefficients (§1.2) "
         "are the mean over the five training-fold fits, so no model is ever fitted on the full "
@@ -2851,6 +2851,11 @@ def _deviations(meta_mod: dict, meta_th: dict) -> list[str]:
         "**H1b without döner/kebab (R3): not testable.** The taxonomy carries only one Fast Food "
         "type ('Other Fast Food') at the H1 snapshots, so no kebab type can be removed; the row is "
         'reported as NO DATA with that reason (§5.2: "if the taxonomy carries it").',
+        "**H2 incremental with a wholly negative delta-AUC CI.** §5.6 maps H2 to 'stronger than "
+        "thesis' only when the delta-AUC CI excludes 0, and to 'explained by current status "
+        "level' when it includes 0. A CI entirely below 0 (OA lowers out-of-fold AUC once status "
+        "level is in the model) is read with the second label, because OA then adds nothing "
+        "beyond status level; 'stronger than thesis' requires a CI entirely above 0.",
         "**Hamburg panels not reported here.** The code supports `--city HH` (`HH/full`, "
         "`HH/modern`, phase-shift chains); Hamburg results and findings are #355's.",
     ]
@@ -3073,20 +3078,22 @@ def write_berlin_findings(path: Path, records: list[dict], meta: dict) -> None:
     a("")
     for label, div, rows_desc in (
         ("status composite S", div_s, "H1 family"),
-        ("change composite D", div_d, "H2/H3"),
+        ("change composite D", div_d, "H2 and H3a-c"),
     ):
         if div:
             a(
                 f"**Disclosure (§3.2):** the {label} diverges from the official classification "
                 f"(Spearman < 0.80) in {', '.join(div)}. The published-class secondary rows of the "
                 f'{rows_desc} (role `secondary`, "published-class version") must be read beside the '
-                "primaries there. The Dynamik class has three heavily tied levels and the official "
-                "index includes indicators the composite leaves out (S2/D2 where populated), both of "
-                "which cap the attainable rank correlation; the threshold is applied as pre-registered."
+                "primaries there. Context, not an excuse: the published Dynamik class has three "
+                "heavily tied levels (most PLRs are 'stabil'), which caps the attainable rank "
+                "correlation, and in 2015/2017 and 2023/2025 the official index also uses S2/D2; "
+                "2019 and 2021 have no S2 and still fall below 0.80. The threshold is applied as "
+                "pre-registered."
             )
         else:
             a(f"The {label} meets the 0.80 threshold in every edition.")
-        a("")
+            a("")
     ti = mt.get("thesis_index_vs_S")
     if ti:
         a("")
@@ -3210,7 +3217,10 @@ def write_berlin_findings(path: Path, records: list[dict], meta: dict) -> None:
     a("## 12. Deviations from the pre-registration")
     a("")
     a(
-        "Dated 2026-10-31, recorded before the results were read. None changes a hypothesis, variable, "
+        "Dated 2026-10-31/2026-11-01. Items 1-11 were fixed in code before any suite statistic "
+        "was computed. Items 12-15 record consequences first seen in a low-B smoke run (an "
+        "untestable or thin sensitivity row, a delta-AUC case the mapping does not spell out); "
+        "none changed a rule after results were seen. None changes a hypothesis, variable, "
         "expected sign, family or verdict rule."
     )
     a("")
