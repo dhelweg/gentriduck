@@ -232,7 +232,8 @@ def hh_shock_notes(s: int, e: int) -> list[str]:
 
 
 def _hh_shock_map(*chains: tuple[tuple[int, int], ...]) -> dict:
-    return {w: "; ".join(hh_shock_notes(*w)) for ch in chains for w in ch if hh_shock_notes(*w)}
+    # tuples of individual notes, so rows spanning several windows can de-duplicate them
+    return {w: tuple(hh_shock_notes(*w)) for ch in chains for w in ch if hh_shock_notes(*w)}
 
 
 # §4.5 / domain review D8e: every Hamburg H1a-c statement names the status construct.
@@ -640,6 +641,26 @@ def auc_test(
         "ci_high": hi,
         "p_boot": bootstrap_p(draws, 0.5, n_boot) if lo is not None else None,
         "p_analytic": float(p_mw),
+    }
+
+
+def oof_diagnostics(x: np.ndarray, y: np.ndarray, groups: np.ndarray, windows: pd.Series) -> dict:
+    """#355 review MED 2 (descriptive, no verdict): where an out-of-fold AUC comes from.
+    Same deterministic GroupKFold as the primary row; AUC within each test fold and within
+    each pooled window, on the pooled out-of-fold scores."""
+    y = np.asarray(y).astype(int)
+    res = grouped_oof_auc(x, y, groups, n_splits=N_SPLITS)
+    if res["auc"] is None:
+        return {"pooled_auc": None, "within_fold_auc": [], "per_window_auc": {}}
+    oof = res["oof"]
+    w = np.asarray(windows)
+    return {
+        "pooled_auc": res["auc"],
+        "within_fold_auc": [auc_score(y[te], oof[te]) for _tr, te in res["folds"]],
+        "fold_n_test": [int(len(te)) for _tr, te in res["folds"]],
+        "per_window_auc": {
+            str(int(e)): auc_score(y[w == e], oof[w == e]) for e in sorted(pd.unique(w))
+        },
     }
 
 
@@ -1411,7 +1432,15 @@ class SuiteRun:
         return f"{windows[0][0]}-{windows[-1][1]}"
 
     def shock_notes(self, windows) -> list[str]:
-        return [self.p.shock_notes[w] for w in windows if w in self.p.shock_notes]
+        """Shock notes of every window a row spans (§3.4 / §4.3: every row that includes a
+        window names its mechanism), each note once, in window order."""
+        out: list[str] = []
+        for w in windows:
+            v = self.p.shock_notes.get(w)
+            for n in (v,) if isinstance(v, str) else (v or ()):
+                if n not in out:
+                    out.append(n)
+        return out
 
     def break_notes(self, editions) -> list[str]:
         if self.p.city != "BER":
@@ -1964,6 +1993,10 @@ class SuiteRun:
             key="H2",
             outcome_name=out_name,
         )
+        if p.city == "HH":
+            self.meta["h2_oof_diagnostics"] = oof_diagnostics(
+                x.to_numpy(float), y.to_numpy(int), fr["cluster"].to_numpy(object), fr["w_end"]
+            )
         doms = fixed_feature_list(fr, "dom")
         self.meta["feature_lists"]["H2_domain"] = doms
         xd = oa_features(fr, doms, "dom")
@@ -2332,7 +2365,8 @@ class SuiteRun:
                     "g_commercial_c5",
                     status_name,
                     [pv],
-                    [*self.shock_notes([w for w in p.windows if w[1] == pv]), *bn],
+                    # #355 review MED 1: the row spans P (ends at pv) and F (starts at pv)
+                    [*self.shock_notes([w for w in p.windows if pv in (w[0], w[1])]), *bn],
                     prim_timing[which],
                 )
             # pivot difference (§3.4)
@@ -2380,7 +2414,8 @@ class SuiteRun:
                     notes=[
                         "heterogeneous across pivots: the pooled estimate depends on the window"
                         if het
-                        else "no detectable pivot heterogeneity (CI includes 0)"
+                        else "no detectable pivot heterogeneity (CI includes 0)",
+                        *self.shock_notes(p.windows),
                     ],
                     descriptive=True,
                 )
@@ -2478,7 +2513,7 @@ class SuiteRun:
                 "g_commercial_c5",
                 status_name,
                 pivots,
-                [cut_note],
+                [cut_note, *self.shock_notes(p.windows)],
                 timing,
             )
 
@@ -3251,7 +3286,16 @@ def _deviations(meta_mod: dict, meta_th: dict) -> list[str]:
         "low-B smoke run**, so it is not pre-registered; it can only weaken a claim, and it "
         "binds #355 unchanged.",
         "**Hamburg panels not reported here.** The code supports `--city HH` (`HH/full`, "
-        "`HH/modern`, phase-shift chains); Hamburg results and findings are #355's.",
+        "`HH/modern`, phase-shift chains); Hamburg results and findings are #355's (see "
+        "`docs/epic-h/H-thesis-hypothesis-suite-findings.md`).",
+        "**Shock notes on every row that spans a shock window (#355 review, 2026-11-01; "
+        "notes only).** Per-pivot H3a/H3b rows now name the shock notes of both the P and the "
+        "F window (before: P only), and the pivot-difference and level-stratified H3a/H3b rows "
+        "carry the panel's shock notes (before: none), so the §3.4 sentence 'every pooled row "
+        "that includes W1 names this mechanism' holds for every row. In `BER/modern` this adds "
+        "the W1 note to the two pivot-difference rows and the four level-stratified rows; no "
+        "estimate, CI, p, verdict or Holds? label changes, and `BER/thesis-era` carries no "
+        "shock notes, so it is unchanged.",
     ]
     return devs
 
@@ -3654,8 +3698,9 @@ def write_berlin_findings(path: Path, records: list[dict], meta: dict) -> None:
         "Dated 2026-10-31/2026-11-01. Items 1-11 were fixed in code before any suite statistic "
         "was computed. Items 12-15 record consequences first seen in a low-B smoke run (an "
         "untestable or thin sensitivity row, a delta-AUC case the mapping does not spell out); "
-        "none changed a rule after results were seen. None changes a hypothesis, variable, "
-        "expected sign, family or verdict rule."
+        "none changed a rule after results were seen. Item 16 is a notes-only correction from "
+        "the #355 review (2026-11-01). None changes a hypothesis, variable, expected sign, "
+        "family or verdict rule."
     )
     a("")
     for i, dv in enumerate(_deviations(mm, mt), start=1):
@@ -3751,6 +3796,89 @@ HH_INDICATOR_SENTENCE = (
     "six Dynamik indicators per statistisches Gebiet as z-scores; the WFS used by the warehouse "
     'publishes classes only."* (phase A §5, binding check §2.1(5) / D8g)'
 )
+
+
+# #355 review MED 3: plain names of the domains an OA feature list draws on.
+DOMAIN_PHRASE = {
+    "Public Space": "public facilities",
+    "Mobility": "transport",
+    "Tourism": "tourist facilities",
+    "Public Service": "public services",
+    "Health": "health services",
+    "Education": "education",
+    "Sports and Recreation": "sport and recreation",
+    "Gastronomy": "shops and services",
+    "Retail": "shops and services",
+    "Services": "shops and services",
+    "Entertainment": "shops and services",
+}
+CAMPAIGN_DOMAINS = ("Mobility", "Public Space")
+
+
+def _feature_mix(feats: Sequence[str]) -> tuple[str, bool]:
+    """('public facilities, transport and tourist facilities', has_commercial) for a fixed
+    feature list; the phrase follows the list, so it cannot claim shops it does not hold."""
+    doms = sorted({f.split("|")[0] for f in feats})
+    phrases: list[str] = []
+    for dm in doms:
+        ph = DOMAIN_PHRASE.get(dm, dm.lower())
+        if ph not in phrases:
+            phrases.append(ph)
+    if not phrases:
+        text = "no category"
+    elif len(phrases) == 1:
+        text = phrases[0]
+    else:
+        text = ", ".join(phrases[:-1]) + " and " + phrases[-1]
+    return text, any(dm in COMMERCIAL_DOMAINS for dm in doms)
+
+
+def _hh_construct_sentence(feats: Sequence[str], design: str) -> str:
+    mix, has_comm = _feature_mix(feats)
+    doms = sorted({f.split("|")[0] for f in feats})
+    camp = [dm for dm in doms if dm in CAMPAIGN_DOMAINS]
+    what = f"the mix of {mix}"
+    if not has_comm:
+        what += " (no shop or service category reaches the measurement base at Gebiet grain)"
+    out = f"{design} in Hamburg tests {what}: its fixed feature list draws on {', '.join(doms)}."
+    if camp:
+        out += (
+            f" {' and '.join(camp)} are street-furniture and transit classes whose mapping is "
+            "campaign-driven, where C5's uniform-coverage assumption is least credible (domain "
+            "review D2)."
+        )
+    return out
+
+
+def _h2_diag_text(m: dict, mm: dict | None) -> str:
+    """#355 review MED 2: fold- and window-level AUC behind a below-chance pooled AUC."""
+    dg = m.get("h2_oof_diagnostics") or {}
+    folds = [v for v in dg.get("within_fold_auc") or [] if v is not None]
+    wins = {k: v for k, v in (dg.get("per_window_auc") or {}).items() if v is not None}
+    if not folds:
+        return "It is not read as evidence that the OA mix predicts the opposite change."
+    fb, wb = sum(v < 0.5 for v in folds), sum(v < 0.5 for v in wins.values())
+    consistent = fb == len(folds) and wb == len(wins)
+    mdg = (mm or {}).get("h2_oof_diagnostics") or {}
+    md = [v for v in mdg.get("within_fold_auc") or [] if v is not None]
+    cmp_txt = (
+        f" For comparison, the pivot-2022 panel's within-fold AUCs are {min(md):.2f}–{max(md):.2f}."
+        if md
+        else ""
+    )
+    fold_txt = " / ".join(f"{v:.3f}" for v in folds)
+    win_txt = ", ".join(f"{k} {v:.3f}" for k, v in sorted(wins.items()))
+    return (
+        f"The shortfall is {'consistent' if consistent else 'not uniform'}: within-fold AUC is "
+        f"below 0.5 in {fb} of {len(folds)} Stadtteil folds ({fold_txt}) and per-window AUC in "
+        f"{wb} of {len(wins)} windows ({win_txt}).{cmp_txt} It is read as an OA–Dynamik "
+        "relationship that is unstable across Stadtteile: a model fitted on the other "
+        "Stadtteile ranks the held-out ones slightly the wrong way"
+        + (", in every fold and every window" if consistent else "")
+        + ". It is not read as evidence that the OA mix predicts the opposite change. The "
+        "verdict and label stay as pre-registered; the diagnostics are in the metadata "
+        "(`h2_oof_diagnostics`)."
+    )
 
 
 def _hh_cell(r: dict | None) -> str:
@@ -3884,7 +4012,8 @@ def _hh_deviations(records: list[dict], meta: dict) -> list[str]:
         "**Stadtteil cluster membership.** A Gebiet's cluster is the Stadtteil named in its "
         f"latest edition. The label varies across editions for {mf.get('n_gebiete_stadtteil_label_varies', '?')} "
         "Gebiete (spelling variants such as 'GroßFlottbek' / 'Groß Flottbek', and Stadtteile "
-        "split or renamed, such as 'Hamm' → 'Hamm-Nord'); the latest edition gives "
+        "merged or renamed, such as 'Hamm-Nord' / 'Hamm-Mitte' / 'Hamm-Süd' → 'Hamm' (merged)); "
+        "the latest edition gives "
         f"{mf.get('n_clusters_total', '?')} clusters. §4.2 names the Stadtteil but not which edition decides.",
         "**Phase-shift chains: first H3b pivot without data.** The H3b window-start control at "
         "pivot 2014 (chain 2014/17/20/23) and 2015 (chain 2015/18/21/24) is the status class of "
@@ -3904,6 +4033,18 @@ def _hh_deviations(records: list[dict], meta: dict) -> list[str]:
         "H1 size sentence (§3), plain reasons for rows without data, and two lookup fixes for "
         "the D3b/R3 sentences in §3. The statistics code, the rows, the verdicts and the labels "
         "are unchanged by them."
+    )
+    devs.append(
+        "**#355 review corrections (data-engineer-reviewer, 2026-11-01), notes and text only.** "
+        "(a) Shock notes now reach every row that spans a shock window: per-pivot H3a/H3b rows "
+        "name both the P and the F window (before: P only), and the pivot-difference and "
+        "level-stratified rows carry the panel's notes (before: none); repeated notes on "
+        "phase-shift rows appear once. The same shared-code fix changes `notes` cells of six "
+        "`BER/modern` rows (pivot-difference and level-stratified H3a/H3b; E1b findings §12 "
+        "item 16). No estimate, CI, p, verdict or label changes in either city. (b) The "
+        "below-chance H2 disclosure reports the within-fold and per-window AUCs "
+        "(`h2_oof_diagnostics`, descriptive). (c) The H1/H2 wording follows the fixed feature "
+        "lists, which hold no shop or service category at Gebiet grain."
     )
     below = [
         r
@@ -3981,6 +4122,13 @@ def write_hamburg_findings(path: Path, records: list[dict], meta: dict) -> None:
         if r["city"] == "BER" and r["panel"] == "modern" and r["role"] == "primary"
     }
     mf = meta.get("HH/full", {})
+    h1_feats = mf.get("feature_lists", {}).get("H1_category", [])
+    h1_mix, h1_comm = _feature_mix(h1_feats)
+    h1_public = (
+        'only "the local mix of shops, services and public facilities" (§9).'
+        if h1_comm
+        else f'only "the mix of {h1_mix}" (§9; no shop or service category in the feature list).'
+    )
     sha = next((r["run_sha"] for r in hh), "")
     nboot = next((r["n_boot"] for r in hh), "")
     L: list[str] = []
@@ -4236,13 +4384,9 @@ def write_hamburg_findings(path: Path, records: list[dict], meta: dict) -> None:
         )
         a(
             f"- **H1 public wording ({label}).** Commercial-only H1 row: {_row_brief(r)} → public "
-            "text may say "
-            + (
-                '"businesses".'
-                if ok
-                else 'only "the local mix of shops, services and public facilities" (§9).'
-            )
+            "text may say " + ('"businesses".' if ok else h1_public)
         )
+    a(f"- **What H1 measures in Hamburg.** {_hh_construct_sentence(h1_feats, 'H1')}")
     a("")
     a("## 4. H2: two contrasts and the low-power rule (§4.4)")
     a("")
@@ -4253,6 +4397,10 @@ def write_hamburg_findings(path: Path, records: list[dict], meta: dict) -> None:
         "**Low-power rule (§4.4):** if the CI is NA or wider than 0.25, the row is NOT SIGNIFICANT with a "
         "'low power' note."
     )
+    a("")
+    for pk, label in HH_PANELS:
+        f2 = meta.get(f"HH/{pk}", {}).get("feature_lists", {}).get("H2_category", [])
+        a(f"- **What H2 measures ({label}).** {_hh_construct_sentence(f2, 'H2')}")
     a("")
     a("| Edition (Dynamik window) | positiv | stabil | negativ | Gebiete |")
     a("|---|---|---|---|---|")
@@ -4311,9 +4459,12 @@ def write_hamburg_findings(path: Path, records: list[dict], meta: dict) -> None:
                 "non-directional (§1.1), so CONTRADICTED is undefined (§5.1, as implemented in #354); "
                 "the row is NOT SIGNIFICANT"
                 + (" and maps to 'consistent (still unclear)'" if r["role"] == "primary" else "")
-                + ". It is not read as evidence that the OA mix predicts the opposite change. The CI "
-                "resamples fixed out-of-fold scores and ignores refit variance (geo sign-off 354 §6), "
-                "so it is somewhat narrow for a value this close to 0.5. See §16."
+                + ". "
+                + _h2_diag_text(
+                    meta.get(f"HH/{r['panel']}", {}),
+                    meta.get("HH/modern", {}) if r["panel"] != "modern" else None,
+                )
+                + " See §16."
             )
     a("")
     a("## 5. H3a/H3b per pivot and pivot heterogeneity")

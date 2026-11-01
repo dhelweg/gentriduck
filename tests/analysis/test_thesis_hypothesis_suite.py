@@ -948,3 +948,89 @@ def test_e5_retired_from_poe_analysis():
     assert "H-thesis-hypothesis-suite-findings.md" in e5.SUPERSEDED_NOTICE
     e5_md = repo / "docs" / "epic-h" / "E5-hamburg-lead-lag-findings.md"
     assert e5.SUPERSEDED_NOTICE.strip() in e5_md.read_text(encoding="utf-8")
+
+
+# ---------------------------------------------------------------------------
+# #355 review (data-engineer-reviewer, 2026-11-01): MED 1-3, LOW 4
+# ---------------------------------------------------------------------------
+
+
+def test_shock_notes_reach_every_row_spanning_a_shock_window():
+    """MED 1: per-pivot rows name P and F; pivot-difference and stratified rows carry the
+    panel's notes (§3.4 / §4.3 'every row that includes this window names the mechanism')."""
+    rows, _meta = _run_hh("full")
+    pan = "includes the 2020-21 pandemic"
+    by_op = {(r["hypothesis"], r["operationalisation"]): r for r in rows}
+    # pivot 2019: P = [2016, 2019] (refugee entry), F = [2019, 2022] (pandemic)
+    r19 = by_op[("H3a", "H3a at pivot 2019 only")]
+    assert any(pan in n for n in r19["notes"])
+    assert any("2015-16 refugees" in n for n in r19["notes"])
+    for which in ("H3a", "H3b"):
+        diff = [
+            r
+            for r in rows
+            if r["hypothesis"] == which and r["operationalisation"].startswith("pivot difference")
+        ]
+        strat = [
+            r
+            for r in rows
+            if r["hypothesis"] == which and "level-stratified" in r["operationalisation"]
+        ]
+        assert diff and strat
+        for r in (*diff, *strat):
+            assert any(pan in n for n in r["notes"]), r["operationalisation"]
+
+
+def test_berlin_per_pivot_notes_unchanged_and_pooled_rows_named():
+    """MED 1 in shared code: Berlin pivot 2023 spans no W1, so it stays note-free."""
+    run = S.SuiteRun(_crafted_panel_data(), n_boot=19, run_sha="test")
+    assert run.shock_notes([w for w in run.p.windows if 2023 in w]) == []
+    assert run.shock_notes([w for w in run.p.windows if 2021 in w]) == [S.W1_NOTE]
+    assert run.shock_notes(run.p.windows) == [S.W1_NOTE]
+
+
+def test_phase_shift_notes_are_deduplicated_in_order():
+    """LOW 4: a note shared by several windows of a chain appears once, in window order."""
+    rows, _meta = _run_hh("full")
+    ph = [r for r in rows if "phase-shift chain" in r["operationalisation"]]
+    assert ph
+    for r in ph:
+        assert len(r["notes"]) == len(set(r["notes"])), r["operationalisation"]
+    run = S.SuiteRun(_crafted_hh_panel_data(), n_boot=19, run_sha="test")
+    chain = S.HH_PHASE_CHAINS[0]
+    notes = run.shock_notes(chain)
+    expected = []
+    for w in chain:
+        for n in S.hh_shock_notes(*w):
+            if n not in expected:
+                expected.append(n)
+    assert notes == expected
+
+
+def test_h2_oof_diagnostics_in_metadata():
+    """MED 2: within-fold and per-window AUC of the H2 primary, same folds as the row."""
+    rows, meta = _run_hh("full")
+    dg = meta["h2_oof_diagnostics"]
+    prim = next(r for r in rows if r["hypothesis"] == "H2" and r["role"] == "primary")
+    assert dg["pooled_auc"] == pytest.approx(prim["estimate"])
+    assert len(dg["within_fold_auc"]) == S.N_SPLITS
+    assert set(dg["per_window_auc"]) == {"2016", "2019", "2022", "2025"}
+    txt = S._h2_diag_text(
+        {"h2_oof_diagnostics": {"within_fold_auc": [0.4, 0.45], "per_window_auc": {"2016": 0.4}}},
+        {"h2_oof_diagnostics": {"within_fold_auc": [0.51, 0.59]}},
+    )
+    assert "consistent" in txt and "unstable across Stadtteile" in txt and "0.51–0.59" in txt
+    assert "not read as evidence that the OA mix predicts the opposite change" in txt
+
+
+def test_hh_construct_wording_follows_the_feature_list():
+    """MED 3: no shop/service category in the list -> no 'shops, services' wording."""
+    feats = ["Mobility|Individual", "Public Space|Bench", "Tourism|Sights"]
+    mix, comm = S._feature_mix(feats)
+    assert mix == "transport, public facilities and tourist facilities" and comm is False
+    txt = S._hh_construct_sentence(feats, "H1")
+    assert "no shop or service category reaches the measurement base" in txt
+    assert "campaign-driven" in txt and "D2" in txt
+    mix2, comm2 = S._feature_mix(["Gastronomy|Cafe", "Public Space|Bench"])
+    assert comm2 is True and "shops and services" in mix2
+    assert "no shop or service" not in S._hh_construct_sentence(["Gastronomy|Cafe"], "H1")
