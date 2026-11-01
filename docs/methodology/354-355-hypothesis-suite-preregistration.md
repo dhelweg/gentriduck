@@ -819,6 +819,44 @@ step to the domain-reviewed primary. It does not change hypotheses, variables, e
 families or verdict mapping, but it is material enough that **the domain expert must re-check A1.1**
 before phase B integrates. A1.2–A1.5 are clarifications with no design effect.
 
+## Amendment 2 (post-results clarification, 2026-11-01)
+
+**Recorded after results.** Geo-DS records this clarification on 2026-11-01, after the low-B smoke
+run and the full B = 1999 run of `BER/thesis-era` and `BER/modern` had been seen. It is therefore
+**not pre-registered** and is disclosed as such (findings §12 item 14). It changes no hypothesis,
+variable, expected sign, family, primary verdict or BH adjustment; it only fills a case that the §5.6
+H2 row did not spell out.
+
+**The gap.** §5.6 maps a SUPPORTED-and-at-least-poor H2 to "stronger than thesis" when "the ΔAUC CI
+excludes 0" and to "explained by current status level" when it includes 0. It did not say which side
+of 0. The thesis-era H2 incremental row is ΔAUC = −0.018 [−0.035, −0.003] (status level alone 0.767,
+status level + category OA 0.749): a CI wholly **below** 0.
+
+**Clarification (binding).** The §5.6 phrase "the ΔAUC CI excludes 0" means **ci_low > 0**: OA adds
+out-of-fold discrimination beyond current status level. A ΔAUC CI that includes 0 **or lies wholly
+below 0** maps to **"consistent (still unclear): explained by current status level"**, citing the
+thesis's "Scheinkorrelation" (§6.3.2.1). The incremental row itself keeps its own verdict
+(CONTRADICTED, secondary, uncorrected) and the note "adding OA significantly lowers out-of-fold AUC
+once status level is included".
+
+**Why this follows the pre-registered intent.**
+1. D5 and §5.2 define the incremental row as the test of whether OA carries information about status
+   change *beyond* the current status level. The thesis rejected H2 as a substantive finding
+   because the OA–Dynamik link may be a spurious correlation running through the status level
+   (§6.3.2.1). "Stronger than thesis" was meant to require evidence that defeats that objection, i.e.
+   positive increment. A negative increment is the opposite of such evidence.
+2. The ΔAUC test is directional by construction (§5.2, "does OA add?"); a two-sided reading of
+   "excludes 0" would award "stronger than thesis" to the result that most supports the thesis's
+   spurious-correlation reading. That is a reductio, not an intent.
+3. A negative out-of-fold ΔAUC is what an uninformative block of ~30 standardised features does to a
+   fixed L2 logit (C = 1.0) at this n: added variance lowers held-out discrimination. It is read as
+   "no incremental information", **not** as OA being inversely informative. Public text must not say
+   OA "worsens" prediction in a substantive sense.
+
+**Scope.** Applies to every panel that uses the §5.6 H2 row, including the #355 Hamburg panels,
+which have not been run at the time of writing. The domain expert ratifies or overrules this
+amendment independently (ADR-0011 dual gate).
+
 ## 13. References
 
 - Helweg, D. (2018). *Untersuchung von Gentrifizierung am Beispiel Berlin mittels Big Data Analytics.*
