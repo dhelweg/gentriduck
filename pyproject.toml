@@ -150,15 +150,18 @@ analysis = { sequence = [
     # (no RNG) analysis scripts, so they belong here like their siblings.
     "python analysis/e3_maps.py",
     "python analysis/e3_narratives.py",
-    # H-C3 (#160): independent Hamburg annual-cadence lead-lag H3a/H3b re-test.
-    # Deterministic (no RNG); requires int_hamburg_lead_lag from `poe build`.
-    "python analysis/e5_hamburg_lead_lag.py",
-    # #354: city/window-parametrised thesis hypothesis suite (pre-registration
-    # docs/methodology/354-355-hypothesis-suite-preregistration.md). Berlin panels
-    # (modern + thesis-era) -> docs/epic-e/thesis-hypothesis-suite-results.csv and the
-    # generated E1b findings. Deterministic (seed 42, B = 1999); a few minutes. The
-    # `--city HH` run is added by #355 together with the Hamburg findings.
+    # H-C3 (#160) analysis/e5_hamburg_lead_lag.py was removed from this sequence by #355:
+    # superseded by the thesis hypothesis suite's `--city HH` run below (pre-registration
+    # §6.3). The script stays in the repository, marked superseded, for the audit trail.
+    # #354/#355: city/window-parametrised thesis hypothesis suite (pre-registration
+    # docs/methodology/354-355-hypothesis-suite-preregistration.md). Both runs write
+    # docs/epic-e/thesis-hypothesis-suite-results.csv (each replaces only its own panels'
+    # rows). Berlin panels (modern + thesis-era) -> the generated E1b findings; Hamburg
+    # panels (full chain + pivot 2022) -> docs/epic-h/H-thesis-hypothesis-suite-findings.md.
+    # Deterministic (seed 42, B = 1999). BER takes a few minutes. HH runs after BER because
+    # the Hamburg findings' cross-city label table reads the BER rows already in the CSV.
     "python analysis/thesis_hypothesis_suite.py --city BER",
+    "python analysis/thesis_hypothesis_suite.py --city HH",
 ], default_item_type = "cmd" }
 # B2: back-test harness — validates live index against MSS classes and known hotspot/coldspot PLRs.
 # Run after `poe build`. Results written to docs/methodology/backtest.md.

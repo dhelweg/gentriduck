@@ -3278,6 +3278,9 @@ models:
       scope, #125): filtered to city_code='HH'; int_mss_lead_lag.sql (Berlin) is
       untouched. Does NOT widen any published mart's `accepted_values` beyond
       `["BER"]` (#158/#159 precedent) -- feeds only analysis/e5_hamburg_lead_lag.py.
+      #355: that script is superseded by analysis/thesis_hypothesis_suite.py --city HH
+      (pre-registration 354-355 §6.3) and no longer runs in `poe analysis`; the suite
+      does not read this model, so it currently has no active consumer.
 
       Graceful degradation: returns zero rows when int_gentrification_ts has no
       Hamburg rows.
