@@ -1,0 +1,839 @@
+{
+  "BER/modern": {
+    "city": "BER",
+    "coefficients": {
+      "H1": [
+        [
+          "oa_cat:oa_cat:Services|Funeral",
+          0.5651
+        ],
+        [
+          "oa_cat:oa_cat:Public Space|Phone",
+          0.4979
+        ],
+        [
+          "oa_cat:oa_cat:Public Space|Other",
+          0.3778
+        ],
+        [
+          "oa_cat:oa_cat:Public Service|Social",
+          0.3449
+        ],
+        [
+          "oa_cat:oa_cat:Retail|Tech",
+          0.3332
+        ],
+        [
+          "oa_cat:oa_cat:Services|Beauty",
+          -0.3261
+        ],
+        [
+          "oa_cat:oa_cat:Gastronomy|Fast Food",
+          0.3115
+        ],
+        [
+          "oa_cat:oa_cat:Public Space|Post",
+          -0.2945
+        ],
+        [
+          "oa_cat:oa_cat:Retail|Other Goods",
+          -0.2879
+        ],
+        [
+          "oa_cat:oa_cat:Services|Travel",
+          0.284
+        ]
+      ],
+      "H2": [
+        [
+          "oa_cat:oa_cat:Mobility|Public Transport",
+          0.4268
+        ],
+        [
+          "oa_cat:oa_cat:Public Space|Bench",
+          -0.3366
+        ],
+        [
+          "oa_cat:oa_cat:Retail|Food and Drink",
+          -0.3352
+        ],
+        [
+          "oa_cat:oa_cat:Public Space|Phone",
+          -0.3247
+        ],
+        [
+          "oa_cat:oa_cat:Public Space|Recycling",
+          -0.3218
+        ],
+        [
+          "oa_cat:oa_cat:Mobility|Individual",
+          0.252
+        ],
+        [
+          "oa_cat:oa_cat:Retail|Tech",
+          -0.2395
+        ],
+        [
+          "oa_cat:oa_cat:Retail|Workshop",
+          -0.2153
+        ],
+        [
+          "oa_cat:oa_cat:Public Service|Bank",
+          -0.1879
+        ],
+        [
+          "oa_cat:oa_cat:Public Service|Health",
+          -0.1753
+        ]
+      ]
+    },
+    "coverage": {
+      "H1a": {
+        "dropped": "median status -0.12, share with status > 0 45%",
+        "n_retained": 260,
+        "n_total": 535,
+        "retained": "median status -0.32, share with status > 0 41%"
+      },
+      "H1b": {
+        "dropped": "median status -0.12, share with status > 0 45%",
+        "n_retained": 260,
+        "n_total": 535,
+        "retained": "median status -0.32, share with status > 0 41%"
+      },
+      "H1c": {
+        "dropped": "none",
+        "n_retained": 535,
+        "n_total": 535,
+        "retained": "median status -0.21, share with status > 0 43%"
+      }
+    },
+    "definition_breaks": {
+      "2021": "D_2021 window (Dec 2018-Dec 2020) crosses the MSS 2021 Regelaltersgrenze change in the S1/S3 denominators (Indikatorenblaetter MSS 2021, Vorbemerkungen p. 7)"
+    },
+    "direction": "no directional evidence either way",
+    "feature_lists": {
+      "H1_bzr": [
+        "Entertainment|Bar",
+        "Entertainment|Culture",
+        "Entertainment|Leisure",
+        "Entertainment|Nightlife",
+        "Gastronomy|Cafe",
+        "Gastronomy|Fast Food",
+        "Gastronomy|Restaurant",
+        "Mobility|Individual",
+        "Mobility|Public Transport",
+        "Public Service|Bank",
+        "Public Service|Education",
+        "Public Service|Health",
+        "Public Service|Other",
+        "Public Service|Safety",
+        "Public Service|Social",
+        "Public Space|Bench",
+        "Public Space|Mail",
+        "Public Space|Other",
+        "Public Space|Phone",
+        "Public Space|Post",
+        "Public Space|Recycling",
+        "Public Space|Toilet",
+        "Retail|Art",
+        "Retail|Clothing",
+        "Retail|Food and Drink",
+        "Retail|Hardware",
+        "Retail|Medical",
+        "Retail|Other Goods",
+        "Retail|Print",
+        "Retail|Tech",
+        "Retail|Toys and Gifts",
+        "Retail|Workshop",
+        "Services|Beauty",
+        "Services|Funeral",
+        "Services|Hairdresser",
+        "Services|Laundry",
+        "Services|Massage",
+        "Services|Travel",
+        "Sports and Recreation|Recreation",
+        "Sports and Recreation|Sport",
+        "Tourism|Accommodation",
+        "Tourism|Info",
+        "Tourism|Sights",
+        "Vacancy|Vacancy"
+      ],
+      "H1_category": [
+        "Gastronomy|Cafe",
+        "Gastronomy|Fast Food",
+        "Gastronomy|Restaurant",
+        "Mobility|Individual",
+        "Mobility|Public Transport",
+        "Public Service|Bank",
+        "Public Service|Education",
+        "Public Service|Health",
+        "Public Service|Other",
+        "Public Service|Safety",
+        "Public Service|Social",
+        "Public Space|Bench",
+        "Public Space|Mail",
+        "Public Space|Other",
+        "Public Space|Phone",
+        "Public Space|Post",
+        "Public Space|Recycling",
+        "Public Space|Toilet",
+        "Retail|Art",
+        "Retail|Clothing",
+        "Retail|Food and Drink",
+        "Retail|Hardware",
+        "Retail|Medical",
+        "Retail|Other Goods",
+        "Retail|Print",
+        "Retail|Tech",
+        "Retail|Toys and Gifts",
+        "Retail|Workshop",
+        "Services|Beauty",
+        "Services|Funeral",
+        "Services|Hairdresser",
+        "Services|Laundry",
+        "Services|Massage",
+        "Services|Travel",
+        "Sports and Recreation|Recreation",
+        "Sports and Recreation|Sport",
+        "Tourism|Accommodation",
+        "Tourism|Info",
+        "Tourism|Sights"
+      ],
+      "H1_commercial": [
+        "Gastronomy|Cafe",
+        "Gastronomy|Fast Food",
+        "Gastronomy|Restaurant",
+        "Retail|Art",
+        "Retail|Clothing",
+        "Retail|Food and Drink",
+        "Retail|Hardware",
+        "Retail|Medical",
+        "Retail|Other Goods",
+        "Retail|Print",
+        "Retail|Tech",
+        "Retail|Toys and Gifts",
+        "Retail|Workshop",
+        "Services|Beauty",
+        "Services|Funeral",
+        "Services|Hairdresser",
+        "Services|Laundry",
+        "Services|Massage",
+        "Services|Travel"
+      ],
+      "H1_domain": [
+        "Entertainment",
+        "Gastronomy",
+        "Mobility",
+        "Office",
+        "Other",
+        "Public Service",
+        "Public Space",
+        "Religion",
+        "Retail",
+        "Services",
+        "Sports and Recreation",
+        "Tourism",
+        "Vacancy"
+      ],
+      "H2_category": [
+        "Gastronomy|Cafe",
+        "Gastronomy|Fast Food",
+        "Gastronomy|Restaurant",
+        "Mobility|Individual",
+        "Mobility|Public Transport",
+        "Public Service|Bank",
+        "Public Service|Education",
+        "Public Service|Health",
+        "Public Service|Other",
+        "Public Service|Safety",
+        "Public Service|Social",
+        "Public Space|Bench",
+        "Public Space|Mail",
+        "Public Space|Other",
+        "Public Space|Phone",
+        "Public Space|Post",
+        "Public Space|Recycling",
+        "Public Space|Toilet",
+        "Retail|Art",
+        "Retail|Clothing",
+        "Retail|Food and Drink",
+        "Retail|Hardware",
+        "Retail|Medical",
+        "Retail|Other Goods",
+        "Retail|Print",
+        "Retail|Tech",
+        "Retail|Toys and Gifts",
+        "Retail|Workshop",
+        "Tourism|Accommodation",
+        "Tourism|Info",
+        "Tourism|Sights"
+      ],
+      "H2_domain": [
+        "Entertainment",
+        "Gastronomy",
+        "Mobility",
+        "Office",
+        "Other",
+        "Public Service",
+        "Public Space",
+        "Religion",
+        "Retail",
+        "Services",
+        "Sports and Recreation",
+        "Tourism",
+        "Vacancy"
+      ]
+    },
+    "feature_lists_prefit": {
+      "H1_category": [
+        "Gastronomy|Cafe",
+        "Gastronomy|Fast Food",
+        "Gastronomy|Restaurant",
+        "Mobility|Individual",
+        "Mobility|Public Transport",
+        "Public Service|Bank",
+        "Public Service|Education",
+        "Public Service|Health",
+        "Public Service|Other",
+        "Public Service|Safety",
+        "Public Service|Social",
+        "Public Space|Bench",
+        "Public Space|Mail",
+        "Public Space|Other",
+        "Public Space|Phone",
+        "Public Space|Post",
+        "Public Space|Recycling",
+        "Public Space|Toilet",
+        "Retail|Art",
+        "Retail|Clothing",
+        "Retail|Food and Drink",
+        "Retail|Hardware",
+        "Retail|Medical",
+        "Retail|Other Goods",
+        "Retail|Print",
+        "Retail|Tech",
+        "Retail|Toys and Gifts",
+        "Retail|Workshop",
+        "Services|Beauty",
+        "Services|Funeral",
+        "Services|Hairdresser",
+        "Services|Laundry",
+        "Services|Massage",
+        "Services|Travel",
+        "Sports and Recreation|Recreation",
+        "Sports and Recreation|Sport",
+        "Tourism|Accommodation",
+        "Tourism|Info",
+        "Tourism|Sights"
+      ],
+      "H2_category": [
+        "Gastronomy|Cafe",
+        "Gastronomy|Fast Food",
+        "Gastronomy|Restaurant",
+        "Mobility|Individual",
+        "Mobility|Public Transport",
+        "Public Service|Bank",
+        "Public Service|Education",
+        "Public Service|Health",
+        "Public Service|Other",
+        "Public Service|Safety",
+        "Public Service|Social",
+        "Public Space|Bench",
+        "Public Space|Mail",
+        "Public Space|Other",
+        "Public Space|Phone",
+        "Public Space|Post",
+        "Public Space|Recycling",
+        "Public Space|Toilet",
+        "Retail|Art",
+        "Retail|Clothing",
+        "Retail|Food and Drink",
+        "Retail|Hardware",
+        "Retail|Medical",
+        "Retail|Other Goods",
+        "Retail|Print",
+        "Retail|Tech",
+        "Retail|Toys and Gifts",
+        "Retail|Workshop",
+        "Tourism|Accommodation",
+        "Tourism|Info",
+        "Tourism|Sights"
+      ]
+    },
+    "h2_incremental": {
+      "auc_base": 0.694464,
+      "auc_full": 0.690574,
+      "ci_high": 0.007122,
+      "ci_low": -0.015295,
+      "estimate": -0.00389
+    },
+    "label": "2019-2025 (MSS 2021/2023/2025, LOR 2021)",
+    "notes": [],
+    "panel": "modern",
+    "pivot_diff": {
+      "H3a": {
+        "ci_high": 0.192429,
+        "ci_low": -0.065309,
+        "estimate": 0.069684,
+        "first": 2021,
+        "heterogeneous": false,
+        "last": 2023
+      },
+      "H3b": {
+        "ci_high": 0.191444,
+        "ci_low": -0.088691,
+        "estimate": 0.05138,
+        "first": 2021,
+        "heterogeneous": false,
+        "last": 2023
+      }
+    },
+    "validity": [
+      {
+        "edition": 2021,
+        "n_D": 536,
+        "n_S": 536,
+        "rho_D_dynamik_class": 0.6783,
+        "rho_S_status_class": 0.8231,
+        "sources_D": "D_2021 = mean z(arbeitslose_dynamik[d1], transferbezug_dynamik[d3], kinderarmut_dynamik[d4])",
+        "sources_S": "S_2021 = mean z(arbeitslose_anteil[s1], transferbezug_anteil[s3], kinderarmut_anteil[s4])"
+      },
+      {
+        "edition": 2023,
+        "n_D": 536,
+        "n_S": 536,
+        "rho_D_dynamik_class": 0.7082,
+        "rho_S_status_class": 0.8208,
+        "sources_D": "D_2023 = mean z(arbeitslose_dynamik[d1], transferbezug_dynamik[d3], kinderarmut_dynamik[d4])",
+        "sources_S": "S_2023 = mean z(arbeitslose_anteil[s1], transferbezug_anteil[s3], kinderarmut_anteil[s4])"
+      },
+      {
+        "edition": 2025,
+        "n_D": 535,
+        "n_S": 535,
+        "rho_D_dynamik_class": 0.7095,
+        "rho_S_status_class": 0.8095,
+        "sources_D": "D_2025 = mean z(arbeitslose_dynamik[d1], transferbezug_dynamik[d3], kinderarmut_dynamik[d4])",
+        "sources_S": "S_2025 = mean z(arbeitslose_anteil[s1], transferbezug_anteil[s3], kinderarmut_anteil[s4])"
+      }
+    ]
+  },
+  "BER/thesis-era": {
+    "city": "BER",
+    "coefficients": {
+      "H1": [
+        [
+          "oa_cat:oa_cat:Gastronomy|Fast Food",
+          0.4188
+        ],
+        [
+          "oa_cat:oa_cat:Retail|Tech",
+          0.3351
+        ],
+        [
+          "oa_cat:oa_cat:Gastronomy|Restaurant",
+          -0.3334
+        ],
+        [
+          "oa_cat:oa_cat:Retail|Print",
+          -0.3311
+        ],
+        [
+          "oa_cat:oa_cat:Public Space|Phone",
+          0.251
+        ],
+        [
+          "oa_cat:oa_cat:Public Space|Toilet",
+          -0.2226
+        ],
+        [
+          "oa_cat:oa_cat:Public Space|Mail",
+          -0.2162
+        ],
+        [
+          "oa_cat:oa_cat:Public Space|Recycling",
+          0.1864
+        ],
+        [
+          "oa_cat:oa_cat:Retail|Drugstore",
+          -0.177
+        ],
+        [
+          "oa_cat:oa_cat:Retail|Hardware",
+          0.168
+        ]
+      ],
+      "H2": [
+        [
+          "oa_cat:oa_cat:Retail|Drugstore",
+          0.3377
+        ],
+        [
+          "oa_cat:oa_cat:Public Space|Phone",
+          -0.2965
+        ],
+        [
+          "oa_cat:oa_cat:Retail|Food and Drink",
+          -0.2475
+        ],
+        [
+          "oa_cat:oa_cat:Mobility|Public Transport",
+          0.2282
+        ],
+        [
+          "oa_cat:oa_cat:Public Service|Health",
+          0.2275
+        ],
+        [
+          "oa_cat:oa_cat:Gastronomy|Fast Food",
+          -0.2125
+        ],
+        [
+          "oa_cat:oa_cat:Public Service|Bank",
+          0.2074
+        ],
+        [
+          "oa_cat:oa_cat:Public Space|Recycling",
+          -0.1863
+        ],
+        [
+          "oa_cat:oa_cat:Public Space|Mail",
+          0.1844
+        ],
+        [
+          "oa_cat:oa_cat:Public Space|Post",
+          -0.1709
+        ]
+      ]
+    },
+    "coverage": {
+      "H1a": {
+        "dropped": "median status -0.22, share with status > 0 44%",
+        "n_retained": 188,
+        "n_total": 436,
+        "retained": "median status -0.24, share with status > 0 40%"
+      },
+      "H1b": {
+        "dropped": "median status -0.22, share with status > 0 44%",
+        "n_retained": 188,
+        "n_total": 436,
+        "retained": "median status -0.24, share with status > 0 40%"
+      },
+      "H1c": {
+        "dropped": "median status -0.40, share with status > 0 25%",
+        "n_retained": 432,
+        "n_total": 436,
+        "retained": "median status -0.23, share with status > 0 43%"
+      }
+    },
+    "definition_breaks": {
+      "2017": "D_2017 window (Dec 2014-Dec 2016) crosses the 2016 SGB II statistics revision (S3/S4 recalculated, MSS 2023 history table p. 13; D3 r = 0.981, D4 r = 0.917 vs level difference)",
+      "2019": "D_2019 window (Dec 2016-Dec 2018) crosses the MSS 2019 S1 redefinition (SGB III removed; recomputed back to 2016 by the publisher, MSS 2019 p. 16; D1 r = 0.953)"
+    },
+    "direction": "no directional evidence either way",
+    "feature_lists": {
+      "H1_bzr": [
+        "Entertainment|Bar",
+        "Entertainment|Culture",
+        "Entertainment|Leisure",
+        "Entertainment|Nightlife",
+        "Gastronomy|Cafe",
+        "Gastronomy|Fast Food",
+        "Gastronomy|Restaurant",
+        "Mobility|Individual",
+        "Mobility|Public Transport",
+        "Public Service|Bank",
+        "Public Service|Education",
+        "Public Service|Health",
+        "Public Service|Other",
+        "Public Service|Safety",
+        "Public Service|Social",
+        "Public Space|Bench",
+        "Public Space|Mail",
+        "Public Space|Other",
+        "Public Space|Phone",
+        "Public Space|Post",
+        "Public Space|Recycling",
+        "Public Space|Toilet",
+        "Retail|Art",
+        "Retail|Clothing",
+        "Retail|Drugstore",
+        "Retail|Food and Drink",
+        "Retail|Hardware",
+        "Retail|Medical",
+        "Retail|Other Goods",
+        "Retail|Print",
+        "Retail|Tech",
+        "Retail|Toys and Gifts",
+        "Retail|Workshop",
+        "Services|Beauty",
+        "Services|Hairdresser",
+        "Services|Laundry",
+        "Services|Massage",
+        "Services|Travel",
+        "Sports and Recreation|Recreation",
+        "Sports and Recreation|Sport",
+        "Tourism|Accommodation",
+        "Tourism|Info",
+        "Tourism|Sights"
+      ],
+      "H1_category": [
+        "Gastronomy|Cafe",
+        "Gastronomy|Fast Food",
+        "Gastronomy|Restaurant",
+        "Mobility|Individual",
+        "Mobility|Public Transport",
+        "Public Service|Bank",
+        "Public Service|Education",
+        "Public Service|Health",
+        "Public Service|Other",
+        "Public Service|Safety",
+        "Public Service|Social",
+        "Public Space|Bench",
+        "Public Space|Mail",
+        "Public Space|Other",
+        "Public Space|Phone",
+        "Public Space|Post",
+        "Public Space|Recycling",
+        "Public Space|Toilet",
+        "Retail|Art",
+        "Retail|Clothing",
+        "Retail|Drugstore",
+        "Retail|Food and Drink",
+        "Retail|Hardware",
+        "Retail|Medical",
+        "Retail|Other Goods",
+        "Retail|Print",
+        "Retail|Tech",
+        "Retail|Toys and Gifts",
+        "Retail|Workshop",
+        "Tourism|Accommodation",
+        "Tourism|Info",
+        "Tourism|Sights"
+      ],
+      "H1_commercial": [
+        "Gastronomy|Cafe",
+        "Gastronomy|Fast Food",
+        "Gastronomy|Restaurant",
+        "Retail|Art",
+        "Retail|Clothing",
+        "Retail|Drugstore",
+        "Retail|Food and Drink",
+        "Retail|Hardware",
+        "Retail|Medical",
+        "Retail|Other Goods",
+        "Retail|Print",
+        "Retail|Tech",
+        "Retail|Toys and Gifts",
+        "Retail|Workshop"
+      ],
+      "H1_domain": [
+        "Entertainment",
+        "Gastronomy",
+        "Mobility",
+        "Office",
+        "Other",
+        "Public Service",
+        "Public Space",
+        "Religion",
+        "Retail",
+        "Services",
+        "Sports and Recreation",
+        "Tourism",
+        "Vacancy"
+      ],
+      "H2_category": [
+        "Gastronomy|Cafe",
+        "Gastronomy|Fast Food",
+        "Gastronomy|Restaurant",
+        "Mobility|Individual",
+        "Mobility|Public Transport",
+        "Public Service|Bank",
+        "Public Service|Education",
+        "Public Service|Health",
+        "Public Service|Other",
+        "Public Service|Safety",
+        "Public Service|Social",
+        "Public Space|Bench",
+        "Public Space|Mail",
+        "Public Space|Other",
+        "Public Space|Phone",
+        "Public Space|Post",
+        "Public Space|Recycling",
+        "Public Space|Toilet",
+        "Retail|Art",
+        "Retail|Clothing",
+        "Retail|Drugstore",
+        "Retail|Food and Drink",
+        "Retail|Hardware",
+        "Retail|Medical",
+        "Retail|Other Goods",
+        "Retail|Print",
+        "Retail|Tech",
+        "Retail|Toys and Gifts",
+        "Retail|Workshop"
+      ],
+      "H2_domain": [
+        "Entertainment",
+        "Gastronomy",
+        "Mobility",
+        "Office",
+        "Other",
+        "Public Service",
+        "Public Space",
+        "Religion",
+        "Retail",
+        "Services",
+        "Sports and Recreation",
+        "Tourism",
+        "Vacancy"
+      ]
+    },
+    "feature_lists_prefit": {
+      "H1_category": [
+        "Gastronomy|Cafe",
+        "Gastronomy|Fast Food",
+        "Gastronomy|Restaurant",
+        "Mobility|Individual",
+        "Mobility|Public Transport",
+        "Public Service|Bank",
+        "Public Service|Education",
+        "Public Service|Health",
+        "Public Service|Other",
+        "Public Service|Safety",
+        "Public Service|Social",
+        "Public Space|Bench",
+        "Public Space|Mail",
+        "Public Space|Other",
+        "Public Space|Phone",
+        "Public Space|Post",
+        "Public Space|Recycling",
+        "Public Space|Toilet",
+        "Retail|Art",
+        "Retail|Clothing",
+        "Retail|Drugstore",
+        "Retail|Food and Drink",
+        "Retail|Hardware",
+        "Retail|Medical",
+        "Retail|Other Goods",
+        "Retail|Print",
+        "Retail|Tech",
+        "Retail|Toys and Gifts",
+        "Retail|Workshop",
+        "Tourism|Accommodation",
+        "Tourism|Info",
+        "Tourism|Sights"
+      ],
+      "H2_category": [
+        "Gastronomy|Cafe",
+        "Gastronomy|Fast Food",
+        "Gastronomy|Restaurant",
+        "Mobility|Individual",
+        "Mobility|Public Transport",
+        "Public Service|Bank",
+        "Public Service|Education",
+        "Public Service|Health",
+        "Public Service|Other",
+        "Public Service|Safety",
+        "Public Service|Social",
+        "Public Space|Bench",
+        "Public Space|Mail",
+        "Public Space|Other",
+        "Public Space|Phone",
+        "Public Space|Post",
+        "Public Space|Recycling",
+        "Public Space|Toilet",
+        "Retail|Art",
+        "Retail|Clothing",
+        "Retail|Drugstore",
+        "Retail|Food and Drink",
+        "Retail|Hardware",
+        "Retail|Medical",
+        "Retail|Other Goods",
+        "Retail|Print",
+        "Retail|Tech",
+        "Retail|Toys and Gifts",
+        "Retail|Workshop"
+      ]
+    },
+    "fidelity": {
+      "H1a": {
+        "n": 436,
+        "suite": -0.1044,
+        "thesis": -0.02
+      },
+      "H1b": {
+        "n": 436,
+        "suite": 0.2631,
+        "thesis": 0.27
+      },
+      "H1c": {
+        "n": 436,
+        "suite": 0.1752,
+        "thesis": 0.1
+      }
+    },
+    "h2_incremental": {
+      "auc_base": 0.767477,
+      "auc_full": 0.749143,
+      "ci_high": -0.003226,
+      "ci_low": -0.034918,
+      "estimate": -0.018334
+    },
+    "label": "re-analysis of the thesis era with current methods (MSS 2015/2017/2019, LOR pre-2021)",
+    "notes": [],
+    "panel": "thesis-era",
+    "pivot_diff": {
+      "H3a": {
+        "ci_high": 0.095965,
+        "ci_low": -0.151357,
+        "estimate": -0.030076,
+        "first": 2015,
+        "heterogeneous": false,
+        "last": 2017
+      },
+      "H3b": {
+        "ci_high": 0.150204,
+        "ci_low": -0.143926,
+        "estimate": 0.010642,
+        "first": 2015,
+        "heterogeneous": false,
+        "last": 2017
+      }
+    },
+    "thesis_index_vs_S": {
+      "edition": 2017,
+      "n": 436,
+      "rho": 0.9945
+    },
+    "validity": [
+      {
+        "edition": 2015,
+        "n_D": 435,
+        "n_S": 435,
+        "rho_D_dynamik_class": 0.6685,
+        "rho_S_status_class": 0.8649,
+        "sources_D": "D_2015 = mean z(arbeitslose_dynamik[d1], transferbezug_dynamik[d3], kinderarmut_dynamik[d4])",
+        "sources_S": "S_2015 = mean z(arbeitslose_anteil[s1], transferbezug_anteil[s3], kinderarmut_anteil[s4])"
+      },
+      {
+        "edition": 2017,
+        "n_D": 436,
+        "n_S": 436,
+        "rho_D_dynamik_class": 0.6907,
+        "rho_S_status_class": 0.853,
+        "sources_D": "D_2017 = mean z(arbeitslose_dynamik[d1], transferbezug_dynamik[d3], kinderarmut_dynamik[d4])",
+        "sources_S": "S_2017 = mean z(arbeitslose_anteil[s1], transferbezug_anteil[s3], kinderarmut_anteil[s4])"
+      },
+      {
+        "edition": 2019,
+        "n_D": 436,
+        "n_S": 436,
+        "rho_D_dynamik_class": 0.6704,
+        "rho_S_status_class": 0.8491,
+        "sources_D": "D_2019 = mean z(arbeitslose_dynamik[d1], transferbezug_dynamik[d3], kinderarmut_dynamik[d4])",
+        "sources_S": "S_2019 = mean z(arbeitslose_anteil[s1], transferbezug_anteil[s3], kinderarmut_anteil[s4])"
+      }
+    ]
+  }
+}
