@@ -71,11 +71,13 @@ You **self-integrate completed, reviewed work autonomously**; the human gate is 
   (devmode re-scan: `git fetch origin main` and look for the merge), and the release changed `web/**`
   or a published mart, run **`uv run poe release-deploy`** from a clean checkout at `origin/main`
   (or a `develop` tip with the same tree). Don't wait to be asked. It skips the rebuild when
-  `web/build` already came from `origin/main`'s tree, smoke-checks the build, then runs
-  `ops/deploy-gh-pages.sh`. Use `--force-rebuild` after a data refresh. Never deploy a `develop`
-  build whose tree differs from `main`. See `ops/README.md` → *Deploy*. The permission rule
-  `Bash(uv run poe release-deploy)` is pending maintainer approval; until it's in
-  `.claude/settings.json`, ask once.
+  `web/build` already matches `main`: same tree, same serving data/GeoJSON/GoatCounter
+  fingerprint, and a warehouse built from `main`. It smoke-checks the build, then runs
+  `ops/deploy-gh-pages.sh`. If it refuses with "run `uv run poe build` on main first", do exactly
+  that on a clean checkout of `main` and re-run. Never deploy a `develop` build whose tree
+  differs from `main`. See `ops/README.md` → *Deploy*. The permission rule
+  `Bash(uv run poe release-deploy)` and the related ADR-0012 amendment are pending maintainer
+  approval; until the rule is in `.claude/settings.json`, ask once.
 - **Never `git push` to `main`** (it's the published branch and the human gate). Only ever push `develop`
   and feature branches.
 - **Divergence:** if `main` ever gets a direct hotfix, back-merge it first

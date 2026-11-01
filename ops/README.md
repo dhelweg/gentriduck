@@ -240,35 +240,64 @@ uv run poe release-deploy               # check → skip-or-rebuild → smoke ch
    with the **same tree** (a GitHub merge commit has a new SHA but the develop tip's tree), and
    that the working tree is clean (tracked edits anywhere, or untracked files under `web/`).
    Otherwise it stops with an error.
-2. **Skips the rebuild** when `web/build/.build-source` records a clean build from
-   `origin/main`'s tree (`git rev-parse origin/main^{tree}`). That file is written at the end of
-   every `npm run build` by `web/scripts/postbuild-build-source.mjs` (tree, commit, UTC time,
-   dirty flag). This is the common case: the PM already built and checked the site from
-   `develop`, and the release merge didn't change the tree. Otherwise it **rebuilds**:
-   `poe export-serving` → `poe export-area-geojson` → `npm ci` (only if `web/node_modules` is
-   missing) → `npm run sources` → `npm run build`.
+2. **Skips the rebuild only if the existing `web/build` provably matches `main` today.**
+   `web/scripts/postbuild-build-source.mjs` writes `web/build/.build-source` at the end of every
+   `npm run build`. It holds the tree, commit, UTC time, a dirty flag and dirty count, plus two
+   records of things the tree hash can't see:
+   - `inputs`: sha256 over `data/serving/*.parquet`, `web/static/geo/**` and the effective
+     GoatCounter code (`GOATCOUNTER_CODE` if set, else `web/goatcounter-code.txt`);
+   - `warehouse`: a copy of `data/.warehouse-source` (see below).
+
+   The rebuild is skipped when all of these hold:
+   - the build ran on a clean tree equal to `origin/main^{tree}`;
+   - the recomputed inputs fingerprint is unchanged, so a new data vintage always rebuilds;
+   - the warehouse record is unchanged and proves a complete, clean `poe build` from
+     `origin/main`'s tree.
+
+   This is the common case after a release with no new data: the PM already built and checked
+   the site from `develop`, and the release merge didn't change the tree. Otherwise it
+   **rebuilds**: `poe export-serving` → `poe export-area-geojson` → `npm ci` (only if
+   `web/node_modules` is missing) → `npm run sources` → `npm run build`. Before rebuilding it
+   **refuses** unless `data/.warehouse-source` shows a complete, clean `poe build` from
+   `origin/main`'s tree. The message is "run `uv run poe build` on main first", because the
+   exports would otherwise publish marts built from different model code.
 3. **Smoke-checks** `web/build`. It must be non-empty, have at least 500 HTML pages
-   (`--min-pages`), contain no `cartocdn` string (#351 removed the CARTO basemap), and have a
-   `.build-source` that matches `origin/main`.
+   (`--min-pages`), and contain no `cartocdn` string (#351 removed the CARTO basemap). Its
+   `.build-source` must match `origin/main`'s tree, the current inputs fingerprint and the
+   current warehouse record.
 4. **Deploys** via `ops/deploy-gh-pages.sh`. The script is unchanged, so its SEC-2 (#191)
    hard-asserted gh-pages-only force-push is still the only push.
 
-Flags go straight after the task name, e.g. `uv run poe release-deploy --dry-run` (poe would pass
-a literal `--` through, and the script rejects it):
+**Warehouse provenance (`data/.warehouse-source`).** `poe build` and `poe build-full-refresh`,
+and so `poe refresh`/`resync` and the pre-push hook, now run `dbt build` through
+`ops/dbt_build.py`. Extra args still pass through (`poe build --select x+`), and dbt's exit code
+is unchanged. Afterwards the wrapper records the git tree the warehouse was built from, plus a
+`clean` flag (no uncommitted changes under `transform/`) and a `complete` flag:
+- a successful full build sets `complete: true`;
+- a failed build, or a `--select`/`--target`/other non-standard one, sets `complete: false`;
+- the exception is a successful partial build of the same clean tree, which keeps the existing
+  record.
+
+**First release after #361:** no machine has `data/.warehouse-source` yet, and older builds
+lack the fingerprint. So the first `release-deploy` will rebuild and refuse until you run
+`uv run poe build` once on a clean checkout of `main`.
+
+Flags go straight after the task name, e.g. `uv run poe release-deploy --dry-run`. A single
+leading `--` (`uv run poe release-deploy -- --dry-run`) is also accepted.
 
 - `--dry-run` runs the checks and the skip/rebuild decision, then prints the steps without
-  running them. It still fetches `origin/main` and runs the read-only smoke check on the skip path.
-- `--force-rebuild` rebuilds even when the trees match. **Use it after a data refresh:** `data/`
-  is gitignored, so the tree hash can't see a re-ingest or a `poe build` made after the last web
-  build. The task never runs `poe refresh`/`poe build` itself. If the release changed a model
-  behind a published mart and the warehouse wasn't rebuilt from that tree yet, run
-  `uv run poe refresh` first, then `uv run poe release-deploy --force-rebuild`.
+  running them. It still fetches `origin/main`, and runs the read-only smoke check on the skip path.
+- `--force-rebuild` rebuilds even when everything matches.
 - `--no-fetch` uses the local `origin/main` ref as it is.
 - `--min-pages N` overrides the smoke-check page floor.
 
-**Permission (pending maintainer approval):** `ops/deploy-gh-pages.sh` is a production publish,
-so auto mode blocks it unless the maintainer asks for it. #361 proposes adding exactly this rule
-to the `permissions.allow` list in the committed `.claude/settings.json`:
+The task never runs `poe refresh`/`poe build` itself. For a new data vintage, run
+`uv run poe refresh` on `main` first. The new parquet changes the inputs fingerprint and the
+new warehouse record changes `warehouse`, so `release-deploy` rebuilds on its own.
+
+**Permission and ADR (pending maintainer approval):** `ops/deploy-gh-pages.sh` is a production
+publish, so auto mode blocks it unless the maintainer asks for it. #361 proposes adding exactly
+this rule to the `permissions.allow` list in the committed `.claude/settings.json`:
 
 ```json
 "Bash(uv run poe release-deploy)"
@@ -276,8 +305,15 @@ to the `permissions.allow` list in the committed `.claude/settings.json`:
 
 The rule is an exact match, so it covers only the bare task: no `--force-rebuild`, no
 `--dry-run`, no other arguments. Those still prompt. The force-push target stays hard-asserted
-inside `deploy-gh-pages.sh`. Until the maintainer approves and adds the rule, the PM asks once
-per release.
+inside `deploy-gh-pages.sh`.
+
+Before adding the rule, the maintainer also has to decide on an **ADR-0012 amendment**. It would
+cover two changes to the documented "rebuild from `main`" routine:
+- reusing a build whose tree, inputs and warehouse provenance match `main`;
+- the PM running the production deploy without being asked.
+
+The #361 review raised this. Until the maintainer approves both and adds the rule, the PM asks
+once per release.
 
 If the release touched neither `web/**` nor a published mart, skip the deploy and say so in the
 handoff. Deploy only builds of `main`'s tree, never a `develop` tree that differs from it;

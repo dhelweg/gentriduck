@@ -8,26 +8,31 @@ ADR-0012 Amendment A) must be rebuilt from `main` and republished. Nothing deplo
   (a) Preconditions. Fetch `origin/main` (unless `--no-fetch`) and require the local checkout to
       be at `origin/main`, or at a commit whose tree equals it (e.g. the `develop` tip a GitHub
       merge commit was made from). Also require a clean working tree, so the build can't bake in
-      local edits (see `relevant_dirty()` for which paths count).
-  (b) Skip or rebuild. If `web/build/.build-source` (written at build time by
-      `web/scripts/postbuild-build-source.mjs`) records a clean build from a tree equal to
-      `origin/main^{tree}`, skip the rebuild: `web/build` already holds exactly what `main` would
-      produce. Otherwise run `poe export-serving`, `poe export-area-geojson`, `npm ci` (only if
-      `web/node_modules` is missing), `npm run sources` and `npm run build`.
+      local edits (see `ops.build_provenance.relevant_dirty()` for which paths count).
+  (b) Skip or rebuild. `web/build/.build-source` (written at build time by
+      `web/scripts/postbuild-build-source.mjs`) records the build's provenance. The rebuild is
+      skipped only if ALL of these hold:
+        - the build ran on a clean tree equal to `origin/main^{tree}`;
+        - its `inputs` fingerprint (serving parquet + map GeoJSON + effective GoatCounter code,
+          `ops.build_provenance.inputs_fingerprint()`) equals the current one;
+        - its `warehouse` record equals the current `data/.warehouse-source`, and that record
+          proves a complete, clean `poe build` from `origin/main`'s tree.
+      Otherwise it rebuilds: `poe export-serving`, `poe export-area-geojson`, `npm ci` (only if
+      `web/node_modules` is missing), `npm run sources`, `npm run build`. Before rebuilding it
+      refuses unless `data/.warehouse-source` proves the warehouse was built from
+      `origin/main`'s tree, so it never exports marts built from other model code.
   (c) Smoke check (`smoke_check()`): non-empty build, at least `--min-pages` HTML pages, no
       `cartocdn` string in any text asset (#351 removed the CARTO basemap; its reappearance means
-      a regression to Evidence's tile-based `<AreaMap>`), and `.build-source` matches `origin/main`.
+      a regression to Evidence's tile-based `<AreaMap>`), and `.build-source` matches
+      `origin/main`'s tree, the current inputs fingerprint and the current warehouse record.
   (d) Deploy: `ops/deploy-gh-pages.sh`, unchanged. Its SEC-2 (#191) hard-asserted
       gh-pages-only force-push stays the only push this task performs.
 
 `--dry-run` runs (a) and (b) read-only (it still fetches `origin/main`, unless `--no-fetch`,
 because the decision depends on it), runs the read-only smoke check if the skip path applies,
-and prints the steps it would run without running them.
-
-The tree-hash check covers the committed code only. The serving data (`data/`) is gitignored, so
-a re-ingest or `poe build` since the last web build is invisible to it. Pass `--force-rebuild`
-after a data refresh. The task also does not run `poe build`/`poe refresh`: like the documented
-manual sequence it exports from the warehouse as it stands.
+and prints the steps it would run without running them. `--force-rebuild` rebuilds regardless.
+The task never runs `poe build`/`poe refresh` itself: it exports from the warehouse as it stands,
+once the warehouse record says that warehouse matches `main`.
 
 Stdlib only, cross-platform (same discipline as ops/time_web_build.py and
 ingestion/run_ingest.py). The decision/smoke helpers are pure or path-only functions so
@@ -37,7 +42,6 @@ tests/ops/test_release_deploy.py can exercise them without data, Node or a netwo
 from __future__ import annotations
 
 import argparse
-import json
 import shutil
 import subprocess
 import sys
@@ -45,15 +49,24 @@ from dataclasses import dataclass
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
-BUILD_SOURCE_NAME = ".build-source"
+if str(REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(REPO_ROOT))
+
+from ops.build_provenance import (  # noqa: E402 -- after the sys.path insert above
+    BUILD_SOURCE_NAME,
+    WAREHOUSE_SOURCE_REL,
+    WEB_DIRTY_RULE,
+    ProvenanceError,
+    dirty_lines,
+    git,
+    inputs_fingerprint,
+    read_json,
+    warehouse_problem,
+)
+
 DEFAULT_MIN_PAGES = 500  # 559 pages for Berlin alone in 2026-07; ~1,900 with Hamburg (2026-11).
 FORBIDDEN_STRINGS = ("cartocdn",)
 TEXT_SUFFIXES = {".html", ".js", ".mjs", ".css", ".json", ".svg", ".txt", ".webmanifest", ".xml"}
-
-# Paths that change during a normal build/release without affecting the built site. Keep in sync
-# with IGNORED_DIRTY_PATHS in web/scripts/postbuild-build-source.mjs.
-#   ops/web-build-timings.log -- appended by ops/time_web_build.py after each `poe web-build`.
-IGNORED_DIRTY_PATHS = frozenset({"ops/web-build-timings.log"})
 
 
 def say(*args: object, **kwargs: object) -> None:
@@ -74,42 +87,22 @@ class Decision:
 # --------------------------------------------------------------------------- pure helpers
 
 
-def relevant_dirty(porcelain_lines: list[str]) -> list[str]:
-    """Filter `git status --porcelain --untracked-files=all` output to lines that could change the
-    built site: any tracked modification, plus untracked files under `web/` (Evidence picks up every
-    page there). Untracked files elsewhere (scratch notes) and IGNORED_DIRTY_PATHS don't count.
-    Gitignored paths (`data/`, `web/build/`, `web/node_modules/`) never appear in the input.
-    """
-    out = []
-    for line in porcelain_lines:
-        if len(line) < 4:
-            continue
-        status, path = line[:2], line[3:].strip().strip('"')
-        if " -> " in path:  # rename: "old -> new"; the new path is what's in the tree
-            path = path.split(" -> ", 1)[1].strip('"')
-        if path in IGNORED_DIRTY_PATHS:
-            continue
-        if status == "??" and not path.startswith("web/"):
-            continue
-        out.append(line)
-    return out
-
-
-def parse_build_source(text: str | None) -> dict | None:
-    """Parse `.build-source` JSON. Returns None if missing or malformed (forces a rebuild)."""
-    if not text:
-        return None
-    try:
-        data = json.loads(text)
-    except json.JSONDecodeError:
-        return None
-    return data if isinstance(data, dict) else None
+def parse_build_source(path: Path) -> dict | None:
+    """Read `.build-source`. Missing or malformed -> None (forces a rebuild)."""
+    return read_json(path) if path.is_file() else None
 
 
 def decide(
-    build_source: dict | None, main_tree: str, *, build_present: bool, force: bool
+    build_source: dict | None,
+    main_tree: str,
+    *,
+    build_present: bool,
+    force: bool,
+    current_inputs: str | None,
+    current_warehouse: dict | None,
 ) -> Decision:
-    """Skip the rebuild only if the existing build provably came from origin/main's tree."""
+    """Skip the rebuild only if the existing build provably matches origin/main's tree, today's
+    gitignored inputs and a warehouse built from origin/main."""
     if force:
         return Decision(True, "--force-rebuild given")
     if not build_present:
@@ -125,11 +118,28 @@ def decide(
         return Decision(True, f"{BUILD_SOURCE_NAME} says the build ran on a dirty working tree")
     if tree != main_tree:
         return Decision(True, f"build tree {tree[:12]} != origin/main tree {main_tree[:12]}")
+    inputs = build_source.get("inputs")
+    if not inputs:
+        return Decision(True, f"{BUILD_SOURCE_NAME} has no inputs fingerprint")
+    if inputs != current_inputs:
+        return Decision(
+            True,
+            "build inputs changed since the build (data/serving, web/static/geo or the "
+            f"GoatCounter code): {inputs[:12]} != {str(current_inputs)[:12]}",
+        )
+    if build_source.get("warehouse") != current_warehouse:
+        return Decision(
+            True, f"the warehouse record changed since the build ({WAREHOUSE_SOURCE_REL})"
+        )
+    problem = warehouse_problem(current_warehouse, main_tree)
+    if problem:
+        return Decision(True, problem)
     commit = str(build_source.get("commit") or "?")[:12]
     built_at = build_source.get("built_at", "?")
     return Decision(
         False,
-        f"web/build was built from tree {tree[:12]} (commit {commit}, {built_at}) == origin/main tree",
+        f"web/build was built from tree {tree[:12]} (commit {commit}, {built_at}) == origin/main "
+        f"tree; inputs {inputs[:12]} unchanged; warehouse built from origin/main",
     )
 
 
@@ -137,7 +147,14 @@ def build_present(build_dir: Path) -> bool:
     return build_dir.is_dir() and any(build_dir.iterdir())
 
 
-def smoke_check(build_dir: Path, *, main_tree: str, min_pages: int) -> list[str]:
+def smoke_check(
+    build_dir: Path,
+    *,
+    main_tree: str,
+    min_pages: int,
+    expected_inputs: str,
+    warehouse: dict | None,
+) -> list[str]:
     """Return a list of problems (empty = pass). Read-only."""
     if not build_present(build_dir):
         return [f"{build_dir} is missing or empty"]
@@ -159,36 +176,36 @@ def smoke_check(build_dir: Path, *, main_tree: str, min_pages: int) -> list[str]
     problems.extend(hits[:20])
     if len(hits) > 20:
         problems.append(f"... and {len(hits) - 20} more forbidden-string hit(s)")
-    src_path = build_dir / BUILD_SOURCE_NAME
-    src = parse_build_source(src_path.read_text(encoding="utf-8") if src_path.is_file() else None)
+    src = parse_build_source(build_dir / BUILD_SOURCE_NAME)
     if src is None:
         problems.append(f"{BUILD_SOURCE_NAME} is missing or unreadable")
-    elif src.get("tree") != main_tree or src.get("dirty", True):
-        problems.append(
-            f"{BUILD_SOURCE_NAME} (tree {str(src.get('tree'))[:12]}, dirty={src.get('dirty')}) "
-            f"does not match origin/main tree {main_tree[:12]}"
-        )
+    else:
+        if src.get("tree") != main_tree or src.get("dirty", True):
+            problems.append(
+                f"{BUILD_SOURCE_NAME} (tree {str(src.get('tree'))[:12]}, "
+                f"dirty={src.get('dirty')}) does not match origin/main tree {main_tree[:12]}"
+            )
+        if src.get("inputs") != expected_inputs:
+            problems.append(
+                f"{BUILD_SOURCE_NAME} inputs {str(src.get('inputs'))[:12]} != current inputs "
+                f"{expected_inputs[:12]} (data/serving, web/static/geo, GoatCounter code)"
+            )
+        if src.get("warehouse") != warehouse:
+            problems.append(
+                f"{BUILD_SOURCE_NAME} warehouse record != current {WAREHOUSE_SOURCE_REL}"
+            )
+        problem = warehouse_problem(src.get("warehouse"), main_tree)
+        if problem:
+            problems.append(problem)
     if not problems:
         say(
-            f"release-deploy: smoke check passed ({pages} HTML pages, no {', '.join(FORBIDDEN_STRINGS)})."
+            f"release-deploy: smoke check passed ({pages} HTML pages, "
+            f"no {', '.join(FORBIDDEN_STRINGS)}, provenance matches origin/main)."
         )
     return problems
 
 
 # --------------------------------------------------------------------------- git / steps
-
-
-def git(repo: Path, *args: str, strip: bool = True) -> str:
-    result = subprocess.run(  # noqa: S603 -- fixed git argv, no untrusted input
-        ["git", *args],  # noqa: S607 -- git resolved from PATH, as everywhere in ops/
-        cwd=repo,
-        capture_output=True,
-        text=True,
-    )
-    if result.returncode != 0:
-        raise ReleaseDeployError(f"git {' '.join(args)} failed: {result.stderr.strip()}")
-    # Porcelain status lines start with a significant space (" M path"); don't strip those.
-    return result.stdout.strip() if strip else result.stdout
 
 
 def check_preconditions(repo: Path, *, fetch: bool) -> str:
@@ -198,7 +215,7 @@ def check_preconditions(repo: Path, *, fetch: bool) -> str:
         git(repo, "fetch", "--quiet", "origin", "main")
     try:
         main_tree = git(repo, "rev-parse", "--verify", "--quiet", "origin/main^{tree}")
-    except ReleaseDeployError:
+    except ProvenanceError:
         raise ReleaseDeployError(
             "origin/main is not available locally. Run `git fetch origin main` first."
         ) from None
@@ -211,9 +228,7 @@ def check_preconditions(repo: Path, *, fetch: bool) -> str:
             f"(tree {main_tree[:12]}). Check out the release first, e.g. "
             "`git switch main && git pull --ff-only` (or `git switch --detach origin/main`)."
         )
-    dirty = relevant_dirty(
-        git(repo, "status", "--porcelain", "--untracked-files=all", strip=False).splitlines()
-    )
+    dirty = dirty_lines(repo, WEB_DIRTY_RULE)
     if dirty:
         listing = "\n  ".join(dirty[:20])
         raise ReleaseDeployError(
@@ -296,7 +311,7 @@ def main(argv: list[str] | None = None, repo: Path = REPO_ROOT) -> int:
     parser.add_argument(
         "--force-rebuild",
         action="store_true",
-        help="rebuild even if web/build matches origin/main (e.g. after a data refresh)",
+        help="rebuild even if web/build matches origin/main and today's inputs",
     )
     parser.add_argument(
         "--min-pages",
@@ -304,35 +319,56 @@ def main(argv: list[str] | None = None, repo: Path = REPO_ROOT) -> int:
         default=DEFAULT_MIN_PAGES,
         help=f"smoke-check minimum HTML page count (default {DEFAULT_MIN_PAGES})",
     )
+    argv = list(sys.argv[1:] if argv is None else argv)
+    if argv[:1] == ["--"]:  # `poe release-deploy -- --dry-run` passes the `--` through
+        argv = argv[1:]
     args = parser.parse_args(argv)
 
     build_dir = repo / "web" / "build"
     try:
         main_tree = check_preconditions(repo, fetch=not args.no_fetch)
-
-        src_path = build_dir / BUILD_SOURCE_NAME
-        src = parse_build_source(
-            src_path.read_text(encoding="utf-8") if src_path.is_file() else None
-        )
+        warehouse = read_json(repo / WAREHOUSE_SOURCE_REL)
+        src = parse_build_source(build_dir / BUILD_SOURCE_NAME)
+        present = build_present(build_dir)
+        current_inputs = inputs_fingerprint(repo) if present and not args.force_rebuild else None
         decision = decide(
-            src, main_tree, build_present=build_present(build_dir), force=args.force_rebuild
+            src,
+            main_tree,
+            build_present=present,
+            force=args.force_rebuild,
+            current_inputs=current_inputs,
+            current_warehouse=warehouse,
         )
         verb = "REBUILD" if decision.rebuild else "SKIP rebuild"
         say(f"release-deploy: {verb}: {decision.reason}")
 
         if decision.rebuild:
+            problem = warehouse_problem(warehouse, main_tree)
+            if problem:
+                raise ReleaseDeployError(
+                    f"refusing to rebuild: {problem}. Run `uv run poe build` on main first "
+                    "(a clean checkout at origin/main), then re-run `uv run poe release-deploy`."
+                )
             for step, cwd in rebuild_steps(repo):
                 run_step(step, cwd, dry_run=args.dry_run)
 
         if args.dry_run and decision.rebuild:
             say("release-deploy: (dry-run) would run the smoke check on the fresh build")
         else:
-            problems = smoke_check(build_dir, main_tree=main_tree, min_pages=args.min_pages)
+            # After a rebuild the exports rewrote the inputs, so fingerprint them again.
+            expected = inputs_fingerprint(repo) if decision.rebuild else current_inputs
+            problems = smoke_check(
+                build_dir,
+                main_tree=main_tree,
+                min_pages=args.min_pages,
+                expected_inputs=str(expected),
+                warehouse=warehouse,
+            )
             if problems:
                 raise ReleaseDeployError("smoke check failed:\n  " + "\n  ".join(problems))
 
         run_step(*deploy_step(repo), dry_run=args.dry_run)
-    except ReleaseDeployError as exc:
+    except (ReleaseDeployError, ProvenanceError) as exc:
         say(f"release-deploy: error: {exc}", file=sys.stderr)
         return 1
     say(
