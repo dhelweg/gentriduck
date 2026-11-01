@@ -471,6 +471,23 @@ def zscore(s: pd.Series) -> pd.Series:
     return (s - s.mean()) / sd
 
 
+def tie_ceiling(classes: np.ndarray) -> float | None:
+    """Highest Spearman any continuous measure can reach against a tied ordinal class.
+
+    The ideal measure orders every area consistently with its class (strictly increasing
+    across classes, ties broken arbitrarily within a class); its Spearman with the class is
+    the ceiling. Asymptotically sqrt(12 * sum_k p_k (m_k - 1/2)^2), with p_k the class share
+    and m_k the class midrank fraction (domain sign-off 354 §3, C2).
+    """
+    c = np.asarray(classes, dtype=float)
+    c = c[np.isfinite(c)]
+    if len(c) < 3 or len(np.unique(c)) < 2:
+        return None
+    ideal = np.empty(len(c))
+    ideal[np.argsort(c, kind="stable")] = np.arange(len(c), dtype=float)
+    return float(stats.spearmanr(c, ideal).statistic)
+
+
 def effect_label(estimator: str, estimate: float | None) -> str:
     """§5.4: Cohen (1988) for rho; Hosmer, Lemeshow & Sturdivant (2013) for AUC."""
     if estimate is None or not np.isfinite(estimate):
@@ -662,6 +679,8 @@ class PanelData:
     clusters: pd.DataFrame  # area_code, cluster
     source_attrs: dict
     bzr_status: pd.DataFrame | None = None
+    # Unweighted city means of meaning-named indicators per edition (findings context, C3).
+    edition_means: dict = field(default_factory=dict)
     _wide_cache: dict = field(default_factory=dict)
 
     def cluster_of(self, codes: pd.Series) -> pd.Series:
@@ -848,6 +867,15 @@ def load_berlin(con, panel: Panel) -> PanelData:
         d4=ewr_df[["area_code", "year", "ewr_composite"]],
         clusters=clusters,
         source_attrs=source_attrs,
+        edition_means={
+            "arbeitslose_dynamik": {
+                int(k): float(v)
+                for k, v in ind[ind["indicator"] == "arbeitslose_dynamik"]
+                .groupby("edition")["indicator_value"]
+                .mean()
+                .items()
+            }
+        },
         bzr_status=bzr,
     )
 
@@ -1931,7 +1959,15 @@ class SuiteRun:
             "positive",
             win,
             level_control="window_start",
-            notes=notes,
+            notes=[
+                *notes,
+                (
+                    f"out-of-fold AUC: status level alone {res['auc_base']:.3f}; with the category "
+                    f"OA mix {res['auc_full']:.3f}"
+                )
+                if res.get("auc_base") is not None
+                else "AUCs not available",
+            ],
         )
         # §5.2 directional continuity row.
         bask = _basket(fr.set_index("area_code"))
@@ -2514,6 +2550,10 @@ class SuiteRun:
             ok_d = st["D"].notna() & st["D_cls"].notna()
             rs = stats.spearmanr(st.loc[ok_s, "S"], st.loc[ok_s, "S_cls"]).statistic
             rd = stats.spearmanr(st.loc[ok_d, "D"], st.loc[ok_d, "D_cls"]).statistic
+            # C2 (domain sign-off 354): tie ceiling of each published class.
+            cs = tie_ceiling(st.loc[ok_s, "S_cls"].to_numpy(float))
+            cd = tie_ceiling(st.loc[ok_d, "D_cls"].to_numpy(float))
+            shares = st.loc[ok_d, "D_cls"].value_counts(normalize=True).sort_index()
             self.meta["validity"].append(
                 {
                     "edition": int(e),
@@ -2521,10 +2561,20 @@ class SuiteRun:
                     "n_S": int(ok_s.sum()),
                     "rho_D_dynamik_class": round(float(rd), 4),
                     "n_D": int(ok_d.sum()),
+                    "ceiling_S": None if cs is None else round(cs, 4),
+                    "ceiling_D": None if cd is None else round(cd, 4),
+                    "dynamik_class_shares": {
+                        str(int(k)): round(float(v), 4) for k, v in shares.items()
+                    },
                     "sources_S": _fmt_status_desc(self.d, e, "S"),
                     "sources_D": _fmt_status_desc(self.d, e, "D"),
                 }
             )
+        self.meta["mean_arbeitslose_dynamik"] = {
+            str(k): round(v, 4)
+            for k, v in sorted(self.d.edition_means.get("arbeitslose_dynamik", {}).items())
+            if k in eds
+        }
         if self.p.h1_status == "thesis_2018":
             th = self.d.h1_status.set_index("area_code")["status"]
             st = _status_at(self.d, self.p.h1_edition)["S"]
@@ -2669,6 +2719,14 @@ def score_panel(rows: list[dict], panel: Panel, meta: dict) -> None:
         v, extra = _verdict_for(r, primary)
         r["verdict"] = v
         r["notes"] = [*r["notes"], *extra]
+        if v == NO_DATA and r["estimate"] is not None:
+            # C4 (domain sign-off 354): no point estimate below the §5.3 cluster floor.
+            r["estimate"], r["effect_label"], r["p_analytic"] = None, "", None
+            r["notes"].append(
+                "not reported: < 20 clusters"
+                if (r["n_clusters"] or 0) < MIN_CLUSTERS
+                else "not reported: NO DATA"
+            )
         if primary:
             if (
                 r["p_bh"] is not None
@@ -2932,6 +2990,37 @@ MUST_NOT_TEXT = """What these results must not be used to claim (pre-registratio
 - Hamburg verdicts are transfer tests, not replications (§4.4–4.5)."""
 
 
+def _auc_pair(meta: dict) -> str:
+    inc = meta.get("h2_incremental") or {}
+    if inc.get("auc_base") is None or inc.get("auc_full") is None:
+        return "n/a"
+    d = inc.get("estimate")
+    ci = (
+        f" (delta {d:+.3f} [{inc['ci_low']:+.3f}, {inc['ci_high']:+.3f}])"
+        if d is not None and inc.get("ci_low") is not None
+        else ""
+    )
+    return f"{inc['auc_base']:.3f} -> {inc['auc_full']:.3f}{ci}"
+
+
+def _shock_text(meta_th: dict) -> str:
+    """§3.4 binding text plus the thesis-era line (domain sign-off 354, C3); the city means
+    of Arbeitslosigkeit-Dynamik are computed from the meaning-named indicators."""
+    means = meta_th.get("mean_arbeitslose_dynamik") or {}
+    mtxt = ", ".join(f"{float(v):+.2f}" for _k, v in sorted(means.items()))
+    eds = "/".join(sorted(means))
+    line = (
+        "- **Thesis era (D_2015, D_2017, D_2019).** People who arrived as refugees in 2015–16 "
+        "moved into SGB II after recognition, mainly 2016–2018. That falls inside the D_2017 and "
+        "D_2019 windows and affects Transferbezug and Kinderarmut at small-area level near large "
+        "accommodation sites. Berlin means show no bump, because labour-market recovery "
+        f"dominated (mean Arbeitslosigkeit-Dynamik {mtxt} pp in {eds}), so the effect is local, "
+        "not city-wide. The thesis-era H1 level (MSS Dec 2016) contains part of it."
+    )
+    head, sep, tail = SHOCK_TEXT.partition("\n\nThe warehouse has no")
+    return head + "\n" + line + sep + tail
+
+
 def _deviations(meta_mod: dict, meta_th: dict) -> list[str]:
     devs = [
         "**Min-base rule (ADR-0017) as a thesis deviation (N8).** The thesis computed its OA "
@@ -2980,20 +3069,58 @@ def _deviations(meta_mod: dict, meta_th: dict) -> list[str]:
         "**H1b without döner/kebab (R3): not testable.** The taxonomy carries only one Fast Food "
         "type ('Other Fast Food') at the H1 snapshots, so no kebab type can be removed; the row is "
         'reported as NO DATA with that reason (§5.2: "if the taxonomy carries it").',
-        "**H2 incremental with a wholly negative delta-AUC CI: pending explicit ratification "
-        "by geo-DS + domain (post-results clarification of §5.6).** §5.6 maps H2 to 'stronger "
-        "than thesis' only when the delta-AUC CI excludes 0, and to 'explained by current status "
-        "level' when it includes 0; it does not spell out a CI entirely below 0. The thesis-era "
-        "delta AUC is such a case (the row is reported as CONTRADICTED: adding OA significantly "
-        "lowers out-of-fold AUC once status level is included). The H2 'Holds?' label keeps "
-        "'consistent (still unclear): explained by current status level', on the reading that "
-        "OA then adds nothing beyond status level and 'stronger than thesis' needs a CI entirely "
-        "above 0. **This reading was settled after seeing the low-B smoke run**, so it is not "
-        "pre-registered; the gate reviewers decide whether to ratify it.",
+        "**H2 incremental with a wholly negative delta-AUC CI: ratified (Amendment 2, geo-DS + "
+        "domain, 2026-11-01).** §5.6 maps H2 to 'stronger than thesis' only when the delta-AUC "
+        "CI excludes 0, and to 'explained by current status level' when it includes 0; it did "
+        "not spell out a CI entirely below 0. Amendment 2 reads 'excludes 0' as ci_low > 0, so a "
+        "CI that includes 0 or lies wholly below 0 maps to 'consistent (still unclear): "
+        "explained by current status level'. Out-of-fold AUC, status level alone -> status "
+        f"level plus the category OA mix: thesis era {_auc_pair(meta_th)}; 2019-2025 "
+        f"{_auc_pair(meta_mod)}. The thesis-era incremental row is CONTRADICTED (adding OA "
+        "significantly lowers out-of-fold AUC once status level is included), which means no "
+        "increment, not an opposite prediction. **This reading was settled after seeing the "
+        "low-B smoke run**, so it is not pre-registered; it can only weaken a claim, and it "
+        "binds #355 unchanged.",
         "**Hamburg panels not reported here.** The code supports `--city HH` (`HH/full`, "
         "`HH/modern`, phase-shift chains); Hamburg results and findings are #355's.",
     ]
     return devs
+
+
+def _d_validity_text(meta: dict, div: list[str], rows_desc: str) -> str:
+    """C2 (domain sign-off 354 §3): D vs the tie ceiling of the three-level Dynamik class."""
+    vals = [
+        (pk, v)
+        for pk in ("thesis-era", "modern")
+        for v in meta.get(f"BER/{pk}", {}).get("validity", [])
+        if v.get("ceiling_D")
+    ]
+    ceilings = [v["ceiling_D"] for _pk, v in vals]
+    ratios = [v["rho_D_dynamik_class"] / v["ceiling_D"] for _pk, v in vals]
+    full = [str(v["edition"]) for (_pk, v), r in zip(vals, ratios, strict=True) if r >= 0.995]
+    same_ind = set(full) <= {"2019", "2021"}
+    at_ceiling = ""
+    if full:
+        at_ceiling = f", and exactly 100% in {'/'.join(full)}"
+        if same_ind:
+            at_ceiling += (
+                ", where the official Dynamik index uses the same three indicators (D1/D3/D4; "
+                "S2/D2 is vacant in the MSS 2019 and 2021 editions)"
+            )
+    return (
+        f"**Disclosure (§3.2):** the change composite D is below the pre-registered 0.80 "
+        f"threshold in {', '.join(div)}. Against a three-class variable with these shares the "
+        f"highest attainable Spearman is {min(ceilings):.2f}–{max(ceilings):.2f} (tie ceiling: "
+        "the Spearman of the class with an ideal continuous measure that orders every PLR "
+        f"consistently with its class). D reaches {100 * min(ratios):.0f}–"
+        f"{100 * min(max(ratios), 1.0):.0f}% of it{at_ceiling}. Our change measure follows the "
+        "official Dynamik ordering as closely as its three classes allow; the remaining shortfall "
+        "in the other editions matches the S2/D2 indicator the official index adds there. The "
+        f"pre-registered rule is applied as written: read the published-class rows of {rows_desc} "
+        '(role `secondary`, "published-class version") beside the primaries. The H2 class row '
+        "is a narrower contrast (Dynamik 'negativ', about one PLR in ten, vs the rest), not a "
+        "different measure of change."
+    )
 
 
 def write_berlin_findings(path: Path, records: list[dict], meta: dict) -> None:
@@ -3192,9 +3319,9 @@ def write_berlin_findings(path: Path, records: list[dict], meta: dict) -> None:
     )
     a("")
     a(
-        "| Panel | Edition | ρ(S, status class) | S judgement | ρ(D, Dynamik class) | D judgement | n |"
+        "| Panel | Edition | ρ(S, status class) | S judgement | ρ(D, Dynamik class) | D judgement | tie ceiling (Dynamik class) | observed / ceiling | n |"
     )
-    a("|---|---|---|---|---|---|---|")
+    a("|---|---|---|---|---|---|---|---|---|")
     div_s, div_d = [], []
     for pk in ("thesis-era", "modern"):
         for v in meta.get(f"BER/{pk}", {}).get("validity", []):
@@ -3204,27 +3331,28 @@ def write_berlin_findings(path: Path, records: list[dict], meta: dict) -> None:
                 div_s.append(f"{pk} {v['edition']}")
             if not ok_d:
                 div_d.append(f"{pk} {v['edition']}")
-            js = "≥ 0.80" if ok_s else "**below 0.80: diverges**"
-            jd = "≥ 0.80" if ok_d else "**below 0.80: diverges**"
+            js = "≥ 0.80" if ok_s else "below 0.80"
+            jd = "≥ 0.80" if ok_d else "below 0.80"
+            cd = v.get("ceiling_D")
+            ratio = "–" if not cd else f"{100 * v['rho_D_dynamik_class'] / cd:.0f}%"
             a(
-                f"| {pk} | {v['edition']} | {v['rho_S_status_class']:.3f} | {js} | {v['rho_D_dynamik_class']:.3f} | {jd} | {v['n_S']} |"
+                f"| {pk} | {v['edition']} | {v['rho_S_status_class']:.3f} | {js} | {v['rho_D_dynamik_class']:.3f} | {jd} | {_f(cd)} | {ratio} | {v['n_S']} |"
             )
     a("")
     for label, div, rows_desc in (
         ("status composite S", div_s, "H1 family"),
         ("change composite D", div_d, "H2 and H3a-c"),
     ):
-        if div:
+        if div and label.startswith("change"):
+            a(_d_validity_text(meta, div, rows_desc))
+        elif div:
             a(
-                f"**Disclosure (§3.2):** the {label} diverges from the official classification "
-                f"(Spearman < 0.80) in {', '.join(div)}. The published-class secondary rows of the "
-                f'{rows_desc} (role `secondary`, "published-class version") must be read beside the '
-                "primaries there. Context, not an excuse: the published Dynamik class has three "
-                "heavily tied levels (most PLRs are 'stabil'), which caps the attainable rank "
-                "correlation, and in 2015/2017 and 2023/2025 the official index also uses S2/D2; "
-                "2019 and 2021 have no S2 and still fall below 0.80. The threshold is applied as "
-                "pre-registered."
+                f"**Disclosure (§3.2):** the {label} is below the pre-registered 0.80 threshold "
+                f"in {', '.join(div)}. The published-class secondary rows of the {rows_desc} "
+                '(role `secondary`, "published-class version") must be read beside the primaries '
+                "there."
             )
+            a("")
         else:
             a(f"The {label} meets the 0.80 threshold in every edition.")
             a("")
@@ -3260,7 +3388,7 @@ def write_berlin_findings(path: Path, records: list[dict], meta: dict) -> None:
     a("")
     a("## 5. Shock disclosure (binding text, §3.4)")
     a("")
-    a(SHOCK_TEXT)
+    a(_shock_text(mt))
     a("")
     a("## 6. AUC comparability and top coefficients (binding text, §1.2)")
     a("")

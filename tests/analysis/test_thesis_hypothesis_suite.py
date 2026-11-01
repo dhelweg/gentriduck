@@ -571,3 +571,40 @@ def test_delta_auc_is_directional():
     v, notes = S._verdict_for(row, primary=False)
     assert v == CONTRADICTED
     assert notes == ["adding OA significantly lowers out-of-fold AUC once status level is included"]
+
+
+# ---------------------------------------------------------------------------
+# Domain sign-off C2 / C3 / C4
+# ---------------------------------------------------------------------------
+
+
+def test_tie_ceiling_matches_closed_form_and_untied_case():
+    # shares 0.1 / 0.8 / 0.1: midrank fractions 0.05, 0.5, 0.95
+    c = np.repeat([1.0, 2.0, 3.0], [100, 800, 100])
+    p, m = np.array([0.1, 0.8, 0.1]), np.array([0.05, 0.5, 0.95])
+    closed = np.sqrt(12 * np.sum(p * (m - 0.5) ** 2))
+    assert S.tie_ceiling(c) == pytest.approx(closed, abs=2e-3)
+    assert S.tie_ceiling(np.arange(50.0)) == pytest.approx(1.0)
+    assert S.tie_ceiling(np.ones(10)) is None
+
+
+def test_no_data_rows_publish_no_estimate():
+    panel = S.PANELS[("BER", "modern")]
+    rows = _primary_family([0.5] * 8, [0.6, 0.0, 0.0, 0.0, 0.6, 0.0, 0.0, 0.0])
+    sec = _row("spearman", {"estimate": -0.716, "ci_low": None, "ci_high": None}, hyp="H1c")
+    sec.update({"n_clusters": 17, "p_analytic": 0.001})
+    assert sec["effect_label"] == "large"
+    rows.append(sec)
+    S.score_panel(rows, panel, {})
+    assert sec["verdict"] == "NO DATA"
+    assert sec["estimate"] is None and sec["effect_label"] == "" and sec["p_analytic"] is None
+    assert "not reported: < 20 clusters" in sec["notes"]
+    rec = S.rows_to_records([dict(sec, **{k: "" for k in S.CSV_COLUMNS if k not in sec})])[0]
+    assert rec["estimate"] == "" and rec["effect_label"] == ""
+
+
+def test_thesis_era_shock_line_uses_computed_means():
+    txt = S._shock_text({"mean_arbeitslose_dynamik": {"2015": -0.68, "2017": -0.9, "2019": -0.97}})
+    assert "Thesis era (D_2015, D_2017, D_2019)" in txt
+    assert "-0.68, -0.90, -0.97 pp" in txt
+    assert txt.index("Thesis era") < txt.index("The warehouse has no")
