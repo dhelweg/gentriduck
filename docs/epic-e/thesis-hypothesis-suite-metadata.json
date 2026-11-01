@@ -4,85 +4,85 @@
     "coefficients": {
       "H1": [
         [
-          "oa_cat:oa_cat:Services|Funeral",
+          "oa_cat:Services|Funeral",
           0.5651
         ],
         [
-          "oa_cat:oa_cat:Public Space|Phone",
+          "oa_cat:Public Space|Phone",
           0.4979
         ],
         [
-          "oa_cat:oa_cat:Public Space|Other",
+          "oa_cat:Public Space|Other",
           0.3778
         ],
         [
-          "oa_cat:oa_cat:Public Service|Social",
+          "oa_cat:Public Service|Social",
           0.3449
         ],
         [
-          "oa_cat:oa_cat:Retail|Tech",
+          "oa_cat:Retail|Tech",
           0.3332
         ],
         [
-          "oa_cat:oa_cat:Services|Beauty",
+          "oa_cat:Services|Beauty",
           -0.3261
         ],
         [
-          "oa_cat:oa_cat:Gastronomy|Fast Food",
+          "oa_cat:Gastronomy|Fast Food",
           0.3115
         ],
         [
-          "oa_cat:oa_cat:Public Space|Post",
+          "oa_cat:Public Space|Post",
           -0.2945
         ],
         [
-          "oa_cat:oa_cat:Retail|Other Goods",
+          "oa_cat:Retail|Other Goods",
           -0.2879
         ],
         [
-          "oa_cat:oa_cat:Services|Travel",
+          "oa_cat:Services|Travel",
           0.284
         ]
       ],
       "H2": [
         [
-          "oa_cat:oa_cat:Mobility|Public Transport",
+          "oa_cat:Mobility|Public Transport",
           0.4268
         ],
         [
-          "oa_cat:oa_cat:Public Space|Bench",
+          "oa_cat:Public Space|Bench",
           -0.3366
         ],
         [
-          "oa_cat:oa_cat:Retail|Food and Drink",
+          "oa_cat:Retail|Food and Drink",
           -0.3352
         ],
         [
-          "oa_cat:oa_cat:Public Space|Phone",
+          "oa_cat:Public Space|Phone",
           -0.3247
         ],
         [
-          "oa_cat:oa_cat:Public Space|Recycling",
+          "oa_cat:Public Space|Recycling",
           -0.3218
         ],
         [
-          "oa_cat:oa_cat:Mobility|Individual",
+          "oa_cat:Mobility|Individual",
           0.252
         ],
         [
-          "oa_cat:oa_cat:Retail|Tech",
+          "oa_cat:Retail|Tech",
           -0.2395
         ],
         [
-          "oa_cat:oa_cat:Retail|Workshop",
+          "oa_cat:Retail|Workshop",
           -0.2153
         ],
         [
-          "oa_cat:oa_cat:Public Service|Bank",
+          "oa_cat:Public Service|Bank",
           -0.1879
         ],
         [
-          "oa_cat:oa_cat:Public Service|Health",
+          "oa_cat:Public Service|Health",
           -0.1753
         ]
       ]
@@ -423,85 +423,85 @@
     "coefficients": {
       "H1": [
         [
-          "oa_cat:oa_cat:Gastronomy|Fast Food",
+          "oa_cat:Gastronomy|Fast Food",
           0.4188
         ],
         [
-          "oa_cat:oa_cat:Retail|Tech",
+          "oa_cat:Retail|Tech",
           0.3351
         ],
         [
-          "oa_cat:oa_cat:Gastronomy|Restaurant",
+          "oa_cat:Gastronomy|Restaurant",
           -0.3334
         ],
         [
-          "oa_cat:oa_cat:Retail|Print",
+          "oa_cat:Retail|Print",
           -0.3311
         ],
         [
-          "oa_cat:oa_cat:Public Space|Phone",
+          "oa_cat:Public Space|Phone",
           0.251
         ],
         [
-          "oa_cat:oa_cat:Public Space|Toilet",
+          "oa_cat:Public Space|Toilet",
           -0.2226
         ],
         [
-          "oa_cat:oa_cat:Public Space|Mail",
+          "oa_cat:Public Space|Mail",
           -0.2162
         ],
         [
-          "oa_cat:oa_cat:Public Space|Recycling",
+          "oa_cat:Public Space|Recycling",
           0.1864
         ],
         [
-          "oa_cat:oa_cat:Retail|Drugstore",
+          "oa_cat:Retail|Drugstore",
           -0.177
         ],
         [
-          "oa_cat:oa_cat:Retail|Hardware",
+          "oa_cat:Retail|Hardware",
           0.168
         ]
       ],
       "H2": [
         [
-          "oa_cat:oa_cat:Retail|Drugstore",
+          "oa_cat:Retail|Drugstore",
           0.3377
         ],
         [
-          "oa_cat:oa_cat:Public Space|Phone",
+          "oa_cat:Public Space|Phone",
           -0.2965
         ],
         [
-          "oa_cat:oa_cat:Retail|Food and Drink",
+          "oa_cat:Retail|Food and Drink",
           -0.2475
         ],
         [
-          "oa_cat:oa_cat:Mobility|Public Transport",
+          "oa_cat:Mobility|Public Transport",
           0.2282
         ],
         [
-          "oa_cat:oa_cat:Public Service|Health",
+          "oa_cat:Public Service|Health",
           0.2275
         ],
         [
-          "oa_cat:oa_cat:Gastronomy|Fast Food",
+          "oa_cat:Gastronomy|Fast Food",
           -0.2125
         ],
         [
-          "oa_cat:oa_cat:Public Service|Bank",
+          "oa_cat:Public Service|Bank",
           0.2074
         ],
         [
-          "oa_cat:oa_cat:Public Space|Recycling",
+          "oa_cat:Public Space|Recycling",
           -0.1863
         ],
         [
-          "oa_cat:oa_cat:Public Space|Mail",
+          "oa_cat:Public Space|Mail",
           0.1844
         ],
         [
-          "oa_cat:oa_cat:Public Space|Post",
+          "oa_cat:Public Space|Post",
           -0.1709
         ]
       ]
