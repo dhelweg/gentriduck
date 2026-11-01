@@ -672,7 +672,7 @@ def test_hh_shock_notes_cover_the_binding_windows():
     assert any("pandemic" in n for n in n22)
     assert any("Rechtskreiswechsel" in n for n in n25) and any("2023" in n for n in n25)
     assert not any("pandemic" in n for n in n25)
-    assert S.hh_shock_notes(2013, 2016) == []
+    assert S.hh_shock_notes(2013, 2016) == [S.HH_REFUGEE_CHANNEL_NOTE]
     modern = S.PANELS[("HH", "modern")]
     assert set(modern.shock_notes) == {(2019, 2022), (2022, 2025)}
     # Berlin's shock notes are untouched (only the W1 mechanism note)
@@ -866,10 +866,10 @@ def test_hh_suite_end_to_end_on_crafted_panel():
     assert {r["cluster_unit"] for r in rows} == {"stadtteil"}
     by = {r["hypothesis"]: r for r in prim}
     assert "{3,4} vs {1,2}" in by["H1"]["operationalisation"]
-    assert "negativ (3) vs rest (predicts worsening)" in by["H2"]["operationalisation"]
+    assert "negativ (3) vs rest (target: classed as worsening)" in by["H2"]["operationalisation"]
     assert any(
         r["hypothesis"] == "H2"
-        and "positiv (1) vs rest (predicts improvement)" in r["operationalisation"]
+        and "positiv (1) vs rest (target: classed as improving)" in r["operationalisation"]
         for r in rows
     )
     # every Hamburg H1a-c primary names the construct (§4.5)
@@ -1034,3 +1034,88 @@ def test_hh_construct_wording_follows_the_feature_list():
     mix2, comm2 = S._feature_mix(["Gastronomy|Cafe", "Public Space|Bench"])
     assert comm2 is True and "shops and services" in mix2
     assert "no shop or service" not in S._hh_construct_sentence(["Gastronomy|Cafe"], "H1")
+
+
+# ---------------------------------------------------------------------------
+# #355 gate (domain sign-off 355 C1-C4, R1-R3; Amendment 3)
+# ---------------------------------------------------------------------------
+
+
+def test_hh_refugee_channel_windows():
+    """C3: the direct D1 / S3-AsylbLG channel is named on windows ending 2016, 2019, 2025."""
+    for w, has in (
+        ((2013, 2016), True),
+        ((2016, 2019), True),
+        ((2019, 2022), False),
+        ((2022, 2025), True),
+    ):
+        assert (S.HH_REFUGEE_CHANNEL_NOTE in S.hh_shock_notes(*w)) is has, w
+    rows, _meta = _run_hh("full")
+    h3c = next(r for r in rows if r["hypothesis"] == "H3c" and r["role"] == "primary")
+    assert S.HH_REFUGEE_CHANNEL_NOTE in h3c["notes"]
+
+
+def test_hh_h2_pandemic_note_names_the_local_mix():
+    """R2: Hamburg H2 has no gastronomy feature; its pandemic note names the local mix, while
+    H3 rows keep the gastronomy mechanism."""
+    rows, _meta = _run_hh("full")
+    h2 = [r for r in rows if r["hypothesis"] == "H2"]
+    assert h2
+    for r in h2:
+        joined = " ".join(r["notes"])
+        assert "correlate with gastronomy" not in joined
+    prim = next(r for r in h2 if r["role"] == "primary")
+    assert any("with the local mix through the labour market" in n for n in prim["notes"])
+    h3c = next(r for r in rows if r["hypothesis"] == "H3c" and r["role"] == "primary")
+    assert any("correlate with gastronomy" in n for n in h3c["notes"])
+    assert S.hh_h2_note("unrelated note") == "unrelated note"
+
+
+def test_below_chance_auc_carries_the_amendment_3_flag():
+    row = _row("oof_auc_logit", {"estimate": 0.44, "ci_low": 0.40, "ci_high": 0.48}, hyp="H2")
+    v, notes = S._verdict_for(row, primary=False)
+    assert v == NOT_SIGNIFICANT
+    assert any(
+        "out-of-fold AUC significantly below 0.5 (no transferable prediction)" in n for n in notes
+    )
+
+
+def test_hh_findings_gate_texts(tmp_path):
+    """C1, C2 (a-c), C4, R1, R3 in the generated Hamburg findings when, as in the real run,
+    the feature lists hold no shop or service category."""
+    rows_f, meta_f = _run_hh("full")
+    rows_m, meta_m = _run_hh("modern")
+    h1 = ["Mobility|Individual", "Public Space|Bench", "Tourism|Sights"]
+    h2 = ["Mobility|Individual", "Public Space|Bench"]
+    for m in (meta_f, meta_m):
+        m["feature_lists"]["H1_category"] = h1
+        m["feature_lists"]["H2_category"] = h2
+    recs = S.rows_to_records(rows_f + rows_m)
+    path = tmp_path / "H.md"
+    S.write_hamburg_findings(path, recs, S._json_clean({"HH/full": meta_f, "HH/modern": meta_m}))
+    txt = path.read_text(encoding="utf-8")
+    # C1: the §9 bullet stays verbatim and the Hamburg line follows it
+    assert 'commercial-only H1 row also holds; only then may it say "businesses".' in txt
+    assert (
+        "**Hamburg (#355):** no shop, service, gastronomy or entertainment category reaches the "
+        "measurement base at Gebiet grain, so Hamburg H1 is worded 'the mix of transport, public "
+        "facilities and tourist facilities' and H2 'the mix of transport and public facilities'. "
+        "Never 'shops', 'services', 'businesses' or 'commercial mix' for Hamburg H1/H2 (§3, §4)."
+    ) in txt.replace("\n  ", " ")
+    # C2 (a), (b), (c)
+    assert "is consistent with, \nbut not evidence of, upgrading" in txt or (
+        "consistent with, but not evidence of, upgrading (§13)" in txt
+    )
+    assert (
+        "**The 'positiv vs rest' secondary is not evidence that the mix predicts improvement.**"
+        in txt
+    )
+    assert "expected significant by chance) and has no status-level control" in txt
+    assert "(target: classed as worsening)" in txt and "(target: classed as improving)" in txt
+    assert "predicts worsening)" not in txt and "predicts improvement)" not in txt
+    # C4 under both tables, R3
+    c4 = "Hamburg H1 and H2 are **not comparable** with the thesis's H1/H2"
+    assert txt.count(c4) == 2
+    assert "**Status** = the Hamburg Sozialmonitoring Statusindex class" in txt
+    # C3 bullet in §7
+    assert "**Hamburg-specific channel.**" in txt
