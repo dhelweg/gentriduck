@@ -287,3 +287,31 @@ SenSBW *Monitoring Soziale Stadtentwicklung* 2015–2025 (published classes; S2/
 2023/2025). BA-Statistik on refugee entry into SGB II (2016–2018; Rechtskreiswechsel 2022).
 Project: pre-registration §1.2–1.3, §3.2, §3.4, §5.2, §5.5–5.6, §9, Amendments 1–2;
 `docs/epic-e/354-geo-signoff.md`.
+
+---
+
+## Re-check of C1–C4 (2026-11-01)
+
+Scope: C1–C4 only. I checked `git show 36b36074 7a4a64e1` and the regenerated
+`docs/epic-e/E1b-berlin-hypothesis-suite-findings.md` and `thesis-hypothesis-suite-results.csv`
+at 7a4a64e1. I did not open the DB.
+
+```json
+{ "verdict": "pass",
+  "domain_rationale": "All four required changes are in the generated outputs, with numbers that match the sign-off. A cell-by-cell CSV diff (12dd5c41 -> 7a4a64e1, run_sha ignored) shows exactly four changed rows: the two NO DATA sport-without-table-tennis rows (C4) and the two H2 incremental notes (C1). No estimate, CI, p, verdict or Holds? label changed anywhere.",
+  "theory_risks": [],
+  "recommendations": ["R1-R6 of §7 remain non-blocking", "§5 public wording binds the phase C page"] }
+```
+
+| Item | Where | Status |
+|---|---|---|
+| **C1** item 14 / base and full AUCs | Findings §12 item 14 reads "ratified (Amendment 2, geo-DS + domain, 2026-11-01)". It gives ci_low > 0, AUC 0.767 → 0.749 (thesis era) and 0.694 → 0.691 (2019–2025), and the sentence "no increment, not an opposite prediction". The H2 incremental row notes in the CSV and findings §8 carry both AUCs. | **Met.** |
+| **C2** tie ceiling | Findings §4 has ceiling and observed/ceiling columns: 0.691/97%, 0.726/95%, 0.670/100%, 0.678/100%, 0.739/96%, 0.750/95%. These are identical to my §3 table. The bare "diverges" judgement is replaced by "below 0.80". The disclosure text carries the replacement sentence, keeps the read-beside rule, and names the H2 class row as a narrower contrast. | **Met.** |
+| **C3** thesis-era shock line | Findings §5, under "No window is shock-free", has the D_2015/D_2017/D_2019 line: refugee entry into SGB II 2016–2018, local near accommodation sites, means −0.68/−0.90/−0.97 pp, and the H1 Dec 2016 level. | **Met.** |
+| **C4** NO DATA rows | CSV rows 18 and 77 have `estimate`, `effect_label` and `p_analytic` blank, with notes "not reported: < 20 clusters". The findings §8 table carries the same note. | **Met.** |
+
+On wording: "the remaining shortfall … matches the S2/D2 indicator" is an inference, not a test, and
+it is acceptable in a disclosure. The public page uses only the sentence "follows the official
+Dynamik ordering as closely as its three classes allow" (§5). Amendment 2 stays ratified.
+
+Verdict: PASS
