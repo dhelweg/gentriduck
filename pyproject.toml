@@ -153,6 +153,12 @@ analysis = { sequence = [
     # H-C3 (#160): independent Hamburg annual-cadence lead-lag H3a/H3b re-test.
     # Deterministic (no RNG); requires int_hamburg_lead_lag from `poe build`.
     "python analysis/e5_hamburg_lead_lag.py",
+    # #354: city/window-parametrised thesis hypothesis suite (pre-registration
+    # docs/methodology/354-355-hypothesis-suite-preregistration.md). Berlin panels
+    # (modern + thesis-era) -> docs/epic-e/thesis-hypothesis-suite-results.csv and the
+    # generated E1b findings. Deterministic (seed 42, B = 1999); a few minutes. The
+    # `--city HH` run is added by #355 together with the Hamburg findings.
+    "python analysis/thesis_hypothesis_suite.py --city BER",
 ], default_item_type = "cmd" }
 # B2: back-test harness — validates live index against MSS classes and known hotspot/coldspot PLRs.
 # Run after `poe build`. Results written to docs/methodology/backtest.md.
