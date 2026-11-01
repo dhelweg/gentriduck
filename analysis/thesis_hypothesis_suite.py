@@ -3760,6 +3760,10 @@ def _hh_cell(r: dict | None) -> str:
         return f"NO DATA (n = {r['n'] or 0}); *{r['holds']}*"
     name = "AUC" if r["estimator"] == "oof_auc_logit" else "ρ"
     lp = " — low power (§4.4)" if "low power" in r["notes"] else ""
+    if "significantly below 0.5" in r["notes"]:
+        lp += (
+            " — AUC significantly below 0.5, not CONTRADICTED for a non-directional test (§5.1; §4)"
+        )
     return (
         f"{name} {_f(r['estimate'])} [{_f(r['ci_low'])}, {_f(r['ci_high'])}], n = {r['n']} "
         f"({r['n_clusters']} Stadtteile), p_BH = {_f(r['p_bh'], 4)}: **{r['verdict']}** "
@@ -3861,8 +3865,9 @@ def _hh_deviations(records: list[dict], meta: dict) -> list[str]:
         "(its notes, in `docs/handoff/2026-11-01-hypothesis-suite.md`: H2 low power, H1a/H1b "
         "n ≈ 100, commercial-only H1 row without data). No rule was changed after it.",
         "**Tie-ceiling context (domain sign-off 354 R5).** §10 reports the highest Spearman any "
-        "continuous measure can reach against each Sozialmonitoring class variable. It was added "
-        "before this B = 1999 run, is context only, and changes no verdict and no effect label "
+        "continuous measure can reach against each Sozialmonitoring class variable. It was in the "
+        "code before the first Hamburg run on this branch, is context only, and changes no verdict "
+        "and no effect label "
         "(the Cohen labels are applied as pre-registered).",
         "**Shock notes on Hamburg rows.** §4.3 requires the Hamburg counterpart of §3.4. Rows that "
         "include the windows ending 2022 (pandemic) or 2025 (Rechtskreiswechsel, 2023 reforms) "
@@ -3892,6 +3897,29 @@ def _hh_deviations(records: list[dict], meta: dict) -> list[str]:
         "leaves the published pipeline only when the gate passes. The script stays in the "
         "repository, marked superseded, for the audit trail.",
     ]
+    devs.append(
+        "**Text-only generator additions made after seeing Hamburg results (2026-11-01).** After "
+        "the first Hamburg runs on this branch (a B = 49 crash test and the B = 1999 run), the "
+        "findings generator gained: the below-chance AUC disclosure (§4 and the next item), the "
+        "H1 size sentence (§3), plain reasons for rows without data, and two lookup fixes for "
+        "the D3b/R3 sentences in §3. The statistics code, the rows, the verdicts and the labels "
+        "are unchanged by them."
+    )
+    below = [
+        r
+        for r in records
+        if r["city"] == "HH" and r["hypothesis"] == "H2" and "significantly below 0.5" in r["notes"]
+    ]
+    if below:
+        where = ", ".join(f"{r['panel']} {r['role']}" for r in below)
+        devs.append(
+            f"**H2 out-of-fold AUC significantly below 0.5 ({where}) → NOT SIGNIFICANT.** The "
+            "pre-registration writes 'CONTRADICTED impossible' for H1 (§5.1) and makes H2 "
+            "non-directional (§1.1, §5.1); the #354 code applies the rule to both AUC tests "
+            "(`_verdict_for`, covered for H2 by `test_auc_below_null_is_never_contradicted`). It "
+            "binds here for the first time, so it is listed for the reviewers. No rule was changed "
+            "after seeing the result."
+        )
     nd = [
         r
         for r in records
@@ -4179,6 +4207,15 @@ def write_hamburg_findings(path: Path, records: list[dict], meta: dict) -> None:
         "limitation (#337) probably hits this category hardest. The organised-sport row without table "
         "tennis (D3b): " + (f"{_row_brief(no_tt[0])}." if no_tt else "not run.")
     )
+    h1 = prim.get(("full", "H1"))
+    if h1 and "nominally significant" in h1["holds"] and h1["effect_label"] == "negligible":
+        a(
+            f"- **H1 (both panels).** AUC {_f(h1['estimate'])} [{_f(h1['ci_low'])}, "
+            f"{_f(h1['ci_high'])}] is significant before but not after BH, so §5.6 labels it 'not "
+            "reproduced at the corrected threshold (nominally significant)'. Its size is "
+            "'negligible' (AUC < 0.60): even a significant result of this size would map to 'weaker "
+            "than thesis'. The label is the pre-registered one; this sentence only gives its size."
+        )
     for pk, label in HH_PANELS:
         r = next(
             (
@@ -4244,7 +4281,14 @@ def write_hamburg_findings(path: Path, records: list[dict], meta: dict) -> None:
             npos = next(
                 (t.split("=")[1] for t in r["notes"].split("; ") if t.startswith("n_pos=")), "?"
             )
-            lp = "low power" if "low power" in r["notes"] else ""
+            lp = "; ".join(
+                t
+                for t, k in (
+                    ("low power", "low power"),
+                    ("AUC significantly below 0.5 (§5.1)", "significantly below 0.5"),
+                )
+                if k in r["notes"]
+            )
             a(
                 f"| {label} | {contrast} | {_f(r['estimate'])} [{_f(r['ci_low'])}, {_f(r['ci_high'])}] | "
                 f"{r['n']} ({npos}) | {r['verdict']} | {lp} |"
@@ -4257,6 +4301,20 @@ def write_hamburg_findings(path: Path, records: list[dict], meta: dict) -> None:
             f"plus the category OA mix: {_auc_pair(m)}. Amendment 2 applies unchanged: only ci_low > 0 "
             "counts as an increment; otherwise H2 reads 'explained by current status level' when SUPPORTED."
         )
+    a("")
+    for r in hh:
+        if r["hypothesis"] == "H2" and "significantly below 0.5" in r["notes"]:
+            a(
+                f"- **Below-chance out-of-fold AUC ({r['panel']}, {r['role']}: "
+                f"{r['operationalisation'].split(' => ')[-1]}).** AUC {_f(r['estimate'])} "
+                f"[{_f(r['ci_low'])}, {_f(r['ci_high'])}] lies wholly below 0.5. H2 is "
+                "non-directional (§1.1), so CONTRADICTED is undefined (§5.1, as implemented in #354); "
+                "the row is NOT SIGNIFICANT"
+                + (" and maps to 'consistent (still unclear)'" if r["role"] == "primary" else "")
+                + ". It is not read as evidence that the OA mix predicts the opposite change. The CI "
+                "resamples fixed out-of-fold scores and ignores refit variance (geo sign-off 354 §6), "
+                "so it is somewhat narrow for a value this close to 0.5. See §16."
+            )
     a("")
     a("## 5. H3a/H3b per pivot and pivot heterogeneity")
     a("")
