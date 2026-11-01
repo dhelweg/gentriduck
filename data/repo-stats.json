@@ -1,0 +1,44 @@
+{
+  "schema_version": 1,
+  "layers": {
+    "transform": {
+      "files": 111,
+      "loc": 24463
+    },
+    "ingestion": {
+      "files": 106,
+      "loc": 32751
+    },
+    "web": {
+      "files": 43,
+      "loc": 16834
+    },
+    "docs": {
+      "files": 275,
+      "loc": 43431
+    },
+    "analysis": {
+      "files": 13,
+      "loc": 9174
+    },
+    "ops": {
+      "files": 4,
+      "loc": 810
+    },
+    ".claude": {
+      "files": 18,
+      "loc": 853
+    }
+  },
+  "dbt": {
+    "models": 68,
+    "tests": 15,
+    "seeds": 12
+  },
+  "site": {
+    "pages": 18,
+    "components": 7
+  },
+  "adrs": 23,
+  "signoffs": 117
+}
