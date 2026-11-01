@@ -72,3 +72,21 @@ or with equivalent meaning, the verdict becomes **PASS** without another review 
 - the current status level predicting change better than the mix (0.767 / 0.694 vs 0.617 / 0.609).
 
 geo-DS approves it. The domain sign-off is still required separately.
+
+## Re-check (applied edits), 2026-11-01
+
+Commit 90ed9aae, `web/pages/thesis-recheck.md`:
+- **C1** is applied verbatim (the final tie-ceiling text). It is accurate against findings §4: ≈ 0.7,
+  95–100% of the computed ceiling, and the 0.8 threshold disclosed as missed and unattainable.
+- **C2** is applied verbatim (the H3 sentence). It is accurate: the main tests are within |ρ| ≤ 0.06
+  (maximum 0.055), the separate rows are per starting point, and the thesis-era H3b class row
+  (ρ 0.096) is disclosed as chance-level.
+- Incidental edits in the same commit, checked:
+  - The summary now says H3b is not reproduced and the H3a rejection holds, which matches the
+    `holds` labels.
+  - The OA gloss now reads "shops, services or public facilities", which is accurate.
+  - `string_agg` over `run_sha` is a display-only change.
+  - The H1c paragraph merges two sentences of the §1.3 binding text with the meaning unchanged.
+    The domain owns that text.
+
+Verdict: PASS

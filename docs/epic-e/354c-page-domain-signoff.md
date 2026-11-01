@@ -104,3 +104,36 @@ superseded for takeaway 1 only.
   (260/535). For the thesis era it is 188/436 (43%). "roughly half" or "43–49%" would cover both.
 - **R4** `takeaways.md` timing sentence: add "which rules out a strong ordering, not a small one",
   matching the recheck page.
+
+---
+
+## Re-check (applied edits), 2026-11-01
+
+Scope: `git show 90ed9aae -- web/pages/`. I did not open the DB.
+
+| Item | Where | Status |
+|---|---|---|
+| **P1** | `thesis-recheck.md:73–76`, Alert | **Met**, verbatim. It names H3b as not reproduced and the H3a rejection as holding. |
+| **P2** | `index.md:86–89` | **Met**, verbatim. |
+| **P3** | `takeaways.md:57–58` | **Met**, verbatim, including "adding that mix adds nothing". Takeaway 1 is therefore **approved** (I5 public-claims gate). |
+| **P4** | `thesis-recheck.md:98–99` | **Met.** My P4 called this the "methods paragraph". It is the "Two studies" paragraph, and that is the right place for the change. |
+
+**H1c join: acceptable.** "In OpenStreetMap this category is mostly public playgrounds and
+table-tennis tables, which are provided where many families live, including large estates." It
+keeps the meaning of the binding §1.3 sentence (composition: playgrounds and table tennis, not
+gyms) and adds my §5 sentence. All of the mixed-sign, polarity-slip and "verdict unaffected" text
+before it is still verbatim. There is one small nuance, which is optional and not blocking. "Public"
+now also qualifies the playgrounds. Many OSM playgrounds sit in housing-company courtyards, so the
+§1.3 order ("mostly playgrounds and public table-tennis tables, which are provided …") is slightly
+more exact. Either form passes.
+
+**Other changes in the same commit, checked for domain meaning:**
+- The geo C1 validity sentence (`thesis-recheck.md:120–124`) agrees with domain §3 (95–100% of the
+  tie ceiling; the 0.8 threshold could not be reached; both are reported where they disagree).
+- The geo C2 H3 sentence (`:265–270`) names the thesis-era H3b class row with its chance framing
+  ("we do not read it as a finding"). That is consistent with "list, don't interpret".
+- The `run_sha` string_agg change is not a wording change.
+
+Neither introduces pressure, causal, displacement or ethnic wording.
+
+Verdict: PASS
