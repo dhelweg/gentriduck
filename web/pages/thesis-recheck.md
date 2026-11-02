@@ -60,7 +60,9 @@ sidebar_position: 10
   #355 (page part, 2026-11): the neutral "Hamburg: re-test in progress (#355)" placeholder is
   replaced by a pointer to /hamburg/thesis-recheck (no Hamburg result is stated here), and the
   same link is added to "Further reading". The Berlin table and its `city = 'BER'` filter are
-  unchanged.
+  unchanged. Page review R1 (docs/epic-h/355c-page-domain-signoff.md): the study table's grain row
+  now gives the pre-registration §4.5 figure, "about 7,000 residents on average" (median 7,224),
+  so this page and /hamburg/thesis-recheck agree.
 -->
 
 <Hero compact eyebrow="The historical reproduction study" title="The 2018 thesis, re-checked" lede="Gentriduck began as a question: an <a href='https://github.com/dhelweg/masterthesis2018_gentrification'>award-era master's thesis</a> from 2018 claimed that the churn of shops, cafés and restaurants in a Berlin neighbourhood tracks — and partly <i>predicts</i> — its social change. Eight years and a completely rebuilt, open-source stack later: <b>does that result still hold?</b>" />
@@ -92,7 +94,7 @@ where these 2018 hypotheses matter less than the live picture.
 | **Commercial signal** | OpenStreetMap points of interest, expressed as an *Offering Advantage* (a location quotient: a PLR's local share of a business category relative to Berlin overall) | Same OSM sources and same Offering-Advantage construct, full annual history back to 2008 |
 | **Social measure** | Berlin's official social monitor (MSS Status and Dynamik indices, editions 2013–2017); resident-register (EWR) data as context inputs | The official social monitor (MSS), editions 2013–2025 |
 | **Stack** | Hadoop · Hive SQL · Java · R · Weka | dbt · DuckDB · Python (scipy, scikit-learn) — free, open, local-first |
-| **Grain** | Planungsraum (≈2,000–5,000 residents) | Same, plus coarser scales for robustness checks |
+| **Grain** | Planungsraum (about 7,000 residents on average) | Same, plus coarser scales for robustness checks |
 | **Scope** | One-shot analysis | Ongoing public statistics site, Berlin now, more cities later |
 
 The original thesis repository is left untouched as the historical record; Gentriduck is a

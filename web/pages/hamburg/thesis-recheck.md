@@ -45,6 +45,16 @@ hide_breadcrumbs: true
   same BER/modern rows and the same mapping as /thesis-recheck. The hypothesis wording and thesis
   column (words only, no AUC) are the domain §5 Hamburg table text. The per-row sentences are the
   agreed text at run_sha 1ed46268d3ed and must be re-checked if the Hamburg rows are regenerated.
+  #355 page review (web low 1): the per-row <Details> blocks render only while the CSV's Hamburg
+  run_sha equals that signed-off run (SIGNED_OFF_HH_RUN in the script block); otherwise a one-line
+  "being updated after a re-run" note replaces them.
+
+  #355 page review fixes (docs/epic-h/355c-page-geo-signoff.md C1, 355c-page-domain-signoff.md P1,
+  R2): the H2 below-chance line now says "each of the five held-out groups of districts and in
+  every time window" (5 GroupKFold folds + 4 windows, not 99 per-district results); the H1b/H1c
+  "as in Berlin" carry the §4.5 qualifier in place; the construct paragraph notes that H2 uses
+  transport and public facilities only. Berlin-today H1 reads "Holds (businesses, AUC ...)" here
+  (domain C4/§5), on this page only.
 
   Not methodology-bearing as a page change: no statistic is computed or altered here; every label
   and estimate comes from the signed-off CSV, and every sentence from the signed-off Addendum.
@@ -52,6 +62,12 @@ hide_breadcrumbs: true
 
 <script>
   // #353 convention: explicit breadcrumb trail (hide_breadcrumbs above) and browser-tab title.
+  // #355 page review (web low 1): the per-row sentences below are the agreed text for this run
+  // only. If the Hamburg rows are regenerated (different run_sha, or a mixed-run CSV), they are
+  // replaced by a one-line note until the wording is re-checked; the table keeps reading the CSV.
+  const SIGNED_OFF_HH_RUN = '1ed46268d3ed';
+  $: perRowCurrent = suite_runs?.[0]?.hh_run_sha === SIGNED_OFF_HH_RUN;
+
   const crumbs = [
     { label: 'Hamburg', href: '/hamburg' },
     { label: 'Thesis re-check' }
@@ -79,7 +95,8 @@ that composite, not with any one indicator or group. Hamburg is an out-of-sample
 not a replication. A matching result is not evidence that the same process is at work, and a
 different result is not evidence that it isn't. At Hamburg's small statistical areas (about 2,200
 residents), shops and services are too sparse to measure the local mix, so Hamburg's H1 and H2 use
-transport, public facilities and tourist facilities instead.
+transport, public facilities and tourist facilities instead (H2: transport and public facilities
+only).
 
 ## The eight hypotheses: thesis, Berlin today, Hamburg
 
@@ -87,6 +104,9 @@ transport, public facilities and tourist facilities instead.
 -- Berlin today = BER/modern (2019-2025), same rows and same holds -> label mapping as
 -- /thesis-recheck (domain sign-off 354 §5). Unknown holds -> NULL -> blank cell. A compact
 -- estimate is appended only to "Holds" rows (AUC for out-of-fold-AUC rows, rho otherwise).
+-- #355 page review (web low 2): on THIS page only, Berlin's H1 "Holds" also names "businesses"
+-- (domain sign-off 355 C4 / §5 table: "Holds (businesses)"), so it reads against Hamburg's
+-- "Not comparable" H1. /thesis-recheck keeps its own unchanged mapping.
 select
     hypothesis,
     case
@@ -101,7 +121,8 @@ select
     end
     || case
         when holds = 'holds' then
-            ' (' || case when estimator = 'oof_auc_logit' then 'AUC ' else 'ρ ' end
+            ' (' || case when hypothesis = 'H1' then 'businesses, ' else '' end
+            || case when estimator = 'oof_auc_logit' then 'AUC ' else 'ρ ' end
             || printf('%.2f', estimate) || ')'
         else ''
     end as cell,
@@ -140,7 +161,7 @@ select
                     then '<br><span style="opacity:0.8">A test on transport and public facilities found no transferable prediction.'
                         || case
                             when panel = 'full' and estimate < 0.5
-                                then ' Prediction was worse than chance in every held-out district. We read this as no usable signal, not as an opposite effect.'
+                                then ' Prediction was worse than chance in each of the five held-out groups of districts and in every time window. We read this as no usable signal, not as an opposite effect.'
                             else ''
                         end
                         || '</span>'
@@ -249,6 +270,8 @@ both Hamburg columns, so it is shown once and counts once.
 
 ### Each hypothesis in a sentence
 
+{#if perRowCurrent}
+
 <Details title="H1: social status and the local mix">
 
 Not comparable: no business category can be measured at Hamburg's small-area grain. A test on
@@ -272,7 +295,7 @@ evidence that the two cities differ.
 
 Among the roughly one in eight areas with at least ten gastronomy outlets, fast food makes up a
 larger share of the gastronomy mix where the Sozialmonitoring status is worse (ρ 0.42, moderate), as
-in Berlin. Status here is Hamburg's composite index as a whole (seven indicators, including
+in Berlin; a matching result is not evidence that the same process is at work. Status here is Hamburg's composite index as a whole (seven indicators, including
 migration background and school-leaving outcomes), not any single one of its indicators. This is an
 area-level pattern, not a statement about any group or business. We could not test whether it
 depends on one type of outlet. It is one 2025 cross-section, so it counts once, not once per
@@ -282,8 +305,8 @@ Hamburg column.
 
 <Details title="H1c: sport and leisure facilities">
 
-Opposite direction, small, as in Berlin: more sport and leisure facilities go slightly with a worse
-Sozialmonitoring status (Hamburg's composite index, which includes migration background and
+Opposite direction, small, as in Berlin (a matching result, not evidence of the same process): more
+sport and leisure facilities go slightly with a worse Sozialmonitoring status (Hamburg's composite index, which includes migration background and
 school-leaving outcomes). In OpenStreetMap these are mostly playgrounds and public table tennis,
 provided where many families live.
 
@@ -293,8 +316,8 @@ provided where many families live.
 
 Not comparable: no business category can be measured at Hamburg's small-area grain. A test on
 transport and public facilities found no transferable prediction. Over the full chain, prediction
-was worse than chance in every held-out district. We read this as no usable signal, not as an
-opposite effect.
+was worse than chance in each of the five held-out groups of districts and in every time window. We
+read this as no usable signal, not as an opposite effect.
 
 </Details>
 
@@ -307,6 +330,12 @@ small one. Every window contains shocks: refugee arrivals 2015–18 and 2022, th
 2023 benefit reforms.
 
 </Details>
+
+{:else}
+
+The per-hypothesis sentences are being updated after a re-run of the Hamburg analysis; the table above shows the current results.
+
+{/if}
 
 ## Corrections
 
