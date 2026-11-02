@@ -294,3 +294,48 @@ agreed label. The findings line under the §1 and §2 tables should read: "Hambu
 their features are transport, public facilities (and, for H1, tourist facilities) only (§3, §11)."
 C2 and C3 stand unchanged. They are not covered by the geo-DS conditions: C2 is the positiv guard
 and the #358 sentence, and C3 is the direct D1/AsylbLG refugee channel.
+
+---
+
+## Re-check of C1–C4 and R1–R3 (2026-11-02)
+
+Scope: `git show 1ed46268 af6fffe2` and the regenerated
+`docs/epic-h/H-thesis-hypothesis-suite-findings.md` at af6fffe2 (`run_sha` 1ed46268d3ed). I did
+not open the DB and did not switch branches.
+
+```json
+{ "verdict": "pass",
+  "domain_rationale": "All seven items are in the generated outputs, worded as requested. A cell-by-cell CSV diff (2458d1d7 -> af6fffe2, 216 rows, run_sha ignored) shows changes only in Hamburg rows: 4 operationalisation and 2 outcome cells (C2c relabel) and 72 notes cells (C3, R2, Amendment 3 flag). There are zero changes to estimate, CI, p, verdict, effect label, holds or n, and no Berlin row changed.",
+  "theory_risks": [],
+  "recommendations": ["Hamburg page follows the agreed text in the Addendum reconciliation table"] }
+```
+
+| Item | Where | Status |
+|---|---|---|
+| **C1** §13 Hamburg wording line | §13, after the §9 H1 bullet, verbatim. | **Met.** |
+| **C2(a)** #358 sentence | §4 lead: "'negativ' … filtering, at most a rent-gap precondition; 'positiv' … consistent with, but not evidence of, upgrading". | **Met.** |
+| **C2(b)** positiv guard | §4, bold paragraph after the contrast table, verbatim. It includes the 0.577 vs 0.546 and Amendment 2 points. | **Met.** |
+| **C2(c)** contrast labels | §1 operationalisation table, the §4 table and paragraph, §12, and the CSV `operationalisation` (4 rows) and `outcome` (2 rows). They read "target: classed as worsening / improving". | **Met.** Relabelling the CSV too is **fine and preferred**: the CSV is the public artefact, and it now agrees with the findings. These are descriptive text columns, and no statistic or row key changed. |
+| **C3** direct refugee channel | §7 bullet ("Hamburg-specific channel": D1, S3 with AsylbLG, windows ending 2016/2019/2025, reverse effect on closure, local), and in the `notes` of every row that spans those windows. | **Met.** |
+| **C4** (as edited in the Addendum) | The "not comparable" line under the §1 table (line 30) and under the §2 cross-city table (line 92), verbatim. | **Met.** |
+| **R1** campaign-mapping mechanism | In the §4 below-chance paragraph, next to the Parker et al. artefact, as "two compatible explanations … neither is tested". | **Met.** |
+| **R2** H2 pandemic note | §7 and the H2 row notes: "with the local mix through the labour market"; gastronomy is kept for H3 and H1a/b. | **Met.** |
+| **R3** status definition | One line under the §1 table (line 28). | **Met.** |
+
+The Amendment 3 flag wording ("out-of-fold AUC significantly below 0.5 (no transferable
+prediction)") is in the §1 cell, the §4 table and the H2 notes. Deviation 13 discloses the gate
+text changes accurately.
+
+**E1b §12 item 16 (Berlin, earlier notes-only change).** It adds the W1 shock notes to 6
+`BER/modern` pivot-difference and level-stratified H3a/H3b rows. This is exactly the D7 rule that
+every row spanning W1 names the mechanism, now applied to rows that had missed it. The geo-DS
+diffed all 116 Berlin rows (`docs/epic-h/355-geo-signoff.md` §5): only `notes` changed, and no
+estimate, CI, p, verdict or `holds` value moved. My own diff for these two commits shows no Berlin
+change at all. **It does not affect my #354 sign-offs**
+(`docs/epic-e/354-domain-signoff.md`, PASS after the C1–C4 re-check) **or the phase C page
+sign-off** (`docs/epic-e/354c-page-domain-signoff.md`, PASS). The page reads only primary-row
+`holds` and `estimate`, which are unchanged.
+
+Amendment 3 stays ratified.
+
+Verdict: PASS
