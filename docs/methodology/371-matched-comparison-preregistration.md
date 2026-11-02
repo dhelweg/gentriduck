@@ -13,6 +13,10 @@
   measured at Gebiet grain); `docs/epic-e/354-phase-a-data-prerequisites.md` §3–5 (cited as
   **PA**); `docs/epic-c/360-mss-indicator-mapping-evidence.md` (cited as **#360**);
   `analysis/thesis_hypothesis_suite.py`.
+- **Revision 1 (2026-11-02, pre-results):** addresses the domain review
+  `docs/methodology/371-preregistration-domain-review.md` (D1–D7 required, R1–R6 adopted). No
+  matched-panel statistic existed before or during this revision. The changes are listed in the
+  "Revision log" at the end.
 - **Binding rule:** whatever this document does not change carries over from P354 unchanged. That
   covers the estimators (§5.1), the classifier specification, OA zero-fill and A1.1, the bootstrap
   p, BH-FDR, the effect-size labels, the verdict mapping (§5.6 with Amendments 2 and 3), the §9
@@ -26,13 +30,14 @@
 | Item | Decision |
 |---|---|
 | Grain | **Berlin BZR (`lor_2021`, 143)** vs **Hamburg Stadtteil (99 with scored Gebiete)**. Both are built bottom-up from a **balanced** set of PLR/Gebiete: units inhabited/scored in all four editions. |
-| Status construct | **Harmonised core K**: unemployment, transfer receipt and child poverty, population-weighted from PLR/Gebiet. Within each city and edition, each indicator is z-scored over the matched units, and K is the mean of the three z-scores. Higher K means more disadvantage. HH migration background (S1) and school leaving (S7) are reported as context only. |
+| Status construct | **Harmonised core K (primary: core-3H, Revision 2)**: unemployment, transfer receipt and child poverty, population-weighted from PLR/Gebiet. **Berlin T is re-based to all recipients including the unemployed** (T\* = count(S3) + count(S1) over all residents, §3.7), which corrects construct gap 5 instead of only disclosing it. The previous mixed construct (core-3M) and U + C (core-2) are sensitivities. Within each city and edition, each indicator is z-scored over the matched units, and K is the mean of the three z-scores. Higher K means more disadvantage. HH migration background (S1) and school leaving (S7) are reported as context only. |
 | Hamburg shares | Recovered from the annex z-scores as share = mean + z·SD per edition (`stg_hamburg_sozialmonitoring_indicators`, pending the ADR-0014 amendment). Every rank statistic depends only on the SD; the mean only matters for descriptive levels (§3.3). |
 | Windows | Editions **2019, 2021, 2023, 2025** in both cities. Levels as of 31.12.(E−1) in **both** cities (verified, §4.1). Changes are pp differences of **levels** over W1 = [2019, 2021], W2 = [2021, 2023], W3 = [2023, 2025] (OSM snapshot years). Pivots are **2021** and **2023**. The H1 cross-section is edition 2025 × OSM 2025. Published Dynamik classes are not used. |
 | Berlin 2019 level | Backcast on `lor_2021`: S_2019 = anteil_2021 − dynamik_2021 (the P354 §3.1 rule). Checked against crosswalked MSS 2019 on `lor_pre2021` (§4.2). |
 | POIs | The same commercial basket (Gastronomy, Retail, Services, Entertainment), the ADR-0017 LQ OA (`standard/faithful`), and snapshots 2019/2021/2023/2025, with stocks summed to the matched grain and OA recomputed there. **The H1/H2 feature list is the intersection of the two cities' A1.1 lists.** |
 | Inference | **Spatial block bootstrap**: G = 24 contiguous k-means blocks per city on area centroids (EPSG:25833 / 25832), B = 1999, seed 42. The same blocks are the GroupKFold groups for H1/H2. Sensitivities: G = 16 and G = 36, an iid bootstrap, and Moran's I of the residuals (#365). |
 | City difference | For each of the 8 hypotheses, Δ = θ_BER − θ_HH from **independent** block bootstraps in each city. Two-sided bootstrap p. BH across the 8 forms its own family. Verdicts: **DIFFERS** / **NO DIFFERENCE DETECTED** / NO DATA. The minimum detectable difference (MDD) is always reported. |
+| Stating a city difference (D1, D2; Revision 2) | A city difference is stated publicly only if X8 gives DIFFERS under the primary **core-3H** **and** in the ≥ 5,000-resident panel, its Δ keeps the same sign under core-3M and core-2, and, if Hamburg S5 includes AsylbLG, it is also DIFFERS under the U-only **core-1U** sensitivity (§3.2, §3.7, §6.3). Otherwise: "differs only under <condition>; not stated as a city difference". If the §3.7 fallback applies, the Revision 1 rule (DIFFERS under core-3M **and** core-2 **and** the ≥ 5,000 panel) is used. |
 | MAUP | The whole matched design is re-run at PLR/Gebiet with the same blocks, as a sensitivity. |
 | New hypotheses | **N1** level-conditional H3a (confirmatory). **N2** café-to-fast-food ratio change precedes status change (confirmatory). **N3** neighbourhood commercial-change spillover via a spatial lag (exploratory). **(d) protection-zone timing is rejected** (§7.4). |
 | Families | Per city: **T8** (the 8 thesis primaries, BH as in P354) and **N2-family** (N1, N2; BH within the family). Across cities: **X8** (the 8 interactions, BH). N3, the N1/N2 interactions and every sensitivity are uncorrected and exploratory. |
@@ -147,8 +152,8 @@ not made.** Only within-city associations are compared.
 | **T: transfer receipt** | S3 `transferbezug_anteil`: **non-unemployed** recipients of SGB II and SGB XII subsistence benefits per resident, % | **S3 SGB-II-(und AsylbLG-)Empfänger/-innen**: all SGB II recipients, plus AsylbLG from 2019, per resident |
 | **C: child poverty** | S4 `kinderarmut_anteil`: under-15s in SGB II households per under-15s, % | **S5 Kinder (unter 15) in Mindestsicherung** |
 
-Excluded from K, reported as **context only** (descriptive correlations with K and with the H1a/H1b
-OA, no verdict): HH S1 Kinder mit Migrationshintergrund, HH S7 Schulabschlüsse, and also HH S2
+Excluded from K, reported as **context only** (descriptive correlations **with K only**, no verdict;
+D4: no correlation of S1 or S7 with any OA, café or fast-food variable is computed or shown): HH S1 Kinder mit Migrationshintergrund, HH S7 Schulabschlüsse, and also HH S2
 (single-parent children) and S6 (Mindestsicherung im Alter), which have no Berlin counterpart in
 all four editions. Berlin S2 (single-parent children) exists only from 2023 and is excluded for the
 same reason.
@@ -157,18 +162,122 @@ same reason.
 
 1. **T differs in scope.** Berlin S3 excludes the unemployed and AsylbLG recipients. Hamburg S3
    includes all SGB II recipients and, from 2019, AsylbLG recipients. Hamburg T therefore loads more
-   on refugee accommodation and overlaps more with U.
+   on refugee accommodation and overlaps more with U (gap 5).
 2. **C differs in scope.** Berlin S4 counts SGB II only. Hamburg S5 counts "Mindestsicherung",
    which may include SGB XII and AsylbLG. **The DE must confirm the S5 definition from the annex
-   notes before the analysis runs.**
+   notes before the analysis runs.** Every statement in this document about a refugee channel in C
+   is **conditional on that finding** (D2).
 3. **U denominators differ** (15 to retirement age vs 15–64). The DE confirms whether Hamburg S4
    remains SGB II only in 2023/2025, or whether it changes to SGB II + III (see §4.3).
 4. Because K is z-scored within each city, **it ranks units within a city**. A Berlin and a
    Hamburg unit with the same K are not equally disadvantaged.
+5. **Hamburg K double-weights unemployment (D1).** Hamburg T (all SGB II recipients) contains the
+   SGB II unemployed who are also in U. Hamburg K therefore weights SGB II unemployment about twice;
+   Berlin K (S3 = non-unemployed recipients) does not. K means a different mix in each city even
+   after within-city z-scoring. On its own this can produce a DIFFERS for any predictor that relates
+   differently to unemployment than to non-employment transfer receipt (for example via pensioner or
+   single-parent geography). **Revision 2: corrected in the primary** by re-basing Berlin T to all
+   recipients (§3.7). Gap 5 remains in force for the core-3M sensitivity and for the §3.7 fallback.
 
-**Sensitivity "core-2":** K without T (U + C only). T is the indicator with the largest scope gap
-and the most direct refugee channel. A verdict or DIFFERS decision that changes under core-2 is
+**Sensitivity "core-3M" (Revision 2):** the Revision 1 mixed construct, with Berlin T = S3
+(non-unemployed recipients) and Hamburg T = S3 (all recipients). It carries gap 5.
+
+**Sensitivity "core-2":** K without T (U + C only), described as **"without the transfer
+indicator"**. It removes the T scope gap and the U double weighting (gap 5). It removes the refugee
+channel only if S5 excludes AsylbLG. A verdict or DIFFERS decision that changes under core-2 is
 flagged "depends on the transfer indicator".
+
+**Sensitivity "core-1U" (conditional, D2):** if the DE finds that Hamburg S5 includes AsylbLG, a
+U-only construct is added for every primary and X8 row. Core-2 is then not described as "without
+the refugee channel".
+
+The primary construct and its derivation are in §3.7.
+
+### 3.7 Harmonised transfer construct T\* (Revision 2, maintainer question, pre-results)
+
+**Question.** Can gap 5 be corrected rather than only disclosed? There are two directions: (A) add
+the unemployed to Berlin T, or (B) remove them from Hamburg T. Both have to work in **counts**,
+because U and T have different denominators.
+
+**Denominators (R-C2).**
+- Berlin S1 Arbeitslosigkeit: SGB II unemployed per resident aged **15–<65** (MSS 2019) or **15 to
+  the Regelaltersgrenze** (MSS 2021+). Sources: Indikatorenblätter MSS 2019 S. 13; MSS 2021 S. 16 and
+  Vorbemerkungen S. 7; MSS 2023 S. 18; MSS 2025 S. 18 (#360 §2).
+- Berlin S3 Transferbezug: non-unemployed recipients of SGB II and SGB XII subsistence benefits per
+  **resident** (all ages). Sources: MSS 2019 S. 18; MSS 2021 S. 21; MSS 2023 S. 26; MSS 2025 S. 26
+  (#360 §2).
+- Hamburg S3: SGB II (plus AsylbLG from 2019) recipients; Hamburg S4: Arbeitslose. Both are per the
+  Sozialmonitoring annex and Methodenteil of each edition (PA §5). The exact bases have to be
+  confirmed by the DE (checks below).
+
+**(A) Berlin → all recipients: CHOSEN.** Per PLR i and edition E:
+
+- N_U,i = S1_i / 100 · P^(U)_i, where P^(U) is the residents aged 15–<65 (edition 2019 backcast:
+  see below) or 15 to the Regelaltersgrenze (2021+);
+- N_T,i = S3_i / 100 · P_i (all residents);
+- **T\*_i = 100 · (N_U,i + N_T,i) / P_i**.
+
+At matched grain the counts are summed before dividing:
+**T\*_u = 100 · Σ_i (N_U,i + N_T,i) / Σ_i P_i**, so the population weighting is exact. The base is
+all residents, which matches the documented Berlin S3 base and the expected Hamburg S3 base. If the
+DE finds that Hamburg S3 uses residents **under 65** as its base, the Berlin base becomes
+P^(<65)_i in both the numerator conversion and the division (same formula, different P).
+
+- **Regelaltersgrenze:** 65 years 9 months at 31.12.2020, 65 y 11 m at 31.12.2022, and 66 y 2 m at
+  31.12.2024 (§ 235 SGB VI). P^(U) = P(15–<65) + f · P(65–<67), with f = (Regelaltersgrenze − 65) / 2
+  (0.375, 0.458, 0.583). This assumes a uniform age distribution within the published 65–67 band; the
+  error is at most a fraction of one single-age cohort.
+- **2019 backcast:** S1_2019 and S3_2019 are backcast on `lor_2021` (§4.2), so N_U,2019 uses
+  P(15–<65) at 31.12.2018 on `lor_2021`.
+- **Data availability (verified read-only, 2026-11-02).** The raw EWR matrices
+  (`data/raw/berlin/ewr/csv/EWR{YYYY}12E_Matrix.csv`, `EWR_L21_{YYYY}12E_Matrix.csv`; Amt für
+  Statistik Berlin-Brandenburg, CC BY 3.0 DE, an existing source under ADR-0003/ADR-0007) carry
+  single and narrow age bands, including `E_E15_18`, `E_E60_63`, `E_E63_65` and `E_E65_67`, for
+  **31.12.2018, 31.12.2020 and 31.12.2024** (and 2025). The warehouse currently stages only coarse
+  shares (`age_under18_share`, `age_18_27_share`, …, `age_65plus_share` in `int_berlin_ewr_plr2021`),
+  which cannot form 15–<65. So the DE must stage the needed bands. 2018 and 2020 are on `lor_pre2021`
+  and go through the existing PLR-2021 crosswalk; 2024 is native `lor_2021`. **31.12.2022 is missing**
+  (#346), so it is linearly interpolated per PLR between 2020 and 2024, as under M3, band by band.
+  No new source, so no ADR is needed.
+
+**(B) Hamburg → non-unemployed recipients: REJECTED.** T^nu_i = 100 · (S3_i · P_i − S4_i · P^(15–64)_i) / P_i
+would need (1) the Gebiet-level 15–64 population, which Hamburg does not publish at Gebiet grain
+(the warehouse has total population per Gebiet, and age shares only per Stadtteil, under-18 and 65+
+only, in `stg_hamburg_ewr_stadtteil`); (2) Hamburg S4 to be exactly the SGB II unemployed, which is
+documented only for the 2019 and 2021 annexes (PA §5); and (3) a subtraction of two rounded,
+z-recovered shares, which can turn negative in small Gebiete. A also leaves Hamburg's published
+indicators untouched, so the annex recovery checks (§3.3) stay simple.
+
+**Residual differences after A (binding disclosure).** Berlin T\* counts SGB II **and SGB XII**
+recipients, and no AsylbLG. Hamburg T counts SGB II **and AsylbLG** (from 2019), and no SGB XII.
+So the U double weighting is gone, but the refugee channel (Hamburg) and the older and
+disabled-persons channel (Berlin) remain. U and T\* now overlap in **both** cities in the same way
+(the unemployed are in both), so the two cities' K weight unemployment alike.
+
+**DE checks (binding before any analysis).**
+1. The Hamburg S3 base (all residents or under-65) and the Hamburg S4 base (15–64) are stated per
+   edition 2019–2025 from the annex/Methodenteil text, and quoted in the evidence doc.
+2. Hamburg S3 counts **all** SGB II recipients (not only the employable), including the unemployed.
+   Otherwise gap 5 does not exist and core-3M becomes primary (see fallback).
+3. The Berlin S1 base per edition (15–<65 in 2019; 15–Regelaltersgrenze 2021+) and the S3 base (all
+   residents) are confirmed from the Indikatorenblätter pages above.
+4. The EWR age bands are staged per PLR for 2018, 2020 and 2024 on `lor_2021`. Σ bands = `residents_total`
+   per PLR (exact), and the crosswalk keeps the city totals.
+5. Plausibility: T\* ≥ S3 and T\* − S3 ≤ S1 in every PLR-edition (because P^(U) ≤ P). The city-level
+   T\* is within ±1 pp of the published Berlin SGB II/XII recipient rate, where one is published.
+6. The 2022 interpolation is flagged per row.
+(The Hamburg S4 SGB II-only check from §3.2 item 3 stays binding, but under A it matters only for U,
+not for T.)
+
+**Fallback.** If the EWR age bands cannot be staged for any of 2018/2020/2024, P(15–<65) is
+approximated from the staged coarse shares as P(18–<65) + (3/18) · P(<18), with the Regelaltersgrenze
+slice taken as 0, and the row is flagged `t_star_approx`. If even that is not possible, or DE check 2
+fails, **core-3M becomes primary again** with gap 5 disclosed, and the Revision 1 statement rule
+applies (§0, §6.3).
+
+**Validity.** §3.6 is computed for core-3H (primary) and core-3M. The Berlin level check against
+the #354 S composite is no longer near-tautological for core-3H (T\* ≠ S3), so its ≥ 0.90 threshold
+becomes informative. A pre-registered descriptive: ρ(T\*, S3) per edition at PLR.
 
 ### 3.3 Hamburg shares from the annex z-scores
 
@@ -226,7 +335,11 @@ H2 target = dK > 0 ("relative worsening vs rest"), in both cities.
 | HH change | Gebiet, W windows vs the 3-year Dynamik-summe that ends in the same edition | ρ | reported, no threshold (the windows differ) |
 | Both | matched grain | ρ(K, the population-weighted mean of the own index's status class) | reported |
 
-The Hamburg threshold is lower because S1 and S7 are deliberately left out. If any threshold
+The Hamburg threshold is lower because S1 and S7 are deliberately left out. **Reading (R6):** the
+Berlin level check compares K with the #354 S composite, which is built from the same three
+indicators, so ρ ≈ 1 is expected by construction; a pass there only shows that the aggregation code
+is correct. The informative checks are Hamburg K vs Status-summe and K vs each city's own classes
+at matched grain. A pass must not be over-read beyond that. If any threshold
 fails, the matched panel still runs, but every finding carries "the harmonised core diverges from
 <city>'s own index (ρ = …)", and the domain expert decides whether the H1 family may be shown
 publicly. Thresholds are not adjusted after results.
@@ -278,14 +391,19 @@ for all indicators.
   market, not through neighbourhood change (P354 §3.4, W1 mechanism). Refugees who arrived in
   2015–16 continue to move from AsylbLG into SGB II after recognition. In Berlin this raises S3/S4;
   in Hamburg it moves people from AsylbLG to SGB II, both of which are inside S3.
-- **W2 (2020 → 2022):** the bounce-back of pandemic unemployment. The **Rechtskreiswechsel** of
-  1 June 2022 moves Ukrainian refugees from AsylbLG to SGB II. This raises Berlin U, T and C wherever
-  Ukrainians live. In Hamburg it raises U and C; T changes less, because AsylbLG was already counted.
-  **This channel is asymmetric between the cities by construction**, and it is the main reason for
-  the core-2 sensitivity.
+- **W2 (2020 → 2022):** the bounce-back of pandemic unemployment. Ukrainian refugees arriving from
+  March 2022 enter Hamburg T at arrival (AsylbLG is in S3 from 2019). At the 1 June 2022 switch
+  (**Rechtskreiswechsel**) Hamburg T is unchanged, while U (and C, if S5 excludes AsylbLG) rise.
+  Berlin U, T (non-unemployed recipients only) and C rise from June. Both cities' W2 absorb the
+  arrivals; the asymmetry is in which indicator carries them and when within the window. This is a
+  reason for the core-2 (and, conditionally, core-1U) sensitivity.
+- **Local sites (all windows, mainly W2/W3):** large arrival and accommodation sites, such as the
+  Berlin Ukraine arrival centre at the former Tegel airport (from 2022) and Hamburg's central
+  initial reception sites, can move K and dK of a whole matched unit. Whether their residents are in
+  the population counts is unknown, so this is disclosed, not corrected (P354 §3.4 rule).
 - **W3 (2022 → 2024):** **Bürgergeld** (1 January 2023) widens SGB II access and raises the
   protected assets. **Wohngeld-Plus** (2023) moves some low-income households out of SGB II/XII
-  into housing benefit, which lowers T and C. Both are city-wide, but their spatial incidence
+  into housing benefit, which lowers T and (depending on S5's scope) C. Both are city-wide, but their spatial incidence
   follows the existing low-income geography. Ukrainian refugee arrivals continue.
 - Under rank statistics a uniform city-wide shift is harmless; a shift that follows the existing
   geography is not. Every H2/H3 row that pools windows says so. Per-window rows are reported as
@@ -331,6 +449,10 @@ Hamburg H1/H2 can test the business mix (*Angebotsstruktur*) for the first time.
   mapping diffusion remains a threat (P354 §4.1, R6). The OSM total-count growth per matched unit
   is reported as a diagnostic. An H3 verdict whose sign reverses when the units in the top decile of
   total-POI growth are dropped is flagged "possibly mapping-driven".
+- **New-build diagnostic (R5), symmetric with the above:** population growth per matched unit over
+  each window is reported. A verdict whose sign reverses when the units in the top decile of
+  population growth are dropped is flagged "possibly new-build-driven" (HafenCity, Berlin's new
+  quarters).
 
 ---
 
@@ -421,7 +543,17 @@ For each hypothesis h:
   in both cities" is **never** shown as agreement unless X8 says NO DIFFERENCE DETECTED **and** the
   MDD is at most 0.30 / 0.10. Even then it reads "no difference detected", never "the same".
 - For non-directional AUC rows, Δ compares discrimination, not direction. Below-chance AUCs are
-  kept in Δ as estimated, and the row notes Amendment 3.
+  kept in Δ as estimated, and the row notes Amendment 3. **Below-chance rule (D6):** if either
+  city's AUC is below 0.5, a DIFFERS on that row reads "differs in transferable discrimination:
+  <city> shows none (Amendment 3)", never "the association differs" or "runs the other way". Such a
+  row is never stated as a city difference under the robust-DIFFERS rule.
+- **Robust-DIFFERS rule (D1, Revision 2):** a city difference may be **stated** (findings
+  headline, any public page) only if X8 gives DIFFERS under the primary **core-3H** **and** in the
+  ≥ 5,000-resident panel, its Δ has the same sign under core-3M and core-2, and, if triggered (D2),
+  it is also DIFFERS under core-1U. A DIFFERS that fails any of these is reported as "differs only
+  under <condition>; not stated as a city difference". The verdicts themselves stay as defined; this
+  rule governs only what may be claimed. If the §3.7 fallback makes core-3M primary, the Revision 1
+  rule applies: DIFFERS under core-3M **and** core-2 **and** the ≥ 5,000 panel.
 
 **Rejected:** a pooled model with a city × predictor interaction term. The two cities' K and OA are
 standardised separately, so a pooled rank model would mix two scales. A Fisher-z test on ρ assumes
@@ -474,25 +606,46 @@ sources at matched grain **in both cities**; (iii) none uses displacement or "pr
   cut (the median of K, the same rule in both cities). P354 used class-based cuts that were not
   comparable between the cities.
 - **Thesis link:** H3a (✗ in 2018) tested unconditionally.
+- **Scope disclosure (D7):** above-median K pools inner-city disadvantaged areas, where
+  invasion–succession is expected (Dangschat 1988: *innenstadtnahe Wohnviertel*), with peripheral
+  large estates, where it is not. A NOT SIGNIFICANT N1 is therefore weak evidence against the
+  model. Public wording: "among the more disadvantaged half of neighbourhoods", never "gentrifying
+  areas".
+- **Exploratory centrality split (R2):** N1 is also reported within the inner and outer halves of
+  each city, split at the population-weighted median distance of unit centroids to the city centre
+  (Berlin: Alexanderplatz; Hamburg: Rathausmarkt; a city-relative, symmetric rule fixed now).
+  Uncorrected, no verdict.
 
-### 7.2 N2: café-to-fast-food ratio as an early signal (from (c); CONFIRMATORY)
+### 7.2 N2: café-to-fast-food ratio change and later status change (from (c); CONFIRMATORY)
 
-- **Wording:** "A relative rise in cafés against fast-food outlets in a neighbourhood's gastronomy
-  precedes a relative decline in officially measured disadvantage."
+- **Wording:** "A relative shift in the gastronomy mix toward cafés precedes a relative decline in
+  officially measured disadvantage." This is an ordering test, like H3a. It is **not** a warning,
+  forecasting or investment indicator (D5a; §10).
 - **Variable:** r_E = ln((Cafe_E + 0.5) / (FastFood_E + 0.5)), from the matched-grain stocks. The
   continuity correction is the standard empirical-logit one (Cox 1970). The change is Δr_P over the
   pivot window. Only units that pass the Gastronomy base at both ends of P are included.
 - **Estimator:** partial Spearman ρ(Δr_P, dK_F | dK_P, K_pivot), pivots pooled.
 - **Expected sign:** ρ < 0.
-- **Why:** it combines the thesis's own H1a and H1b signals (Papachristos et al. 2011, café growth as
-  a marker of neighbourhood change; Pearce et al. 2007, fast food and deprivation) into one
-  within-domain ratio. Glaeser, Kim & Luca (2018) show that changes in café presence (Yelp,
-  Starbucks entries) lead local housing-price and composition changes in US cities. A ratio
-  *within* Gastronomy cancels the gastronomy-wide mapping completeness (C5) and the pandemic
-  gastronomy shock to first order. That makes it more robust than a café-share growth. P354 §5.2
-  ran a café-growth cross-lag only as exploratory (R4).
-- **Wording guard:** fast food is a category of outlets, not of people. The H1b anti-stigmatisation
-  wording (R3) applies. The döner/kebab-excluded variant is a sensitivity if the taxonomy carries it.
+- **Component secondaries (D5b, outside every family):** g(café share within Gastronomy)_P and
+  g(fast-food share within Gastronomy)_P, each against dK_F with the same controls. They show which
+  side of the ratio carries any N2 result. The döner/kebab-excluded variant stays a sensitivity,
+  conditional on the taxonomy carrying it (354 R4, OSM `cuisine`).
+- **Wording rule (D5b, binding):** N2 is described only as "a shift in the gastronomy mix toward
+  cafés", never as "fewer fast-food outlets" (let alone döner). If the fast-food component carries
+  the result, the findings state that it may reflect outlet closures, including of owner-run
+  outlets, and is not evidence of improvement. The H1b anti-stigmatisation wording (R3) applies.
+- **Pivots (D5c):** a ratio *within* Gastronomy cancels the gastronomy-wide mapping completeness
+  (C5) to first order. It does **not** cancel the pandemic: during the 2020–21 lockdowns takeaway
+  stayed permitted while sit-down cafés closed, and OSM registers closures with uneven lags. So pivot
+  2021 (P = W1) is reported separately, with the W1 mechanism named, beside the pooled primary.
+- **Why (D5d):** it combines the thesis's own H1a and H1b variables into one within-domain ratio.
+  Papachristos et al. (2011) relate coffee-shop growth to gentrification and crime in Chicago.
+  Glaeser, Kim & Luca (2018) relate business openings, including cafés and Starbucks, to house-price
+  growth in US cities. Pearce et al. (2007) relate fast-food access to deprivation. This literature
+  supports café growth as a marker of **market upgrading**; neither café study tests officially
+  measured disadvantage. N2 tests whether the shift precedes a fall in measured disadvantage, which
+  is a different construct (improvement ≠ gentrification, P354 §9). P354 §5.2 ran a café-growth
+  cross-lag only as exploratory (R4).
 
 ### 7.3 N3: neighbourhood commercial-change spillover (from (b); EXPLORATORY)
 
@@ -507,9 +660,10 @@ sources at matched grain **in both cities**; (iii) none uses displacement or "pr
 - **Why exploratory:** the spatial lag smooths over the same neighbours that the block bootstrap
   keeps together, so its inference is the least tested in this design. With about 4 neighbours per
   unit it is also collinear with the unit's own growth. Its role is to show whether a
-  neighbourhood's own change is the right unit at all. Theory: upgrading spreads from adjacent,
-  already-upgraded areas (Guerrieri, Hartley & Hurst 2013, endogenous gentrification); the spatial
-  lag operationalisation follows Anselin (1988).
+  neighbourhood's own change is the right unit at all. Theory: Guerrieri, Hartley & Hurst (2013) model
+  spillover from adjacent **high-status** areas, which is a status gradient. N3 operationalises the
+  general diffusion idea with neighbours' commercial change instead (R3). The spatial lag
+  operationalisation follows Anselin (1988).
 
 ### 7.4 Rejected: (d) protection-zone timing
 
@@ -524,7 +678,9 @@ addition, designation is selected on the very outcome (the §172 BauGB criteria 
 upgrading potential), which makes any "before/after" reading confounded by design. And the topic
 pulls the wording towards displacement (#358). Berlin-only timing stays with the Milieuschutz work
 (ADR-0019). It is out of E1c's scope. The protection status is reported only as a **descriptive
-context column** (the share of each matched unit's population under protection in 2024).
+context column** (the share of each matched unit's population under protection in 2024). **No association of
+this column with K, dK, OA or any N row is computed or shown (R4)**: the §7.4 reasons apply to a
+correlation as much as to a timing test.
 
 ### 7.5 Families and multiplicity
 
@@ -582,19 +738,23 @@ The P354 §7.1 columns are kept with these values:
 | `p_boot`, `p_bh`, `p_holm` | BH within T8, N-family or X8, as the row's family |
 | `verdict` | as P354; for interaction rows `DIFFERS` / `NO DIFFERENCE DETECTED` / `NO DATA` |
 | `holds` | §6.6; empty for N rows and interaction rows |
-| `outcome` | `K_harmonised_core3_2025`, `dK_harmonised_core3` (or `_core2`) |
+| `outcome` | `K_harmonised_core3h_2025`, `dK_harmonised_core3h` (sensitivities `_core3m`, `_core2`, `_core1u`) |
 
 New columns, **appended at the end** (empty for existing rows; see maintainer call M1):
-`family` (`T8` / `N` / `X8` / `none`), `status_construct` (`harmonised_core3` / `harmonised_core2` /
+`family` (`T8` / `N` / `X8` / `none`), `status_construct` (`harmonised_core3h` / `harmonised_core3m` / `harmonised_core2` / `harmonised_core1u` /
 `own_index`), `estimate_ber`, `estimate_hh` (on interaction rows), `mdd`, `n_blocks`,
 `definition_fallback` (§4.3, boolean), `flags` (semicolon-separated: `small_units_flip`,
-`core2_flip`, `maup_flip`, `mapping_driven`, `w2_only`, `amendment3_below_chance`).
+`core3m_flip`, `core2_flip`, `core1u_flip`, `t_star_approx`, `ewr_2022_interpolated`, `maup_flip`, `mapping_driven`, `newbuild_driven`, `w2_only`,
+`amendment3_below_chance`, `not_stated_city_difference`).
 
 ### 9.2 Findings file (generated, never hand-edited)
 
 `docs/epic-e/E1c-matched-comparison-findings.md` contains:
 
-1. A first paragraph with what is matched, what is not (§1), and the power statement (§6.4).
+1. A first paragraph with what is matched, what is not (§1), the power statement (§6.4), the
+   robust-DIFFERS rule (§6.3), and the scale caveat (R1): "the matched units (15–26k residents) are
+   coarser than the scale at which gentrification is usually observed, so a null here does not rule
+   out a neighbourhood-scale process".
 2. **The side-by-side table** (the headline):
 
    | # | Hypothesis | 2018 thesis | Berlin matched | Hamburg matched | City difference tested |
@@ -605,9 +765,11 @@ New columns, **appended at the end** (empty for existing rows; see maintainer ca
 3. The K validity check (§3.6), the Hamburg z-to-share recovery checks (§3.3) and the Berlin
    backcast check (§4.2).
 4. Grain distributions (§2.1) and the min-base table (§5).
-5. Sensitivities: G = 16/36/iid/Bezirk, the small-unit trim, core-2, z-change dK, per-window rows,
+5. Sensitivities: G = 16/36/iid/Bezirk, the small-unit trim, core-3M, core-2 (and core-1U if triggered),
+   z-change dK, per-window rows, the N2 components and pivot 2021, the N1 centrality split, the
+   new-build diagnostic (R5),
    MAUP (fine grain and PGR), and the Moran's I diagnostic.
-6. Context: HH S1/S7 correlations with K and with the H1a/H1b OA; protection-zone shares.
+6. Context: HH S1/S7 correlations **with K only** (D4); protection-zone shares, unlinked (R4).
 7. The shock disclosure (§4.4), the construct gaps (§3.2), the BH/Holm note, the count of
    exploratory rows with the number expected by chance, and a deviations section.
 8. A reconciliation with the P354 panels. Where a matched verdict differs from the BER/modern or
@@ -631,7 +793,13 @@ existing-row invariance.
 - "The cities are the same." (Never; at most "no difference detected", with the MDD.)
 - Anything about displacement, "pressure" or protection-zone effects (#358, §7.4).
 - Cross-city comparisons of OA levels or K levels (§2.4, §3.2.4).
-- That Hamburg migration background or school leaving explain any result (context only, no test).
+- That Hamburg migration background or school leaving explain any result (context only, no test;
+  no S1/S7 × OA correlation exists, D4).
+- **N2 is not an early-warning or investment signal** (D5a). N2 is never worded as "fewer fast-food
+  outlets".
+- N1 results are never about "gentrifying areas" (D7).
+- A city difference that fails the robust-DIFFERS rule (§6.3, D1), or an AUC difference involving
+  a below-chance city (D6), stated as a city difference.
 - Every P354 §9 item.
 
 ---
@@ -702,3 +870,36 @@ the recommended option:
   not chosen, because the EWR download URLs are currently dead (#346).
 - **M4:** the **primary panel keeps all 99 Stadtteile**. Restricting to units with at least 5,000
   residents is a pre-registered sensitivity.
+
+---
+
+## Revision log
+
+**Revision 1 (2026-11-02, pre-results): domain review D1–D7 and R1–R6.** No matched-panel
+statistic had been computed. The DB was not reopened for this revision.
+
+| Item | Change |
+|---|---|
+| D1 | §3.2 gap 5 (Hamburg K double-weights SGB II unemployment); robust-DIFFERS rule in §6.3; §9.2(1), §10 |
+| D2 | Every C refugee-channel statement conditional on the S5 definition (§3.2, §4.4); conditional core-1U sensitivity; core-2 described as "without the transfer indicator" |
+| D3 | W2 shock text replaced; large arrival/accommodation sites disclosed (§4.4) |
+| D4 | S1/S7 × OA context correlations removed (§3.1, §9.2, §10); S1/S7 correlate with K only |
+| D5 | N2 retitled, "early signal" framing removed; component secondaries and wording rule; pandemic claim corrected, pivot 2021 reported separately; citations corrected (§7.2, §10) |
+| D6 | Below-chance AUC reading rule for Δ (§6.3) |
+| D7 | N1 scope disclosure and public wording (§7.1) |
+| R1–R6 | All adopted: scale caveat (§9.2); N1 centrality split (§7.1); N3 citation (§7.3); protection-zone column unlinked (§7.4); new-build diagnostic (§5); §3.6 reading note |
+
+Geo-DS agrees with every D item, so there is no "Geo-DS response" section.
+
+**Revision 2 (2026-11-02, maintainer question, pre-results): correcting construct gap 5.** No
+matched-panel statistic had been computed. The DB was opened read-only for data availability only
+(EWR age fields, Hamburg age fields); no outcome was joined to a predictor.
+
+| Item | Change |
+|---|---|
+| Primary construct | New §3.7: Berlin T re-based to all recipients, T\* = (count S3 + count S1) / all residents, aggregated as count sums (direction A). The primary becomes **core-3H**; the Revision 1 mixed construct (**core-3M**) and **core-2** become sensitivities. |
+| Direction B | Rejected: no Gebiet-level 15–64 population in Hamburg, Hamburg S4 SGB II-only documented for 2019/2021 only, and negative differences are possible. |
+| Data | Raw EWR matrices carry the age bands 15–18, 63–65, 65–67 for 2018/2020/2024. They must be staged (existing source, no ADR); 2022 is interpolated (M3). |
+| DE checks | Six binding checks (§3.7). The fallback is coarse-band approximation, then core-3M primary. |
+| Statement rule | §0 and §6.3: DIFFERS under core-3H and in the ≥ 5,000 panel, same sign under core-3M and core-2, plus core-1U if triggered; the Revision 1 rule if the fallback applies. |
+| Gap 5 | §3.2: corrected in the primary; still disclosed for core-3M and the fallback. Residual SGB XII vs AsylbLG difference disclosed. |
