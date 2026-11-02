@@ -12,8 +12,10 @@
 -- label, and the raw verdict must never reach it (domain sign-off §2/§5; e.g. the H2
 -- incremental row's raw "CONTRADICTED" means "no increment", not "opposite
 -- prediction"; that row is not primary anyway).
--- * `city` is kept so the page filters by city code (ADR-0005); Hamburg rows (#355)
--- would arrive in the same shape.
+-- * `city` is kept so each page filters by city code (ADR-0005): /thesis-recheck reads
+-- city = 'BER'; /hamburg/thesis-recheck (#355) reads city = 'HH' (panels `full` and
+-- `modern`) plus the BER/modern rows for its "Berlin today" column.
+-- No filter change was needed for #355: the HH rows arrive in the same shape.
 select
     city,
     panel,
