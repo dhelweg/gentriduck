@@ -288,3 +288,117 @@ Hurst (2013). SenSBW *MSS* Indikatorenblätter (S1, S3, S4; #360). FHH *Sozialmo
 (S3–S5; `354-phase-a-data-prerequisites.md` §5). BA-Statistik (2022), Rechtskreiswechsel. Project:
 P354 §3.4, §5.1–5.6, §9, Amendments 1–3; `354-domain-signoff.md`; `355-domain-signoff.md` with its
 Addendum.
+
+---
+
+## Re-check of Revisions 1 and 2 (2026-11-02)
+
+Scope: `git show 7a2b6881` (Revisions 1 and 2 of
+`371-matched-comparison-preregistration.md`), against D1–D7 and R1–R6 above, plus the new T\*
+construct (§3.7) and the rewritten statement rule (§0, §6.3). I did not open the DB.
+
+Verdict: CONCERNS
+
+Two small text changes remain (D8, D9 below). D1–D7 and R1–R6 are resolved. T\* is sound, and the
+residual gap is acceptable.
+
+```json
+{
+  "verdict": "concerns",
+  "domain_rationale": "Revision 1 adopts D1-D7 and R1-R6 as written. Revision 2 goes further than D1 asked: it corrects gap 5 instead of only disclosing it. T* = (SGB II unemployed + non-unemployed SGB II/XII recipients) / all residents is a sound 'total minimum-income receipt' construct and the right direction (A). Direction B is rightly rejected. The residual SGB XII (Berlin) vs AsylbLG (Hamburg) difference is acceptable, because both are partial minimum-income rates, and the T-free check isolates it. Two issues remain. (1) The rewritten statement rule is internally inconsistent: it requires DIFFERS under core-1U when Hamburg S5 contains AsylbLG, but only 'same sign' under core-2 when it does not. Yet in each case that construct is the T-free, refugee-channel-free check of exactly the residual gap, and it should be held to one standard. (2) §3.7 gives the Regelaltersgrenze at 31.12.2024 as 66y2m; for the cohort retiring at that date it is 66y0m. The 2019 backcast denominator also contradicts §4.2's 'consistent definition'.",
+  "theory_risks": ["T* is a project-derived indicator, not a published MSS indicator. Public text must say it is derived from the published S1 and S3."],
+  "recommendations": ["D8, D9 required", "R7-R8 optional"]
+}
+```
+
+### 1. D1–D7 and R1–R6: resolved
+
+| Item | Where | Status |
+|---|---|---|
+| D1 | §3.2 gap 5 (verbatim, now marked "corrected in the primary"); robust-DIFFERS rule in §0, §6.3, §9.2(1), §10 | **Met**, and exceeded by Revision 2 (see §3 below for the rule itself). |
+| D2 | §3.2 item 2 and §4.4 conditional on S5; conditional core-1U; core-2 described as "without the transfer indicator" | **Met.** |
+| D3 | §4.4 W2 replaced verbatim; local arrival and accommodation sites disclosed | **Met.** |
+| D4 | §3.1, §9.2(6), §10: S1/S7 correlate with K only; no S1/S7 × OA row exists | **Met.** |
+| D5 | §7.2 retitled; "not a warning, forecasting or investment indicator"; component secondaries; binding wording rule including outlet closures; pivot 2021 separate with the lockdown mechanism; citations corrected; §10 line | **Met**, verbatim. |
+| D6 | §6.3 below-chance reading rule | **Met.** |
+| D7 | §7.1 scope disclosure and public wording | **Met.** |
+| R1–R6 | §9.2(1) scale caveat; §7.1 centrality split (Alexanderplatz / Rathausmarkt, population-weighted median distance); §7.3 citation; §7.4 column unlinked; §5 new-build diagnostic; §3.6 reading note | **All adopted.** |
+
+### 2. T\*: sound, and the residual gap is acceptable
+
+- **The construct.** Berlin S3 (non-unemployed SGB II/XII recipients, all ages) and S1 (SGB II
+  unemployed) are disjoint. Their count sum over all residents is the **total rate of SGB II plus
+  SGB XII receipt**, a standard "Transferbezug / Mindestsicherung" construct, and the same kind of
+  quantity as Hamburg S3 (all SGB II recipients plus AsylbLG). Re-basing Berlin rather than Hamburg
+  (direction A) is right on both counts: it uses only published Berlin bases and EWR age bands
+  (counts, exact population weighting), and it leaves Hamburg's published indicators untouched.
+  Direction B would need a Gebiet-level 15–64 population that does not exist, plus a subtraction of
+  rounded, z-recovered shares. Rejecting it is correct.
+- **What changes in meaning.** T\* overlaps U in both cities, so both Ks now weight unemployment
+  alike. The comparison gains symmetry at the price of K being, in both cities, essentially an SGB II
+  dependency index. That is acceptable for a comparison. It also makes the §3.6 Berlin check against
+  the #354 S composite informative, as Revision 2 notes. The descriptive ρ(T\*, S3) per edition is the
+  right companion row.
+- **The residual SGB XII vs AsylbLG gap: acceptable.** Both T's are **partial minimum-income rates**,
+  each missing a different part of the official Mindestsicherungsquote (SGB II + SGB XII + AsylbLG).
+  Berlin T\* carries old-age and disability social assistance; Hamburg T carries asylum-seeker
+  benefits. By the cities' orders of magnitude, each residual is a minor share of its T, but they are
+  distributed very differently: AsylbLG is concentrated at accommodation sites, while old-age
+  assistance is more diffuse, with clusters in some inner-city areas and estates. That is exactly
+  what a T-free check isolates, so the gap is acceptable **provided** the statement rule holds every
+  stated difference to the T-free construct consistently (D8).
+- **Public wording.** The §3.7 binding disclosure is adequate for the findings. For any page, it needs
+  a plain sentence. Proposed (R7): "Welfare receipt is measured slightly differently in the two
+  cities: Berlin's figure, derived from two published indicators, includes social assistance (mainly
+  older and disabled people); Hamburg's includes asylum-seeker benefits. A city difference is only
+  stated if it also appears without this indicator."
+
+### 3. The revised statement rule: adequate in structure, inconsistent in one place
+
+The rule now requires: DIFFERS under core-3H **and** in the ≥ 5,000 panel; the same sign of Δ under
+core-3M and core-2; and DIFFERS under core-1U if S5 contains AsylbLG.
+
+- **Relaxing core-3M to "same sign" is right.** Core-3M is now the knowingly flawed construct (gap
+  5). Requiring significance under it would make the corrected construct depend on the uncorrected
+  one.
+- **The T-free check is held to two different standards.** If S5 excludes AsylbLG, core-2 is the
+  construct free of both the residual T gap and the refugee channel, and the rule asks only for the
+  same sign. If S5 includes AsylbLG, that role passes to core-1U, and the rule asks for DIFFERS. The
+  question being checked ("does the difference survive without the indicators whose scope differs?")
+  is the same in both cases, so the standard should be the same.
+  - "Same sign" alone is too weak for that question: a Δ that shrinks to near zero without T is
+    T-driven, even if its sign holds.
+  - Full DIFFERS (BH within X8) is undefined for a sensitivity outside the family.
+
+  The consistent, defined criterion is: the same sign **and** an unadjusted 95% CI that excludes 0
+  under the T-free construct (D8).
+
+### 4. Required changes
+
+- **D8 — One standard for the T-free check (§0, §6.3).** Replace the core-2 / core-1U clauses with:
+  "…its Δ has the same sign under core-3M; and under the **T-free construct** (core-2 if Hamburg S5
+  excludes AsylbLG, core-1U if it includes AsylbLG) Δ has the same sign **and** its unadjusted 95%
+  block-bootstrap CI excludes 0 (sensitivity criterion, no BH)." Keep the fallback sentence (the
+  Revision 1 rule if core-3M becomes primary), with "DIFFERS under core-2" read the same way
+  (same sign and unadjusted CI excluding 0).
+- **D9 — Regelaltersgrenze values and the 2019 denominator (§3.7).**
+  (a) Under § 235 SGB VI the retirement age is 65y7m (born 1953), 65y9m (1955), 65y11m (1957),
+  66y0m (1958) and 66y2m (1959). On 31.12.2024 the oldest cohort not yet retired is 1958, so the
+  boundary is **66y0m** (f = 0.500), not 66y2m (f = 0.583). Correct the value, or state the rule used
+  ("Regelaltersgrenze of the cohort reaching it on the reference date") and have the DE verify all
+  three values against the MSS Indikatorenblätter wording.
+  (b) §4.2 says the S1_2019 backcast is on the **2021 definition** (15 to the Regelaltersgrenze), but
+  §3.7 converts it with P(15–<65). For consistency, use P(15–RAG at 31.12.2018) = P(15–<65) + f · P(65–<67)
+  with f = 7/24 ≈ 0.29 (65y7m), or state why the 2019 definition is intended. The numeric effect is
+  small; the point is internal consistency.
+
+### 5. Optional
+
+- **R7** The public sentence on the residual T gap (§2 above) goes into §9.2/§10 as the page wording.
+- **R8** Optional Hamburg sensitivity, not required: at Stadtteil grain the warehouse has 65+ shares
+  (`stg_hamburg_ewr_stadtteil`), so HH S6 (Mindestsicherung im Alter) could be added to Hamburg T as
+  counts, bringing it closer to Berlin T\*'s SGB XII part. It would cover only the old-age part of
+  SGB XII, and it needs a Gebiet → Stadtteil approximation, so it is a sensitivity at most. D8's
+  T-free check already protects the stated claims.
+
+Verdict: CONCERNS

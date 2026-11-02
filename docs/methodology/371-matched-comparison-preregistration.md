@@ -37,7 +37,7 @@
 | POIs | The same commercial basket (Gastronomy, Retail, Services, Entertainment), the ADR-0017 LQ OA (`standard/faithful`), and snapshots 2019/2021/2023/2025, with stocks summed to the matched grain and OA recomputed there. **The H1/H2 feature list is the intersection of the two cities' A1.1 lists.** |
 | Inference | **Spatial block bootstrap**: G = 24 contiguous k-means blocks per city on area centroids (EPSG:25833 / 25832), B = 1999, seed 42. The same blocks are the GroupKFold groups for H1/H2. Sensitivities: G = 16 and G = 36, an iid bootstrap, and Moran's I of the residuals (#365). |
 | City difference | For each of the 8 hypotheses, Δ = θ_BER − θ_HH from **independent** block bootstraps in each city. Two-sided bootstrap p. BH across the 8 forms its own family. Verdicts: **DIFFERS** / **NO DIFFERENCE DETECTED** / NO DATA. The minimum detectable difference (MDD) is always reported. |
-| Stating a city difference (D1, D2; Revision 2) | A city difference is stated publicly only if X8 gives DIFFERS under the primary **core-3H** **and** in the ≥ 5,000-resident panel, its Δ keeps the same sign under core-3M and core-2, and, if Hamburg S5 includes AsylbLG, it is also DIFFERS under the U-only **core-1U** sensitivity (§3.2, §3.7, §6.3). Otherwise: "differs only under <condition>; not stated as a city difference". If the §3.7 fallback applies, the Revision 1 rule (DIFFERS under core-3M **and** core-2 **and** the ≥ 5,000 panel) is used. |
+| Stating a city difference (D1, D2, D8; Revisions 2–3) | A city difference is stated publicly only if X8 gives DIFFERS under the primary **core-3H** **and** in the ≥ 5,000-resident panel, **and** under the T-free construct (core-2 if HH S5 excludes AsylbLG, core-1U if it includes it), Δ has the same sign **and** its unadjusted 95% block-bootstrap CI excludes 0 (sensitivity criterion, no BH). Core-3M is reported, not required. Otherwise: "differs only under <condition>; not stated as a city difference" (§3.2, §3.7, §6.3). If the §3.7 fallback makes core-3M primary, the same rule applies with core-3M in place of core-3H. |
 | MAUP | The whole matched design is re-run at PLR/Gebiet with the same blocks, as a sensitivity. |
 | New hypotheses | **N1** level-conditional H3a (confirmatory). **N2** café-to-fast-food ratio change precedes status change (confirmatory). **N3** neighbourhood commercial-change spillover via a spatial lag (exploratory). **(d) protection-zone timing is rejected** (§7.4). |
 | Families | Per city: **T8** (the 8 thesis primaries, BH as in P354) and **N2-family** (N1, N2; BH within the family). Across cities: **X8** (the 8 interactions, BH). N3, the N1/N2 interactions and every sensitivity are uncorrected and exploratory. |
@@ -223,12 +223,24 @@ all residents, which matches the documented Berlin S3 base and the expected Hamb
 DE finds that Hamburg S3 uses residents **under 65** as its base, the Berlin base becomes
 P^(<65)_i in both the numerator conversion and the division (same formula, different P).
 
-- **Regelaltersgrenze:** 65 years 9 months at 31.12.2020, 65 y 11 m at 31.12.2022, and 66 y 2 m at
-  31.12.2024 (§ 235 SGB VI). P^(U) = P(15–<65) + f · P(65–<67), with f = (Regelaltersgrenze − 65) / 2
-  (0.375, 0.458, 0.583). This assumes a uniform age distribution within the published 65–67 band; the
-  error is at most a fraction of one single-age cohort.
-- **2019 backcast:** S1_2019 and S3_2019 are backcast on `lor_2021` (§4.2), so N_U,2019 uses
-  P(15–<65) at 31.12.2018 on `lor_2021`.
+- **Regelaltersgrenze (D9a):** rule: at reference date 31.12.Y, the upper bound is the
+  Regelaltersgrenze of the birth cohort that reaches it in year Y, from the § 235 Abs. 2 SGB VI
+  table (cohorts 1947–1958: +1 month per cohort; 1959–1963: +2 months). This gives:
+
+  | Reference date | Cohort | Regelaltersgrenze | f = (RAG − 65) / 2 |
+  |---|---|---|---|
+  | 31.12.2018 | 1953 | 65 y 7 m | 0.292 |
+  | 31.12.2020 | 1955 | 65 y 9 m | 0.375 |
+  | 31.12.2022 | 1957 | 65 y 11 m | 0.458 |
+  | 31.12.2024 | 1958 | 66 y 0 m | 0.500 |
+
+  P^(U) = P(15–<65) + f · P(65–<67). This assumes a uniform age distribution within the published
+  65–67 band; the error is at most a fraction of one single-age cohort. (Revision 2 wrote 66 y 2 m /
+  0.583 for 2024; that was wrong and is corrected here.)
+- **2019 backcast (D9b):** S1_2019 and S3_2019 are backcast on `lor_2021` as anteil_2021 −
+  dynamik_2021 (§4.2), i.e. on the **2021 definition** (15 to the Regelaltersgrenze). So N_U,2019 uses
+  P(15–<RAG) at 31.12.2018 on `lor_2021`, with f = 0.292, not P(15–<65). The 2019 definition
+  (15–<65) applies only to the crosswalked MSS 2019 values in the §4.2 consistency check.
 - **Data availability (verified read-only, 2026-11-02).** The raw EWR matrices
   (`data/raw/berlin/ewr/csv/EWR{YYYY}12E_Matrix.csv`, `EWR_L21_{YYYY}12E_Matrix.csv`; Amt für
   Statistik Berlin-Brandenburg, CC BY 3.0 DE, an existing source under ADR-0003/ADR-0007) carry
@@ -266,6 +278,11 @@ disabled-persons channel (Berlin) remain. U and T\* now overlap in **both** citi
 5. Plausibility: T\* ≥ S3 and T\* − S3 ≤ S1 in every PLR-edition (because P^(U) ≤ P). The city-level
    T\* is within ±1 pp of the published Berlin SGB II/XII recipient rate, where one is published.
 6. The 2022 interpolation is flagged per row.
+7. **Regelaltersgrenze per date (D9a):** the DE quotes the § 235 Abs. 2 SGB VI table and confirms the
+   four values above (65 y 7 m, 65 y 9 m, 65 y 11 m, 66 y 0 m; f = 0.292 / 0.375 / 0.458 / 0.500). It
+   also confirms that the MSS Indikatorenblätter (2021 S. 16; 2023 and 2025 S. 18) use the
+   Regelaltersgrenze of the reference date and not a fixed bound. Any deviation is recorded as an
+   amendment before results.
 (The Hamburg S4 SGB II-only check from §3.2 item 3 stays binding, but under A it matters only for U,
 not for T.)
 
@@ -547,13 +564,17 @@ For each hypothesis h:
   city's AUC is below 0.5, a DIFFERS on that row reads "differs in transferable discrimination:
   <city> shows none (Amendment 3)", never "the association differs" or "runs the other way". Such a
   row is never stated as a city difference under the robust-DIFFERS rule.
-- **Robust-DIFFERS rule (D1, Revision 2):** a city difference may be **stated** (findings
+- **Robust-DIFFERS rule (D1, D8; Revisions 2–3):** a city difference may be **stated** (findings
   headline, any public page) only if X8 gives DIFFERS under the primary **core-3H** **and** in the
-  ≥ 5,000-resident panel, its Δ has the same sign under core-3M and core-2, and, if triggered (D2),
-  it is also DIFFERS under core-1U. A DIFFERS that fails any of these is reported as "differs only
-  under <condition>; not stated as a city difference". The verdicts themselves stay as defined; this
-  rule governs only what may be claimed. If the §3.7 fallback makes core-3M primary, the Revision 1
-  rule applies: DIFFERS under core-3M **and** core-2 **and** the ≥ 5,000 panel.
+  ≥ 5,000-resident panel, **and** under the T-free construct (core-2 if HH S5 excludes AsylbLG, core-1U if it includes it), Δ has the same sign **and** its unadjusted 95% block-bootstrap CI excludes 0 (sensitivity criterion, no BH). Core-3M is reported as a sensitivity but is not a
+  condition. A DIFFERS that fails any condition is reported as "differs only under <condition>; not
+  stated as a city difference". The verdicts themselves stay as defined; this rule governs only what
+  may be claimed. If the §3.7 fallback makes core-3M primary, the same rule applies with core-3M in
+  place of core-3H (DIFFERS under core-3M and in the ≥ 5,000 panel, plus the same T-free criterion).
+- **Binding page wording (R7):** wherever a city comparison is shown: "Welfare receipt is measured
+  slightly differently in the two cities: Berlin's figure, derived from two published indicators,
+  includes social assistance (mainly older and disabled people); Hamburg's includes asylum-seeker
+  benefits. A city difference is only stated if it also appears without this indicator."
 
 **Rejected:** a pooled model with a city × predictor interaction term. The two cities' K and OA are
 standardised separately, so a pooled rank model would mix two scales. A Fisher-z test on ρ assumes
@@ -903,3 +924,14 @@ matched-panel statistic had been computed. The DB was opened read-only for data 
 | DE checks | Six binding checks (§3.7). The fallback is coarse-band approximation, then core-3M primary. |
 | Statement rule | §0 and §6.3: DIFFERS under core-3H and in the ≥ 5,000 panel, same sign under core-3M and core-2, plus core-1U if triggered; the Revision 1 rule if the fallback applies. |
 | Gap 5 | §3.2: corrected in the primary; still disclosed for core-3M and the fallback. Residual SGB XII vs AsylbLG difference disclosed. |
+
+**Revision 3 (2026-11-02, domain re-check D8/D9, pre-results).** No matched-panel statistic had been
+computed, and the DB was not opened for this revision.
+
+| Item | Change |
+|---|---|
+| D8 | §0 and §6.3: one standard for the transfer-free check. Under the T-free construct (core-2 if HH S5 excludes AsylbLG, core-1U if it includes it), Δ has the same sign and its unadjusted 95% block-bootstrap CI excludes 0 (sensitivity criterion, no BH). The core-3M same-sign condition is dropped (reported only). The fallback rule uses the same reading with core-3M as primary. |
+| D9a | §3.7: Regelaltersgrenze at 31.12.2024 corrected to 66 y 0 m (cohort 1958, f = 0.500). The rule and all four per-date values are stated; DE check 7 added. |
+| D9b | §3.7: the 2019 backcast is on the 2021 definition, so it converts with 15–<RAG at 31.12.2018 (65 y 7 m, f = 0.292). |
+| R7 | Public sentence adopted verbatim as binding page wording (§6.3). |
+| R8 | Not adopted. Hamburg publishes no 65+ population per Gebiet, so S6 cannot be converted to counts at the grain where T is formed. The Stadtteil-level approximation would add a construct the D8 T-free check already protects against. |
