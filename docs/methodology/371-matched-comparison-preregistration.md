@@ -37,7 +37,7 @@
 | POIs | The same commercial basket (Gastronomy, Retail, Services, Entertainment), the ADR-0017 LQ OA (`standard/faithful`), and snapshots 2019/2021/2023/2025, with stocks summed to the matched grain and OA recomputed there. **The H1/H2 feature list is the intersection of the two cities' A1.1 lists.** |
 | Inference | **Spatial block bootstrap**: G = 24 contiguous k-means blocks per city on area centroids (EPSG:25833 / 25832), B = 1999, seed 42. The same blocks are the GroupKFold groups for H1/H2. Sensitivities: G = 16 and G = 36, an iid bootstrap, and Moran's I of the residuals (#365). |
 | City difference | For each of the 8 hypotheses, Δ = θ_BER − θ_HH from **independent** block bootstraps in each city. Two-sided bootstrap p. BH across the 8 forms its own family. Verdicts: **DIFFERS** / **NO DIFFERENCE DETECTED** / NO DATA. The minimum detectable difference (MDD) is always reported. |
-| Stating a city difference (D1, D2, D8; Revisions 2–3) | A city difference is stated publicly only if X8 gives DIFFERS under the primary **core-3H** **and** in the ≥ 5,000-resident panel, **and** under the T-free construct (core-2 if HH S5 excludes AsylbLG, core-1U if it includes it), Δ has the same sign **and** its unadjusted 95% block-bootstrap CI excludes 0 (sensitivity criterion, no BH). Core-3M is reported, not required. Otherwise: "differs only under <condition>; not stated as a city difference" (§3.2, §3.7, §6.3). If the §3.7 fallback makes core-3M primary, the same rule applies with core-3M in place of core-3H. |
+| Stating a city difference (D1, D2, D8; Revisions 2–3) | A city difference is stated publicly only if X8 gives DIFFERS under the primary **core-3H** **and** in the ≥ 5,000-resident panel, **and** under the T-free construct (core-2 if HH S5 excludes AsylbLG, core-1U if it includes it), Δ has the same sign **and** its unadjusted 95% block-bootstrap CI excludes 0 (sensitivity criterion, no BH); **and** its Δ has the same sign under core-3M (sign only, no significance requirement). Otherwise: "differs only under <condition>; not stated as a city difference" (§3.2, §3.7, §6.3). If the §3.7 fallback makes core-3M primary, the same rule applies with core-3M in place of core-3H. |
 | MAUP | The whole matched design is re-run at PLR/Gebiet with the same blocks, as a sensitivity. |
 | New hypotheses | **N1** level-conditional H3a (confirmatory). **N2** café-to-fast-food ratio change precedes status change (confirmatory). **N3** neighbourhood commercial-change spillover via a spatial lag (exploratory). **(d) protection-zone timing is rejected** (§7.4). |
 | Families | Per city: **T8** (the 8 thesis primaries, BH as in P354) and **N2-family** (N1, N2; BH within the family). Across cities: **X8** (the 8 interactions, BH). N3, the N1/N2 interactions and every sensitivity are uncorrected and exploratory. |
@@ -566,8 +566,7 @@ For each hypothesis h:
   row is never stated as a city difference under the robust-DIFFERS rule.
 - **Robust-DIFFERS rule (D1, D8; Revisions 2–3):** a city difference may be **stated** (findings
   headline, any public page) only if X8 gives DIFFERS under the primary **core-3H** **and** in the
-  ≥ 5,000-resident panel, **and** under the T-free construct (core-2 if HH S5 excludes AsylbLG, core-1U if it includes it), Δ has the same sign **and** its unadjusted 95% block-bootstrap CI excludes 0 (sensitivity criterion, no BH). Core-3M is reported as a sensitivity but is not a
-  condition. A DIFFERS that fails any condition is reported as "differs only under <condition>; not
+  ≥ 5,000-resident panel, **and** under the T-free construct (core-2 if HH S5 excludes AsylbLG, core-1U if it includes it), Δ has the same sign **and** its unadjusted 95% block-bootstrap CI excludes 0 (sensitivity criterion, no BH); **and** its Δ has the same sign under core-3M (sign only, no significance requirement). A DIFFERS that fails any condition is reported as "differs only under <condition>; not
   stated as a city difference". The verdicts themselves stay as defined; this rule governs only what
   may be claimed. If the §3.7 fallback makes core-3M primary, the same rule applies with core-3M in
   place of core-3H (DIFFERS under core-3M and in the ≥ 5,000 panel, plus the same T-free criterion).
@@ -930,7 +929,7 @@ computed, and the DB was not opened for this revision.
 
 | Item | Change |
 |---|---|
-| D8 | §0 and §6.3: one standard for the transfer-free check. Under the T-free construct (core-2 if HH S5 excludes AsylbLG, core-1U if it includes it), Δ has the same sign and its unadjusted 95% block-bootstrap CI excludes 0 (sensitivity criterion, no BH). The core-3M same-sign condition is dropped (reported only). The fallback rule uses the same reading with core-3M as primary. |
+| D8 | §0 and §6.3: one standard for the transfer-free check. Under the T-free construct (core-2 if HH S5 excludes AsylbLG, core-1U if it includes it), Δ has the same sign and its unadjusted 95% block-bootstrap CI excludes 0 (sensitivity criterion, no BH). The core-3M same-sign condition is kept (sign only). The fallback rule uses the same reading with core-3M as primary. |
 | D9a | §3.7: Regelaltersgrenze at 31.12.2024 corrected to 66 y 0 m (cohort 1958, f = 0.500). The rule and all four per-date values are stated; DE check 7 added. |
 | D9b | §3.7: the 2019 backcast is on the 2021 definition, so it converts with 15–<RAG at 31.12.2018 (65 y 7 m, f = 0.292). |
 | R7 | Public sentence adopted verbatim as binding page wording (§6.3). |
