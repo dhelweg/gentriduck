@@ -857,6 +857,54 @@ once status level is included".
 which have not been run at the time of writing. The domain expert ratifies or overrules this
 amendment independently (ADR-0011 dual gate).
 
+## Amendment 3 (post-results clarification, 2026-11-01)
+
+**Recorded after results.** Geo-DS records this on 2026-11-01, after the `HH/full` and `HH/modern`
+results had been seen (findings `docs/epic-h/H-thesis-hypothesis-suite-findings.md`). It is **not
+pre-registered** and is disclosed as such. It changes no hypothesis, variable, family, p-value or BH
+adjustment. It writes down a rule that was already implemented before any Hamburg statistic existed:
+the #354 code, integrated into `develop`, maps an AUC-CONTRADICTED to NOT SIGNIFICANT for
+"the non-directional H1/H2 AUC tests". It also closes the gap in the §5.1/§5.6 text, which writes
+"CONTRADICTED impossible" only on the H1 row.
+
+**The gap.** H2 is pre-registered as non-directional ("AUC > 0.5 ... Non-directional", §5.1;
+§1.1). §5.6 has no CONTRADICTED branch for H2. The `HH/full` H2 primary is AUC 0.440 [0.397, 0.481],
+p_BH 0.021: wholly below 0.5.
+
+**Clarification (binding, all panels).**
+1. For every out-of-fold AUC primary (H1, H2), the verdict is SUPPORTED only if AUC > 0.5 **and**
+   p_BH < 0.05. An AUC significantly **below** 0.5 is NOT SIGNIFICANT. It carries the flag
+   "out-of-fold AUC significantly below 0.5 (no transferable prediction)" wherever the verdict is
+   shown, and maps through §5.6 as NOT SIGNIFICANT.
+2. The reported p stays the pre-registered **two-sided** bootstrap p (§5.3). It is **not**
+   replaced by a one-sided p for any row. Read against this verdict rule, the two-sided p is
+   conservative for SUPPORTED (a one-sided p would be half as large). The pre-registration never
+   offered that reading, and it is not adopted after results. In particular, H1 in Hamburg (AUC 0.559,
+   nominal) stays NOT SIGNIFICANT.
+
+**Why this follows the pre-registered intent.**
+- In a non-directional test the classifier chooses the direction from the training folds. There is
+  no hypothesised direction for a result to contradict, so CONTRADICTED has no meaning, which is
+  exactly why §5.1 calls H1 and H2 non-directional.
+- An out-of-fold AUC below 0.5 means the training-fold relation does not carry over to held-out
+  Stadtteile. It does not mean that the features predict the outcome "the other way". Under a true
+  null, grouped cross-validation is known to give AUCs biased below 0.5: holding out a group shifts the
+  training fold's class balance and feature means against the test group (Parker, Günter & Bedo 2007,
+  *BMC Bioinformatics* 8:326, "stratification bias in low signal studies"). So a consistent shortfall
+  in every fold (HH/full: 5 of 5 folds, 4 of 4 windows) is what this artefact produces, not evidence
+  of an inverse signal. The cluster bootstrap resamples fixed out-of-fold predictions and is centred
+  on 0.5, so it does not model this bias. That is why a "significant" deviation below 0.5 cannot be
+  read as a finding.
+- Reading it as CONTRADICTED would, as in Amendment 2, turn the clearest sign of "no transferable
+  information" into a substantive claim.
+
+**Follow-up (non-gating).** A label-permutation null for the out-of-fold AUC rows (refit per
+permutation) would calibrate the test against this bias. It is recommended for a future,
+pre-registered suite revision only. It is **not** applied to these results. A null centred below 0.5
+would leave a below-chance AUC at NOT SIGNIFICANT, but it could make borderline rows above 0.5 (such as
+Hamburg H1) easier to pass, and adopting it after seeing them would be exactly the post-results
+choice this pre-registration exists to prevent.
+
 ## 13. References
 
 - Helweg, D. (2018). *Untersuchung von Gentrifizierung am Beispiel Berlin mittels Big Data Analytics.*

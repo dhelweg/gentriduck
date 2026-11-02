@@ -1,5 +1,7 @@
 # E5 Hamburg Lead-Lag Findings -- Independent H3a/H3b/H3c Re-Test (H-C3, #160)
 
+> **SUPERSEDED (#355, 2026-11-01). Do not cite these results.** The thesis hypothesis suite replaces this analysis in full: `analysis/thesis_hypothesis_suite.py --city HH`, findings in [`H-thesis-hypothesis-suite-findings.md`](H-thesis-hypothesis-suite-findings.md) (pre-registration `docs/methodology/354-355-hypothesis-suite-preregistration.md` §1.4, §6.3). Reasons: the annual k = 1 cross-lag below differences annual status classes against Hamburg's 3-year Dynamik concept, so consecutive windows overlap (rejected, §8), and Section 2 runs OLS on ordinal class codes, which `docs/methodology/index-definition.md` §3.2 forbids. This file and `analysis/e5_hamburg_lead_lag.py` are kept for the audit trail; the script is no longer part of `poe analysis`.
+
 - **Task:** H-C3 (#160) -- annual-cadence Hamburg lead-lag model + independent H3a/H3b re-test
 - **Issue:** #160 (H-C3); #129 (Stadtteil SE-clustering binding requirement) **(Follow-up now tracked: #265 (H-reg-SE) — see `docs/planning/deferred-work-audit-2026-07.md`.)**
 - **Date:** 2026-10-27
