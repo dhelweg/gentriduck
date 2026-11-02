@@ -21,14 +21,26 @@ Usage:
 from __future__ import annotations
 
 import logging
+import sys
 from pathlib import Path
 
 import duckdb
 
+REPO_ROOT = Path(__file__).resolve().parent.parent
+if str(REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(REPO_ROOT))
+
+from ops.build_provenance import (  # noqa: E402 -- after the sys.path insert above
+    SERVING_STAMP_REL,
+    WAREHOUSE_SOURCE_REL,
+    clear_export_stamp,
+    read_json,
+    write_export_stamp,
+)
+
 logging.basicConfig(level=logging.INFO, format="%(message)s")
 logger = logging.getLogger(__name__)
 
-REPO_ROOT = Path(__file__).resolve().parent.parent
 DUCKDB_PATH = REPO_ROOT / "data" / "gentriduck.duckdb"
 MARTS_DIR = REPO_ROOT / "transform" / "models" / "marts"
 OUT_DIR = REPO_ROOT / "data" / "serving"
@@ -41,12 +53,24 @@ def main() -> None:
         raise SystemExit(f"{DUCKDB_PATH} not found — run `uv run poe build` first.")
     OUT_DIR.mkdir(parents=True, exist_ok=True)
 
+    # #361: export stamp. Remove it first (an interrupted export leaves none), then record which
+    # warehouse (data/.warehouse-source, written by `poe build`) the parquet came from.
+    clear_export_stamp(REPO_ROOT, SERVING_STAMP_REL)
+    warehouse = read_json(REPO_ROOT / WAREHOUSE_SOURCE_REL)
+
     con = duckdb.connect(str(DUCKDB_PATH), read_only=True)
     for model in MART_MODELS:
         out_path = OUT_DIR / f"{model}.parquet"
         con.execute(f"COPY (SELECT * FROM main.{model}) TO '{out_path}' (FORMAT PARQUET)")
         logger.info("exported %s -> %s", model, out_path.relative_to(REPO_ROOT))
     con.close()
+
+    write_export_stamp(REPO_ROOT, SERVING_STAMP_REL, warehouse, source=WAREHOUSE_SOURCE_REL)
+    logger.info(
+        "export stamp -> %s (warehouse tree %s)",
+        SERVING_STAMP_REL,
+        str((warehouse or {}).get("tree"))[:12],
+    )
 
 
 if __name__ == "__main__":

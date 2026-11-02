@@ -225,17 +225,130 @@ does not build from `main`.
 **Standing policy (maintainer, 2026-07-07): the deploy is part of the weekly release routine.**
 After each weekly `develop → main` merge, the PM session checks whether the release changed
 `web/**` or a published mart (a model exported by `poe export-serving` / the map GeoJSON). If
-yes, it rebuilds and redeploys as release close-out, on a machine with the ingested data:
+yes, it closes out the release **right after it detects the merge** (devmode re-scan), without
+waiting to be asked, on a machine with the ingested data. It runs one command from a checkout
+of `main`:
+
+```bash
+git switch main && git pull --ff-only   # or stay on a develop tip whose tree equals origin/main
+uv run poe release-deploy               # check → skip-or-rebuild → smoke check → deploy-gh-pages.sh
+```
+
+`poe release-deploy` (`ops/release_deploy.py`, #361) does four things:
+
+1. **Checks** that it can fetch `origin/main`, that the local `HEAD` is `origin/main` or a commit
+   with the **same tree** (a GitHub merge commit has a new SHA but the develop tip's tree), and
+   that the working tree is clean (tracked edits anywhere, or untracked files under `web/`).
+   Otherwise it stops with an error.
+2. **Skips the rebuild only if the existing `web/build` provably matches `main` today.**
+   `web/scripts/postbuild-build-source.mjs` writes `web/build/.build-source` at the end of every
+   `npm run build`. It holds the tree, commit, UTC time, a dirty flag and dirty count, plus two
+   records of things the tree hash can't see:
+   - `inputs`: sha256 over `data/serving/*.parquet`, `web/static/geo/**` and the effective
+     GoatCounter code (`GOATCOUNTER_CODE` if set, else `web/goatcounter-code.txt`);
+   - `exports`: the export stamps of the bundled data (see *Export stamps* below), which
+     record the warehouse the data was exported from.
+
+   The rebuild is skipped when all of these hold:
+   - the build ran on a clean tree equal to `origin/main^{tree}`;
+   - the recomputed inputs fingerprint is unchanged, so a new data vintage always rebuilds;
+   - both embedded export stamps show the data was exported from a warehouse with a complete,
+     clean `poe build` of `origin/main`'s tree.
+
+   The *current* warehouse record isn't part of the skip decision. An unrelated later
+   `poe build` (e.g. the pre-push hook) doesn't change what `web/build` contains.
+
+   This is the common case after a release with no new data: the PM already built and checked
+   the site from `develop`, and the release merge didn't change the tree. Otherwise it
+   **rebuilds**: `poe export-serving` → `poe export-area-geojson` → `npm ci` (only if
+   `web/node_modules` is missing) → `npm run sources` → `npm run build`. Before rebuilding it
+   **refuses** unless `data/.warehouse-source` shows a complete, clean `poe build` from
+   `origin/main`'s tree. The message is "run `uv run poe build` on main first", because the
+   exports would otherwise publish marts built from different model code.
+3. **Smoke-checks** `web/build`. It must be non-empty, have at least 500 HTML pages
+   (`--min-pages`), and contain no `cartocdn` string (#351 removed the CARTO basemap). Its
+   `.build-source` must match `origin/main`'s tree and the current inputs fingerprint, and its
+   export stamps must be valid for `origin/main`.
+4. **Deploys** via `ops/deploy-gh-pages.sh`. The script is unchanged, so its SEC-2 (#191)
+   hard-asserted gh-pages-only force-push is still the only push.
+
+**Warehouse provenance (`data/.warehouse-source`).** `poe build` and `poe build-full-refresh`,
+and so `poe refresh`/`resync` and the pre-push hook, now run `dbt build` through
+`ops/dbt_build.py`. Extra args still pass through (`poe build --select x+`), and dbt's exit code
+is unchanged. The wrapper records the git tree the warehouse was built from, plus a `clean`
+flag (no uncommitted changes under `transform/`) and a `complete` flag:
+- **Before dbt starts**, it sets `complete: false, reason: "dbt build in progress"`. A killed
+  or interrupted build (Ctrl-C, `taskkill`, crash) therefore never leaves a valid certificate.
+- **After dbt exits**:
+  - a successful full build (no extra args, or only `--full-refresh`, `--fail-fast`,
+    `--threads`) sets `complete: true`;
+  - a successful partial build (`--select`/`-s`/`-m`/`--models`/`--exclude`) of the same clean
+    tree restores the existing certificate;
+  - anything else voids it (`complete: false`): a failed build, a partial build of another
+    tree, or any other arg such as `--vars`, `--target`, `--defer` or `--state`.
+
+The provenance covers only `poe build` and `poe build-full-refresh` (and so `refresh`/`resync`).
+**`poe materialize-oa-getis-ord`, `poe oa-bandwidth-sweep` and any direct `dbt` call bypass the
+wrapper** and don't touch the record. Inside `refresh`/`resync`, `materialize-oa-getis-ord`
+re-materializes two models from the same tree right after the certified build. If you run dbt
+directly against the warehouse, run `uv run poe build` afterwards before a release.
+
+**Export stamps.** `poe export-serving` copies the warehouse record into
+`data/serving/.export-source`. `poe export-area-geojson` copies the serving stamp's warehouse
+into `data/.geo-export-source`; it lives in `data/` rather than `web/static/geo/`, so it isn't
+published with the site. Each export deletes its stamp before it starts, so an interrupted
+export leaves none, which forces a rebuild. `npm run build` embeds both stamps in
+`.build-source`.
+
+**First release after #361:** no machine has the warehouse record or export stamps yet, and
+older builds lack the fingerprint. So the first `release-deploy` will rebuild, and it refuses
+until you run `uv run poe build` once on a clean checkout of `main`.
+
+Flags go straight after the task name, e.g. `uv run poe release-deploy --dry-run`. A single
+leading `--` (`uv run poe release-deploy -- --dry-run`) is also accepted.
+
+- `--dry-run` runs the checks and the skip/rebuild decision, then prints the steps without
+  running them. It still fetches `origin/main`, and runs the read-only smoke check on the skip path.
+- `--force-rebuild` rebuilds even when everything matches.
+- `--no-fetch` uses the local `origin/main` ref as it is.
+- `--min-pages N` overrides the smoke-check page floor.
+
+The task never runs `poe refresh`/`poe build` itself. For a new data vintage, run
+`uv run poe refresh` on `main` first. The new parquet changes the inputs fingerprint, so
+`release-deploy` rebuilds on its own.
+
+**Permission and ADR (pending maintainer approval):** `ops/deploy-gh-pages.sh` is a production
+publish, so auto mode blocks it unless the maintainer asks for it. #361 proposes adding exactly
+this rule to the `permissions.allow` list in the committed `.claude/settings.json`:
+
+```json
+"Bash(uv run poe release-deploy)"
+```
+
+The rule is an exact match, so it covers only the bare task: no `--force-rebuild`, no
+`--dry-run`, no other arguments. Those still prompt. The force-push target stays hard-asserted
+inside `deploy-gh-pages.sh`.
+
+Before adding the rule, the maintainer also has to decide on an **ADR-0012 amendment**. It would
+cover two changes to the documented "rebuild from `main`" routine:
+- reusing a build whose tree, inputs and warehouse provenance match `main`;
+- the PM running the production deploy without being asked.
+
+The #361 review raised this. Until the maintainer approves both and adds the rule, the PM asks
+once per release.
+
+If the release touched neither `web/**` nor a published mart, skip the deploy and say so in the
+handoff. Deploy only builds of `main`'s tree, never a `develop` tree that differs from it;
+`release-deploy` enforces this. The `gh-pages` branch is a generated artefact, so never merge it
+back. See the script header for details (`.nojekyll`, author identity, empty-build guard).
+
+The manual step-by-step sequence still works (e.g. to rerun a single step):
 
 ```bash
 uv run poe refresh      # data → data/serving/*.parquet + web/static/geo/
 uv run poe web-build    # cd web && npm ci && npm run sources && npm run build → web/build/ (incl. noindex meta)
 ops/deploy-gh-pages.sh  # force-replace gh-pages with the fresh build
 ```
-
-If the release touched neither, skip the deploy and say so in the handoff. Build from `main`
-(the published branch), not `develop`. The `gh-pages` branch is a generated artefact — never
-merge it back. See the script header for details (`.nojekyll`, author identity, empty-build guard).
 
 **Web-build smoke check (QA-9, #184):** `uv run poe web-build` (added 2026-07-09) wraps the
 same three Node steps as a reusable poe task, so a mart/schema change that silently breaks the

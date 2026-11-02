@@ -93,7 +93,11 @@ exclude = ["transform/target/**", "transform/dbt_packages/**"]
 [tool.poe.tasks]
 debug = "dbt debug --project-dir transform --profiles-dir transform"
 deps  = "dbt deps --project-dir transform"
-build = "dbt build --project-dir transform --profiles-dir transform"
+# #361: `build` runs `dbt build --project-dir transform --profiles-dir transform <args>` through
+# ops/dbt_build.py, which then records data/.warehouse-source (the git tree the warehouse was built
+# from, plus clean/complete flags) for `poe release-deploy`. Extra args still pass through
+# (`poe build --select x+`); dbt's exit code is returned unchanged.
+build = "python ops/dbt_build.py"
 # #292: full-refresh counterpart to `build`, for a warehouse whose seed schema predates a
 # later column add (e.g. #240's `oa_leaf_area_level` in seed_dim_city.csv) -- a plain `dbt
 # build`'s seed truncate+copy can't absorb the new column under duckdb >=1.5 ("CSV sniffing"
@@ -101,7 +105,7 @@ build = "dbt build --project-dir transform --profiles-dir transform"
 # them. Per #248, `dbt build` is NOT the release bottleneck (~5 min vs. ingest's much longer
 # run), so paying this cost is cheap -- reserved for `resync` (below), not the everyday
 # `refresh` path, since a primary machine that refreshes regularly shouldn't need it.
-build-full-refresh = "dbt build --project-dir transform --profiles-dir transform --full-refresh"
+build-full-refresh = "python ops/dbt_build.py --full-refresh"  # #361: same wrapper as `build`
 test  = "dbt test --project-dir transform --profiles-dir transform"
 # QA-1 (#176): pytest for ingestion/analysis pure functions (crosswalk math,
 # ADR-0016 drift-guard severity classification, PDF-parser regexes). No dbt/DB
@@ -268,6 +272,18 @@ resync = { sequence = ["verify-data", "deps", "ingest", "build-full-refresh", "o
 # no new tool, same discipline as #251's ingestion driver). Exit code is unchanged
 # (a failed build still fails this poe sequence).
 web-build = { sequence = ["npm ci", "npm run sources", "python ../ops/time_web_build.py"], cwd = "web", default_item_type = "cmd" }
+# #361: one-step release close-out after the maintainer merges the weekly `develop -> main` PR.
+# Checks the checkout is at origin/main (or tree-equal to it) and clean. Skips the rebuild only
+# when web/build/.build-source (written by web/scripts/postbuild-build-source.mjs) records a clean
+# build from origin/main's tree, the same gitignored-inputs fingerprint (data/serving parquet,
+# web/static/geo, GoatCounter code) and export stamps showing the data came from a warehouse
+# `build` certified for origin/main's tree. Otherwise it refuses unless the current warehouse
+# record (data/.warehouse-source) is for origin/main,
+# then runs export-serving -> export-area-geojson -> npm run sources -> npm run build. Then a
+# smoke check (page count, no `cartocdn`, provenance) and ops/deploy-gh-pages.sh (SEC-2
+# gh-pages-only push unchanged). `--dry-run` prints the plan and builds/deploys nothing;
+# `--force-rebuild` always rebuilds. See ops/release_deploy.py and ops/README.md's Deploy section.
+release-deploy = "python ops/release_deploy.py"
 # O2 (#82) / ADR-0013: single-command reproducible whitepaper build (Quarto + Typst,
 # quarto-cli installed into the repo-local .venv). Renders docs/whitepaper/whitepaper.qmd to
 # HTML + PDF under the gitignored data/whitepaper/. Content is a staged slice (see the
