@@ -229,3 +229,60 @@ flagged, resolved here:
 - Hamburger Mietenspiegel: <https://suche.transparenz.hamburg.de/dataset/hamburger-mietenspiegel31>
 - ohsome API (HeiGIT, global OSM history): <https://docs.ohsome.org/ohsome-api/stable/boundaries.html>
 - Datenlizenz Deutschland (dl-de): <https://www.govdata.de/dl-de/by-2-0>
+
+## Amendment 2026-11-02 — Sozialmonitoring annex indicator z-scores (#371)
+
+- **Status:** Accepted (maintainer approval 2026-11-02)
+- **Trigger:** #371 needs a harmonised Berlin–Hamburg status core. Earlier groundwork:
+  `docs/epic-e/354-architect-note.md` (b) and `docs/epic-e/354-phase-a-data-prerequisites.md` §5, §8 O4.
+
+**Source.** The *Sozialmonitoring Integrierte Stadtteilentwicklung, Bericht <E> — Anhang*
+XLSX annex ("Anhang-Tabelle", from 2021 "Ergebnistabellen"), editions **2016–2025**. Same
+publisher, product, and licence as Pillar 2: `dl-de/by-2.0`, attribution *"Freie und Hansestadt
+Hamburg, Behörde für Stadtentwicklung und Wohnen"*. Each edition gives S1–S7 (status) and D1–D6
+(Dynamik) as **z-scores** per scored statistisches Gebiet, plus city mean/SD rows. S7 has no
+Dynamik counterpart and uses an area-exclusion code. Edition 2018 uses the corrected annex
+("korrigiert"). **No annex exists for 2013–2015.** This amendment adds no new source family;
+it only widens what we ingest from an existing one.
+
+**Host.** The files are served from **`daten.transparenz.hamburg.de`** (Dataport
+`GetRessource100` service). The per-edition pinned URLs are the ones recorded in the
+`seed_hh_sozialmonitoring_published_class_counts` description in `transform/seeds/schema.yml`.
+This subdomain is **not listed** in `docs/method/egress-hosts.md`, which names only
+`transparenz.hamburg.de` and `suche.transparenz.hamburg.de`. It **must be added** there, with the
+`ingestion/hamburg/*` consumer, in the same change.
+
+**Target.** `stg_hamburg_sozialmonitoring_indicators(edition_year, gebiet_id, indicator,
+z_score, share)`, long format, one row per edition × Gebiet × indicator (S1–S7, D1–D6). `share`
+is recovered as `mean + z_score × sd` from the edition's city mean/SD rows **only where the
+annex supplies them**. Otherwise it is NULL. Do not impute shares. Excluded or not-scored cells
+(S7 exclusion code, Gebiete below the population threshold) are NULL with a flag, never 0.
+Hamburg-specific; stays in `stg_hamburg_*` (ADR-0005).
+
+**Role rule (R-A1).** These indicators are **outcome components only**. They must never enter a
+model as predictors. This is the same leakage boundary as Berlin MSS (ADR-0006/R-C3).
+
+**Purpose.** A harmonised status core shared with Berlin MSS: **unemployment, transfer receipt,
+child poverty**. Migration background and school-leaving indicators are ingested for
+completeness but are **context only**. They are not part of the harmonised core.
+
+**Ingestion pattern.**
+- Pure-Python HTTP download from the pinned URLs. No portal scraping or URL discovery at run time.
+- Raw XLSX goes to gitignored `data/`. Only derived seeds and tests are committed.
+- Read with **`openpyxl`** (already a direct dependency in `pyproject.toml`, `>=3.1.5`; pandas
+  is also present). No new library. Any other reader needs a fresh sign-off.
+- Expect **header and sheet-name drift** across editions (e.g. the 2021 rename to
+  "Ergebnistabellen"). Use an explicit per-edition column map. Fail loudly on an unmapped edition;
+  never guess headers.
+- dbt tests: Gebiet IDs reconcile with the WFS Sozialmonitoring classes per edition. Per-edition
+  scored-Gebiet counts match `seed_hh_sozialmonitoring_published_class_counts`. z-scores are
+  approximately mean 0 / SD 1 per edition and indicator. Recovered shares fall within [0, 100].
+
+**Methodology gate.** Ingestion and staging are plumbing. However, **any composite, index, or
+harmonised Berlin–Hamburg score built from these indicators is methodology-bearing** (R-C1). It
+needs a geo-data-scientist **and** a gentrification-domain-expert `Verdict: PASS` before it is
+integrated into `develop`, with R-C2 citations in the model SQL.
+
+**Consequences.** Hamburg gains an indicator-level outcome series for 2016–2025, which makes a
+like-for-like status core with Berlin possible. 2013–2015 stays class-only. The egress allow-list
+grows by one subdomain of an already-approved portal.
