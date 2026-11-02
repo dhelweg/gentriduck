@@ -47,3 +47,9 @@ district" therefore claims 99 separate results where there are 5.
 | H2 sub-line names transport and public facilities only | H2 feature list contains Mobility and Public Space, no Tourism | yes |
 | BH caveat; full chain primary, 2019–2025 a comparison | pre-registration §5.5, §10.3 | yes |
 | No "not reproduced"/"business mix" wording for HH H1/H2 and no thesis AUCs | page text | yes |
+
+## Re-check (applied edit), 2026-11-02
+
+Commit 34745816 applies C1 verbatim in both places, the SQL literal and the H2 Details block ("each of the five held-out groups of districts and in every time window"). This matches `h2_oof_diagnostics`: 5 folds and 4 windows, all below 0.5. The incidental edits (§4.5 qualifiers, the H2 feature note, gating the per-row text on the signed-off run_sha, Berlin H1 "businesses", permitted by the BER commercial-only H1 row: AUC 0.689, SUPPORTED) are accurate.
+
+Verdict: PASS

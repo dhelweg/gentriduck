@@ -97,3 +97,11 @@ and `:285`).**
 - **R2** Construct paragraph (line 81–82): "so Hamburg's H1 and H2 use transport, public facilities
   and tourist facilities instead" could add "(H2: transport and public facilities only)", matching
   call 1. This is my own binding text, so the clarification is permitted.
+
+---
+
+## Re-check (applied edits), 2026-11-02
+
+Commit 34745816 checked. P1 (H1b "; a matching result is not evidence that the same process is at work", H1c "as in Berlin (a matching result, not evidence of the same process):"), R1 (Berlin grain "about 7,000 residents on average"), R2 ("(H2: transport and public facilities only)") and the Berlin-today H1 cell "Holds (businesses, AUC 0.74)" are applied as proposed. The geo-DS C1 rewording of the H2 line ("each of the five held-out groups of districts and in every time window") and the run_sha gate on the per-row sentences are accurate and add no claim. I did not open the DB.
+
+Verdict: PASS
