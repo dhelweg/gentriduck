@@ -402,3 +402,44 @@ core-3M and core-2; and DIFFERS under core-1U if S5 contains AsylbLG.
   T-free check already protects the stated claims.
 
 Verdict: CONCERNS
+
+---
+
+## Final re-check: Revision 3 (2026-11-02)
+
+Scope: `git show 02f16391` (Revision 3), against D8, D9, R7 and R8. I did not open the DB.
+
+Verdict: CONCERNS
+
+One clause is needed. Everything else in Revision 3 is correct. If the clause below is restored
+verbatim, this review is **PASS** without another full re-check.
+
+| Item | Where | Status |
+|---|---|---|
+| **D8** single standard for the T-free check | §0, §6.3: same sign **and** unadjusted 95% CI excluding 0 under core-2 or core-1U (by S5), no BH; the fallback reads the same way | **Met.** |
+| **Core-3M same-sign condition** | dropped ("reported, not required") | **Not intended. Restore it** (below). |
+| **D9a** retirement-age values | Rule stated (cohort reaching the Regelaltersgrenze in year Y, § 235 Abs. 2 SGB VI). 65y7m / 65y9m / 65y11m / 66y0m with f = 0.292 / 0.375 / 0.458 / 0.500. DE check 7 binding, including the Indikatorenblätter wording | **Met.** Verified against the § 235 table: 1953 +7, 1955 +9, 1957 +11, 1958 +12 months. At 31.12.Y the 1953/55/57/58 cohort is the last to have reached it (the next cohort, aged one month younger, has a higher bound), so the boundaries are right. |
+| **D9b** 2019 backcast on the 2021 definition | §3.7: P(15–<RAG at 31.12.2018), f = 0.292; the 2019 definition only for the crosswalked consistency check | **Met.** |
+| **R7** public sentence | §6.3, verbatim, binding page wording | **Met.** |
+| **R8** declined | No 65+ population per Gebiet in Hamburg | **Accepted.** D8's T-free check already covers what R8 would have narrowed. |
+
+**Why the core-3M condition stays.** My D8 text kept it ("…its Δ has the same sign under core-3M;
+and under the T-free construct…"). It changed only the T-free clause. Core-3H and core-3M differ in
+one thing only: whether Berlin's transfer indicator includes the SGB II unemployed. If Δ reverses
+sign between them, the city difference depends on that construct choice, which is precisely gap 5.
+The T-free check cannot catch this: the T-free check removes T entirely, so it says nothing about
+whether the *choice* of Berlin T flips the sign. The condition costs almost nothing (sign only, no
+significance), and it closes a gap that the T-free check leaves open. It is not the same as the
+Revision 1 demand (DIFFERS under core-3M), which I agreed to relax.
+
+**Required change (one clause):**
+
+- **D10 — Restore the core-3M sign condition (§0 table row, §6.3 robust-DIFFERS rule, revision
+  log).** In both rule statements, replace "Core-3M is reported, not required." / "Core-3M is reported
+  as a sensitivity but is not a condition." with: "**and** its Δ has the same sign under core-3M
+  (sign only, no significance requirement)." In the Revision 3 log row D8, replace "The core-3M
+  same-sign condition is dropped (reported only)." with "The core-3M same-sign condition is kept
+  (sign only)." The fallback sentence (core-3M as primary) is unaffected, because there core-3M *is*
+  the primary.
+
+Verdict: CONCERNS
