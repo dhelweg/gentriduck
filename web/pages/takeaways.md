@@ -26,6 +26,11 @@ sidebar_position: 16
   heading"; H1b "share of the gastronomy mix", per-resident count shows no clear link; H2 "current
   level predicts that change better on its own"; H3 "no detectable ordering in either direction").
   Hamburg is no longer cited here: the old Hamburg timing result came from E5, superseded pending #355.
+
+  #355 (page part, 2026-11): E5 is now superseded by the Hamburg hypothesis suite
+  (docs/epic-h/H-thesis-hypothesis-suite-findings.md). Takeaway 1 gains a neutral pointer to
+  /hamburg/thesis-recheck only. No Hamburg result is stated here and no takeaway changes, so no new
+  claim enters this gated page.
 -->
 
 <Hero
@@ -59,6 +64,10 @@ its mix of shops, services and public facilities does, and adding that mix adds 
 gastronomy mix, as one description of an area's current situation among several — not as a
 predictor of change.**
 → [The 2018 thesis, re-checked](/thesis-recheck) — the full hypothesis-by-hypothesis comparison.
+
+→ [The same hypotheses, re-tested on Hamburg](/hamburg/thesis-recheck) — an out-of-sample transfer
+test, not a replication; its results are not like-for-like with Berlin's and are not summarised in
+this takeaway.
 
 ### 2. Small-area (PLR-level) monitoring catches what district averages hide
 
