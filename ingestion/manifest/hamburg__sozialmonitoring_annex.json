@@ -1,0 +1,23 @@
+{
+  "source_id": "hamburg__sozialmonitoring_annex",
+  "source_class": "pinned",
+  "city": "hamburg",
+  "upstream": {
+    "url": "https://daten.transparenz.hamburg.de/ (GetRessource100; per-edition pinned annex XLSX, see EDITION_SPECS)",
+    "vintage": "Sozialmonitoring report annexes, editions 2016-2025",
+    "retrieved_at": "2026-11-04T21:50:48Z"
+  },
+  "outputs": [
+    {
+      "path": "data/raw/hamburg/sozialmonitoring_annex/annex_indicators.parquet",
+      "row_count": 110747,
+      "schema_fingerprint": "sha256:81c1ec66b261248fd5e15dee65755432bf1b248553818227582d019e18de468d",
+      "content_hash": "sha256:5a10b73d8915804637e51f29b6d143bca5ffa18bcbd9e158361cc8ebe5f27961"
+    }
+  ],
+  "ingest_script": {
+    "module": "ingestion.hamburg.sozialmonitoring.ingest_hamburg_sozialmonitoring_annex",
+    "git_sha": "0d59b2a4b192e8ff4468fda2fdd51697ef5c3489"
+  },
+  "manifest_schema_version": 1
+}

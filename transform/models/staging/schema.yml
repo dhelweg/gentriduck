@@ -2131,3 +2131,155 @@ models:
           k-NN (k=6) fallback weights instead (ADR-0025 Decision 4 /
           ADR-0010 Sec 5) -- audit column so the neighbour structure this
           area's Gi* value was computed against is never silently opaque.
+
+  - name: stg_hamburg_sozialmonitoring_indicators
+    description: >
+      #371 (ADR-0014 Amendment 2026-11-02): Hamburg Sozialmonitoring report-annex
+      indicators S1-S7 (status) and D1-D6 (3-year Dynamik) per scored statistisches
+      Gebiet, editions 2016-2025, long format (one row per edition_year x gebiet_id x
+      indicator). Source: "Sozialmonitoring Integrierte Stadtteilentwicklung, Bericht
+      <E> - Anhang", sheet II (Freie und Hansestadt Hamburg, Behoerde fuer
+      Stadtentwicklung und Wohnen, dl-de/by-2.0), pinned URLs in
+      ingestion/hamburg/sozialmonitoring/ingest_hamburg_sozialmonitoring_annex.py.
+      share (status rows, %) and change_pp (Dynamik rows, pp) are recovered as
+      100 * (mean + z * SD) from the edition's published mean/SD rows; nothing is
+      imputed. S7 cells with the exclusion code (z = 0) are NULL with
+      cell_flag = 's7_zero_exclusion_code'. OUTCOME COMPONENTS ONLY (R-A1): never a
+      predictor. Evidence for every pre-registered check:
+      docs/epic-e/371-data-checks.md. Returns zero rows (typed stub) before ingestion.
+    meta:
+      dbt_meta_owner: data-engineer
+      role: outcome_only
+    data_tests:
+
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns:
+              - edition_year
+              - gebiet_id
+              - indicator
+      - assert_not_empty:
+          config:
+            severity: error
+      - assert_min_rows:
+          arguments:
+            min_rows: 110000
+          config:
+            severity: warn
+    columns:
+      - name: city_code
+        description: Canonical city code 'HH' (ADR-0005).
+        data_tests:
+
+          - accepted_values:
+              arguments:
+                values: ["HH"]
+      - name: edition_year
+        description: Sozialmonitoring report edition (Berichtsjahr), 2016-2025.
+        data_tests:
+
+          - not_null
+          - accepted_values:
+              arguments:
+                values: [2016, 2017, 2018, 2019, 2020, 2021, 2022, 2023, 2024, 2025]
+      - name: reference_date
+        description: Data reference date, 31.12.(edition_year - 1) (phase-A doc §3).
+        data_tests:
+
+          - not_null
+      - name: gebiet_id
+        description: >
+          Statistisches-Gebiet id as published ("Stat. Gebiet"); joins
+          stg_hamburg_sozialmonitoring.area_code (tested per edition by
+          test_371_hh_annex_gebiete_match_wfs).
+        data_tests:
+
+          - not_null
+      - name: stadtteil_name
+        description: Informational Stadtteil name from the annex (not a join key).
+      - name: population
+        description: Annex "Bevoelkerung 31.12.(E-1)"; equals the WFS bevoelkerung (tested).
+        data_tests:
+
+          - not_null
+      - name: indicator
+        description: Annex code S1-S7 or D1-D6 (see indicator_label_de for the edition's text).
+        data_tests:
+
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ["S1", "S2", "S3", "S4", "S5", "S6", "S7", "D1", "D2", "D3", "D4", "D5", "D6"]
+      - name: indicator_kind
+        description: "'status' (S1-S7) or 'dynamik' (D1-D6)."
+        data_tests:
+
+          - accepted_values:
+              arguments:
+                values: ["status", "dynamik"]
+      - name: indicator_label_de
+        description: The edition's own header text for the indicator (e.g. 'S4 Arbeitslose (SGB II)').
+        data_tests:
+
+          - not_null
+      - name: z_published
+        description: z-score exactly as published (S7 exclusion code 0 kept here for traceability).
+        data_tests:
+
+          - not_null
+      - name: z_score
+        description: z_published, NULL for excluded cells (cell_flag != 'scored').
+      - name: edition_mean
+        description: >
+          The edition's published "Mittelwert" row for the indicator (a fraction;
+          the unweighted mean over the scored Gebiete).
+        data_tests:
+
+          - not_null
+      - name: edition_sd
+        description: >
+          The edition's published "SD" row for the indicator (a fraction; population
+          SD over the scored Gebiete).
+        data_tests:
+
+          - not_null
+      - name: share
+        description: Recovered level in % = 100 * (mean + z * SD); status rows only, NULL if excluded.
+      - name: change_pp
+        description: Recovered 3-year change in percentage points = 100 * (mean + z * SD); Dynamik rows only.
+      - name: recovery_error_bound_pp
+        description: Worst-case recovery error from published rounding, in pp (see model header).
+        data_tests:
+
+          - not_null
+      - name: z_precision
+        description: "'two_decimals' or 'full' (derived per edition from the values)."
+        data_tests:
+
+          - accepted_values:
+              arguments:
+                values: ["two_decimals", "full"]
+      - name: moments_precision
+        description: "'three_decimals' or 'full' for the mean/SD rows (derived per edition)."
+        data_tests:
+
+          - accepted_values:
+              arguments:
+                values: ["three_decimals", "full"]
+      - name: cell_flag
+        description: "'scored' or 's7_zero_exclusion_code' (S7 area exclusion, NULL value)."
+        data_tests:
+
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ["scored", "s7_zero_exclusion_code"]
+      - name: status_summe
+        description: The Gebiet's published Status-summe (sum of S1-S7 z).
+      - name: dynamik_summe
+        description: The Gebiet's published Dynamik-summe (sum of D1-D6 z).
+      - name: source_file
+        description: Annex workbook file name (pinned per edition).
+      - name: source_attribution
+        description: Mandatory dl-de/by-2.0 attribution string.
+
