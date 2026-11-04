@@ -55,18 +55,18 @@ purely areal, which misallocates some 2018/2020 population (quantified in §4.4)
 - **Model:** `stg_hamburg_sozialmonitoring_indicators` (view), 110,747 rows = 8,519 Gebiet-editions
   × 13 indicators (S1–S7, D1–D6):
 
-| Edition | Gebiete | S7 exclusion-code cells (NULL) | z precision | mean/SD precision | max recovery bound (pp) |
+| Edition | Gebiete | S7 z = 0 cells (handling) | z precision | mean/SD precision | max recovery bound (pp) |
 |---|---:|---:|---|---|---:|
-| 2016 | 847 | 43 | 2 decimals | 3 decimals | 0.77 |
-| 2017 | 846 | 2 | 2 decimals | full | 0.10 |
-| 2018 | 848 | 2 | 2 decimals | full | 0.10 |
-| 2019 | 852 | 6 | 2 decimals | 3 decimals | 0.81 |
+| 2016 | 847 | 43 → NULL | 2 decimals | 3 decimals | 0.77 |
+| 2017 | 846 | 2 kept | 2 decimals | full | 0.10 |
+| 2018 | 848 | 2 kept | 2 decimals | full | 0.10 |
+| 2019 | 852 | 6 kept | 2 decimals | 3 decimals | 0.81 |
 | 2020 | 850 | 0 | full | full | 0.00 |
-| 2021 | 853 | 28 | 2 decimals | 3 decimals | 0.75 |
-| 2022 | 853 | 32 | 2 decimals | full | 0.10 |
-| 2023 | 856 | 34 | 2 decimals | 3 decimals | 1.13 |
-| 2024 | 857 | 39 | 2 decimals | 3 decimals | 1.03 |
-| 2025 | 857 | 39 | 2 decimals | 3 decimals | 1.04 |
+| 2021 | 853 | 28 → NULL | 2 decimals | 3 decimals | 0.75 |
+| 2022 | 853 | 32 → NULL | 2 decimals | full | 0.10 |
+| 2023 | 856 | 34 → NULL | 2 decimals | 3 decimals | 1.13 |
+| 2024 | 857 | 39 → NULL | 2 decimals | 3 decimals | 1.03 |
+| 2025 | 857 | 39 → NULL | 2 decimals | 3 decimals | 1.04 |
 
 The Gebiet counts equal the published class counts (seed) in every edition.
 
@@ -74,10 +74,34 @@ The Gebiet counts equal the published class counts (seed) in every edition.
 says "Im Vergleich zum Vorjahr ging der Anteil von 10,9 % auf 10,5 % zurück" (Bericht 2025, PDF
 p. 10). So share = 100 · (mean + z · SD) in %.
 
-**S7 exclusion.** S7 ("bes. Gebietsausschluss") codes excluded Gebiete as z = 0. With the zeros,
-SD(z) is 0.975–0.983 in 2016 and 2021–2025; without them it is 0.999–1.002. Rule: every S7 cell with
-z = 0 is NULL with `cell_flag = 's7_zero_exclusion_code'`. A genuine z that rounds to 0.00 cannot
-be told apart. This affects only S7, which is context only (PR §3.1).
+**S7 exclusion (revised after DE review, finding 5).** S7 ("bes. Gebietsausschluss") codes
+excluded Gebiete as z = 0 in some editions only. Whether the zeros were part of the
+standardisation shows in the moments:
+
+| Edition | z = 0 cells | SD(z) with zeros | SD(z) without zeros | Reading |
+|---|---:|---:|---:|---|
+| 2016 | 43 | 0.975 | 1.001 | exclusion code |
+| 2017 | 2 | 1.000 | 1.001 | genuine 0.00 |
+| 2018 | 2 | 1.000 | 1.001 | genuine 0.00 |
+| 2019 | 6 | 1.000 | 1.004 | genuine 0.00 |
+| 2020 | 0 | 1.000 | 1.000 | — |
+| 2021–2025 | 28–39 | 0.976–0.983 | 0.999–1.002 | exclusion code |
+
+So the rule is edition-specific: S7 cells with z = 0 in **2016 and 2021–2025** are NULL with
+`cell_flag = 's7_zero_exclusion_code'` (215 cells). In **2017–2020** the 10 zeros are kept as genuine
+values. (The first version NULLed all 225 zeros, which pushed the 2017–2019 SD to 1.001–1.004.)
+Within an exclusion edition a genuine z that rounds to 0.00 cannot be told apart. This affects only
+S7, which is context only (PR §3.1).
+
+**Deviation from the ADR-0014 amendment wording (finding 6).** The amendment's "Target" says
+"Gebiete below the population threshold are NULL with a flag". The model instead leaves them out:
+the annex, like the WFS, contains only scored Gebiete (≥ 300 residents), so a Gebiet below the
+threshold has **no row** in that edition. Inventing NULL rows would need a Gebiet frame from
+another source and a guess at which unscored Gebiete exist in each edition. **Rationale:** an
+absent `(edition_year, gebiet_id)` means "not scored in that edition". The panel code must treat
+it exactly that way, i.e. as not part of that edition, never as 0 and never as imputed. The
+balanced-panel rule (PR §2.3, §5 below) does this. The ADR text is unchanged; this note records
+the deviation.
 
 ## 2. Hamburg annex checks (PR §3.3, binding)
 
@@ -85,7 +109,8 @@ All five are also dbt tests (severity error) and pass in `uv run poe build`.
 
 1. **Moments (`test_371_hh_annex_z_moments`).** All 130 edition × indicator cells have
    |mean z| ≤ 0.01 and |SD z − 1| ≤ 0.01. The largest deviations are mean −0.0033 (S7 2025) and SD
-   1.0035 (S7 2019); for S3/S4/S5 they are ≤ 0.001 and ≤ 0.0009.
+   1.0019 (S7 2024); for S3/S4/S5 they are ≤ 0.001 and ≤ 0.0009. With the edition-specific S7
+   rule (§1), S7's SD is 0.9997–1.0019 in every edition.
    - **Population SD.** In the full-precision edition 2020, SD(z) with ddof = 0 is 1.0000 exactly
      for S3/S4/S5, and 1.0006 with ddof = 1.
    - **The mean row is the unweighted Gebiet mean, not a city rate.** (a) The mean of z over
@@ -101,7 +126,7 @@ All five are also dbt tests (severity error) and pass in `uv run poe build`.
      labelled "unweighted mean over scored Gebiete". Population-weighted means differ by up to
      1.05 pp: for example S5 2019 has mean row 17.5 % and population-weighted 18.55 %.
 2. **Share range (`test_371_hh_annex_share_range`).** No recovered share lies outside
-   [−0.5, 100.5]: **0 of 59,408** non-excluded status cells, against a FAIL threshold of 0.5 %. Shares slightly
+   [−0.5, 100.5]: **0 of 59,418** non-excluded status cells, against a FAIL threshold of 0.5 %. Shares slightly
    outside [0, 100] (min −0.17, max 100.22) all lie within the cell's rounding bound, and the test
    asserts exactly that.
 3. **Precision.** As tabulated in §1. At two-decimal z, the error is 0.005·s. For S4 (s ≈ 0.024–0.034)
@@ -133,6 +158,23 @@ All five are also dbt tests (severity error) and pass in `uv run poe build`.
    - `test_371_hh_annex_summe_separates_wfs_classes`: the WFS status and Dynamik classes are
      strictly separated by the Summe in coded order in every edition. For example in 2025, hoch is
      ≤ −5.72 and mittel ≥ −5.69, against the published ±5.70.
+     This guards the Gebiet join and the class-code order only. It reads the published Summe
+     columns, so it cannot detect a permuted indicator column.
+6. **D vs S consistency (`test_371_hh_annex_d_vs_s_consistency`, added after DE review finding 4).**
+   For S3/S4/S5, the recovered change D_j,E equals share_j,E − share_j,E−3 on the Gebiete scored
+   in both editions. Median |Δ| is 0.03–0.12 pp in every edition × indicator; the tolerance is
+   0.2 pp. Excluded definition seams: S4 editions 2019 and 2021 (SGB III + II → SGB II; median
+   |Δ| about 1.6 pp) and S3 edition 2020 (AsylbLG added). Mutation check: swapping the S3 and S4
+   SD rows of edition 2022 makes the test fail (4 rows: S3 and S4 in 2022 and 2025, median
+   |Δ| 4.2–4.8 pp), while the z-moment test still passes.
+   **S3 2022/2023 outliers:** correlation between D3 and the S3 level change is only 0.913 / 0.951
+   (medians 0.05 / 0.04 pp). A minority of Gebiete disagree, most likely because the publisher
+   back-revised the earlier edition's levels when computing D3. It has no effect on the design,
+   which uses levels (PR §3.5), not published Dynamik.
+
+   The z-moment test (check 1) cannot catch a misread column or a swapped mean/SD row, because any
+   z column is standardised. Those are caught by the share range (check 2), the D-vs-S test, and
+   the ingest's code-row and label checks (check 4).
 
 ## 3. Hamburg indicator definitions (PR §3.2, §3.7 checks 1–2)
 
@@ -312,6 +354,12 @@ unchanged. **No deviation, so no amendment is needed.**
 - **2022 (M3).** For each PLR and band, the midpoint of 2020 and 2024. `is_interpolated = TRUE` and
   `derivation = 'linear_interpolation_2020_2024'` on all 17,344 rows and on no other row
   (`test_371_ewr_age_bands_plr2021_totals`). City total 3,833,553.5.
+- **Labels and flags (revised after DE review, finding 7).** The crosswalked years carry
+  `derivation = 'crosswalk_areal_renormalised'`. The earlier label `…_areal_pop_weighted_…` repeated
+  the seed's misleading `mapping_type` (§4.4). `is_blank_row` is now `residents_total = 0` per
+  PLR-year. Before, it was an OR over the source rows, which flagged Pankower Tor 2022 as blank
+  although it carries 3,148 interpolated residents. In the native years the two definitions agree
+  exactly: no non-blank matrix row has 0 residents.
 
 ### 4.4 Finding: the existing LOR crosswalk is areal, not population-weighted
 
@@ -332,26 +380,50 @@ So about 10,100 residents (0.27 % of the city) sit on uninhabited PLRs in 2018 a
 about 5,000 in the interpolated 2022. They are missing from the neighbouring PLRs where they
 actually live (for example 06200419 Thermometersiedlung, which had 4,539 residents in 2024).
 
-How far 2020 (crosswalked) is from 2024 (native) at each grain. This includes genuine growth of
-+3.4 % city-wide and new-build quarters, so it is an upper bound on the artefact:
+How far 2020 (crosswalked) is from 2024 (native) at each grain (revised after DE review,
+finding 1). The ratios are computed on child PLRs only: PLRs inhabited at both dates, so Pankower
+Tor and Landweg, which cannot enter the balanced panel, are excluded, and BZR totals are summed
+over those children. The ratio includes genuine growth of +3.4 % city-wide and new-build quarters,
+so it is an upper bound on the artefact:
 
-| Grain | Units | median P_2020/P_2024 | \|ln ratio\| > ln 1.25 | \|ln ratio\| > ln 1.5 | range |
-|---|---:|---:|---:|---:|---|
-| PLR (inhabited both dates) | 540 | 0.982 | 102 | 54 | — |
-| **BZR (matched grain)** | 143 | 0.975 | **0** | **0** | 0.815–1.115 |
+| Child set | Grain | Units | median P_2020/P_2024 | \|ln ratio\| > ln 1.25 | \|ln ratio\| > ln 1.5 | BZR range |
+|---|---|---:|---:|---:|---:|---|
+| inhabited at both dates | PLR | 540 | 0.982 | **102** (19 %) | 54 | — |
+| inhabited at both dates | **BZR** | 143 | 0.975 | **1** (034008) | 0 | 0.793–1.115 |
+| + MSS S1 in 2021/2023/2025 (PR §2.3 frame) | PLR | 535 | 0.981 | 98 | 50 | — |
+| + MSS S1 in 2021/2023/2025 (PR §2.3 frame) | **BZR** | 143 | 0.975 | **3** (053008, 122004, 034008) | 1 (053008) | 0.605–1.115 |
 
-At the matched BZR grain the artefact largely cancels; presumably most areal spill-over stays
-inside a BZR, though this was not checked split by split. The most extreme BZR ratios
-(0.82–0.85: 092006, 053007, 082006, 093010, 102004, 111001) are consistent with population growth,
-but were not checked individually. At PLR grain,
-which the MAUP sensitivity in PR §6.5 uses, the 2018/2020 populations of split PLRs are unreliable.
+The first version of this table summed all PLRs, including the two uninhabited ones. That made
+the two affected BZRs look clean, because the misplaced residents stayed inside the BZR total.
+On the child set the distortion shows up as follows:
+
+- **BZR 034008 Pankow Süd:** P_2020/P_2024 = **0.793**. The 6,295 residents placed on Pankower Tor
+  are missing from its inhabited children.
+- **BZR 062004 Ostpreußendamm:** the BZR ratio is unremarkable, but the **weights inside it are
+  distorted**. Thermometersiedlung 06200419 has 1,081 residents in 2020 against 4,539 in 2024,
+  while its neighbours 06200420–06200423 change by less than 7 %. Its S1 in 2021 is 7.18 %,
+  against 2.36–4.47 % for those neighbours. That is a high share on a deflated base, so its
+  2018/2020 weight in any population-weighted BZR aggregate is too small by a factor of about 4.
+- **The source PLRs stay inside their BZR.** 03040818 puts **99.86 %** of its crosswalk weight
+  into BZR 034008 (0.14 % into four neighbouring BZRs). 06020407 puts **100 %** into BZR 062004.
+  So the BZR totals of all residents (children plus the uninhabited PLR) are right to within
+  0.14 %. What is wrong is the split between the uninhabited PLR and the inhabited children inside
+  the BZR, and the weight of each child.
+- **053008 Siemensstadt (0.605) and 122004 Tegel-Süd/Flughafensee (0.78)** exceed 25 % only in
+  the MSS frame. There, PLRs without MSS values drop out, and the remaining children grew
+  strongly (new-build growth is plausible but was not checked individually). Whether that is
+  growth or an artefact was not determined.
+- **PLR grain:** 102 of the 540 inhabited PLRs (19 %) are more than 25 % off, and 54 more than
+  50 %. The MAUP sensitivity in PR §6.5 runs at this grain, and at it the 2018/2020/2022
+  populations of split PLRs are unreliable.
 
 The same artefact is already in `int_berlin_ewr_plr2021`, which the PR's §3.4 weights use. It is
 pre-existing and was not introduced here. **Impact on the design:**
 - T\* at PLR depends only on P^(U)/P. That ratio is an area-weighted mix of old-PLR age
   structures, so it is less sensitive than the counts.
-- The **BZR aggregation weights for 2018/2020/2022** are affected only where a split moves
-  population across a BZR boundary.
+- **BZR totals** for 2018/2020/2022 are right to within 0.14 % for the two affected BZRs. The
+  weights of the inhabited children inside BZR 034008 and BZR 062004 are not, and the 034008
+  child-set total is about 6,300 residents (18 %) short.
 - 2024 and 2025 are native and unaffected.
 
 Recommendation for geo-DS, not done here because it is a gated crosswalk change:
@@ -405,8 +477,11 @@ guessed URL returned 404 after rate limiting. That check is open but not binding
 
 ## 6. Open issues and notes for the analysis phase
 
-1. **Areal crosswalk** (§4.4): flagged for geo-DS. It affects 2018/2020/2022 population weights in
-   both `int_berlin_ewr_plr2021` and the new band model.
+1. **Areal crosswalk** (§4.4): flagged for geo-DS, who decides it in the pre-registration
+   amendment; nothing is changed here. It affects 2018/2020/2022 population weights in both
+   `int_berlin_ewr_plr2021` and the new band model. At BZR grain, child weights inside 034008
+   Pankow Süd and 062004 Ostpreußendamm are distorted (BZR totals are right to within 0.14 %). At PLR
+   grain, 102 of 540 PLRs are more than 25 % off.
 2. **Hamburg precision** (§2.3): the S4 SD is rounded to 3 decimals in the matched editions
    2019/2021/2023/2025, a ±1.5–2.1 % scale uncertainty on S4 pp changes. Rank statistics are not
    affected.

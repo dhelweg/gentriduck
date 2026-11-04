@@ -6044,14 +6044,14 @@ models:
 
           - not_null
       - name: derivation
-        description: "'native_lor_2021', 'crosswalk_areal_pop_weighted_renormalised' or 'linear_interpolation_2020_2024'."
+        description: "'native_lor_2021', 'crosswalk_areal_renormalised' (areal seed weights, renormalised per old PLR) or 'linear_interpolation_2020_2024'."
         data_tests:
 
           - accepted_values:
               arguments:
                 values:
                   - native_lor_2021
-                  - crosswalk_areal_pop_weighted_renormalised
+                  - crosswalk_areal_renormalised
                   - linear_interpolation_2020_2024
       - name: is_blank_row
-        description: TRUE if any contributing source row was a whole-row-blank (uninhabited) PLR.
+        description: TRUE for an uninhabited PLR-year (residents_total = 0); equals the publisher's whole-row-blank flag in the native years.

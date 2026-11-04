@@ -36,13 +36,24 @@
 --
 -- Excluded cells (ADR-0014 amendment: NULL with a flag, never 0):
 -- S7 "Schulabschluesse (... bes. Gebietsausschluss)" codes area exclusion as
--- z = 0 in the annex (phase-A §5: S7 SD 0.97-0.98 with the zeros, 1.00
--- without them; 28-43 zero cells in 2016 and 2021-2025 vs 0-6 elsewhere).
--- Rule: every S7 cell with z_published = 0 -> z_score / share NULL,
--- cell_flag = 's7_zero_exclusion_code'. A genuine z that rounds to 0.00 cannot
--- be told apart; this affects only S7, which is context only (pre-registration
--- §3.1). Gebiete below the source's 300-resident threshold are not in the annex
--- at all (absent, not NULL), exactly as in the WFS.
+-- z = 0 in SOME editions only. Per edition (docs/epic-e/371-data-checks.md §1):
+-- edition  zeros  SD(z) with zeros  SD(z) without zeros
+-- 2016       43       0.975              1.001
+-- 2017        2       1.000              1.001
+-- 2018        2       1.000              1.001
+-- 2019        6       1.000              1.004
+-- 2020        0       1.000              1.000
+-- 2021-2025 28-39   0.976-0.983        0.999-1.002
+-- In 2016 and 2021-2025 the zeros were left out of the standardisation (SD is
+-- 1 only without them): exclusion code. In 2017-2020 the zeros are part of
+-- the standardisation (SD is 1 with them): genuine z = 0.00 values.
+-- Rule: S7 cells with z_published = 0 in editions 2016 and 2021-2025 ->
+-- z_score / share NULL, cell_flag = 's7_zero_exclusion_code'; 2017-2020 zeros
+-- are kept. A genuine 0.00 in an exclusion edition cannot be told apart; this
+-- affects only S7, which is context only (pre-registration §3.1).
+-- Gebiete below the source's 300-resident threshold are not in the annex at
+-- all: absent rows, not NULL rows, exactly as in the WFS (deviation from the
+-- ADR-0014 amendment wording; docs/epic-e/371-data-checks.md §1).
 --
 -- Reference date: edition E carries data as of 31.12.(E-1) (phase-A §3).
 --
@@ -107,7 +118,10 @@
             select
                 raw.*,
                 case
-                    when raw.indicator = 'S7' and raw.z_published = 0
+                    when
+                        raw.indicator = 'S7'
+                        and raw.z_published = 0
+                        and (raw.edition_year = 2016 or raw.edition_year >= 2021)
                     then 's7_zero_exclusion_code'
                     else 'scored'
                 end as cell_flag,

@@ -5,8 +5,11 @@
 -- the coded order, per edition: every Gebiet of status code k has a lower
 -- Status-summe than every Gebiet of code k+1 (1 = hoch ... 4 = sehr niedrig), and
 -- likewise for Dynamik (1 = positiv, 2 = stabil, 3 = negativ). This is the
--- row-level form of the phase-A §4 sign check: a mis-joined Gebiet or a
--- permuted indicator column would break it.
+-- row-level form of the phase-A §4 sign check. It guards the Gebiet join
+-- (annex gebiet_id <-> WFS area_code per edition) and the class-code order of
+-- int_hamburg_sozialmonitoring_index. It does not check the indicator columns:
+-- it uses the published Status-/Dynamik-summe columns, not the S/D z-scores
+-- (those are covered by test_371_hh_annex_summe_reproduction).
 -- Returns one row per (edition, index, adjacent class pair) that overlaps.
 {{ config(severity="error") }}
 

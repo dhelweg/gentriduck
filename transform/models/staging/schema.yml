@@ -2143,7 +2143,8 @@ models:
       ingestion/hamburg/sozialmonitoring/ingest_hamburg_sozialmonitoring_annex.py.
       share (status rows, %) and change_pp (Dynamik rows, pp) are recovered as
       100 * (mean + z * SD) from the edition's published mean/SD rows; nothing is
-      imputed. S7 cells with the exclusion code (z = 0) are NULL with
+      imputed. S7 cells with the exclusion code (z = 0 in editions 2016 and
+      2021-2025; in 2017-2020 the zeros are genuine values) are NULL with
       cell_flag = 's7_zero_exclusion_code'. OUTCOME COMPONENTS ONLY (R-A1): never a
       predictor. Evidence for every pre-registered check:
       docs/epic-e/371-data-checks.md. Returns zero rows (typed stub) before ingestion.
@@ -2267,7 +2268,7 @@ models:
               arguments:
                 values: ["three_decimals", "full"]
       - name: cell_flag
-        description: "'scored' or 's7_zero_exclusion_code' (S7 area exclusion, NULL value)."
+        description: "'scored' or 's7_zero_exclusion_code' (S7 area exclusion in editions 2016 and 2021-2025, NULL value)."
         data_tests:
 
           - not_null

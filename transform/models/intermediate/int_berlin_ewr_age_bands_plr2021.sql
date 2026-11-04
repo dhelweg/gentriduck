@@ -39,6 +39,8 @@
 -- Sum(bands) = residents_total per PLR and the city total = mean of the
 -- 2020 and 2024 city totals.
 --
+-- is_blank_row = (residents_total = 0), i.e. an uninhabited PLR-year.
+--
 -- residents_total is the sum of the 32 bands of the same PLR-year, so
 -- Sum(bands) = residents_total holds exactly by construction (and equals the
 -- published E_E where the matrix is native; staging test).
@@ -85,7 +87,6 @@ with
             age_from,
             age_to,
             cast(residents as double) as residents,
-            is_blank_row,
             'native_lor_2021' as derivation
         from bands
         where area_vintage = 'lor_2021'
@@ -101,8 +102,7 @@ with
             b.age_from,
             b.age_to,
             sum(b.residents * cw.weight_norm) as residents,
-            bool_or(b.is_blank_row) as is_blank_row,
-            'crosswalk_areal_pop_weighted_renormalised' as derivation
+            'crosswalk_areal_renormalised' as derivation
         from bands as b
         inner join crosswalk as cw on b.area_code = cw.plr_id_pre2021
         where b.area_vintage = 'lor_pre2021'
@@ -128,7 +128,6 @@ with
             a.age_from,
             a.age_to,
             (a.residents + b.residents) / 2.0 as residents,
-            a.is_blank_row or b.is_blank_row as is_blank_row,
             'linear_interpolation_2020_2024' as derivation
         from observed as a
         inner join
@@ -160,5 +159,10 @@ select
     sum(residents) over (partition by reference_year, plr_id_2021) as residents_total,
     derivation = 'linear_interpolation_2020_2024' as is_interpolated,
     derivation,
-    is_blank_row
+    -- Uninhabited PLR-year: derived from the counts, not propagated from the
+    -- source rows (an OR over the 2020/2024 sources flagged Pankower Tor 2022 as
+    -- blank with 3,148 interpolated residents). In the native years this equals
+    -- the publisher's whole-row-blank flag exactly (no non-blank row has 0
+    -- residents).
+    sum(residents) over (partition by reference_year, plr_id_2021) = 0 as is_blank_row
 from unioned
