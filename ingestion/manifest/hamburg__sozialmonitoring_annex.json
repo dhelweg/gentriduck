@@ -5,7 +5,7 @@
   "upstream": {
     "url": "https://daten.transparenz.hamburg.de/ (GetRessource100; per-edition pinned annex XLSX, see EDITION_SPECS)",
     "vintage": "Sozialmonitoring report annexes, editions 2016-2025",
-    "retrieved_at": "2026-11-04T21:50:48Z"
+    "retrieved_at": "2026-11-04T23:36:08Z"
   },
   "outputs": [
     {
@@ -17,7 +17,7 @@
   ],
   "ingest_script": {
     "module": "ingestion.hamburg.sozialmonitoring.ingest_hamburg_sozialmonitoring_annex",
-    "git_sha": "0d59b2a4b192e8ff4468fda2fdd51697ef5c3489"
+    "git_sha": "6001d29041827885d9cb70b8b66802c6620bda52"
   },
   "manifest_schema_version": 1
 }
