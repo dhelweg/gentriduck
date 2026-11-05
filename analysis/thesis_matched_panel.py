@@ -253,6 +253,21 @@ SQL: dict[str, str] = {
           AND indicator IN ({_IN_BER})
         ORDER BY area_code, edition, indicator
     """,
+    # Phase 1 (PR §8.4): presence only -- which PLR x edition x indicator carries a value, and
+    # which Gebiet x edition is scored (with its population, a weight, not an outcome).
+    "ber_presence": f"""
+        SELECT area_code, edition, indicator
+        FROM main.stg_berlin_mss_indicators
+        WHERE area_vintage = 'lor_2021' AND edition IN (2021, 2023, 2025)
+          AND indicator IN ({_IN_BER}) AND indicator_value IS NOT NULL
+        ORDER BY area_code, edition, indicator
+    """,
+    "hh_presence": """
+        SELECT gebiet_id AS area_code, edition_year AS edition, population
+        FROM main.stg_hamburg_sozialmonitoring_indicators
+        WHERE indicator = 'S3' AND edition_year BETWEEN 2016 AND 2025
+        ORDER BY area_code, edition
+    """,
     "ber_mss_2019_pre": f"""
         SELECT area_code, indicator, indicator_value
         FROM main.stg_berlin_mss_indicators
@@ -429,6 +444,27 @@ def assert_level_provenance(prov: Iterable[tuple[str, str, int, int]]) -> None:
             assert (city, ind, edition, source) in PERMITTED_LATER_INPUTS, (  # noqa: S101 -- R-C3
                 f"§8.2: {city} {ind} level {edition} uses edition {source}, which is not a "
                 "permitted later-edition input"
+            )
+
+
+# PR §8.2 / PM decision M3 (recorded in the pre-registration, "PM decisions on the open calls"):
+# the Berlin 31.12.2022 bands are linearly interpolated between 2020 and 2024, so the edition-2023
+# weights and T* base embed 31.12.2024 data. That is a pre-registered input, listed here by name;
+# no other interpolated (later-data) input is permitted. The geo-DS confirms it in the results
+# sign-off (review finding 8).
+PERMITTED_PREREG_INPUTS = {
+    ("BER", "bands", 2022): "M3: 31.12.2022 EWR bands = midpoint of 31.12.2020 and 31.12.2024 "
+    "(int_berlin_ewr_age_bands_plr2021, derivation linear_interpolation_2020_2024)",
+}
+
+
+def assert_prereg_inputs(city: str, used: Iterable[tuple[int, bool]]) -> None:
+    """PR §8.2: an interpolated band year (which embeds later data) is used only if it is a
+    pre-registered input (M3)."""
+    for year, interpolated in used:
+        if interpolated:
+            assert (city, "bands", year) in PERMITTED_PREREG_INPUTS, (  # noqa: S101 -- R-C3
+                f"§8.2: interpolated {city} bands for {year} are not a pre-registered input"
             )
 
 
@@ -784,6 +820,15 @@ VARIANTS: tuple[Variant, ...] = (
     ),
 )
 # PR §6.2: inference-only sensitivities on the primary designs (cannot change a verdict).
+# Cluster floor per grouping: the P354 20-block floor wherever it can hold (G = 36, iid); the
+# directional_inference default of 5 only for G = 16 and Bezirk (12 / 7), which have fewer than
+# 20 clusters by construction (geo readings ruling 4).
+INFERENCE_FLOOR = {
+    "k16": MIN_BLOCKS_SENS,
+    "k36": MIN_BLOCKS,
+    "iid": MIN_BLOCKS,
+    "bezirk": MIN_BLOCKS_SENS,
+}
 INFERENCE_SENS = (
     ("k16", "spatial_block_k16"),
     ("k36", "spatial_block_k36"),
@@ -813,6 +858,7 @@ class CityRaw:
     classes: pd.DataFrame  # area_code, edition, status_index (own index, §3.6)
     status: dict = field(default_factory=dict)
     context: dict = field(default_factory=dict)
+    pre: dict = field(default_factory=dict)  # phase 1: population and presence (PR §8.4)
 
 
 def _q(con, key: str, params: Sequence | None = None, **fmt) -> pd.DataFrame:
@@ -881,13 +927,65 @@ def load_city(con, city: str) -> CityRaw:
         types=types,
         classes=pd.DataFrame(),
     )
+    # PR §8.4: phase 1 loads only geometry, POIs, populations and presence (which children carry
+    # a value or are scored). The balanced child set, the units and the fixed feature lists are
+    # fixed from these before any outcome value is loaded (load_status, phase 2).
     if city == "BER":
-        _load_berlin_status(con, raw)
+        _presence_berlin(con, raw)
     else:
-        _load_hamburg_status(con, raw)
+        _presence_hamburg(con, raw)
     missing = [c for c in raw.balanced if c not in child_parent]
     assert not missing, f"{city}: balanced children without a parent unit: {missing[:5]}"  # noqa: S101 -- R-C3
     return raw
+
+
+def load_status(con, raw: CityRaw) -> None:
+    """Phase 2 (PR §8.4): the outcome values, after the feature lists were written. The balanced
+    set recomputed from the values must equal the phase-1 set."""
+    pre_bal = list(raw.balanced)
+    if raw.city == "BER":
+        _load_berlin_status(con, raw)
+    else:
+        _load_hamburg_status(con, raw)
+    assert raw.balanced == pre_bal, f"{raw.city}: balanced set differs between phases"  # noqa: S101 -- R-C3
+
+
+def _presence_berlin(con, raw: CityRaw) -> None:
+    """PR §2.3: PLRs inhabited at 31.12.2018/2020/2022/2024 with S1/S3/S4 in 2021/2023/2025 and
+    D1/D3/D4 in 2021 (for the §4.2 backcast). Also records why each other PLR drops (A5-5)."""
+    bands = berlin_bands(_q(con, "ber_bands"))
+    assert_pop_source(bands)
+    pres = _q(con, "ber_presence")
+    have = set(zip(pres["area_code"], pres["edition"], pres["indicator"], strict=True))
+    band_codes = set(bands.index.get_level_values(0))
+    plrs = sorted(c for c in raw.child_parent if c in band_codes)
+    ok, dropped = [], []
+    for c in plrs:
+        miss_ed = [e for e in (2021, 2023, 2025) if not all((c, e, i) in have for i in BER_LEVEL)]
+        miss_d = [i for i in BER_CHANGE if (c, 2021, i) not in have]
+        empty = [y for y in (2018, 2020, 2022, 2024) if not bands.loc[(c, y), "P"] > 0]
+        if not miss_ed and not miss_d and not empty:
+            ok.append(c)
+            continue
+        reasons = []
+        if len(miss_ed) == 3:
+            reasons.append("no MSS value in any edition (2021/2023/2025)")
+        elif miss_ed:
+            reasons.append(f"no MSS values in edition {'/'.join(map(str, miss_ed))}")
+        elif miss_d:
+            reasons.append("no 2021 Dynamik (no §4.2 backcast)")
+        if empty:
+            reasons.append(f"uninhabited at 31.12.{'/'.join(map(str, empty))}")
+        dropped.append({"plr": c, "reason": ", ".join(reasons)})
+    raw.balanced = ok
+    raw.pre = {"bands": bands, "dropped_plr": dropped, "n_plr_lor2021": len(plrs)}
+
+
+def _presence_hamburg(con, raw: CityRaw) -> None:
+    """PR §2.3 / A4.3 / DC §1: Gebiete scored in all four editions; an absent row = not scored."""
+    pres = _q(con, "hh_presence")
+    raw.balanced = balanced_children(pres[["area_code", "edition"]])
+    raw.pre = {"hh_pop": pres.set_index(["area_code", "edition"])["population"].astype(float)}
 
 
 def _load_berlin_status(con, raw: CityRaw) -> None:
@@ -916,7 +1014,7 @@ def _load_berlin_status(con, raw: CityRaw) -> None:
         [back.reset_index(), wide[["S1", "S3", "S4"]].reset_index()], ignore_index=True
     ).set_index(["area_code", "edition"])
     lv = lv.sort_index()
-    bands = berlin_bands(_q(con, "ber_bands"))
+    bands = raw.pre["bands"]
     assert_pop_source(bands)
     band_codes = set(bands.index.get_level_values(0))
     plrs = sorted(c for c in raw.child_parent if c in band_codes)
@@ -955,6 +1053,10 @@ def _load_hamburg_status(con, raw: CityRaw) -> None:
     meta = s3rows[["population", "status_summe", "dynamik_summe"]].astype(float)
     d3 = an[an["indicator"] == "D3"].set_index(["area_code", "edition"])["change_pp"]
     wide = wide.join(meta).join(d3.rename("D3chg")).sort_index()
+    pp = raw.pre["hh_pop"]
+    assert np.allclose(  # noqa: S101 -- R-C3 phase-1 population = phase-2 population
+        wide["population"].reindex(pp.index).to_numpy(float), pp.to_numpy(float)
+    ), "HH population differs between phases"
     for e in EDITIONS:
         sub = wide.xs(e, level="edition").reindex(balanced)
         assert sub[list(HH_CORE)].notna().all().all(), f"HH {e}: missing S3/S4/S5 share"  # noqa: S101 -- R-C3
@@ -1045,6 +1147,13 @@ def child_status(raw: CityRaw, v: Variant) -> tuple[pd.DataFrame, dict]:
             # PR §8.2 (A4 rev. 1 scoped exemption): no weight or T* base post-dates the outcome.
             assert_weight_dates(wy, ref, v.sensitivity)
             assert_weight_dates(ry, ref, v.sensitivity)
+            assert_prereg_inputs(
+                "BER",
+                [
+                    (y, bool(bands.xs(y, level="reference_year")["interpolated"].any()))
+                    for y in (ry, wy)
+                ],
+            )
             f = RAG_F[ref]  # E6: f stays the edition's own value, also under W24
             br = bands.xs(ry, level="reference_year").reindex(raw.balanced)
             bw = bands.xs(wy, level="reference_year").reindex(raw.balanced)
@@ -1296,13 +1405,13 @@ class Grain:
 
 
 def _band_pop(raw: CityRaw, year: int) -> pd.Series:
-    bands = raw.status["bands"]
+    bands = raw.pre["bands"]
     assert_pop_source(bands)
     return bands.xs(year, level="reference_year")["P"]
 
 
 def _hh_pop(raw: CityRaw, edition: int) -> pd.Series:
-    return raw.status["wide"].xs(edition, level="edition")["population"]
+    return raw.pre["hh_pop"].xs(edition, level="edition")
 
 
 def city_blocks(raw: CityRaw, units: list[str]) -> pd.DataFrame:
@@ -1703,7 +1812,9 @@ EWR22_NOTE = (
     "Berlin 31.12.2022 weights and T* base linearly interpolated between 2020 and 2024 (PM "
     "decision M3; DC §4.3)"
 )
-COARSE_NOTE = "too few clusters for reliable coverage (PR §6.2); reported only to show how far the coarse-cluster answer differs"
+COARSE_NOTE = "too few clusters for reliable coverage (PR §6.2); reported only to show how far the coarse-cluster answer differs; cluster floor 5 (directional_inference default)"
+G16_NOTE = "G = 16 sensitivity (PR §6.2); cluster floor 5 (directional_inference default), not the P354 floor of 20"
+M3_NOTE = "M3 swaps the edition-2023 aggregation weights only; the age bands and P^(U)/P of each PLR stay at the interpolated 31.12.2022 values (geo readings ruling 5)"
 
 
 def _windows_of(hyp: str) -> tuple[tuple[int, int], ...]:
@@ -2838,9 +2949,11 @@ def make_row(
         "_band_years": set(),
     }
     if gkey == "bezirk" or gkey == "k16":
-        row["notes"].append(COARSE_NOTE if gkey == "bezirk" else "G = 16 sensitivity (PR §6.2)")
+        row["notes"].append(COARSE_NOTE if gkey == "bezirk" else G16_NOTE)
     if variant.key != "primary":
         row["notes"].append(f"sensitivity: {variant.label}")
+    if variant.key == "M3_2020":
+        row["notes"].append(M3_NOTE)
     ctx.rows.append(row)
     return row
 
@@ -2860,6 +2973,7 @@ def x8_row(
     min_blocks: int = MIN_BLOCKS,
     label_prefix: str = "",
     grain: str = "ber_bzr_2021;hh_stadtteil",
+    band_years: Iterable[int] = (),
 ) -> dict:
     """PR §6.3: Delta = theta_BER - theta_HH from independent block bootstraps."""
     boot = ctx.boot
@@ -2905,12 +3019,35 @@ def x8_row(
     row["holds"] = ""
     row["thesis_verdict"] = ""
     row["_kindx"] = "auc" if spec["estimator"] == "oof_auc_logit" else "rho"
+    row["_band_years"] = set(band_years)
+    # geo readings ruling 8: `n` / `n_clusters` are the sums; the per-city counts go in notes.
+    row["notes"].append(
+        f"n_BER={rb.get('n') or 0};n_HH={rh.get('n') or 0};"
+        f"clusters_BER={rb.get('n_clusters') or 0};clusters_HH={rh.get('n_clusters') or 0}"
+    )
     return row
 
 
 # ---------------------------------------------------------------------------
 # Scoring (P354 §5.4-§5.6 with Amendments 2-3; PR §6.3, §6.6, §7.5)
 # ---------------------------------------------------------------------------
+
+
+# A5.2: "X8 gives DIFFERS ... in the >= 5,000 panel" = BH over that panel's 8 X8 rows, NO DATA
+# rows not counted in m. A named sensitivity family, outside every confirmatory family.
+GE5000_FAMILY = "X8_ge5000"
+N1_NOT_TESTED = (
+    "could not be tested at this grain (fewer than 20 occupied blocks, PR §6.2 / P354 §5.3); "
+    "never 'not supported' (A5, domain O3)"
+)
+
+
+def assert_bh_inputs_sensitivity(rows: Sequence[dict], tag: str) -> None:
+    """A5.2: the named >= 5,000 family holds exactly that panel's X8 rows and nothing else."""
+    for r in rows:
+        assert r.get("_tags") == {tag} and r["role"] == "sensitivity", (  # noqa: S101 -- R-C3
+            f"row outside the {tag} X8 panel in the {GE5000_FAMILY} family: {r['hypothesis']}"
+        )
 
 
 def _verdict_matched(r: dict) -> tuple[str, list[str]]:
@@ -2920,7 +3057,7 @@ def _verdict_matched(r: dict) -> tuple[str, list[str]]:
     if r["city"] == "BER-HH":
         if est is None or r["ci_low"] is None or r["p_boot"] is None:
             return NO_DATA, []
-        p = r["p_bh"] if r["family"] == "X8" else r["p_boot"]
+        p = r["p_bh"] if r["family"] in ("X8", GE5000_FAMILY) else r["p_boot"]
         return (DIFFERS if p < ALPHA else NDD), []
     primary = r["family"] in ("T8", "N")
     if r["hypothesis"] in N_HYPOTHESES:
@@ -2952,6 +3089,14 @@ def score_matched(rows: list[dict]) -> dict:
     fams["X8"] = x8
     for fam in fams.values():
         assert_bh_inputs_primary(fam)
+    ge = [r for r in rows if r["family"] == GE5000_FAMILY]
+    if ge:
+        assert sorted(r["hypothesis"] for r in ge) == sorted(PRIMARY_ORDER), "ge5000 X8 != 8"  # noqa: S101
+        assert_bh_inputs_sensitivity(ge, "ge5000")
+        fams[GE5000_FAMILY] = ge
+    m_used = {}
+    for name, fam in fams.items():
+        m_used[name] = sum(r["p_boot"] is not None for r in fam)  # NO DATA rows not in m
         pb = bh_adjust([r["p_boot"] for r in fam])
         ph = holm_adjust([r["p_boot"] for r in fam])
         for r, a, b in zip(fam, pb, ph, strict=True):
@@ -2980,13 +3125,20 @@ def score_matched(rows: list[dict]) -> dict:
                 if (r["n_clusters"] or 0) < MIN_BLOCKS
                 else "not reported: NO DATA"
             )
+        if r["family"] == GE5000_FAMILY:
+            r["notes"].append(
+                f"verdict from BH over the 8 X8 rows of the >= 5,000 panel, m = "
+                f"{m_used[GE5000_FAMILY]} (NO DATA rows not counted), A5.2"
+            )
+        if r["family"] == "N" and v == NO_DATA:
+            r["notes"].append(N1_NOT_TESTED)
         if r["family"] in ("T8", "N", "X8") and r["p_bh"] is not None and r["p_bh"] < ALPHA:
             if r["p_holm"] is None or r["p_holm"] >= ALPHA:
                 r["notes"].append("significant at FDR 5%; not at family-wise 5%")
         if r["family"] == "T8":
             r["holds"], hn = S.holds_label(r, h2_delta[r["city"]])
             r["notes"].extend(hn)
-    return {"h2_delta_excludes_zero": h2_delta}
+    return {"h2_delta_excludes_zero": h2_delta, "bh_family_m": m_used}
 
 
 def _sign(r: dict | None) -> int | None:
@@ -2999,9 +3151,79 @@ def _sign(r: dict | None) -> int | None:
     return int(np.sign(v)) if np.isfinite(v) else None
 
 
+# A5.1: the verdict-defined flip flags, compared on the same unadjusted scale. There is no core-1U
+# variant (not triggered: HH S5 excludes AsylbLG, DC §3), so core1u_flip cannot fire.
+FLIP_SPECS = (
+    ("ge5000", "small_units_flip"),
+    ("core3m", "core3m_flip"),
+    ("core2", "core2_flip"),
+    ("W24", "w24_weight_sensitive"),
+    ("R19pub", "r19_revision_sensitive"),
+)
+
+
+def _computable(r: dict | None) -> bool:
+    return (
+        r is not None
+        and r["verdict"] != NO_DATA
+        and r["estimate"] not in (None, "")
+        and r["p_boot"] is not None
+    )
+
+
+def flip_check(r: dict, c: dict | None) -> tuple[bool, str]:
+    """A5.1: flag when (a) the sign changes (AUC rows: AUC - 0.5; X8 rows: Delta) or (b) the
+    unadjusted significance (block-bootstrap p < 0.05) differs. Both sides unadjusted. A sign
+    change between two unadjusted-non-significant estimates is 'sign unstable around zero'.
+    Never set when either side is NO DATA (review finding 3)."""
+    if c is None:
+        return False, ""
+    if not _computable(r):
+        return False, "primary not computable"
+    if not _computable(c):
+        why = "< 20 blocks" if (c["n_clusters"] or 0) < MIN_BLOCKS else "NO DATA"
+        return False, f"sensitivity not computable ({why})"
+    sr, sc = _sign(r), _sign(c)
+    gr_, gc = r["p_boot"] < ALPHA, c["p_boot"] < ALPHA
+    sign_change, sig_change = sr != sc, gr_ != gc
+    if not (sign_change or sig_change):
+        return False, ""
+    if sign_change and not gr_ and not gc:
+        label = "sign unstable around zero"
+    elif sign_change and sig_change:
+        label = "sign and unadjusted significance change"
+    elif sign_change:
+        label = "sign change"
+    else:
+        label = "unadjusted significance change"
+    return True, label
+
+
+def _is_not_comparable(r: dict | None) -> bool:
+    return r is not None and any(str(n).startswith("not comparable") for n in r["notes"])
+
+
+def _window_uses_2023(r: dict) -> bool:
+    """Row-level: does the row's status use edition 2023 (the interpolated 31.12.2022 weights)?"""
+    if not _uses_2023(r["hypothesis"]):
+        return False
+    m = re.fullmatch(r"(\d{4})-(\d{4})", str(r.get("window", "")))
+    return True if m is None else int(m.group(1)) <= 2023 <= int(m.group(2))
+
+
+def _below_chance(r: dict) -> list[str]:
+    auc = r["estimator"] == "diff_oof_auc_logit"
+    return [
+        c
+        for c, e in (("Berlin", r["estimate_ber"]), ("Hamburg", r["estimate_hh"]))
+        if auc and e is not None and e < 0.5
+    ]
+
+
 def apply_flags(rows: list[dict], meta: dict) -> None:
-    """PR §9.1 flags (+ A4 rev. 1 tokens) on the primary rows, the robust-DIFFERS rule (§6.3,
-    D1/D8/D10) and the D6 below-chance reading on X8, and the §3.6 divergence note."""
+    """PR §9.1 flags (+ A4 rev. 1 tokens) on the primary rows with the A5.1 flip definition, the
+    robust-DIFFERS rule (§6.3, D1/D8/D10 with A5.2) and the D6 below-chance reading on X8, and the
+    §3.6 divergence note."""
     idx = {}
     for r in rows:
         key = (r["_variant"], r["_kind"], r["_gkey"], r["city"], r["hypothesis"])
@@ -3010,6 +3232,9 @@ def apply_flags(rows: list[dict], meta: dict) -> None:
     def cp(variant: str, r: dict, kind: str | None = None) -> dict | None:
         return idx.get((variant, kind or r["_kind"], "k24", r["city"], r["hypothesis"]))
 
+    for r in rows:  # D6 first: the W2-only note reads it
+        if r["city"] == "BER-HH" and _below_chance(r):
+            r["flags"].add("amendment3_below_chance")
     prim = [
         r
         for r in rows
@@ -3017,22 +3242,27 @@ def apply_flags(rows: list[dict], meta: dict) -> None:
     ]
     for r in prim:
         hyp, city = r["hypothesis"], r["city"]
-        for var, flag in (
-            ("ge5000", "small_units_flip"),
-            ("core3m", "core3m_flip"),
-            ("core2", "core2_flip"),
-            ("W24", "w24_weight_sensitive"),
-        ):
+        for var, flag in FLIP_SPECS:
             c = cp(var, r)
-            if c is not None and c["verdict"] != r["verdict"]:
+            if c is None:
+                continue
+            if r["p_boot"] is not None:
+                c["notes"].append(f"primary_p_unadj={r['p_boot']:.6g}")
+            hit, label = flip_check(r, c)
+            if hit:
                 r["flags"].add(flag)
-        c = cp("R19pub", r)
-        if c is not None and (
-            c["verdict"] != r["verdict"] or (city == "BER-HH" and _sign(c) != _sign(r))
-        ):
-            r["flags"].add("r19_revision_sensitive")
+                r["notes"].append(
+                    f"{flag}: {label} (primary p_unadj {r['p_boot']:.4g}, sign {_sign(r):+d}; "
+                    f"{var} p_unadj {c['p_boot']:.4g}, sign {_sign(c):+d}; A5.1)"
+                )
+            elif label.startswith("sensitivity not computable"):
+                r["notes"].append(f"{flag} not evaluated: {label}")
         c = cp("fine", r)
-        if c is not None and _sign(c) is not None and _sign(r) is not None and _sign(c) != _sign(r):
+        if hyp in ("H1", "H2") and _is_not_comparable(c):
+            r["notes"].append("MAUP: not comparable (§6.5)")
+        elif (
+            c is not None and _sign(c) is not None and _sign(r) is not None and _sign(c) != _sign(r)
+        ):
             r["flags"].add("maup_flip")
         if city != "BER-HH" and hyp in ("H3a", "H3b", "H3c"):
             for kind, flag in (
@@ -3048,43 +3278,64 @@ def apply_flags(rows: list[dict], meta: dict) -> None:
                 ):
                     r["flags"].add(flag)
         if city == "BER-HH" and hyp in ("H2", "H3c"):
-            sig = {}
-            for s, e in WINDOWS:
-                c = idx.get(("primary", f"x8win:{s}-{e}", "k24", "BER-HH", hyp))
-                sig[(s, e)] = (
+            sig, rows_w = {}, {}
+            for s_, e_ in WINDOWS:
+                c = idx.get(("primary", f"x8win:{s_}-{e_}", "k24", "BER-HH", hyp))
+                rows_w[(s_, e_)] = c
+                sig[(s_, e_)] = (
                     c is not None
                     and c["ci_low"] is not None
                     and (c["ci_low"] > 0 or c["ci_high"] < 0)
                 )
             if sig.get((2021, 2023)) and not sig.get((2019, 2021)) and not sig.get((2023, 2025)):
                 r["flags"].add("w2_only")
-                r["notes"].append(
-                    "coincides with the Rechtskreiswechsel asymmetry (W2 only, PR §4.4)"
-                )
+                note = "coincides with the Rechtskreiswechsel asymmetry (W2 only, PR §4.4)"
+                w2 = rows_w[(2021, 2023)]
+                if w2 is not None and "amendment3_below_chance" in w2["flags"]:
+                    below = " and ".join(_below_chance(w2))
+                    note += (
+                        f", and in W2 {below} shows no transferable discrimination: it differs in "
+                        "transferable discrimination only (Amendment 3, D6)"
+                    )
+                r["notes"].append(note)
     # ewr_2022_interpolated on every Berlin / X8 row whose status used the 2022 interpolation.
     for r in rows:
         if r["city"] in ("BER", "BER-HH") and r.get("_band_years") and 2022 in r["_band_years"]:
-            if _uses_2023(r["hypothesis"]):
+            if _window_uses_2023(r):
                 r["flags"].add("ewr_2022_interpolated")
     # X8 reading rules (PR §6.3).
+    statement = {}
     for r in [x for x in rows if x["city"] == "BER-HH"]:
         auc = r["estimator"] == "diff_oof_auc_logit"
-        below = [
-            c
-            for c, e in (("Berlin", r["estimate_ber"]), ("Hamburg", r["estimate_hh"]))
-            if auc and e is not None and e < 0.5
-        ]
-        if below:
-            r["flags"].add("amendment3_below_chance")
+        below = _below_chance(r)
         if r["verdict"] == NDD and r["mdd"] is not None:
             thr = MDD_IMPRECISE["auc" if auc else "rho"]
             if r["mdd"] > thr:
                 r["notes"].append(
                     f"too imprecise to say the cities agree (MDD {r['mdd']:.3f} > {thr:.2f})"
                 )
-        if r["family"] != "X8" or r["verdict"] != DIFFERS:
+        if r["family"] != "X8":
+            continue
+        c5, c2, c3 = cp("ge5000", r), cp("core2", r), cp("core3m", r)
+        statement[r["hypothesis"]] = {
+            "x8_verdict": r["verdict"],
+            "ge5000_bh_verdict": None if c5 is None else c5["verdict"],
+            "core2_same_sign_ci_excl_0": None
+            if c2 is None
+            else bool(
+                c2["ci_low"] is not None
+                and _sign(c2) == _sign(r)
+                and (c2["ci_low"] > 0 or c2["ci_high"] < 0)
+            ),
+            "core3m_same_sign": None if c3 is None else bool(_sign(c3) == _sign(r)),
+            "below_chance": below,
+            "outcome": "not applicable (no DIFFERS)",
+        }
+        if r["verdict"] != DIFFERS:
             continue
         if below:
+            statement[r["hypothesis"]]["outcome"] = "not stated (D6)"
+
             r["flags"].add("not_stated_city_difference")
             r["notes"].append(
                 f"differs in transferable discrimination: {' and '.join(below)} shows none "
@@ -3094,7 +3345,7 @@ def apply_flags(rows: list[dict], meta: dict) -> None:
         fails = []
         c = cp("ge5000", r)
         if c is None or c["verdict"] != DIFFERS:
-            fails.append("not DIFFERS in the >= 5,000-resident panel")
+            fails.append("not DIFFERS after BH in the >= 5,000-resident panel (A5.2)")
         c = cp("core2", r)
         ok2 = (
             c is not None
@@ -3107,6 +3358,7 @@ def apply_flags(rows: list[dict], meta: dict) -> None:
         c = cp("core3m", r)
         if c is None or _sign(c) != _sign(r):
             fails.append("core-3M Delta not same-signed")
+        statement[r["hypothesis"]]["outcome"] = "not stated" if fails else "stated"
         if fails:
             r["flags"].add("not_stated_city_difference")
             r["notes"].append(
@@ -3121,6 +3373,7 @@ def apply_flags(rows: list[dict], meta: dict) -> None:
                 "states only that the within-city association differs at the harmonised construct "
                 "and matched grain"
             )
+    meta["statement_rule"] = statement
     # PR §3.6: thresholds failed -> every finding of that city carries the divergence note.
     for city, txt in meta.get("validity_divergence", {}).items():
         for r in rows:
@@ -3131,6 +3384,70 @@ def apply_flags(rows: list[dict], meta: dict) -> None:
 # ---------------------------------------------------------------------------
 # Orchestration
 # ---------------------------------------------------------------------------
+
+
+# Geo readings ruling 8: the `outcome` column carries the §9.1 tokens with these suffixes.
+OUTCOME_SUFFIXES = {
+    " > 0": "binary target of an AUC row (H1: K_2025 > 0; H2: dK_W > 0)",
+    "@P": "the change over the predictor window P (cross-lag rows)",
+    "@F": "the change over the following window F (cross-lag rows)",
+    "@W": "the change over the same window W (H3c rows)",
+    "_core3m / _core2": "status_construct of a construct sensitivity (§9.1)",
+}
+FAMILY_DOC = {
+    "T8": "per city, the 8 thesis primaries, BH (P354 §5.5)",
+    "N": "per city, N1 and N2, BH within the pair (PR §7.5); NO DATA rows not counted in m",
+    "X8": "the 8 city differences, BH (PR §6.3)",
+    GE5000_FAMILY: "sensitivity family: the 8 X8 rows of the >= 5,000-resident panel, BH with NO "
+    "DATA rows not counted in m; used only for the statement rule (A5.2); outside every "
+    "confirmatory family",
+    "none": "every other row: uncorrected (PR §0, §7.5)",
+}
+# A5-7 / geo readings ruling 9: what was run before the binding run, and the two later fixes.
+# The fix evidence compares the result CSVs of the pre-fix code (0fb5fb00, 8e2e9b4d) with 332a64f6
+# at B = 49 (point estimates and n do not depend on B), column by column over all 492 rows.
+DISCLOSURES = {
+    "debug_runs": [
+        {"date": "2026-11-05", "B": 29, "code": "uncommitted pre-0fb5fb00 working tree", "runs": 2},
+        {"date": "2026-11-05", "B": 99, "code": "uncommitted pre-0fb5fb00 working tree", "runs": 1},
+        {"date": "2026-11-05", "B": 49, "code": "332a64f6", "runs": 2},
+        {
+            "date": "2026-11-05",
+            "B": 1999,
+            "code": "0fb5fb00 (superseded, not committed)",
+            "runs": 1,
+        },
+    ],
+    "later_fixes": {
+        "8e2e9b4d": "Hamburg protection-zone cover read the EPSG:25832 zone WKB as is (was "
+        "transformed twice, giving zero cover); descriptive context only",
+        "332a64f6": "PR §6.5 'not comparable' note on H1/H2 where no commercial category "
+        "survives (fine grain); note text only",
+    },
+    "fix_evidence": {
+        "method": "result CSV of 0fb5fb00 and of 8e2e9b4d vs 332a64f6, all at B = 49, compared "
+        "column by column over all 492 rows",
+        "rows_differing": {
+            "estimate": 0,
+            "n": 0,
+            "ci_low": 0,
+            "ci_high": 0,
+            "p_boot": 0,
+            "verdict": 0,
+            "flags": 0,
+            "operationalisation": 0,
+            "notes": 10,
+        },
+        "notes_rows": "the 10 fine-grain H1/H2 rows (city and X8, incl. fine_W24) that gained the "
+        "§6.5 'not comparable' note in 332a64f6",
+        "sha256_16_of_estimate_and_n": {
+            "0fb5fb00": "964b2f7f828e97b3",
+            "8e2e9b4d": "964b2f7f828e97b3",
+            "332a64f6": "964b2f7f828e97b3",
+        },
+        "metadata": "8e2e9b4d changes only protection_share_2024 (Hamburg: 0 -> the zone cover)",
+    },
+}
 
 
 def prefit_features(grains: dict[str, Grain]) -> dict:
@@ -3187,8 +3504,11 @@ def run_matched(con, n_boot: int, sha: str, metadata_path: Path | None) -> tuple
         },
     }
     if metadata_path is not None:
-        # PR §6.2 / §8.4: block assignment and fixed feature lists written before any fit.
+        # PR §6.2 / §8.4: block assignment and fixed feature lists written before any outcome
+        # value is loaded and before any fit.
         write_matched_metadata(metadata_path, {"prefit": meta}, replace_all=True)
+    for c in CITIES:
+        load_status(con, raws[c])
     ctx = Ctx(n_boot=n_boot, sha=sha, boot=Bootstrapper(n_boot))
     designs: dict[tuple[str, str], dict] = {}
     builders: dict[tuple[str, str], Builder] = {}
@@ -3235,11 +3555,17 @@ def run_matched(con, n_boot: int, sha: str, metadata_path: Path | None) -> tuple
                 label_prefix="" if v.key == "primary" else f"[{v.key}] ",
                 grain=f"{(fine if v.grain == 'fine' else grains)['BER'].name};"
                 f"{(fine if v.grain == 'fine' else grains)['HH'].name}",
+                band_years=ber_years(_side_variant(v, "BER")),
             )
-            stb = statuses.get((_side_variant(v, "BER"), "BER"))
-            row["_band_years"] = set(stb.info.get("band_years", set())) if stb else set()
+            if v.key == "ge5000":
+                row["family"] = GE5000_FAMILY  # A5.2: BH within the >= 5,000 panel's X8
+
+    def ber_years(variant_key: str) -> set:
+        stb = statuses.get((variant_key, "BER"))
+        return set(stb.info.get("band_years", set())) if stb else set()
 
     run_variant(PRIMARY)
+    drop_sets: dict = {}
     # P354 §5.2 secondaries at the matched grain (primary run only).
     for c in CITIES:
         b = builders[("primary", c)]
@@ -3255,10 +3581,12 @@ def run_matched(con, n_boot: int, sha: str, metadata_path: Path | None) -> tuple
             ("diag:popgrowth", gr.popgrowth, "population growth 31.12.2018-31.12.2024"),
         ):
             drop = top_decile(series, gr.units)
+            drop_sets[f"{c}/{kind}"] = {"basis": label, "units": sorted(drop)}
             for hyp in ("H3a", "H3b", "H3c"):
                 spec, d = b.diagnostic(hyp, drop, label)
                 row = make_row(ctx, c, gr.name, spec, ctx.boot.infer(d), variant=PRIMARY, kind=kind)
                 row["notes"].append(f"dropped units: {', '.join(sorted(drop))}")
+                row["_band_years"] = set(statuses[("primary", c)].info["band_years"])
     # N1 / N2 / N3 city differences (PR §7.5: exploratory, uncorrected).
     for hyp in N_ORDER:
         sb = designs[("primary", "BER")][hyp]
@@ -3273,6 +3601,7 @@ def run_matched(con, n_boot: int, sha: str, metadata_path: Path | None) -> tuple
             kind="xN",
             role="exploratory",
             family="none",
+            band_years=ber_years("primary"),
         )
     # Per-window X8 for H2 / H3c (w2_only flag, PR §4.4).
     for hyp in ("H2", "H3c"):
@@ -3293,6 +3622,7 @@ def run_matched(con, n_boot: int, sha: str, metadata_path: Path | None) -> tuple
                 kind=f"x8win:{s}-{e}",
                 role="exploratory",
                 family="none",
+                band_years=ber_years("primary"),
             )
     # PR §6.2 inference sensitivities (G = 16 / 36, iid, Bezirk) on the primary designs.
     for gkey, _cu in INFERENCE_SENS:
@@ -3304,7 +3634,7 @@ def run_matched(con, n_boot: int, sha: str, metadata_path: Path | None) -> tuple
                     c,
                     grains[c].name,
                     spec,
-                    ctx.boot.infer(d, gkey, SEED, MIN_BLOCKS_SENS),
+                    ctx.boot.infer(d, gkey, SEED, INFERENCE_FLOOR[gkey]),
                     variant=PRIMARY,
                     kind="core",
                     gkey=gkey,
@@ -3326,8 +3656,9 @@ def run_matched(con, n_boot: int, sha: str, metadata_path: Path | None) -> tuple
                 role="sensitivity",
                 family="none",
                 gkey=gkey,
-                min_blocks=MIN_BLOCKS_SENS,
+                min_blocks=INFERENCE_FLOOR[gkey],
                 label_prefix=f"[{gkey}] ",
+                band_years=ber_years("primary"),
             )
     for v in VARIANTS:
         run_variant(v)
@@ -3335,6 +3666,30 @@ def run_matched(con, n_boot: int, sha: str, metadata_path: Path | None) -> tuple
     pgr_rows(ctx, raws["BER"], pgr, feats_m["common"])
     extra = checks_and_context(raws, grains, fine, statuses, builders, ctx)
     meta.update(extra)
+    meta["diagnostic_drop_sets"] = drop_sets  # geo readings ruling 6
+    meta["ge5000_population_dates"] = {  # geo readings ruling 6 / A4.1
+        "BER": "31.12.2024, int_berlin_ewr_age_bands_plr2021.residents_total, balanced child PLRs",
+        "HH": "edition 2025 Sozialmonitoring population (31.12.2024), balanced Gebiete",
+        "n_units_kept": {c: int((grains[c].pop24 >= MIN_UNIT_POP).sum()) for c in CITIES},
+    }
+    meta["dropped_berlin_plr"] = {  # A5-5 / geo readings ruling 7
+        "n_lor2021_plr": raws["BER"].pre["n_plr_lor2021"],
+        "n_balanced": len(raws["BER"].balanced),
+        "dropped": raws["BER"].pre["dropped_plr"],
+    }
+    meta["prereg_inputs"] = {
+        "later_edition_level_inputs": {
+            f"{k[0]} {k[1]} {k[2]} from {k[3]}": v for k, v in PERMITTED_LATER_INPUTS.items()
+        },
+        "interpolated_inputs": {
+            f"{k[0]} {k[1]} {k[2]}": v for k, v in PERMITTED_PREREG_INPUTS.items()
+        },
+        "note": "The M3 interpolation is a pre-registered input (PM decision M3); the geo-DS "
+        "confirms it in the results sign-off (review finding 8).",
+    }
+    meta["outcome_suffixes"] = OUTCOME_SUFFIXES
+    meta["families"] = FAMILY_DOC
+    meta["disclosures"] = DISCLOSURES
     sc = score_matched(ctx.rows)
     meta.update(sc)
     apply_flags(ctx.rows, meta)
@@ -3427,6 +3782,7 @@ def pgr_rows(ctx: Ctx, raw: CityRaw, gr: Grain, feats: dict) -> None:
             label_prefix="[PGR] ",
         )
         row["cluster_unit"] = "none"
+        row["_band_years"] = set(st.info.get("band_years", set()))
 
 
 # ---------------------------------------------------------------------------
@@ -3969,6 +4325,126 @@ def write_matched_metadata(path: Path, updates: dict, replace_all: bool = False)
 # ---------------------------------------------------------------------------
 
 
+A5_REFERENCE_COMMIT = "13d9f3ff"  # PR Amendment 5 (F2): the pre-A5 reference result CSV
+_REF_PATH = "docs/epic-e/matched-comparison-results.csv"
+
+
+def reference_records(commit: str = A5_REFERENCE_COMMIT) -> list[dict] | None:
+    """The result CSV as of the pre-A5 reference commit (read from git, read-only)."""
+    import subprocess
+
+    try:
+        txt = subprocess.run(  # noqa: S603 -- fixed git argv, no user input
+            ["git", "show", f"{commit}:{_REF_PATH}"],  # noqa: S607
+            cwd=REPO,
+            capture_output=True,
+            check=True,
+        ).stdout.decode("utf-8")
+    except (OSError, subprocess.CalledProcessError):
+        return None
+    return list(csv.DictReader(io.StringIO(txt)))
+
+
+def _statement_of(r: dict) -> str:
+    if r["family"] != "X8":
+        return ""
+    if "robust-DIFFERS rule met" in r["notes"]:
+        return "stated"
+    if "not stated as a city difference" in r["notes"]:
+        return "not stated"
+    return "not applicable (no DIFFERS)"
+
+
+_FLAG_CAUSE = {
+    "small_units_flip": "A5.1",
+    "core3m_flip": "A5.1",
+    "core2_flip": "A5.1",
+    "core1u_flip": "A5.1",
+    "w24_weight_sensitive": "A5.1",
+    "r19_revision_sensitive": "A5.1",
+    "maup_flip": "review 1 (§6.5 not comparable)",
+    "ewr_2022_interpolated": "review 4 (band-year bookkeeping)",
+    "not_stated_city_difference": "A5.2",
+}
+
+
+def a5_changes(records: list[dict], ref: list[dict] | None) -> dict:
+    """A5 (F2) / A5-8: every row whose flags, statement-rule outcome, family or verdict changed
+    against the reference CSV, before -> after, with the cause of each change."""
+    if ref is None:
+        return {"reference": A5_REFERENCE_COMMIT, "available": False, "rows": []}
+
+    def key(r: dict) -> tuple:
+        return (
+            r["city"],
+            r["operationalisation"],
+            r["grain"],
+            r["cluster_unit"],
+            r["window"],
+            r["pivots"],
+        )
+
+    refm = {key(r): r for r in ref}
+    out = []
+    for r in records:
+        o = refm.get(key(r))
+        if o is None:
+            out.append(
+                {
+                    "city": r["city"],
+                    "hypothesis": r["hypothesis"],
+                    "row": r["operationalisation"][:90],
+                    "change": "row not in the reference",
+                }
+            )
+            continue
+        fb = {f for f in o["flags"].split(";") if f}
+        fa = {f for f in r["flags"].split(";") if f}
+        ch = {}
+        if fb != fa:
+            ch["flags"] = {
+                "removed": sorted(fb - fa),
+                "added": sorted(fa - fb),
+                "cause": sorted({_FLAG_CAUSE.get(f, "other") for f in fb ^ fa}),
+            }
+        if _statement_of(o) != _statement_of(r):
+            ch["statement_rule"] = {
+                "before": _statement_of(o),
+                "after": _statement_of(r),
+                "cause": "A5.2",
+            }
+        if o["family"] != r["family"] or o["verdict"] != r["verdict"]:
+            if r["family"] == GE5000_FAMILY:
+                cause = "A5.2"
+            elif r["cluster_unit"] in ("spatial_block_k36", "iid"):
+                cause = "review 5 (floor 20)"
+            else:
+                cause = "other"
+            ch["verdict"] = {
+                "family": [o["family"], r["family"]],
+                "before": o["verdict"],
+                "after": r["verdict"],
+                "cause": cause,
+            }
+        if ch:
+            out.append(
+                {
+                    "city": r["city"],
+                    "hypothesis": r["hypothesis"],
+                    "row": r["operationalisation"][:90],
+                    "cluster_unit": r["cluster_unit"],
+                    **ch,
+                }
+            )
+    gone = [k for k in refm if k not in {key(r) for r in records}]
+    return {
+        "reference": A5_REFERENCE_COMMIT,
+        "available": True,
+        "rows": out,
+        "reference_rows_missing": len(gone),
+    }
+
+
 def main_matched(
     db: Path,
     n_boot: int,
@@ -3997,6 +4473,7 @@ def main_matched(
             )
     run_meta = {k: v for k, v in meta.items() if k not in ("feature_lists_prefit", "blocks")}
     run_meta["run"] = {"run_sha": sha, "n_boot": n_boot, "seed": SEED, "seed_x8_hh": SEED_X8["HH"]}
+    run_meta["a5_changes"] = a5_changes(records, reference_records())
     meta_all = write_matched_metadata(metadata_json, {"run": run_meta})
     print(f"[suite] wrote {results_csv} ({len(records)} rows) and {metadata_json}")
     if findings is not None:
@@ -4031,7 +4508,8 @@ POWER_TEXT = (
 )
 ROBUST_TEXT = (
     "**Robust-DIFFERS rule (§6.3, D1, D8, D10; binding).** A city difference may be **stated** "
-    "only if X8 gives DIFFERS under the primary **core-3H** **and** in the ≥ 5,000-resident panel, "
+    "only if X8 gives DIFFERS under the primary **core-3H** **and** in the ≥ 5,000-resident panel "
+    "(BH over that panel's 8 X8 rows, NO DATA rows not counted in m; Amendment 5, A5.2), "
     "**and** under the T-free construct (core-2, because Hamburg S5 excludes AsylbLG; data checks "
     "§3) Δ has the same sign **and** its unadjusted 95% block-bootstrap CI excludes 0 (sensitivity "
     "criterion, no BH); **and** its Δ has the same sign under core-3M (sign only). A DIFFERS that "
@@ -4127,42 +4605,48 @@ IMPLEMENTATION_READINGS = [
     "**Code placement.** The matched panel lives in `analysis/thesis_matched_panel.py` and runs "
     "through the suite's CLI (`analysis/thesis_hypothesis_suite.py --panel matched`, §9.3). The "
     "existing `BER/*` and `HH/*` code paths and outputs are untouched.",
-    "**Sensitivity verdicts are uncorrected** (§0 Families; P354 §5.4): per-city sensitivity rows "
-    "use the unadjusted 95% CI; X8 sensitivity rows read DIFFERS at unadjusted p < 0.05. The "
-    "robust-DIFFERS condition 'DIFFERS in the ≥ 5,000-resident panel' is evaluated with that "
-    "standard.",
-    "**Flip flags compare the verdict columns as written** (`small_units_flip`, `core3m_flip`, "
-    "`core2_flip`, `w24_weight_sensitive`, `r19_revision_sensitive`): the primary's verdict "
-    "(BH-adjusted) against the sensitivity row's verdict (uncorrected). A primary that is NOT "
-    "SIGNIFICANT only after BH can therefore carry a flip flag. Sign flags (`maup_flip`, "
-    "`mapping_driven`, `popgrowth_driven`, and the X8 sign part of `r19_revision_sensitive`) "
-    "compare the sign of θ − θ0 (Δ for X8).",
-    "**Coarse-cluster sensitivities** (G = 16, Bezirk 12 / 7) use the directional_inference "
-    "default floor of 5 clusters, because §6.2 requires them to be reported; every confirmatory "
-    "row keeps the P354 20-cluster floor.",
-    "**R19-pub** is the as-published 2019 level with pp changes (A4.4's original construction); "
-    "the §4.3 z-change fallback is not applied to it.",
-    "**M3 '2020 only'** swaps the Berlin edition-2023 aggregation weights only; the T\\* base of "
-    "each PLR stays the 2022 interpolation. W24 swaps both (A4.1, E6).",
-    "**Mapping and population-growth diagnostics** (§5, R5/E7): the units in the top decile of "
-    "OSM total-POI growth 2019–2025 (DHS growth) or of population growth 31.12.2018–31.12.2024 are "
-    "dropped from the H3a/H3b/H3c primary rows; the outcome is not re-standardised. Berlin growth "
-    "uses Bezirksregion totals over all child PLRs (E7); Hamburg uses the balanced Gebiete.",
+    "**Load order (§8.4).** Phase 1 loads geometry, POIs, populations and presence only; the "
+    "balanced sets, units, blocks and common feature lists are fixed and written to the metadata "
+    "before any outcome value (MSS indicators, annex shares) is loaded in phase 2, which asserts "
+    "the same balanced sets.",
+    "**Sensitivity verdicts are uncorrected** (§0, §7.5; P354 §5.4; ruling 2): per-city "
+    "sensitivity rows use the unadjusted 95% CI, X8 sensitivity rows unadjusted p < 0.05. The one "
+    "exception is the ≥ 5,000 X8 panel, scored by BH within its 8 rows (family `X8_ge5000`, A5.2), "
+    "used only for the statement rule.",
+    "**Flip flags follow A5.1** (ruling 3): sign or unadjusted significance, both sides "
+    "unadjusted; never set when either side is NO DATA (the row then notes 'not evaluated'); the "
+    "compared sensitivity rows carry `primary_p_unadj` in `notes`.",
+    "**Cluster floors** (ruling 4): G = 16 and Bezirk (12 / 7) use the directional_inference "
+    "default of 5 and say so on every row; G = 36 and iid keep the P354 floor of 20.",
+    "**R19-pub** is the as-published 2019 level with pp changes; the general §4.3 z-change view is "
+    "the separate z-change sensitivity (ruling 5).",
+    "**M3 '2020 only'** swaps the Berlin edition-2023 aggregation weights only; the age bands and "
+    "P^(U)/P stay at the interpolated 31.12.2022 values (noted on every M3 row). W24 swaps both "
+    "(A4.1, E6). The interpolation itself is a pre-registered input (M3) listed in the §8.2 guard.",
+    "**Mapping and population-growth diagnostics** (§5, R5/E7, ruling 6): the units in the top "
+    "decile of OSM total-POI growth 2019–2025 (DHS growth) or of population growth "
+    "31.12.2018–31.12.2024 are dropped from the H3a/H3b/H3c primary rows; the outcome is not "
+    "re-standardised. The dropped IDs are in the metadata. Berlin growth uses Bezirksregion totals "
+    "over all child PLRs (E7); Hamburg uses the balanced Gebiete.",
     "**N1** uses the city's median of K at each pivot edition; the R2 centrality split uses "
     "31.12.2024 populations (A4.1). **N3** computes the spatial lag over all matched units, also "
-    "inside the ≥ 5,000 run.",
-    "**≥ 5,000 threshold** on the population of the unit's balanced children at 31.12.2024 "
-    "(Berlin, A4.1) / edition 2025 (Hamburg).",
+    "inside the ≥ 5,000 run (ruling 6).",
+    "**≥ 5,000 threshold** on the population of the unit's balanced children: Berlin 31.12.2024 "
+    "(A4.1), Hamburg edition 2025 (ruling 6; dates in the metadata).",
     "**Feature lists.** The common lists (A1.1 rule per city, then the intersection) are computed "
     "once on the matched units and reused by every matched-grain sensitivity; the fine grain has its "
-    "own common lists. Both were written to the metadata before any fit.",
-    "**P354 §4.4 Hamburg low-power rule not applied.** It belonged to the class-based Hamburg H2 "
-    "(4–10% positives); §3.5 replaces that operationalisation with dK > 0 in both cities.",
-    "**Carried-over secondaries.** D4 rows are dropped (§8.1 allow-list: OA, g(c), Δr, Wg(c), K, dK "
-    "only), published-class rows are not defined at the matched grain, and the POI-derived P354 "
-    "§5.2 variants (domain/commercial OA, base indicators, per-1k stock, OA basket, total-share and "
-    "café growth) are kept. Per-1k rows use the population of all children (all PLRs at "
-    "31.12.2024; Hamburg Gebiete scored in 2025).",
+    "own common lists. Where no commercial category survives (the fine grain), H1/H2 read 'not "
+    "comparable' (§6.5) and `maup_flip` is not evaluated for them.",
+    "**P354 §4.4 Hamburg low-power rule not applied** (ruling 6): it belonged to the class-based "
+    "Hamburg H2 (4–10% positives); §3.5 replaces that operationalisation with dK > 0.",
+    "**Carried-over secondaries.** D4 rows are dropped (§8.1 allow-list), published-class rows are "
+    "not defined at the matched grain, and the POI-derived P354 §5.2 variants are kept. Per-1k rows "
+    "use the population of all children (all PLRs at 31.12.2024; Hamburg Gebiete scored in 2025).",
+    "**Berlin PLRs** (ruling 7): 535 balanced of the lor_2021 PLRs; every dropped PLR is listed with "
+    "its reason in the metadata (`dropped_berlin_plr`).",
+    "**X8 bookkeeping** (ruling 8): `n` / `n_clusters` are the sums of both cities; the per-city "
+    "values are in `notes` (`n_BER`, `n_HH`, `clusters_BER`, `clusters_HH`); the outcome suffixes "
+    "are documented in the metadata (`outcome_suffixes`).",
     "**Moran's I residuals** are the rank-regression residuals of the outcome on the predictor and "
     "the controls (the linear model behind the partial Spearman), per pivot (H3a/H3b) or window "
     "(H3c).",
@@ -4170,10 +4654,10 @@ IMPLEMENTATION_READINGS = [
     "areas designated by 2024, overlap fraction × 31.12.2024 population. Hamburg: soziale "
     "Erhaltungsverordnungen in force by 31.12.2024, area cover of each Gebiet × edition-2025 "
     "population.",
-    "**Regelaltersgrenze f** uses the exact fractions 7/24, 9/24, 11/24, 12/24 (§3.7 prints them "
-    "rounded to 0.292 / 0.375 / 0.458 / 0.500).",
-    "**Debug runs.** Low-B smoke runs (B = 29 and B = 99) were executed while debugging the code, "
-    "before the B = 1999 run that produced this file. No design choice was changed after them.",
+    "**Regelaltersgrenze f** uses the exact fractions 7/24, 9/24, 11/24, 12/24 (ruling 6).",
+    "**Debug runs and later fixes** (ruling 9): the low-B runs (B = 29, 49, 99) and the two later "
+    "fixes (8e2e9b4d, 332a64f6) are disclosed in the metadata (`disclosures`), with the evidence "
+    "that neither fix changed an estimate, n, CI, p, verdict or flag.",
 ]
 
 
@@ -4185,6 +4669,11 @@ def _cell371(r: dict | None, holds_word: str = "") -> str:
     if r is None:
         return "–"
     if r["verdict"] == NO_DATA:
+        if r["family"] == "N":
+            return (
+                f"NO DATA: could not be tested at this grain (n = {r['n'] or 0}, "
+                f"{r['n_clusters'] or 0} of {G_PRIMARY} blocks < 20)"
+            )
         return f"NO DATA (n = {r['n'] or 0}, {r['n_clusters'] or 0} blocks)"
     name = "AUC" if r["estimator"] == "oof_auc_logit" else "ρ"
     s = (
@@ -4319,6 +4808,27 @@ def write_matched_findings(path: Path, records: list[dict], meta: dict) -> None:
             f"| {h} | {N_HYPOTHESES[h]['wording']} | {_cell371(prim.get(('BER', h)))} | "
             f"{_cell371(prim.get(('HH', h)))} | {_xcell(prim.get(('BER-HH', h)))} |"
         )
+    a("")
+    mm = meta.get("run", {}).get("bh_family_m", {})
+    for c in CITIES:
+        nd = [h for h in ("N1", "N2") if prim.get((c, h), {}).get("verdict") == NO_DATA]
+        a(
+            f"- {CITY[c].label} N-family: BH runs with m = {mm.get(f'N/{c}', '–')}"
+            + (
+                f" ({', '.join(nd)} is NO DATA and not a test, so it does not count toward m; "
+                "A5, geo readings ruling 1)."
+                if nd
+                else "."
+            )
+        )
+        for h in nd:
+            a(
+                f"- {CITY[c].label} {h} **could not be tested at this grain**: the units above the "
+                "median occupy fewer than 20 of the 24 blocks (PR §6.2 / P354 §5.3 floor). It is "
+                "never read as 'not supported' (A5, domain O3). Its inference-sensitivity rows "
+                "(G = 16, G = 36, iid, Bezirk) are in §5 under those headings and in the CSV with "
+                "`cluster_unit` `spatial_block_k16`, `spatial_block_k36`, `iid` and `bezirk`."
+            )
     a("")
     a(
         "**Notes on the primary rows** (verbatim from the CSV `notes` column, binding texts omitted):"
@@ -4522,6 +5032,42 @@ def write_matched_findings(path: Path, records: list[dict], meta: dict) -> None:
         else:
             a(f"- {CITY[c].label}: no block-mean Moran's I is significant at 5%.")
     a("")
+    a(
+        "G = 16 against G = 24 for the confirmatory rows (§6.2: G = 16 is promoted into the text; "
+        "verdicts come from G = 24). The point estimate is identical; only the resampling unit "
+        "changes. Compared on the same unadjusted scale (A5.1): rows where the unadjusted "
+        "significance (p < 0.05) differs."
+    )
+    a("")
+    g24 = {
+        (r["city"], r["operationalisation"]): r for r in records if r["family"] in ("T8", "N", "X8")
+    }
+    diffs = []
+    for r in records:
+        if r["cluster_unit"] != "spatial_block_k16":
+            continue
+        base = g24.get((r["city"], re.sub(r"^\[k16\] ", "", r["operationalisation"])))
+        if base is None:
+            continue
+
+        def sig(x: dict) -> str:
+            if x["p_boot"] in ("", None):
+                return "NO DATA"
+            return "p < 0.05" if float(x["p_boot"]) < ALPHA else "n.s."
+
+        if sig(r) != sig(base):
+            diffs.append(
+                f"| {r['city']} | {r['hypothesis']} | {base['verdict']} (p_unadj {_rf(base['p_boot'], 4)}) | "
+                f"{r['verdict']} (p {_rf(r['p_boot'], 4)}) |"
+            )
+    if diffs:
+        a("| City | Hyp | G = 24 verdict (BH) | G = 16 verdict (unadjusted) |")
+        a("|---|---|---|---|")
+        for d in diffs:
+            a(d)
+    else:
+        a("No confirmatory row changes unadjusted significance under G = 16.")
+    a("")
     a("## 6. Context (no verdict)")
     a("")
     a(
@@ -4668,9 +5214,55 @@ def write_matched_findings(path: Path, records: list[dict], meta: dict) -> None:
     a("### 7.8 Deviations and implementation readings")
     a("")
     a(
-        "No numbered deviation from the pre-registration was needed. Where the text left an "
-        "operational detail open, the implementation reads it as follows (for geo-DS/domain "
-        "ratification):"
+        "**Amendment 5 (post-results-generation, pre-interpretation; binding).** It was written after "
+        f"the first binding run (reference result CSV at commit {A5_REFERENCE_COMMIT}) existed. "
+        "A5.1 redefines the six verdict-defined flip flags: a sign change (AUC rows: AUC − 0.5; X8: "
+        "Δ) or a difference in unadjusted significance, both sides unadjusted; a sign change between "
+        'two non-significant estimates is labelled "sign unstable around zero"; `maup_flip`, '
+        "`mapping_driven` and `popgrowth_driven` stay sign-only. A5.2 reads the ≥ 5,000 condition of "
+        "the statement rule as BH over that panel's 8 X8 rows (NO DATA not in m). Disclosure (A5 F2): "
+        "A5.1 removes flags from the row that triggered reading 3 (Berlin H2, `small_units_flip` / "
+        "`core2_flip`). Rows whose flags, statement-rule outcome, family or verdict changed against the "
+        "reference, before → after, generated from the two CSVs:"
+    )
+    a("")
+    ac = meta.get("run", {}).get("a5_changes", {})
+    if not ac.get("available"):
+        a(f"- Reference CSV {A5_REFERENCE_COMMIT} not readable from git; no list generated.")
+    else:
+        a("| City | Hyp | Row | Flags removed | Flags added | Other change | Cause |")
+        a("|---|---|---|---|---|---|---|")
+        for ch in ac.get("rows", []):
+            fl = ch.get("flags", {})
+            other = []
+            causes = list(fl.get("cause", []))
+            if "statement_rule" in ch:
+                st = ch["statement_rule"]
+                other.append(f"statement rule {st['before']} → {st['after']}")
+                causes.append(st["cause"])
+            if "verdict" in ch:
+                vv = ch["verdict"]
+                other.append(f"{vv['family'][0]}/{vv['before']} → {vv['family'][1]}/{vv['after']}")
+                causes.append(vv["cause"])
+            if "change" in ch:
+                other.append(ch["change"])
+            op = ch["row"] if len(ch["row"]) <= 70 else ch["row"][:67] + "..."
+            a(
+                f"| {ch['city']} | {ch['hypothesis']} | {op} | {', '.join(fl.get('removed', [])) or '–'} | "
+                f"{', '.join(fl.get('added', [])) or '–'} | {'; '.join(other) or '–'} | "
+                f"{', '.join(sorted(set(causes))) or '–'} |"
+            )
+        a("")
+        a(
+            f"{len(ac.get('rows', []))} rows changed; reference rows without a counterpart: "
+            f"{ac.get('reference_rows_missing', 0)}. Review-finding causes (1: MAUP not comparable; "
+            "4: `ewr_2022_interpolated` bookkeeping; 5: cluster floor 20 for G = 36 and iid) are "
+            "code-review corrections, listed for completeness."
+        )
+    a("")
+    a(
+        "Implementation readings (ruled on in `docs/epic-e/371-implementation-readings-geo.md`, "
+        "binding):"
     )
     a("")
     for t in IMPLEMENTATION_READINGS:
