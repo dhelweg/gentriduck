@@ -41,6 +41,12 @@ Usage:
   uv run python analysis/thesis_hypothesis_suite.py --city BER            # both BER panels
   uv run python analysis/thesis_hypothesis_suite.py --city BER --panel modern
   uv run python analysis/thesis_hypothesis_suite.py --city HH             # both HH panels (#355)
+  uv run python analysis/thesis_hypothesis_suite.py --panel matched       # #371 E1c, city-less
+
+The matched Berlin-Hamburg panel (#371, docs/methodology/371-matched-comparison-preregistration.md)
+lives in analysis/thesis_matched_panel.py and writes its own files
+(docs/epic-e/matched-comparison-results.csv / -metadata.json / E1c-matched-comparison-findings.md);
+it never touches this script's BER/HH outputs (maintainer call M1).
 
 Outputs (§7): docs/epic-e/thesis-hypothesis-suite-results.csv (one CSV for all panels; a run
 replaces only its own panels' rows), docs/epic-e/thesis-hypothesis-suite-metadata.json
@@ -4886,12 +4892,16 @@ def run_panel(
 
 def main(argv: Sequence[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
-    ap.add_argument("--city", required=True, choices=["BER", "HH"])
-    ap.add_argument("--panel", nargs="*", choices=["modern", "thesis-era", "full"], default=None)
+    # #371 (E1c): `--panel matched` is city-less (it runs both cities and X8) and writes its own
+    # files (pre-registration §9.3, maintainer call M1); the BER/HH panels are unchanged.
+    ap.add_argument("--city", required=False, choices=["BER", "HH"], default=None)
+    ap.add_argument(
+        "--panel", nargs="*", choices=["modern", "thesis-era", "full", "matched"], default=None
+    )
     ap.add_argument("--n-boot", type=int, default=N_BOOT)
     ap.add_argument("--db", type=Path, default=DUCKDB_PATH)
-    ap.add_argument("--results-csv", type=Path, default=RESULTS_CSV)
-    ap.add_argument("--metadata-json", type=Path, default=METADATA_JSON)
+    ap.add_argument("--results-csv", type=Path, default=None)
+    ap.add_argument("--metadata-json", type=Path, default=None)
     ap.add_argument(
         "--findings",
         type=Path,
@@ -4902,6 +4912,27 @@ def main(argv: Sequence[str] | None = None) -> int:
     args = ap.parse_args(argv)
     if hasattr(sys.stdout, "reconfigure"):
         sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+    if args.panel and "matched" in args.panel:
+        if args.city is not None or len(args.panel) > 1:
+            ap.error("--panel matched is city-less and runs on its own (pre-registration §9.3)")
+        from thesis_matched_panel import (
+            MATCHED_FINDINGS,
+            MATCHED_METADATA_JSON,
+            MATCHED_RESULTS_CSV,
+            main_matched,
+        )
+
+        return main_matched(
+            args.db,
+            args.n_boot,
+            args.results_csv or MATCHED_RESULTS_CSV,
+            args.metadata_json or MATCHED_METADATA_JSON,
+            None if args.no_findings else (args.findings or MATCHED_FINDINGS),
+        )
+    if args.city is None:
+        ap.error("--city is required for the BER/HH panels")
+    args.results_csv = args.results_csv or RESULTS_CSV
+    args.metadata_json = args.metadata_json or METADATA_JSON
     panels = args.panel or (["modern", "thesis-era"] if args.city == "BER" else ["full", "modern"])
     for pk in panels:
         if (args.city, pk) not in PANELS:

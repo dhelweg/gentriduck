@@ -166,6 +166,12 @@ analysis = { sequence = [
     # the Hamburg findings' cross-city label table reads the BER rows already in the CSV.
     "python analysis/thesis_hypothesis_suite.py --city BER",
     "python analysis/thesis_hypothesis_suite.py --city HH",
+    # #371 (E1c): matched Berlin-Hamburg panel (pre-registration
+    # docs/methodology/371-matched-comparison-preregistration.md). City-less; writes its own
+    # docs/epic-e/matched-comparison-results.csv / -metadata.json and the generated
+    # docs/epic-e/E1c-matched-comparison-findings.md (maintainer call M1); it never rewrites the
+    # outputs of the two runs above. Deterministic (seed 42, Hamburg X8 stream 43, B = 1999).
+    "python analysis/thesis_hypothesis_suite.py --panel matched",
 ], default_item_type = "cmd" }
 # B2: back-test harness — validates live index against MSS classes and known hotspot/coldspot PLRs.
 # Run after `poe build`. Results written to docs/methodology/backtest.md.
