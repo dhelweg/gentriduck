@@ -1203,3 +1203,10 @@ rulings are in `docs/epic-e/371-implementation-readings-geo.md`.
   with every row whose flags or statement-rule outcome changed under A5 (before → after).
   Disclosure: A5.1 removes flags from the row that triggered reading 3 (BER H2,
   `small_units_flip`/`core2_flip`).
+- **Correction note (2026-11-05, A5 unchanged).** The reading-3 trigger description ("BER H2
+  primary not significant only after BH, sensitivities significant unadjusted") came from a
+  **B = 29 debug run**, not the binding B = 1999 run. In the binding run, A5.1 as written does
+  **not** remove the BER H2 `small_units_flip`/`core2_flip` flags; both remain. The sentence above,
+  "A5.1 removes flags from the row that triggered reading 3", is withdrawn. The rule in A5.1 is
+  unchanged and no method changed. The findings (§7.8) generate the A5 before → after disclosure
+  from the result rows. The geo-DS did not open the outputs for this note.

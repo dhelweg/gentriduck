@@ -1,7 +1,7 @@
 # #371 matched panel: geo-DS rulings on the DE's implementation readings
 
 - **Date:** 2026-11-05. Post-results-generation, **pre-interpretation**. No output file was opened to make these
-  rulings. Reading 3 was raised by the DE from an observed row pattern (BER H2; see Amendment 5),
+  rulings. Reading 3 was raised by the DE from an observed row pattern (BER H2, as seen in a B = 29 debug run; see Amendment 5 correction note),
   and the PM had seen a verdict summary; the geo-DS saw only the DE's description of that pattern.
 - **This is not the results sign-off.**
 - **PR** = `docs/methodology/371-matched-comparison-preregistration.md`. Changes that need PR text
@@ -41,8 +41,9 @@
 - Recompute every flip flag per A5.1: (a) the sign changes, or (b) unadjusted p < 0.05 differs
   between primary and sensitivity.
 - A primary that is n.s. only because of BH, and whose sensitivity is also unadjusted-significant
-  with the same sign, gets **no** flag. That covers the BER H2 `small_units_flip`/`core2_flip` case,
-  if this description fits it.
+  with the same sign, gets **no** flag. Correction (2026-11-05): the BER H2 description that prompted this came from a B = 29 debug
+  run. In the binding run, both BER H2 flags remain under A5.1 as written (Amendment 5 correction
+  note). The rule is unchanged.
 - Add a `primary_p_unadj` column, or put it in `notes`, so the comparison can be reproduced.
 
 **4. Coarse-cluster sensitivities**
