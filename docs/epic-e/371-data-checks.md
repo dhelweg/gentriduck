@@ -168,119 +168,16 @@ All five are also dbt tests (severity error) and pass in `uv run poe build`.
    SD rows of edition 2022 makes the test fail (4 rows: S3 and S4 in 2022 and 2025, median
    |Δ| 4.2–4.8 pp), while the z-moment test still passes.
    **S3 2022/2023 outliers:** correlation between D3 and the S3 level change is only 0.913 / 0.951
-   (medians 0.05 / 0.04 pp). A minority of Gebiete disagree, because the publisher revised the
-   earlier S3 base (item 7). It has no effect on the design,
-   which uses levels (PR §3.5), not published Dynamik.
+   (medians 0.05 / 0.04 pp). A minority of Gebiete disagree, because the publisher re-based the
+   2019/2020 S3 values after widening the AsylbLG count from edition 2021 (§3.1). **This does
+   affect the design.** Under pre-registration Amendment 4 revision 1 (E1), the primary Hamburg S3
+   level for edition 2019 is the publisher-revised s3_2019_rev = s3_2022 − D3_2022 (R19). The
+   as-published 2019 level is the sensitivity R19-pub. Evidence, the Gebiete list and level
+   quantiles are in §3.1.
 
    The z-moment test (check 1) cannot catch a misread column or a swapped mean/SD row, because any
    z column is standardised. Those are caught by the share range (check 2), the D-vs-S test, and
    the ingest's code-row and label checks (check 4).
-
-7. **S3 base revised by the publisher (evidence for pre-registration Amendment 4 §A4.4).**
-   Δ = D3_E − (s3_E − s3_E−3), where D3_E is the published 3-year change and s3 the recovered level
-   share of the same Gebiet in editions E and E−3. A negative Δ means the publisher's D3 starts
-   from a **higher** E−3 level than the one published in edition E−3: the earlier S3 base was
-   revised upward.
-
-   | Edition E | Gebiete matched | median \|Δ\| (pp) | \|Δ\| > 0.5 pp | of those: upward / downward | Pearson ρ(D3, s3 change) | Spearman ρ |
-   |---|---:|---:|---:|---|---:|---:|
-   | 2019 | 845 | 0.042 | **0** | 0 / 0 | 1.000 | 0.999 |
-   | 2020 | 842 | 0.039 | **59** | 0 / 59 | 0.922 | 0.980 |
-   | 2021 | 845 | 0.045 | **0** | 0 / 0 | 1.000 | 0.999 |
-   | 2022 | 850 | 0.047 | **52** | 51 / 1 | 0.913 | 0.981 |
-   | 2023 | 849 | 0.040 | **44** | 44 / 0 | 0.951 | 0.986 |
-   | 2024 | 852 | 0.047 | **0** | 0 / 0 | 1.000 | 0.999 |
-   | 2025 | 852 | 0.033 | **0** | 0 / 0 | 1.000 | 0.999 |
-
-   - **2020:** the AsylbLG seam. S3 adds AsylbLG from edition 2019, and the D3 of 2020 runs from
-     the edition-2017 base. All 59 have Δ > 0, the opposite sign to 2022/2023. Already excluded from
-     `test_371_hh_annex_d_vs_s_consistency`.
-   - **2022 and 2023:** 52 and 44 Gebiete. All revisions are upward, except one in 2022 (56004,
-     Δ = +1.51 pp). These are exactly the two editions whose D3 window starts in edition
-     2019 or 2020 and ends after edition 2021. The 2021 D3 (2018 → 2021) and the D3 from 2024 on show
-     no revision.
-   - **Definition note, Sozialmonitoring Bericht 2021 (PDF p. 8):** "Ab diesem Berichtsjahr werden
-     Empfänger/innen von Regelleistungen und ausschließlich besonderen Leistungen gemeinsam
-     erfasst. Hiermit erweitert sich der betrachtete Personenkreis, da bis zum vergangenen
-     Berichtsjahr nur Empfänger/innen von Regelleistungen erfasst wurden …" So from edition 2021
-     on, AsylbLG recipients of "ausschließlich besondere Leistungen" are counted. The pattern
-     (upward revisions only, only in the 2022 and 2023 windows, none from 2024 on) fits the publisher having recomputed the 2019/2020 base on the widened definition for D3. That
-     is an inference from the data, not a publisher statement.
-   - The 58 Gebiete with |Δ| > 0.5 pp in 2022 or 2023, labelled **"S3 base revised by the
-     publisher"**:
-     - published s3_2019 is the edition-2019 annex value;
-     - revised s3_2019_rev = s3_2022 − D3_2022;
-     - W1 is editions 2019 → 2021 (published: s3_2021 − s3_2019; revised: s3_2021 − s3_2019_rev);
-     - W2 is s3_2023 − s3_2021;
-     - all values in %, or pp for changes.
-
-   | Gebiet | Δ 2022 | Δ 2023 | s3_2019 published | s3_2019_rev | W1 published | W1 revised | W2 |
-   |---|---:|---:|---:|---:|---:|---:|---:|
-   | 2002 | -3.14 | -3.42 | 29.45 | 32.59 | -3.09 | -6.23 | -18.67 |
-   | 6004 | -13.96 | -15.68 | 54.08 | 68.04 | +21.62 | +7.66 | -8.29 |
-   | 7003 | — | -0.66 | 17.14 | 17.42 | +13.86 | +13.58 | -0.11 |
-   | 9001 | -0.54 | — | 16.95 | 17.49 | -3.46 | -4.00 | +9.63 |
-   | 11008 | -0.69 | — | 20.43 | 21.12 | -4.98 | -5.67 | +1.24 |
-   | 12004 | -0.69 | -0.78 | 13.85 | 14.53 | +24.16 | +23.47 | -1.12 |
-   | 13001 | -11.31 | -9.81 | 65.64 | 76.95 | +17.78 | +6.48 | +0.97 |
-   | 16005 | -3.65 | -3.70 | 33.31 | 36.96 | +1.50 | -2.15 | -0.70 |
-   | 23001 | -1.73 | — | 25.88 | 27.61 | -3.84 | -5.57 | -3.36 |
-   | 25001 | -2.77 | -2.66 | 31.43 | 34.20 | +3.90 | +1.13 | +25.65 |
-   | 25004 | -0.62 | — | 16.20 | 16.81 | -8.68 | -9.30 | -0.27 |
-   | 25005 | -21.17 | -15.36 | 65.74 | 86.91 | +16.97 | -4.20 | +2.02 |
-   | 25008 | -1.80 | -1.58 | 28.98 | 30.78 | +3.25 | +1.46 | -4.12 |
-   | 25011 | -0.51 | — | 19.68 | 20.19 | -0.93 | -1.44 | -1.50 |
-   | 27008 | -0.94 | -0.89 | 17.51 | 18.45 | +2.57 | +1.63 | -0.07 |
-   | 28013 | -1.43 | -1.19 | 40.07 | 41.51 | +0.81 | -0.62 | +0.22 |
-   | 29007 | -0.83 | -1.03 | 26.73 | 27.56 | -1.91 | -2.74 | -11.91 |
-   | 33001 | -8.06 | -5.98 | 48.91 | 56.97 | +13.20 | +5.14 | -4.24 |
-   | 39001 | -0.81 | -2.51 | 9.62 | 10.43 | +18.81 | +18.00 | -0.20 |
-   | 41006 | -2.43 | -1.70 | 23.44 | 25.86 | +6.64 | +4.21 | +1.93 |
-   | 42004 | — | -0.81 | 4.26 | 4.29 | +44.25 | +44.22 | -8.96 |
-   | 43015 | -2.28 | -1.97 | 17.89 | 20.17 | +5.49 | +3.21 | -0.37 |
-   | 46002 | -13.04 | -1.17 | 30.58 | 43.62 | -10.29 | -23.33 | +18.59 |
-   | 46003 | -3.97 | -12.07 | 23.91 | 27.88 | +41.91 | +37.93 | -3.40 |
-   | 47001 | -0.80 | -0.80 | 21.65 | 22.45 | +2.04 | +1.23 | -7.78 |
-   | 48005 | -13.18 | -8.72 | 48.82 | 62.00 | -25.13 | -38.31 | -1.79 |
-   | 49008 | -0.74 | -0.54 | 10.84 | 11.58 | +1.41 | +0.68 | -0.68 |
-   | 50005 | -0.52 | — | 15.07 | 15.59 | -1.68 | -2.20 | +4.30 |
-   | 54002 | -3.66 | -3.86 | 27.01 | 30.67 | +6.77 | +3.11 | -6.55 |
-   | 56004 | +1.51 | — | 9.52 | 8.01 | -0.57 | +0.95 | -1.93 |
-   | 56018 | -5.96 | -4.76 | 60.00 | 65.96 | +3.65 | -2.31 | +6.09 |
-   | 58008 | -1.32 | -1.51 | 32.18 | 33.50 | +1.81 | +0.49 | -0.32 |
-   | 58011 | -1.34 | -1.30 | 19.39 | 20.74 | +1.72 | +0.38 | +3.56 |
-   | 60002 | -0.71 | -0.52 | 14.22 | 14.93 | +1.12 | +0.41 | +3.11 |
-   | 60009 | -1.09 | -1.29 | 40.83 | 41.91 | -0.76 | -1.85 | +2.04 |
-   | 62008 | -0.61 | -0.58 | 17.61 | 18.22 | +0.72 | +0.11 | -1.87 |
-   | 63013 | -0.73 | -0.64 | 26.26 | 26.99 | -0.51 | -1.24 | -1.40 |
-   | 68004 | -1.05 | — | 16.29 | 17.35 | -4.24 | -5.30 | -1.69 |
-   | 72001 | -0.52 | -0.59 | 12.91 | 13.42 | +1.41 | +0.89 | -0.18 |
-   | 73009 | -20.10 | -15.10 | 37.91 | 58.01 | +25.53 | +5.43 | -0.25 |
-   | 74012 | -1.71 | — | 15.73 | 17.44 | -7.90 | -9.61 | -2.35 |
-   | 74028 | -0.63 | — | 19.02 | 19.65 | +0.14 | -0.50 | +0.30 |
-   | 74035 | -1.10 | -0.81 | 28.51 | 29.61 | +0.53 | -0.57 | +0.85 |
-   | 75011 | -0.94 | — | 12.25 | 13.19 | +5.88 | +4.93 | +0.22 |
-   | 76002 | — | -0.83 | 27.29 | 27.72 | +1.65 | +1.22 | +0.06 |
-   | 76012 | -0.66 | — | 16.76 | 17.42 | -1.52 | -2.18 | -4.44 |
-   | 76013 | — | -0.50 | 19.86 | 20.31 | +0.63 | +0.19 | -1.15 |
-   | 77001 | — | -0.51 | 15.26 | 15.73 | -2.28 | -2.75 | +1.38 |
-   | 84002 | -5.91 | -4.24 | 75.51 | 81.43 | -11.35 | -17.26 | -10.52 |
-   | 88003 | -10.56 | -3.50 | 33.12 | 43.68 | +2.52 | -8.04 | +35.55 |
-   | 89003 | -6.54 | -6.82 | 42.05 | 48.58 | +11.71 | +5.18 | -4.11 |
-   | 92001 | -0.54 | — | 12.06 | 12.61 | +2.77 | +2.22 | -0.25 |
-   | 94001 | — | -0.62 | 20.43 | 20.87 | +0.79 | +0.35 | +2.57 |
-   | 94002 | -0.58 | -0.57 | 14.41 | 14.99 | +1.65 | +1.08 | +1.84 |
-   | 97001 | -0.55 | — | 18.92 | 19.48 | +3.11 | +2.56 | +2.30 |
-   | 101003 | -15.08 | -15.85 | 60.28 | 75.36 | +24.89 | +9.82 | -7.33 |
-   | 103001 | -3.46 | -3.09 | 28.70 | 32.16 | -3.26 | -6.72 | +6.79 |
-   | 107010 | -1.52 | -1.09 | 32.84 | 34.35 | -1.94 | -3.46 | +4.55 |
-
-   A Gebiet with only a 2023 entry was within 0.5 pp in 2022, so its two W1 columns nearly agree.
-   **Effect on the design:** the matched design uses levels, so W1 is computed from the published
-   s3_2019 and s3_2021 (PR §3.5), not from D3. For these Gebiete, W1 therefore spans the
-   definition widening. Amendment 4 §A4.4 decides how to treat that. This document only supplies the
-   evidence. Reproduce with `stg_hamburg_sozialmonitoring_indicators`, pairing D3 with S3 by
-   Gebiet and edition (E, E−3).
 
 ## 3. Hamburg indicator definitions (PR §3.2, §3.7 checks 1–2)
 
@@ -367,6 +264,137 @@ operative case.
 
 **S3 base = all residents** (Bericht 2016 to 2025, Tabelle 1, as quoted above). So under PR §3.7 the
 Berlin T\* base stays **all residents**; the under-65 variant is not needed.
+
+### 3.1 S3 base revised by the publisher (AsylbLG counting change, Bericht 2021)
+
+Evidence for pre-registration Amendment 4 §A4.4 and its revision 1 (E1, E3, E4). Gebiete are
+identified by ID only. None is labelled a refugee-accommodation site (E3).
+
+Δ = D3_E − (s3_E − s3_E−3), where D3_E is the published 3-year change and s3 the recovered level
+share of the same Gebiet in editions E and E−3. A negative Δ means the publisher's D3 starts
+from a **higher** E−3 level than the one published in edition E−3: the earlier S3 base was
+revised upward.
+
+| Edition E | Gebiete matched | median \|Δ\| (pp) | \|Δ\| > 0.5 pp | of those: upward / downward | Pearson ρ(D3, s3 change) | Spearman ρ |
+|---|---:|---:|---:|---|---:|---:|
+| 2019 | 845 | 0.042 | **0** | 0 / 0 | 1.000 | 0.999 |
+| 2020 | 842 | 0.039 | **59** | 0 / 59 | 0.922 | 0.980 |
+| 2021 | 845 | 0.045 | **0** | 0 / 0 | 1.000 | 0.999 |
+| 2022 | 850 | 0.047 | **52** | 51 / 1 | 0.913 | 0.981 |
+| 2023 | 849 | 0.040 | **44** | 44 / 0 | 0.951 | 0.986 |
+| 2024 | 852 | 0.047 | **0** | 0 / 0 | 1.000 | 0.999 |
+| 2025 | 852 | 0.033 | **0** | 0 / 0 | 1.000 | 0.999 |
+
+- **2020:** the AsylbLG seam. S3 adds AsylbLG from edition 2019, and the D3 of 2020 runs from
+  the edition-2017 base. All 59 have Δ > 0, the opposite sign to 2022/2023. Already excluded from
+  `test_371_hh_annex_d_vs_s_consistency`.
+- **2022 and 2023:** 52 and 44 Gebiete. All revisions are upward, except one in 2022 (56004,
+  Δ = +1.51 pp). These are exactly the two editions whose D3 window starts in edition
+  2019 or 2020 and ends after edition 2021. The 2021 D3 (2018 → 2021) and the D3 from 2024 on show
+  no revision.
+- **Definition note, Sozialmonitoring Bericht 2021 (PDF p. 8):** "Ab diesem Berichtsjahr werden
+  Empfänger/innen von Regelleistungen und ausschließlich besonderen Leistungen gemeinsam
+  erfasst. Hiermit erweitert sich der betrachtete Personenkreis, da bis zum vergangenen
+  Berichtsjahr nur Empfänger/innen von Regelleistungen erfasst wurden …" So from edition 2021
+  on, AsylbLG recipients of "ausschließlich besondere Leistungen" are counted. The pattern
+  (upward revisions only, only in the 2022 and 2023 windows, none from 2024 on) fits the publisher having recomputed the 2019/2020 base on the widened definition for D3. That
+  is an inference from the data, not a publisher statement.
+- The table below lists the 58 Gebiete with |Δ| > 0.5 pp in 2022 or 2023, under this
+  section's heading "S3 base revised by the publisher":
+  - published s3_2019 is the edition-2019 annex value;
+  - revised s3_2019_rev = s3_2022 − D3_2022;
+  - W1 is editions 2019 → 2021 (published: s3_2021 − s3_2019; revised: s3_2021 − s3_2019_rev);
+  - W2 is s3_2023 − s3_2021;
+  - all values in %, or pp for changes.
+
+| Gebiet | Δ 2022 | Δ 2023 | s3_2019 published | s3_2019_rev | W1 published | W1 revised | W2 |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| 2002 | -3.14 | -3.42 | 29.45 | 32.59 | -3.09 | -6.23 | -18.67 |
+| 6004 | -13.96 | -15.68 | 54.08 | 68.04 | +21.62 | +7.66 | -8.29 |
+| 7003 | — | -0.66 | 17.14 | 17.42 | +13.86 | +13.58 | -0.11 |
+| 9001 | -0.54 | — | 16.95 | 17.49 | -3.46 | -4.00 | +9.63 |
+| 11008 | -0.69 | — | 20.43 | 21.12 | -4.98 | -5.67 | +1.24 |
+| 12004 | -0.69 | -0.78 | 13.85 | 14.53 | +24.16 | +23.47 | -1.12 |
+| 13001 | -11.31 | -9.81 | 65.64 | 76.95 | +17.78 | +6.48 | +0.97 |
+| 16005 | -3.65 | -3.70 | 33.31 | 36.96 | +1.50 | -2.15 | -0.70 |
+| 23001 | -1.73 | — | 25.88 | 27.61 | -3.84 | -5.57 | -3.36 |
+| 25001 | -2.77 | -2.66 | 31.43 | 34.20 | +3.90 | +1.13 | +25.65 |
+| 25004 | -0.62 | — | 16.20 | 16.81 | -8.68 | -9.30 | -0.27 |
+| 25005 | -21.17 | -15.36 | 65.74 | 86.91 | +16.97 | -4.20 | +2.02 |
+| 25008 | -1.80 | -1.58 | 28.98 | 30.78 | +3.25 | +1.46 | -4.12 |
+| 25011 | -0.51 | — | 19.68 | 20.19 | -0.93 | -1.44 | -1.50 |
+| 27008 | -0.94 | -0.89 | 17.51 | 18.45 | +2.57 | +1.63 | -0.07 |
+| 28013 | -1.43 | -1.19 | 40.07 | 41.51 | +0.81 | -0.62 | +0.22 |
+| 29007 | -0.83 | -1.03 | 26.73 | 27.56 | -1.91 | -2.74 | -11.91 |
+| 33001 | -8.06 | -5.98 | 48.91 | 56.97 | +13.20 | +5.14 | -4.24 |
+| 39001 | -0.81 | -2.51 | 9.62 | 10.43 | +18.81 | +18.00 | -0.20 |
+| 41006 | -2.43 | -1.70 | 23.44 | 25.86 | +6.64 | +4.21 | +1.93 |
+| 42004 | — | -0.81 | 4.26 | 4.29 | +44.25 | +44.22 | -8.96 |
+| 43015 | -2.28 | -1.97 | 17.89 | 20.17 | +5.49 | +3.21 | -0.37 |
+| 46002 | -13.04 | -1.17 | 30.58 | 43.62 | -10.29 | -23.33 | +18.59 |
+| 46003 | -3.97 | -12.07 | 23.91 | 27.88 | +41.91 | +37.93 | -3.40 |
+| 47001 | -0.80 | -0.80 | 21.65 | 22.45 | +2.04 | +1.23 | -7.78 |
+| 48005 | -13.18 | -8.72 | 48.82 | 62.00 | -25.13 | -38.31 | -1.79 |
+| 49008 | -0.74 | -0.54 | 10.84 | 11.58 | +1.41 | +0.68 | -0.68 |
+| 50005 | -0.52 | — | 15.07 | 15.59 | -1.68 | -2.20 | +4.30 |
+| 54002 | -3.66 | -3.86 | 27.01 | 30.67 | +6.77 | +3.11 | -6.55 |
+| 56004 | +1.51 | — | 9.52 | 8.01 | -0.57 | +0.95 | -1.93 |
+| 56018 | -5.96 | -4.76 | 60.00 | 65.96 | +3.65 | -2.31 | +6.09 |
+| 58008 | -1.32 | -1.51 | 32.18 | 33.50 | +1.81 | +0.49 | -0.32 |
+| 58011 | -1.34 | -1.30 | 19.39 | 20.74 | +1.72 | +0.38 | +3.56 |
+| 60002 | -0.71 | -0.52 | 14.22 | 14.93 | +1.12 | +0.41 | +3.11 |
+| 60009 | -1.09 | -1.29 | 40.83 | 41.91 | -0.76 | -1.85 | +2.04 |
+| 62008 | -0.61 | -0.58 | 17.61 | 18.22 | +0.72 | +0.11 | -1.87 |
+| 63013 | -0.73 | -0.64 | 26.26 | 26.99 | -0.51 | -1.24 | -1.40 |
+| 68004 | -1.05 | — | 16.29 | 17.35 | -4.24 | -5.30 | -1.69 |
+| 72001 | -0.52 | -0.59 | 12.91 | 13.42 | +1.41 | +0.89 | -0.18 |
+| 73009 | -20.10 | -15.10 | 37.91 | 58.01 | +25.53 | +5.43 | -0.25 |
+| 74012 | -1.71 | — | 15.73 | 17.44 | -7.90 | -9.61 | -2.35 |
+| 74028 | -0.63 | — | 19.02 | 19.65 | +0.14 | -0.50 | +0.30 |
+| 74035 | -1.10 | -0.81 | 28.51 | 29.61 | +0.53 | -0.57 | +0.85 |
+| 75011 | -0.94 | — | 12.25 | 13.19 | +5.88 | +4.93 | +0.22 |
+| 76002 | — | -0.83 | 27.29 | 27.72 | +1.65 | +1.22 | +0.06 |
+| 76012 | -0.66 | — | 16.76 | 17.42 | -1.52 | -2.18 | -4.44 |
+| 76013 | — | -0.50 | 19.86 | 20.31 | +0.63 | +0.19 | -1.15 |
+| 77001 | — | -0.51 | 15.26 | 15.73 | -2.28 | -2.75 | +1.38 |
+| 84002 | -5.91 | -4.24 | 75.51 | 81.43 | -11.35 | -17.26 | -10.52 |
+| 88003 | -10.56 | -3.50 | 33.12 | 43.68 | +2.52 | -8.04 | +35.55 |
+| 89003 | -6.54 | -6.82 | 42.05 | 48.58 | +11.71 | +5.18 | -4.11 |
+| 92001 | -0.54 | — | 12.06 | 12.61 | +2.77 | +2.22 | -0.25 |
+| 94001 | — | -0.62 | 20.43 | 20.87 | +0.79 | +0.35 | +2.57 |
+| 94002 | -0.58 | -0.57 | 14.41 | 14.99 | +1.65 | +1.08 | +1.84 |
+| 97001 | -0.55 | — | 18.92 | 19.48 | +3.11 | +2.56 | +2.30 |
+| 101003 | -15.08 | -15.85 | 60.28 | 75.36 | +24.89 | +9.82 | -7.33 |
+| 103001 | -3.46 | -3.09 | 28.70 | 32.16 | -3.26 | -6.72 | +6.79 |
+| 107010 | -1.52 | -1.09 | 32.84 | 34.35 | -1.94 | -3.46 | +4.55 |
+
+A Gebiet with only a 2023 entry was within 0.5 pp in 2022, so its two W1 columns nearly agree.
+
+**Effect on the design (pre-registration Amendment 4, revision 1, E1).** The primary
+Hamburg S3 level for edition 2019 is the publisher's re-based value
+**s3_2019_rev = s3_2022 − D3_2022 (R19)**, for every balanced Gebiet, not only the 58 listed. The
+as-published 2019 level is the sensitivity **"R19-pub"**. W1 = [2019, 2021] would otherwise
+straddle the counting change. The same logic as the Berlin backcast (PR §4.2) applies.
+- *Coverage:* all 849 balanced Gebiete have both s3_2022 and D3_2022, so the "keep the published
+  level" fallback applies to **0** Gebiete.
+- *Size:* for the clean Gebiete, R19 is a rounding-level change (median |W1_rev − W1_pub| =
+  0.048 pp over the 849). 52 balanced Gebiete (the 2022 set) move by more than 0.5 pp.
+- *Level quantiles* (|ΔS3| in pp):
+
+  | Window, Gebiete | median | p90 | p99 | max |
+  |---|---:|---:|---:|---:|
+  | W2 = s3_2023 − s3_2021, all 852 scored in both | 0.74 | 3.07 | 14.99 | 44.86 |
+  | W2, the 849 balanced Gebiete | 0.74 | 3.06 | 13.86 | 44.86 |
+  | W1 published (R19-pub), 849 balanced | 0.71 | — | 17.39 | 44.25 |
+  | W1 revised (R19, primary), 849 balanced | 0.69 | — | 10.96 | 44.22 |
+
+- *W2 is not claimed to be revision-free:* there is no D3_2026 to test s3_2023 against. Its start
+  level s3_2021 checks clean against D3_2024 (0 Gebiete with |Δ| > 0.5 pp in 2024).
+- *Guard:* `test_371_hh_annex_d_vs_s_consistency` (§2, check 6) holds the median while
+  allowing these outliers, which R19 handles.
+
+Reproduce with `stg_hamburg_sozialmonitoring_indicators`, pairing D3 with S3 by Gebiet and
+edition (E, E−3).
 
 ## 4. Berlin (PR §3.7 checks 3–7)
 
