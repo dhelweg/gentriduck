@@ -443,3 +443,16 @@ Revision 1 demand (DIFFERS under core-3M), which I agreed to relax.
   the primary.
 
 Verdict: CONCERNS
+
+---
+
+## D10 confirmation (2026-11-05)
+
+D10 is restored verbatim in all three places in `371-matched-comparison-preregistration.md`:
+- the §0 table row (line 40): "**and** its Δ has the same sign under core-3M (sign only, no significance requirement)";
+- the §6.3 robust-DIFFERS rule (line 569), with the same clause;
+- the Revision 3 log row D8 (line 932): "The core-3M same-sign condition is kept (sign only)."
+
+No "reported, not required" wording remains. Per the final re-check above, this review is PASS without another full re-check.
+
+Verdict: PASS
