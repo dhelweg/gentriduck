@@ -319,5 +319,4 @@ when it needs a rebuild. Development then resumes.
 **Follow-up option (not decided):** a separate release worktree with its own copy of the DB, so
 deploys don't pause development. If pursued, it needs its own amendment.
 
-**Gate:** ops/hosting process change. The file sits under `docs/adr/**`, so per CLAUDE.md R-C1 it gets a brief geo-DS + domain pass before integration.
-no geo-DS or domain sign-off is required. The ADR text itself still needs maintainer approval.
+**Gate:** ops/hosting process change. The file sits under `docs/adr/**`, so per CLAUDE.md R-C1 it gets a brief geo-DS + domain pass before integration. The maintainer approved this amendment's text on 2026-11-02.
