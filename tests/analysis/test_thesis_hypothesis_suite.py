@@ -1841,3 +1841,41 @@ def test_371_reading3_disclosure_is_generated_from_the_rows():
     assert "remain" in txt and "ge5000 p_unadj 0.1050" in txt and "B = 29" in txt
     prim_row["flags"] = "ewr_2022_interpolated"
     assert "both flags are removed" in M._reading3_disclosure(side, {("BER", "H2"): prim_row})
+
+
+def test_371_rendered_flags_and_imprecise_cells():
+    """Results sign-offs geo R1/R2 = domain R1: tokens render with their meaning in the cells."""
+    base = {
+        "city": "HH",
+        "hypothesis": "H3c",
+        "operationalisation": "op",
+        "p_boot": "0.7",
+        "flags": "small_units_flip;maup_flip;ewr_2022_interpolated",
+        "notes": "small_units_flip: sign unstable around zero (primary p_unadj 0.7, A5.1); x",
+    }
+    fine_ns = {"city": "HH", "operationalisation": "[fine] op", "p_boot": "0.4"}
+    txt = M.render_flags(base, [fine_ns])
+    assert txt == (
+        "small_units_flip (sign unstable around zero); maup_flip (sign unstable around zero); "
+        "ewr_2022_interpolated"
+    )
+    fine_sig = dict(fine_ns, p_boot="0.01")
+    assert "maup_flip (grain-dependent, MAUP)" in M.render_flags(base, [fine_sig])
+    sig = dict(base, notes="small_units_flip: unadjusted significance change (A5.1)")
+    assert M.render_flags(sig, [fine_ns]).split("; ")[0] == "small_units_flip"
+    x = {
+        "verdict": M.NDD,
+        "estimate": "0.03",
+        "ci_low": "-0.1",
+        "ci_high": "0.16",
+        "mdd": "0.188",
+        "p_bh": "0.9",
+        "p_boot": "0.63",
+        "flags": "",
+        "notes": "R7; too imprecise to say the cities agree (MDD 0.188 > 0.10)",
+    }
+    assert (
+        "**NO DIFFERENCE DETECTED** (too imprecise to say the cities agree: MDD 0.188 > 0.10)"
+        in M._xcell(x)
+    )
+    assert "too imprecise" not in M._xcell(dict(x, notes="R7"))

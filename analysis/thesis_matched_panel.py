@@ -3289,14 +3289,20 @@ def apply_flags(rows: list[dict], meta: dict) -> None:
                 )
             if sig.get((2021, 2023)) and not sig.get((2019, 2021)) and not sig.get((2023, 2025)):
                 r["flags"].add("w2_only")
-                note = "coincides with the Rechtskreiswechsel asymmetry (W2 only, PR §4.4)"
                 w2 = rows_w[(2021, 2023)]
-                if w2 is not None and "amendment3_below_chance" in w2["flags"]:
+                # Results geo sign-off R3: the D6 reading refers to the W2-only exploratory row
+                # (uncorrected), not to the pooled primary.
+                note = (
+                    "w2_only: the W2-only exploratory Δ (2021–2023, uncorrected) is "
+                    f"{w2['verdict']}. It coincides with the Rechtskreiswechsel asymmetry (PR §4.4)"
+                )
+                if "amendment3_below_chance" in w2["flags"]:
                     below = " and ".join(_below_chance(w2))
                     note += (
-                        f", and in W2 {below} shows no transferable discrimination: it differs in "
-                        "transferable discrimination only (Amendment 3, D6)"
+                        f", and in W2 {below} shows no transferable discrimination, so that window "
+                        "differs in transferable discrimination only (Amendment 3, D6)"
                     )
+                note += f". The primary X8 row (W1–W3 pooled) is {r['verdict']}."
                 r["notes"].append(note)
     # ewr_2022_interpolated on every Berlin / X8 row whose status used the 2022 interpolation.
     for r in rows:
@@ -4329,20 +4335,22 @@ A5_REFERENCE_COMMIT = "13d9f3ff"  # PR Amendment 5 (F2): the pre-A5 reference re
 _REF_PATH = "docs/epic-e/matched-comparison-results.csv"
 
 
-def reference_records(commit: str = A5_REFERENCE_COMMIT) -> list[dict] | None:
-    """The result CSV as of the pre-A5 reference commit (read from git, read-only)."""
+def reference_records(commit: str = A5_REFERENCE_COMMIT) -> tuple[list[dict] | None, str | None]:
+    """The result CSV as of the pre-A5 reference commit (read from git, read-only), with the
+    SHA-256 of its bytes so the before -> after list can be verified without git history."""
+    import hashlib
     import subprocess
 
     try:
-        txt = subprocess.run(  # noqa: S603 -- fixed git argv, no user input
+        raw = subprocess.run(  # noqa: S603 -- fixed git argv, no user input
             ["git", "show", f"{commit}:{_REF_PATH}"],  # noqa: S607
             cwd=REPO,
             capture_output=True,
             check=True,
-        ).stdout.decode("utf-8")
+        ).stdout
     except (OSError, subprocess.CalledProcessError):
-        return None
-    return list(csv.DictReader(io.StringIO(txt)))
+        return None, None
+    return list(csv.DictReader(io.StringIO(raw.decode("utf-8")))), hashlib.sha256(raw).hexdigest()
 
 
 def _statement_of(r: dict) -> str:
@@ -4377,6 +4385,7 @@ def a5_changes(records: list[dict], ref: list[dict] | None) -> dict:
     def key(r: dict) -> tuple:
         return (
             r["city"],
+            r["hypothesis"],
             r["operationalisation"],
             r["grain"],
             r["cluster_unit"],
@@ -4473,7 +4482,12 @@ def main_matched(
             )
     run_meta = {k: v for k, v in meta.items() if k not in ("feature_lists_prefit", "blocks")}
     run_meta["run"] = {"run_sha": sha, "n_boot": n_boot, "seed": SEED, "seed_x8_hh": SEED_X8["HH"]}
-    run_meta["a5_changes"] = a5_changes(records, reference_records())
+    ref_rows, ref_sha = reference_records()
+    run_meta["a5_changes"] = {
+        **a5_changes(records, ref_rows),
+        "reference_path": _REF_PATH,
+        "reference_sha256": ref_sha,
+    }
     meta_all = write_matched_metadata(metadata_json, {"run": run_meta})
     print(f"[suite] wrote {results_csv} ({len(records)} rows) and {metadata_json}")
     if findings is not None:
@@ -4665,7 +4679,42 @@ def _rf(v: str, nd: int = 3) -> str:
     return S._f(v, nd)
 
 
-def _cell371(r: dict | None, holds_word: str = "") -> str:
+def _sig_unadj(r: dict | None) -> bool | None:
+    if r is None or r["p_boot"] in ("", None):
+        return None
+    return float(r["p_boot"]) < ALPHA
+
+
+def render_flags(r: dict, records: list[dict]) -> str:
+    """Results sign-offs (geo R2 = domain R1): a flag token renders with its meaning. A5.1 flags
+    whose note says "sign unstable around zero" carry that label; `maup_flip` carries it when the
+    matched and the fine-grain estimate are both non-significant (unadjusted), otherwise
+    "grain-dependent, MAUP" (§6.5). Other tokens render bare. The CSV `flags` column is unchanged."""
+    out = []
+    notes = r["notes"].split("; ")
+    for f in [t for t in r["flags"].split(";") if t]:
+        if f == "maup_flip":
+            fine = next(
+                (
+                    x
+                    for x in records
+                    if x["city"] == r["city"]
+                    and x["operationalisation"] == f"[fine] {r['operationalisation']}"
+                ),
+                None,
+            )
+            both_ns = _sig_unadj(r) is False and _sig_unadj(fine) is False
+            out.append(
+                f"{f} ({'sign unstable around zero' if both_ns else 'grain-dependent, MAUP'})"
+            )
+        elif any(n.startswith(f"{f}: sign unstable around zero") for n in notes):
+            out.append(f"{f} (sign unstable around zero)")
+        else:
+            out.append(f)
+    return "; ".join(out)
+
+
+def _cell371(r: dict | None, records: list[dict] | None = None) -> str:
     if r is None:
         return "–"
     if r["verdict"] == NO_DATA:
@@ -4684,17 +4733,23 @@ def _cell371(r: dict | None, holds_word: str = "") -> str:
     if r["holds"]:
         s += f"; *{r['holds']}*"
     if r["flags"]:
-        s += f"; flags: `{r['flags']}`"
+        s += f"; flags: `{render_flags(r, records or [])}`"
     return s
 
 
-def _xcell(r: dict | None) -> str:
+def _xcell(r: dict | None, records: list[dict] | None = None) -> str:
     if r is None:
         return "–"
     if r["verdict"] == NO_DATA:
         return "NO DATA"
+    verdict = f"**{r['verdict']}**"
+    m = re.search(
+        r"too imprecise to say the cities agree \(MDD ([0-9.]+) > ([0-9.]+)\)", r["notes"]
+    )
+    if m:  # results geo sign-off R1: the qualifier sits in the cell that gets quoted
+        verdict += f" (too imprecise to say the cities agree: MDD {m.group(1)} > {m.group(2)})"
     s = (
-        f"**{r['verdict']}**, Δ {_rf(r['estimate'])} [{_rf(r['ci_low'])}, {_rf(r['ci_high'])}], "
+        f"{verdict}, Δ {_rf(r['estimate'])} [{_rf(r['ci_low'])}, {_rf(r['ci_high'])}], "
         f"MDD {_rf(r['mdd'])}"
     )
     if r["p_bh"]:
@@ -4702,7 +4757,7 @@ def _xcell(r: dict | None) -> str:
     else:
         s += f", p = {_rf(r['p_boot'], 4)}"
     if r["flags"]:
-        s += f"; flags: `{r['flags']}`"
+        s += f"; flags: `{render_flags(r, records or [])}`"
     return s
 
 
@@ -4745,8 +4800,10 @@ def _reading3_disclosure(records: list[dict], prim: dict) -> str:
         f"{r['verdict']} (p_unadj {_rf(r['p_boot'], 4)}, p_BH {_rf(r['p_bh'], 4)}), while {nums}. "
         "That is a difference in unadjusted significance, which A5.1 flags. The reading-3 "
         "description was taken from a low-B debug run (B = 29), in which this primary was NOT "
-        "SIGNIFICANT after BH; it does not describe the binding B = 1999 run. Raised with the PM "
-        "and the geo-DS for the results sign-off."
+        "SIGNIFICANT after BH; it does not describe the binding B = 1999 run. Corrected in the "
+        "Amendment 5 correction note (2026-11-05): A5.1 is unchanged and both flags stand. The "
+        "B = 29 outputs were not retained; the description rests on the DE's record (metadata "
+        "`run/disclosures/debug_runs`)."
     )
 
 
@@ -4792,7 +4849,9 @@ def write_matched_findings(path: Path, records: list[dict], meta: dict) -> None:
     )
     a(
         "- **Binding design:** `docs/methodology/371-matched-comparison-preregistration.md` "
-        "(Revisions 1–3, Amendment 4 and Amendment 4 revision 1), with "
+        "(Revisions 1–3, Amendment 4, Amendment 4 revision 1, and Amendment 5 "
+        "(post-results-generation, with its correction note, 4b3551bf); the M3 clarification of "
+        "the §8.2 guard, ccf06121), with "
         "`docs/methodology/354-355-hypothesis-suite-preregistration.md` (Amendments 1–3) for the "
         "shared estimators. Data evidence: `docs/epic-e/371-data-checks.md`."
     )
@@ -4831,8 +4890,25 @@ def write_matched_findings(path: Path, records: list[dict], meta: dict) -> None:
         th = THESIS_HYPOTHESES[h]
         a(
             f"| {h} | {th.get('wording_de', '')} | {THESIS_WORDS.get(th['thesis_verdict'], th['thesis_verdict'])} | "
-            f"{_cell371(prim.get(('BER', h)))} | {_cell371(prim.get(('HH', h)))} | "
-            f"{_xcell(prim.get(('BER-HH', h)))} |"
+            f"{_cell371(prim.get(('BER', h)), records)} | {_cell371(prim.get(('HH', h)), records)} | "
+            f"{_xcell(prim.get(('BER-HH', h)), records)} |"
+        )
+    a("")
+    # Domain O1 (adopted): the outcome of the statement rule, generated.
+    stmt = meta.get("run", {}).get("statement_rule", {})
+    stated = [h for h, v in stmt.items() if v.get("outcome") == "stated"]
+    differs = [h for h, v in stmt.items() if v.get("x8_verdict") == DIFFERS]
+    if stated:
+        a(f"**Statement rule (§6.3):** a city difference may be stated for {', '.join(stated)}.")
+    elif differs:
+        a(
+            "**Statement rule (§6.3):** no city difference is stated; X8 gives DIFFERS under "
+            f"core-3H for {', '.join(differs)}, but the robust-DIFFERS rule is not met."
+        )
+    else:
+        a(
+            "**Statement rule (§6.3):** no city difference is stated; none of the 8 X8 rows gives "
+            "DIFFERS under core-3H."
         )
     a("")
     a(
@@ -4844,8 +4920,8 @@ def write_matched_findings(path: Path, records: list[dict], meta: dict) -> None:
     a("|---|---|---|---|---|")
     for h in N_ORDER:
         a(
-            f"| {h} | {N_HYPOTHESES[h]['wording']} | {_cell371(prim.get(('BER', h)))} | "
-            f"{_cell371(prim.get(('HH', h)))} | {_xcell(prim.get(('BER-HH', h)))} |"
+            f"| {h} | {N_HYPOTHESES[h]['wording']} | {_cell371(prim.get(('BER', h)), records)} | "
+            f"{_cell371(prim.get(('HH', h)), records)} | {_xcell(prim.get(('BER-HH', h)), records)} |"
         )
     a("")
     mm = meta.get("run", {}).get("bh_family_m", {})
@@ -5047,7 +5123,7 @@ def write_matched_findings(path: Path, records: list[dict], meta: dict) -> None:
                 op = op[:107] + "..."
             a(
                 f"| {r['city']} | {r['hypothesis']} | {r['role']} | {op} | {_rf(r['estimate'])} "
-                f"[{_rf(r['ci_low'])}, {_rf(r['ci_high'])}] | {r['n']} | {r['verdict'] or '–'} | {r['flags']} |"
+                f"[{_rf(r['ci_low'])}, {_rf(r['ci_high'])}] | {r['n']} | {r['verdict'] or '–'} | {render_flags(r, records)} |"
             )
     a("")
     a("### Moran's I of the H3 residuals (§6.2, #365 on the matched panel)")
