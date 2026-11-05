@@ -184,7 +184,8 @@ export async function staleExtractedFiles(startMs) {
 }
 
 // #369: why the sources record can't vouch for the data this build bundles (null = it can).
-// `live` = { tree, dirty, serving, extracted } measured at build time.
+// `live` = { tree, serving, extracted } measured at build time (the build's own dirty flag is
+// checked separately by release-deploy).
 export function sourcesProblem(record, live) {
   const name = SOURCES_RECORD_REL;
   if (!record) return `no ${name} (npm run sources predates #369, or never ran here)`;
