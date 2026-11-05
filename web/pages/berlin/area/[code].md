@@ -625,6 +625,8 @@ the others, a pre-reinvestment signal, not a "more OA is more pressure" reading.
 [POI & Offering Advantage map](/berlin/poi-map) to explore this across all of Berlin.
 
 ```sql poi_oa_radar
+-- #357: the mart now zero-fills domains with no POI (is_zero_filled, oa_domain NULL); the radar
+-- keeps only domains with an OA value, as before.
 select
     poi_domain_h,
     oa_domain,
@@ -636,6 +638,7 @@ where
     and weight_variant = 'standard'
     and methodology_variant = 'faithful'
     and area_code = '${params.code}'
+    and not is_zero_filled
     and snapshot_year = (
         select max(snapshot_year)
         from gentriduck_marts.mart_poi_offering_advantage_map
@@ -652,7 +655,8 @@ order by oa_domain desc
 
 ```sql poi_oa_radar_district
 -- Same domain-grain mart, averaged (unweighted) across every PLR in this area's Bezirk at the same
--- snapshot_year, for the radar's district-context series.
+-- snapshot_year, for the radar's district-context series. #357: zero-filled rows (oa_domain NULL)
+-- excluded explicitly; avg() would skip their NULL anyway, so the average is unchanged.
 select poi_domain_h, avg(oa_domain) as district_avg_oa_domain
 from gentriduck_marts.mart_poi_offering_advantage_map
 where
@@ -660,6 +664,7 @@ where
     and area_vintage = 'lor_2021'
     and weight_variant = 'standard'
     and methodology_variant = 'faithful'
+    and not is_zero_filled
     and substr(area_code, 1, 2) = substr('${params.code}', 1, 2)
     and snapshot_year = (
         select max(snapshot_year)

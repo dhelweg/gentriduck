@@ -1274,12 +1274,23 @@ models:
       domain) -- not methodology-bearing, not on the R-C1 gated-file list.
 
       Grain: one row per (city_code, snapshot_year, area_code, area_vintage,
-      weight_variant, methodology_variant, poi_domain_h) -- a
-      (poi_category_h, poi_type_h)-collapsed subset of
-      mart_poi_offering_advantage's grain.
+      weight_variant, methodology_variant, poi_domain_h) -- the
+      (poi_category_h, poi_type_h)-collapsed grain of
+      mart_poi_offering_advantage. #357: the 'standard' weight variant is
+      dense -- every leaf area (dim_city.oa_leaf_area_level) x snapshot year x
+      POI domain has a row; area-domain-years with no POI are zero-filled
+      (is_zero_filled = true, poi_count = 0, poi_density_per_km2 = 0,
+      oa_domain NULL). The gaussian_* rows stay sparse. Rows that existed
+      before the zero-fill are unchanged (test_357_poi_map_zero_fill).
     meta:
       dbt_meta_owner: data-engineer
     data_tests:
+
+      - dbt_utils.expression_is_true:
+          arguments:
+            expression: >-
+              not is_zero_filled or (poi_count = 0 and poi_density_per_km2 = 0
+              and oa_domain is null and weight_variant = 'standard')
 
       - dbt_utils.unique_combination_of_columns:
           arguments:
@@ -1354,7 +1365,9 @@ models:
         description: >
           Domain-level Offering Advantage (location quotient), carried through
           unchanged from mart_poi_offering_advantage (constant within this
-          group by construction -- see model header).
+          group by construction -- see model header). NULL on zero-filled rows
+          (#357): no OA value is added for a domain with no POI in the
+          area-year, exactly as when the row was absent.
       - name: oa_domain_min_base_flag
         description: >
           #274 (ADR-0017 D5 D-3 discharge): true when this PLR-year's total
@@ -1363,6 +1376,8 @@ models:
           PLR-year-level "thinly-mapped" property, constant across every
           domain of the same PLR-year (see model header). The /berlin/poi-map
           page suppresses oa_domain to NULL on this flag before display.
+          Zero-filled rows (#357) carry their area-year's flag, or true when
+          the area-year has no POI in any domain.
         data_tests:
 
           - not_null
@@ -1370,6 +1385,7 @@ models:
         description: >
           SUM(poi_count) across this domain's (poi_category_h, poi_type_h)
           leaves -- the domain-level POI count, from mart_poi_offering_advantage.
+          0 on zero-filled rows (#357).
       - name: area_km2
         description: >
           Area of the (city_code, area_code, area_vintage) polygon in km^2,
@@ -1379,7 +1395,23 @@ models:
         description: >
           SUM(poi_count) / area_km2 for this domain (e.g. "all Gastronomy
           POIs per km2") -- recomputed at domain grain, not an average of
-          leaf-level densities. NULL when area_km2 is NULL or zero.
+          leaf-level densities. NULL when area_km2 is NULL or zero. 0 on
+          zero-filled rows (#357); never NULL on 'standard' rows.
+        data_tests:
+
+          - not_null:
+              config:
+                where: "weight_variant = 'standard'"
+      - name: is_zero_filled
+        description: >
+          #357: true for a row added because this domain has no POI in the
+          area-year ('standard' variant only; see model header); false for
+          every row that comes from mart_poi_offering_advantage. Consumers that
+          need the previous sparse row set (e.g. an OA radar or a flagged-row
+          count) filter `not is_zero_filled`.
+        data_tests:
+
+          - not_null
 
   - name: mart_area_demographics
     description: >
