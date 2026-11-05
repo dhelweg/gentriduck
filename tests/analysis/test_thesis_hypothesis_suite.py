@@ -1485,3 +1485,333 @@ def test_371_fine_grain_without_commercial_features_is_not_comparable():
     note = M._comparability_note(["Mobility|Individual", "Public Space|Bench"])
     assert len(note) == 1 and note[0].startswith("not comparable") and "§6.5" in note[0]
     assert M._comparability_note([])[0].startswith("not comparable")
+
+
+# ---------------------------------------------------------------------------
+# #371 Amendment 5 and the code-review findings: synthetic rows for apply_flags,
+# _verdict_matched and score_matched; E6 in child_status; the M3 pre-registered input.
+# ---------------------------------------------------------------------------
+
+
+def _mr(
+    city="BER",
+    hyp="H1a",
+    variant="primary",
+    kind="core",
+    est=0.3,
+    p=0.01,
+    verdict=SUPPORTED,
+    estimator="spearman",
+    family="none",
+    ci=(0.1, 0.5),
+    notes=None,
+    window="2025",
+    est_ber=None,
+    est_hh=None,
+    n_clusters=24,
+    tags=None,
+    p_bh=None,
+    role="sensitivity",
+):
+    return {
+        "city": city,
+        "hypothesis": hyp,
+        "_variant": variant,
+        "_kind": kind,
+        "_gkey": "k24",
+        "estimate": est,
+        "p_boot": p,
+        "p_bh": p_bh,
+        "p_holm": None,
+        "verdict": verdict,
+        "estimator": estimator,
+        "expected_dir": "negative",
+        "effect_label": "",
+        "family": family,
+        "role": role,
+        "ci_low": None if ci is None else ci[0],
+        "ci_high": None if ci is None else ci[1],
+        "notes": list(notes or []),
+        "flags": set(),
+        "window": window,
+        "estimate_ber": est_ber,
+        "estimate_hh": est_hh,
+        "mdd": None,
+        "n_clusters": n_clusters,
+        "_band_years": set(),
+        "_descriptive": False,
+        "_tags": set(tags or ()),
+        "holds": "",
+        "operationalisation": "op",
+    }
+
+
+def test_371_a5_1_flip_sign_or_unadjusted_significance():
+    prim = _mr(variant="primary", est=0.30, p=0.04, verdict=NOT_SIGNIFICANT)  # n.s. after BH only
+    same = _mr(variant="ge5000", est=0.32, p=0.03)  # same sign, also unadjusted-significant
+    M.apply_flags([prim, same], {})
+    assert "small_units_flip" not in prim["flags"]  # the BER H2 reading-3 case: no flag
+    assert "primary_p_unadj=0.04" in same["notes"]
+    for c, label in (
+        (_mr(variant="core2", est=-0.30, p=0.04), "sign change"),
+        (
+            _mr(variant="core2", est=0.30, p=0.40, verdict=NOT_SIGNIFICANT),
+            "unadjusted significance change",
+        ),
+        (_mr(variant="core2", est=-0.30, p=0.40, verdict=NOT_SIGNIFICANT), "sign and unadjusted"),
+    ):
+        r = _mr(variant="primary", est=0.30, p=0.04)
+        M.apply_flags([r, c], {})
+        assert "core2_flip" in r["flags"] and any(label in n for n in r["notes"])
+    r = _mr(variant="primary", est=0.02, p=0.7, verdict=NOT_SIGNIFICANT)
+    c = _mr(variant="core3m", est=-0.01, p=0.8, verdict=NOT_SIGNIFICANT)
+    M.apply_flags([r, c], {})
+    assert "core3m_flip" in r["flags"] and any("sign unstable around zero" in n for n in r["notes"])
+    # AUC rows: the sign is that of AUC - 0.5
+    r = _mr(variant="primary", est=0.55, p=0.3, estimator="oof_auc_logit", verdict=NOT_SIGNIFICANT)
+    c = _mr(variant="W24", est=0.52, p=0.6, estimator="oof_auc_logit", verdict=NOT_SIGNIFICANT)
+    M.apply_flags([r, c], {})
+    assert "w24_weight_sensitive" not in r["flags"]
+    c = _mr(variant="W24", est=0.48, p=0.6, estimator="oof_auc_logit", verdict=NOT_SIGNIFICANT)
+    r["flags"], r["notes"] = set(), []
+    M.apply_flags([r, c], {})
+    assert "w24_weight_sensitive" in r["flags"]
+
+
+def test_371_flip_never_on_no_data():
+    """Review finding 3: no flip flag when either side is NO DATA."""
+    r = _mr(city="HH", hyp="N1", variant="primary", est=0.01, p=0.9, verdict=NOT_SIGNIFICANT)
+    c = _mr(
+        city="HH",
+        hyp="N1",
+        variant="ge5000",
+        est=None,
+        p=None,
+        verdict=M.NO_DATA,
+        ci=None,
+        n_clusters=18,
+    )
+    M.apply_flags([r, c], {})
+    assert "small_units_flip" not in r["flags"]
+    assert any("not evaluated: sensitivity not computable (< 20 blocks)" in n for n in r["notes"])
+    r = _mr(
+        hyp="N1", variant="primary", est=None, p=None, verdict=M.NO_DATA, ci=None, n_clusters=19
+    )
+    c = _mr(hyp="N1", variant="core2", est=-0.2, p=0.01)
+    M.apply_flags([r, c], {})
+    assert not r["flags"]
+
+
+def test_371_maup_not_comparable_is_not_a_flip():
+    """Review finding 1: no maup_flip for H1/H2 where the fine row is 'not comparable' (§6.5)."""
+    nc = ["not comparable: no commercial category passes A1.1 in both cities at this grain"]
+    r = _mr(hyp="H1", variant="primary", est=0.78, estimator="oof_auc_logit")
+    f = _mr(hyp="H1", variant="fine", est=0.45, estimator="oof_auc_logit", notes=nc)
+    M.apply_flags([r, f], {})
+    assert "maup_flip" not in r["flags"] and "MAUP: not comparable (§6.5)" in r["notes"]
+    r = _mr(hyp="H3c", variant="primary", est=0.03)
+    f = _mr(hyp="H3c", variant="fine", est=-0.02)
+    M.apply_flags([r, f], {})
+    assert "maup_flip" in r["flags"]
+
+
+def _x8(variant="primary", est=0.3, ci=(0.1, 0.5), verdict=M.DIFFERS, family="X8", **kw):
+    kw.setdefault("kind", "x8")
+    kw.setdefault("estimator", "diff_spearman")
+    return _mr(
+        city="BER-HH",
+        hyp="H1a",
+        variant=variant,
+        est=est,
+        ci=ci,
+        verdict=verdict,
+        family=family,
+        **kw,
+    )
+
+
+def _statement(rows):
+    meta: dict = {}
+    M.apply_flags(rows, meta)
+    return rows[0], meta["statement_rule"]["H1a"]["outcome"]
+
+
+def test_371_robust_differs_rule_each_condition():
+    ok5 = _x8("ge5000", family=M.GE5000_FAMILY)
+    ok2 = _x8("core2", ci=(0.05, 0.6), verdict=M.NDD, family="none")
+    ok3 = _x8("core3m", est=0.1, ci=(-0.1, 0.3), verdict=M.NDD, family="none")
+    r, out = _statement([_x8(), ok5, ok2, ok3])
+    assert out == "stated" and any("robust-DIFFERS rule met" in n for n in r["notes"])
+    assert "not_stated_city_difference" not in r["flags"]
+    for bad, why in (
+        (_x8("ge5000", verdict=M.NDD, family=M.GE5000_FAMILY), "BH in the >= 5,000"),
+        (_x8("core2", ci=(-0.05, 0.6), verdict=M.NDD, family="none"), "core-2"),
+        (_x8("core2", est=-0.3, ci=(-0.6, -0.1), family="none"), "core-2"),
+        (_x8("core3m", est=-0.1, ci=(-0.3, 0.1), verdict=M.NDD, family="none"), "core-3M"),
+    ):
+        rest = {"ge5000": ok5, "core2": ok2, "core3m": ok3}
+        rest[bad["_variant"]] = bad
+        r, out = _statement([_x8(), *[dict(x, notes=[], flags=set()) for x in rest.values()]])
+        assert out == "not stated" and "not_stated_city_difference" in r["flags"]
+        assert any(why in n for n in r["notes"])
+
+
+def test_371_d6_below_chance_is_never_stated():
+    r = _x8(estimator="diff_oof_auc_logit", est_ber=0.62, est_hh=0.45)
+    r["estimator"] = "diff_oof_auc_logit"
+    r, out = _statement([r, _x8("ge5000", family=M.GE5000_FAMILY)])
+    assert out == "not stated (D6)"
+    assert {"amendment3_below_chance", "not_stated_city_difference"} <= r["flags"]
+    assert any("Hamburg shows none" in n for n in r["notes"])
+
+
+def test_371_w2_only_note_carries_the_d6_reading():
+    prim = _x8(verdict=M.NDD, ci=(-0.1, 0.3))
+    prim["hypothesis"] = "H2"
+    wins = []
+    for (s_, e_), ci in zip(M.WINDOWS, ((-0.1, 0.2), (0.1, 0.4), (-0.2, 0.1)), strict=True):
+        w = _x8(
+            kind=f"x8win:{s_}-{e_}",
+            ci=ci,
+            verdict=M.NDD,
+            family="none",
+            est_ber=0.6,
+            est_hh=0.45 if e_ == 2023 else 0.55,
+        )
+        w["hypothesis"], w["estimator"] = "H2", "diff_oof_auc_logit"
+        wins.append(w)
+    M.apply_flags([prim, *wins], {})
+    assert "w2_only" in prim["flags"]
+    assert any("Rechtskreiswechsel" in n and "Amendment 3, D6" in n for n in prim["notes"])
+
+
+def test_371_verdicts_by_family_and_ge5000_bh_without_no_data():
+    """A5.2: BH within the >= 5,000 X8 panel; NO DATA rows not counted in m."""
+    assert M._verdict_matched(_x8(p=0.01, p_bh=0.2))[0] == M.NDD  # X8: p_bh decides
+    assert M._verdict_matched(_x8(family=M.GE5000_FAMILY, p=0.01, p_bh=0.03))[0] == M.DIFFERS
+    assert M._verdict_matched(_x8(family="none", p=0.01))[0] == M.DIFFERS  # uncorrected
+    assert M._verdict_matched(_x8(ci=None))[0] == M.NO_DATA
+    rows = []
+    for city in ("BER", "HH"):
+        for h in S.PRIMARY_ORDER:
+            rows.append(_mr(city=city, hyp=h, family="T8", role="primary", p=0.5, verdict=""))
+        rows.append(
+            _mr(
+                city=city,
+                hyp="N1",
+                family="N",
+                role="primary",
+                p=None,
+                est=None,
+                ci=None,
+                verdict="",
+            )
+        )
+        rows.append(_mr(city=city, hyp="N2", family="N", role="primary", p=0.02, verdict=""))
+    for h in S.PRIMARY_ORDER:
+        rows.append(dict(_x8(p=0.5, verdict=""), hypothesis=h, role="interaction"))
+    ge = []
+    for i, h in enumerate(S.PRIMARY_ORDER):
+        g = dict(_x8("ge5000", family=M.GE5000_FAMILY, verdict="", tags={"ge5000"}), hypothesis=h)
+        g["p_boot"] = None if i == 0 else 0.004 * i
+        if i == 0:
+            g["ci_low"] = g["ci_high"] = g["estimate"] = None
+        ge.append(g)
+    rows += ge
+    out = M.score_matched(rows)
+    assert out["bh_family_m"][M.GE5000_FAMILY] == 7 and out["bh_family_m"]["N/BER"] == 1
+    assert ge[0]["p_bh"] is None and ge[0]["verdict"] == M.NO_DATA
+    assert ge[1]["p_bh"] == pytest.approx(0.004 * 7 / 1)  # rank 1 of m = 7
+    n1 = next(
+        r for r in rows if r["family"] == "N" and r["hypothesis"] == "N1" and r["city"] == "BER"
+    )
+    assert n1["verdict"] == M.NO_DATA and any(
+        "could not be tested at this grain" in n for n in n1["notes"]
+    )
+    with pytest.raises(AssertionError, match="X8_ge5000"):
+        M.assert_bh_inputs_sensitivity([dict(ge[1], _tags={"W24"})], "ge5000")
+    with pytest.raises(AssertionError, match="entering a BH family"):
+        M.assert_bh_inputs_primary([ge[1]])
+
+
+def _ber_raw():
+    plr = ["01000001"]
+    idx = pd.MultiIndex.from_product([plr, M.EDITIONS], names=["area_code", "edition"])
+    levels = pd.DataFrame({"S1": 5.0, "S3": 10.0, "S4": 20.0}, index=idx)
+    years = (2018, 2020, 2022, 2024)
+    bidx = pd.MultiIndex.from_product([plr, years], names=["area_code", "reference_year"])
+    bands = pd.DataFrame(
+        {
+            "P": [1000.0, 1000.0, 1000.0, 2000.0],
+            "P15_65": [600.0, 600.0, 600.0, 1000.0],
+            "P65_67": [40.0, 40.0, 40.0, 200.0],
+            "Pu15": [100.0, 100.0, 100.0, 300.0],
+            "interpolated": [False, False, True, False],
+        },
+        index=bidx,
+    )
+    bands.attrs["source"] = M.BER_POP_MODEL
+    raw = M.CityRaw(
+        city="BER",
+        cfg=M.CITY["BER"],
+        child_parent={plr[0]: plr[0][:6]},
+        balanced=plr,
+        unit_bezirk={},
+        geom_units=pd.DataFrame(),
+        geom_children=pd.DataFrame(),
+        centre_xy=(0.0, 0.0),
+        oa=pd.DataFrame(),
+        c5=pd.DataFrame(),
+        types=pd.DataFrame(),
+        classes=pd.DataFrame(),
+    )
+    raw.status = {"levels": levels, "bands": bands}
+    raw.pre = {"bands": bands}
+    return raw
+
+
+def test_371_e6_w24_keeps_each_editions_f():
+    """A4 rev. 1 E6: under W24, P and the bands come from 31.12.2024 while f stays the edition's
+    own Regelaltersgrenze value."""
+    raw = _ber_raw()
+    w24 = next(v for v in M.VARIANTS if v.key == "W24")
+    ch, info = M.child_status(raw, w24)
+    for e in M.EDITIONS:
+        f = M.RAG_F[e - 1]
+        expect = 5.0 * (1000.0 + f * 200.0) / 2000.0 + 10.0
+        assert ch.loc[("01000001", e), "Tstar"] == pytest.approx(expect)
+        assert ch.loc[("01000001", e), "wT"] == 2000.0
+    assert info["band_years"] == {2024}
+    prim, info_p = M.child_status(raw, M.PRIMARY)
+    f19 = M.RAG_F[2018]
+    assert prim.loc[("01000001", 2019), "Tstar"] == pytest.approx(
+        5.0 * (600 + f19 * 40) / 1000 + 10
+    )
+    assert 2022 in info_p["band_years"]  # the M3 interpolation, a pre-registered input
+
+
+def test_371_m3_interpolation_is_the_only_permitted_interpolated_input():
+    M.assert_prereg_inputs("BER", [(2022, True), (2020, False)])
+    with pytest.raises(AssertionError, match="not a pre-registered input"):
+        M.assert_prereg_inputs("BER", [(2020, True)])
+    raw = _ber_raw()
+    raw.status["bands"].loc[("01000001", 2020), "interpolated"] = True
+    with pytest.raises(AssertionError, match="not a pre-registered input"):
+        M.child_status(raw, M.PRIMARY)
+
+
+def test_371_inference_floors():
+    """Review finding 5: floor 5 only for G = 16 and Bezirk; 20 for G = 36 and iid."""
+    assert M.INFERENCE_FLOOR == {"k16": 5, "k36": 20, "iid": 20, "bezirk": 5}
+
+
+def test_371_ewr_flag_follows_the_rows_window():
+    """Review finding 4: per-window rows without edition 2023 carry no ewr_2022_interpolated."""
+    a = _mr(hyp="H3c", window="2019-2021")
+    b = _mr(hyp="H3c", window="2021-2023")
+    c = _mr(hyp="H1a", window="2025")
+    for r in (a, b, c):
+        r["_band_years"] = {2018, 2020, 2022, 2024}
+    M.apply_flags([a, b, c], {})
+    assert "ewr_2022_interpolated" not in a["flags"] | c["flags"]
+    assert "ewr_2022_interpolated" in b["flags"]
