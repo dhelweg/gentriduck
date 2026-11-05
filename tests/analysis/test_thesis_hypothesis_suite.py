@@ -1119,3 +1119,361 @@ def test_hh_findings_gate_texts(tmp_path):
     assert "**Status** = the Hamburg Sozialmonitoring Statusindex class" in txt
     # C3 bullet in §7
     assert "**Hamburg-specific channel.**" in txt
+
+
+# ---------------------------------------------------------------------------
+# #371 (E1c): matched Berlin-Hamburg panel (pre-registration
+# docs/methodology/371-matched-comparison-preregistration.md §8, §9.3, Amendment 4 rev. 1)
+# ---------------------------------------------------------------------------
+
+from analysis import thesis_matched_panel as M  # noqa: E402
+
+
+def test_371_single_berlin_population_guard():
+    """A4.2: the matched analysis reads Berlin population from the band model only."""
+    M.assert_single_berlin_pop(M.SQL.values())  # every query the panel runs
+    M.assert_single_berlin_pop(["SELECT * FROM main.int_berlin_ewr_age_bands_plr2021"])
+    M.assert_single_berlin_pop(["SELECT * FROM main.stg_berlin_ewr_age_bands"])
+    for bad in (
+        "SELECT residents_total FROM main.int_berlin_ewr_plr2021",
+        "SELECT * FROM main.int_ewr_socioeco WHERE area_vintage = 'lor_2021'",
+        "SELECT * FROM main.mart_area_demographics",
+    ):
+        with pytest.raises(AssertionError, match="A4.2"):
+            M.assert_single_berlin_pop([bad])
+    ok = pd.DataFrame({"P": [1.0]})
+    ok.attrs["source"] = M.BER_POP_MODEL
+    M.assert_pop_source(ok)
+    wrong = pd.DataFrame({"P": [1.0]})
+    wrong.attrs["source"] = "int_berlin_ewr_plr2021"
+    with pytest.raises(AssertionError, match="A4.2"):
+        M.assert_pop_source(wrong)
+    with pytest.raises(AssertionError, match="A4.2"):
+        M.assert_pop_source(pd.DataFrame({"P": [1.0]}))
+
+
+def test_371_berlin_bands_aggregates_and_source():
+    raw = pd.DataFrame(
+        {
+            "area_code": ["p1"] * 5,
+            "reference_year": [2024] * 5,
+            "age_from": [0, 14, 15, 63, 65],
+            "age_to": [14, 15, 63, 65, 67],
+            "residents": [10.0, 2.0, 60.0, 8.0, 4.0],
+            "residents_total": [84.0] * 5,
+            "is_interpolated": [False] * 5,
+        }
+    )
+    b = M.berlin_bands(raw)
+    r = b.loc[("p1", 2024)]
+    assert (r["P"], r["P15_65"], r["P65_67"], r["Pu15"]) == (84.0, 68.0, 4.0, 12.0)
+    assert b.attrs["source"] == M.BER_POP_MODEL
+    bad = raw.assign(residents_total=90.0)
+    with pytest.raises(AssertionError, match="bands != total"):
+        M.berlin_bands(bad)
+
+
+def test_371_weight_date_guard_and_w24_exemption():
+    """§8.2 (A4 rev. 1): weights never post-date the outcome, except for runs tagged W24."""
+    M.assert_weight_dates(2020, 2020, None)
+    M.assert_weight_dates(2022, 2022, "core2")
+    for tag in (None, "core2", "M3_2020", "W24x"):
+        with pytest.raises(AssertionError, match="post-date"):
+            M.assert_weight_dates(2024, 2018, tag)
+    M.assert_weight_dates(2024, 2018, "W24")  # the single scoped exemption
+    assert M.Variant("W24", weights="W24").sensitivity == "W24"
+    assert "W24" in M.Variant("fine_W24", weights="W24").tags
+    assert M.PRIMARY.tags == frozenset() and M.PRIMARY.sensitivity is None
+
+
+def _w24row(**kw):
+    r = {
+        "role": "sensitivity",
+        "family": "none",
+        "hypothesis": "H1",
+        "operationalisation": "x",
+        "_tags": set(),
+    }
+    r.update(kw)
+    return r
+
+
+def test_371_w24_rows_never_feed_a_primary_or_bh_row():
+    M.assert_w24_isolated([_w24row(_tags={"W24"}), _w24row(role="primary", family="T8")])
+    with pytest.raises(AssertionError, match="W24 row in role"):
+        M.assert_w24_isolated([_w24row(_tags={"W24"}, role="primary", family="T8")])
+    with pytest.raises(AssertionError, match="W24 row in role"):
+        M.assert_w24_isolated([_w24row(_tags={"W24"}, role="interaction", family="X8")])
+    with pytest.raises(AssertionError, match="W24 row in family"):
+        M.assert_w24_isolated([_w24row(_tags={"W24"}, family="N")])
+    M.assert_bh_inputs_primary([_w24row(role="primary", family="T8")])
+    with pytest.raises(AssertionError, match="entering a BH family"):
+        M.assert_bh_inputs_primary([_w24row(role="primary", family="T8", _tags={"W24"})])
+    # make_row demotes every sensitivity-run row out of the families
+    ctx = M.Ctx(n_boot=9, sha="t", boot=M.Bootstrapper(9))
+    spec = {
+        "hyp": "H1a",
+        "role": "primary",
+        "family": "T8",
+        "op": "o",
+        "predictor": "",
+        "outcome": "",
+        "controls": "",
+        "estimator": "spearman",
+        "expected_dir": "negative",
+        "window": "2025",
+        "pivots": "",
+        "level_control": "none",
+        "notes": [],
+        "descriptive": False,
+    }
+    w24 = next(v for v in M.VARIANTS if v.key == "W24")
+    r = M.make_row(ctx, "BER", "g", spec, {"estimate": 0.1}, variant=w24, kind="core")
+    assert (r["role"], r["family"]) == ("sensitivity", "none") and "W24" in r["_tags"]
+    M.assert_w24_isolated(ctx.rows)
+
+
+def test_371_level_provenance_guard():
+    """§8.2: s3_2019_rev and the Berlin backcast are the only permitted later-edition inputs."""
+    M.assert_level_provenance([("HH", "S3", 2019, 2022), ("BER", "S1", 2019, 2021)])
+    M.assert_level_provenance([("HH", "S4", 2021, 2021)])
+    with pytest.raises(AssertionError, match="not a permitted"):
+        M.assert_level_provenance([("HH", "S4", 2019, 2022)])
+    with pytest.raises(AssertionError, match="not a permitted"):
+        M.assert_level_provenance([("HH", "S3", 2021, 2023)])
+
+
+def test_371_r19_construction_and_fallback():
+    """A4 rev. 1 E1: s3_2019_rev = s3_2022 - D3_2022 for every balanced Gebiet; the published
+    level is kept (and reported) where either input is missing."""
+    pub = pd.Series({"a": 10.0, "b": 20.0, "c": 30.0})
+    s22 = pd.Series({"a": 15.0, "b": 26.0, "c": np.nan, "z": 1.0})
+    d22 = pd.Series({"a": 4.0, "b": 2.5, "c": 1.0})
+    rev, missing = M.r19_revised_s3(s22, d22, pub)
+    assert rev.to_dict() == {"a": 11.0, "b": 23.5, "c": 30.0}
+    assert missing == ["c"]
+    assert list(rev.index) == ["a", "b", "c"]  # no Gebiet outside the balanced set
+
+
+def test_371_absent_row_means_not_scored():
+    """DC §1: an absent (edition, Gebiet) row means 'not scored'; it excludes the Gebiet from the
+    balanced panel and is never filled with 0 or imputed."""
+    present = pd.DataFrame(
+        {
+            "area_code": ["g1"] * 4 + ["g2"] * 3 + ["g3"] * 5,
+            "edition": [2019, 2021, 2023, 2025, 2019, 2023, 2025, 2019, 2020, 2021, 2023, 2025],
+        }
+    )
+    assert M.balanced_children(present) == ["g1", "g3"]
+    M.assert_balanced({2019: {"a", "b"}, 2021: {"a", "b"}})
+    with pytest.raises(AssertionError, match="unbalanced"):
+        M.assert_balanced({2019: {"a", "b"}, 2021: {"a"}})
+
+
+def test_371_z_to_share_recovery_on_a_synthetic_sheet():
+    """PR §3.3: share = 100 (m + z s); only s moves pp changes, m shifts all units alike."""
+    z = np.array([-1.0, 0.0, 2.5])
+    np.testing.assert_allclose(M.recover_share(z, 0.105, 0.02), [8.5, 10.5, 15.5])
+    sheet = pd.DataFrame(
+        {
+            "indicator": ["S3", "S3", "S4", "S7"],
+            "z_score": [1.0, -0.5, 0.2, 9.0],
+            "edition_mean": [0.1, 0.1, 0.03, 0.5],
+            "edition_sd": [0.05, 0.05, 0.02, 0.1],
+            "share": [15.0, 7.5, 3.4, 0.0],
+        }
+    )
+    M.assert_share_recovery(sheet)  # S7 is context only and not checked here
+    with pytest.raises(AssertionError, match="§3.3"):
+        M.assert_share_recovery(sheet.assign(share=[15.0, 7.5, 3.5, 0.0]))
+
+
+def test_371_tstar_and_population_weighted_aggregation():
+    """§3.7: T*_i = S1 P^(U)/P + S3 >= S3 and T* - S3 <= S1; §3.4: the P-weighted mean of T*_i
+    equals the count-sum form 100 sum(N_U + N_T) / sum(P)."""
+    s1, s3 = np.array([5.0, 10.0]), np.array([10.0, 20.0])
+    pu, p = np.array([600.0, 300.0]), np.array([1000.0, 500.0])
+    t = M.tstar_plr(s1, s3, pu, p)
+    np.testing.assert_allclose(t, [13.0, 26.0])
+    assert np.all(t >= s3) and np.all(t - s3 <= s1)
+    counts = 100 * ((s1 / 100 * pu + s3 / 100 * p).sum()) / p.sum()
+    wm = M.weighted_mean(pd.Series(t), pd.Series(p), pd.Series(["u", "u"]))
+    assert wm["u"] == pytest.approx(counts)
+    child = pd.DataFrame(
+        {
+            "area_code": ["a", "b", "c"],
+            "edition": [2025] * 3,
+            "U": [2.0, 4.0, 10.0],
+            "Tstar": [10.0, 20.0, 30.0],
+            "T3M": [8.0, 16.0, 20.0],
+            "C": [1.0, 3.0, 5.0],
+            "wU": [1.0, 3.0, 2.0],
+            "wT": [1.0, 3.0, 2.0],
+            "wC": [1.0, 1.0, 2.0],
+        }
+    ).set_index(["area_code", "edition"])
+    lv = M.unit_levels(child, {"a": "U1", "b": "U1", "c": "U2"})
+    assert lv.loc[("U1", 2025), "U"] == pytest.approx((2 + 12) / 4)
+    assert lv.loc[("U1", 2025), "C"] == pytest.approx(2.0)
+    assert lv.loc[("U2", 2025), "Tstar"] == pytest.approx(30.0)
+
+
+def test_371_k_and_dk_scores():
+    idx = pd.MultiIndex.from_product([["a", "b", "c", "d"], M.EDITIONS], names=["unit", "edition"])
+    rng = np.random.default_rng(1)
+    lv = pd.DataFrame(rng.normal(size=(len(idx), 4)), index=idx, columns=["U", "Tstar", "T3M", "C"])
+    k = M.k_scores(lv, "core3h")
+    for e in M.EDITIONS:
+        assert k.xs(e, level="edition")["K"].mean() == pytest.approx(0.0, abs=1e-12)
+    k2 = M.k_scores(lv, "core2")
+    assert set(k2.columns) == {"z_U", "z_C", "K"}
+    dk = M.dk_scores(lv, "core3h")
+    assert sorted(set(dk.index.get_level_values("w_end"))) == [2021, 2023, 2025]
+    dz = M.dk_scores(lv, "core3h", "zchange")
+    assert dz["dK"].notna().all() and not np.allclose(dz["dK"], dk["dK"])
+
+
+def test_371_k_inputs_and_construct_guard():
+    """§8.1: annex indicators never as predictors; HH S1/S7 never in K."""
+    M.assert_k_inputs("HH", ("S3", "S4", "S5"))
+    M.assert_k_inputs("BER", ("S1", "S3", "S4"))
+    with pytest.raises(AssertionError, match="§8.1"):
+        M.assert_k_inputs("HH", ("S3", "S4", "S5", "S1"))
+    with pytest.raises(AssertionError, match="§8.1"):
+        M.assert_k_inputs("HH", ("S3", "S7"))
+    M.assert_matched_construct(
+        ["oa_cat:Gastronomy|Cafe", "wg_commercial_c5@P"], ["dK_P", "K_pivot"], "dK@F"
+    )
+    for preds in (["S3"], ["status_summe"], ["arbeitslose_anteil"], ["population"]):
+        with pytest.raises(AssertionError, match="§8.1"):
+            M.assert_matched_construct(preds, [], "K")
+    with pytest.raises(AssertionError, match="§8.1"):
+        M.assert_matched_construct(["oa_cat:x"], ["ewr_composite"], "K")  # D4 not allowed
+    with pytest.raises(AssertionError, match="§8.1"):
+        M.assert_matched_construct(["oa_cat:x"], [], "oa_cat:y")
+
+
+def test_371_cross_lag_order_guard():
+    cl = pd.DataFrame(
+        {
+            "poi_P_s": [2019.0],
+            "poi_P_e": [2021.0],
+            "st_F_s": [2021.0],
+            "st_F_e": [2023.0],
+            "st_P_s": [2019.0],
+            "st_P_e": [2021.0],
+            "poi_F_s": [2021.0],
+            "poi_F_e": [2023.0],
+            "K_start_year": [2019.0],
+        }
+    )
+    M.assert_xlag_order(cl, "H3a")
+    M.assert_xlag_order(cl, "H3b")
+    with pytest.raises(AssertionError, match="predictor window ends after"):
+        M.assert_xlag_order(cl.assign(poi_P_e=2023.0), "N2")
+    with pytest.raises(AssertionError, match="start-of-window control"):
+        M.assert_xlag_order(cl.assign(K_start_year=2021.0), "H3b")
+
+
+def test_371_blocks_are_deterministic_and_geometry_only():
+    rng = np.random.default_rng(3)
+    codes = [f"u{i:03d}" for i in range(60)]
+    xy = rng.uniform(0, 10_000, size=(60, 2))
+    a = M.kmeans_blocks(codes, xy, 24, "B")
+    b = M.kmeans_blocks(codes, xy, 24, "B")
+    perm = rng.permutation(60)
+    c = M.kmeans_blocks([codes[i] for i in perm], xy[perm], 24, "B")
+    assert a == b == c
+    assert len(set(a.values())) == 24
+    assert a[codes[0]] == "B01"  # labels renumbered in area-code order
+
+
+def test_371_lq_and_oa_aggregation():
+    np.testing.assert_allclose(
+        M.lq_from_stocks([2, 0, 5], [10, 0, 10], 10.0, 100.0), [2.0, 0.0, 5.0]
+    )
+    long = pd.DataFrame(
+        {
+            "area_code": ["p1", "p2", "p3"],
+            "snapshot_year": [2025] * 3,
+            "oa_level": ["category"] * 3,
+            "poi_domain_h": ["Gastronomy"] * 3,
+            "poi_category_h": ["Cafe"] * 3,
+            "level_stock_local": [2.0, 1.0, 0.0],
+            "parent_stock_local": [4.0, 4.0, 3.0],
+            "level_stock_city": [30.0] * 3,
+            "parent_stock_city": [100.0] * 3,
+        }
+    )
+    agg = M.aggregate_oa(long, {"p1": "U1", "p2": "U1", "p3": "U2"}).set_index("area_code")
+    assert agg.loc["U1", "level_stock_local"] == 3.0 and agg.loc["U1", "parent_stock_local"] == 8.0
+    assert agg.loc["U1", "oa_value"] == pytest.approx((3 / 8) / 0.3)
+    assert bool(agg.loc["U1", "oa_min_base_flag"]) and bool(agg.loc["U2", "oa_min_base_flag"])
+    assert agg.loc["U2", "oa_value"] == 0.0
+
+
+def test_371_independent_stream_delta_known_difference_and_none():
+    """PR §6.3: Delta from independent block bootstraps (BER seed 42, HH seed 43)."""
+    boot = M.Bootstrapper(N_BOOT)
+
+    def city(effect, seed):
+        x, y, cl = _xy(effect, n=480, seed=seed)
+        g = pd.DataFrame({"k24": cl, "k16": cl, "k36": cl, "iid": cl, "bezirk": cl})
+        return M.rho_design(x, y, [], g)
+
+    strong, weak, same = city(1.5, 1), city(0.0, 2), city(1.5, 3)
+    for d_b, d_h, expect in ((strong, weak, M.DIFFERS), (strong, same, M.NDD)):
+        db, _ = boot.draws(d_b, "k24", M.SEED_X8["BER"])
+        dh, _ = boot.draws(d_h, "k24", M.SEED_X8["HH"])
+        res = M.x8_delta(db, dh, d_b.estimate, d_h.estimate, N_BOOT)
+        got = M.DIFFERS if res["p_boot"] < 0.05 else M.NDD
+        assert got == expect
+        assert res["mdd"] > 0 and res["ci_low"] < res["estimate"] < res["ci_high"]
+    # the two streams are not paired by index: same data, different seeds -> different draws
+    d1, _ = boot.draws(strong, "k24", 42)
+    d2, _ = boot.draws(strong, "k24", 43)
+    assert not np.allclose(d1, d2)
+    # NaN draws stay aligned (block_draws keeps undefined draws as NaN)
+    out, g = M.block_draws(lambda idx: None, np.array(["a", "b"]), 5, 42)
+    assert g == 2 and np.isnan(out).all()
+
+
+def test_371_flags_vocabulary_and_byte_identical_output(tmp_path):
+    with pytest.raises(AssertionError, match="vocabulary"):
+        M._flags_str({"newbuild_driven"})  # renamed popgrowth_driven (E7)
+    assert M._flags_str({"w24_weight_sensitive", "small_units_flip"}) == (
+        "small_units_flip;w24_weight_sensitive"
+    )
+    row = {c: None for c in M.MATCHED_COLUMNS}
+    row.update(
+        {
+            "city": "BER-HH",
+            "estimate": 0.123456789,
+            "notes": ["a; b", "c"],
+            "flags": {"w2_only"},
+            "d4_control": False,
+            "definition_fallback": False,
+        }
+    )
+    recs = M.matched_records([row])
+    assert recs[0]["notes"] == "a, b; c" and recs[0]["flags"] == "w2_only"
+    assert list(recs[0]) == list(M.MATCHED_COLUMNS)
+    assert list(M.MATCHED_COLUMNS[: len(S.CSV_COLUMNS)]) == list(S.CSV_COLUMNS)
+    p1, p2 = tmp_path / "a.csv", tmp_path / "b.csv"
+    M.write_matched_results(recs, p1)
+    M.write_matched_results(M.matched_records([row]), p2)
+    assert p1.read_bytes() == p2.read_bytes()
+
+
+def test_371_matched_cli_is_city_less_and_separate(tmp_path):
+    assert M.MATCHED_RESULTS_CSV != S.RESULTS_CSV and M.MATCHED_METADATA_JSON != S.METADATA_JSON
+    for argv in (["--city", "BER", "--panel", "matched"], ["--panel", "matched", "modern"], []):
+        with pytest.raises(SystemExit):
+            S.main(argv)
+
+
+def test_371_weighted_median_and_top_decile():
+    assert M.weighted_median(np.array([1.0, 2.0, 3.0]), np.array([1.0, 1.0, 10.0])) == 3.0
+    assert M.weighted_median(np.array([1.0, 2.0, 3.0]), np.array([5.0, 1.0, 1.0])) == 1.0
+    s = pd.Series({f"u{i}": float(i) for i in range(20)})
+    assert M.top_decile(s, s.index) == {"u18", "u19"}
