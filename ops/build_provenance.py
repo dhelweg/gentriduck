@@ -14,9 +14,14 @@ without a rebuild:
    - export stamps (`data/serving/.export-source`, `data/.geo-export-source`): written by the
      export scripts, recording which warehouse their output came from. The build embeds them;
      the skip path checks them.
+   - `web/.sources-source` (#369): written around `npm run sources` by
+     web/scripts/sources-stamp.mjs. `evidence build` bundles what the last sources run extracted,
+     so the build checks this record (tree, data/serving, extracted data, complete run) and
+     records `inputs: null` plus `sources_problem` if it can't vouch for the bundled data. It is
+     JS-only: Python reads only the outcome in `.build-source`.
 
 `inputs_fingerprint()` and `relevant_dirty()` are mirrored in
-web/scripts/postbuild-build-source.mjs. Keep the two in sync;
+web/scripts/build-provenance.mjs. Keep the two in sync;
 tests/ops/test_release_deploy.py checks that both produce the same fingerprint.
 """
 

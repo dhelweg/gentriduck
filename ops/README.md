@@ -247,10 +247,15 @@ uv run poe release-deploy               # check → skip-or-rebuild → smoke ch
    - `inputs`: sha256 over `data/serving/*.parquet`, `web/static/geo/**` and the effective
      GoatCounter code (`GOATCOUNTER_CODE` if set, else `web/goatcounter-code.txt`);
    - `exports`: the export stamps of the bundled data (see *Export stamps* below), which
-     record the warehouse the data was exported from.
+     record the warehouse the data was exported from;
+   - `sources` and `sources_problem`: the record of the `npm run sources` run whose data the
+     build bundled (see *Sources record* below). If that record can't vouch for the bundled
+     data, `sources_problem` says why and `inputs` is `null`, which forces a rebuild.
 
    The rebuild is skipped when all of these hold:
    - the build ran on a clean tree equal to `origin/main^{tree}`;
+   - it embeds a complete sources record and no `sources_problem` (a build made before #369
+     has neither, so it rebuilds);
    - the recomputed inputs fingerprint is unchanged, so a new data vintage always rebuilds;
    - both embedded export stamps show the data was exported from a warehouse with a complete,
      clean `poe build` of `origin/main`'s tree.
@@ -261,14 +266,15 @@ uv run poe release-deploy               # check → skip-or-rebuild → smoke ch
    This is the common case after a release with no new data: the PM already built and checked
    the site from `develop`, and the release merge didn't change the tree. Otherwise it
    **rebuilds**: `poe export-serving` → `poe export-area-geojson` → `npm ci` (only if
-   `web/node_modules` is missing) → `npm run sources` → `npm run build`. Before rebuilding it
+   `web/node_modules` is missing) → `npm run sources:strict` (fails if any query fails) →
+   `npm run build`. Before rebuilding it
    **refuses** unless `data/.warehouse-source` shows a complete, clean `poe build` from
    `origin/main`'s tree. The message is "run `uv run poe build` on main first", because the
    exports would otherwise publish marts built from different model code.
 3. **Smoke-checks** `web/build`. It must be non-empty, have at least 500 HTML pages
    (`--min-pages`), and contain no `cartocdn` string (#351 removed the CARTO basemap). Its
-   `.build-source` must match `origin/main`'s tree and the current inputs fingerprint, and its
-   export stamps must be valid for `origin/main`.
+   `.build-source` must match `origin/main`'s tree and the current inputs fingerprint, carry a
+   complete sources record, and its export stamps must be valid for `origin/main`.
 4. **Deploys** via `ops/deploy-gh-pages.sh`. The script is unchanged, so its SEC-2 (#191)
    hard-asserted gh-pages-only force-push is still the only push.
 
@@ -298,11 +304,44 @@ directly against the warehouse, run `uv run poe build` afterwards before a relea
 into `data/.geo-export-source`; it lives in `data/` rather than `web/static/geo/`, so it isn't
 published with the site. Each export deletes its stamp before it starts, so an interrupted
 export leaves none, which forces a rebuild. `npm run build` embeds both stamps in
-`.build-source`.
+`.build-source`. The serving stamp comes from the sources record (below), because the bundled
+mart data is what `npm run sources` extracted, not what is in `data/serving` at build time.
+
+**Sources record (`web/.sources-source`, #369).** `npm run build` (`evidence build`) doesn't run
+sources: it bundles whatever the last `npm run sources` extracted into
+`web/.evidence/template/static/data`. So `web/scripts/sources-stamp.mjs` runs as the
+`presources`/`postsources` npm hooks (also for `sources:strict`):
+- **Before** sources, it writes `complete: false, reason: "npm run sources in progress"`. A
+  failed or killed run leaves no usable record.
+- **After** sources, it records the tree, commit and dirty flag, a fingerprint of
+  `data/serving/*.parquet`, the serving export stamp, and a fingerprint of the extracted data.
+  It marks the run unusable unless this run extracted every query. npm doesn't pass
+  `npm run sources -- --changed` (or `--queries`, `--sources`) to the hooks, so the check
+  looks at the result:
+  - every file in Evidence's `manifest.json` must have been written by this run. Evidence
+    keeps the previous run's file for every query a partial run skips, and for a query that
+    returned no rows;
+  - every query in `web/sources/` (each `*.sql` except `initialize.sql`, named as Evidence
+    names it) must be in `manifest.json`. In a non-strict run, a query that fails is dropped
+    from the manifest instead, so no stale file is left to catch.
+
+  Release rebuilds run `npm run sources:strict`, which stops on a failed query. A query that
+  legitimately returns no rows also counts as missing, so it forces a rebuild every time.
+  If `EVIDENCE_DATA_DIR` is set in the environment or in `web/.env`, `web/.env.local` (the
+  files Evidence reads), the record is unusable: it only covers the default data directory.
+
+`postbuild-build-source.mjs` accepts the record only if it is complete, ran on a clean tree
+equal to the build's tree, and its serving and extracted-data fingerprints equal the ones at
+build time. Otherwise the build gets `inputs: null` and `release-deploy` rebuilds. A direct
+`npx evidence sources` skips the hooks, but if it changes the extracted data, the
+extracted-data check catches it. Evidence's parquet output isn't guaranteed to be
+byte-identical across runs, so an extra direct run after the recorded one can force a rebuild
+even with the same data. That errs on the safe side.
 
 **First release after #361:** no machine has the warehouse record or export stamps yet, and
 older builds lack the fingerprint. So the first `release-deploy` will rebuild, and it refuses
-until you run `uv run poe build` once on a clean checkout of `main`.
+until you run `uv run poe build` once on a clean checkout of `main`. Likewise, builds made
+before #369 have no sources record, so the first release after #369 rebuilds too.
 
 Flags go straight after the task name, e.g. `uv run poe release-deploy --dry-run`. A single
 leading `--` (`uv run poe release-deploy -- --dry-run`) is also accepted.

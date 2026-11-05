@@ -13,16 +13,22 @@ ADR-0012 Amendment A) must be rebuilt from `main` and republished. Nothing deplo
       `web/scripts/postbuild-build-source.mjs`) records the build's provenance. The rebuild is
       skipped only if ALL of these hold:
         - the build ran on a clean tree equal to `origin/main^{tree}`;
+        - #369: it embeds a complete `npm run sources` record and no `sources_problem`
+          (`sources_problem()`). `evidence build` doesn't run sources; it bundles what the last
+          sources run extracted. So the build accepts `web/.sources-source` (written around
+          `npm run sources` by `web/scripts/sources-stamp.mjs`) only if that run was complete,
+          ran on the same clean tree, read the same `data/serving`, and its extracted data is
+          unchanged. Otherwise it records why, and `inputs: null`;
         - its `inputs` fingerprint (serving parquet + map GeoJSON + effective GoatCounter code,
           `ops.build_provenance.inputs_fingerprint()`) equals the current one;
-        - its embedded export stamps (`data/serving/.export-source`, `data/.geo-export-source`)
-          prove the bundled data was exported from a warehouse with a complete, clean
-          `poe build` of `origin/main`'s tree. The CURRENT warehouse record doesn't matter
-          here: an unrelated later `poe build` (e.g. the pre-push hook) doesn't change what
-          `web/build` contains.
+        - its embedded export stamps (`data/serving/.export-source` as of sources time,
+          `data/.geo-export-source`) prove the bundled data was exported from a warehouse with a
+          complete, clean `poe build` of `origin/main`'s tree. The CURRENT warehouse record
+          doesn't matter here: an unrelated later `poe build` (e.g. the pre-push hook) doesn't
+          change what `web/build` contains.
       Otherwise it rebuilds: `poe export-serving`, `poe export-area-geojson`, `npm ci` (only if
-      `web/node_modules` is missing), `npm run sources`, `npm run build`. Before rebuilding it
-      refuses unless `data/.warehouse-source` proves the warehouse was built from
+      `web/node_modules` is missing), `npm run sources:strict` (fails on a failed query, #369),
+      `npm run build`. Before rebuilding it refuses unless `data/.warehouse-source` proves the warehouse was built from
       `origin/main`'s tree, so it never exports marts built from other model code.
   (c) Smoke check (`smoke_check()`): non-empty build, at least `--min-pages` HTML pages, no
       `cartocdn` string in any text asset (#351 removed the CARTO basemap; its reappearance means
@@ -123,6 +129,9 @@ def decide(
         return Decision(True, f"{BUILD_SOURCE_NAME} says the build ran on a dirty working tree")
     if tree != main_tree:
         return Decision(True, f"build tree {tree[:12]} != origin/main tree {main_tree[:12]}")
+    problem = sources_problem(build_source)
+    if problem:
+        return Decision(True, problem)
     inputs = build_source.get("inputs")
     if not inputs:
         return Decision(True, f"{BUILD_SOURCE_NAME} has no inputs fingerprint")
@@ -142,6 +151,19 @@ def decide(
         f"web/build was built from tree {tree[:12]} (commit {commit}, {built_at}) == origin/main "
         f"tree; inputs {inputs[:12]} unchanged; data exported from a warehouse built from origin/main",
     )
+
+
+def sources_problem(build_source: dict) -> str | None:
+    """#369: None if the build vouches for the mart data it bundled, i.e. postbuild-build-source.mjs
+    embedded a complete `npm run sources` record that matched the build (no `sources_problem`).
+    A build without one (made before #369) may hold data from any earlier sources run."""
+    problem = build_source.get("sources_problem")
+    if problem:
+        return f"{BUILD_SOURCE_NAME}: the bundled mart data is unproven: {problem}"
+    sources = build_source.get("sources")
+    if not isinstance(sources, dict) or sources.get("complete") is not True:
+        return f"{BUILD_SOURCE_NAME} has no complete `npm run sources` record (built before #369?)"
+    return None
 
 
 def exports_problem(build_source: dict, main_tree: str) -> str | None:
@@ -202,9 +224,9 @@ def smoke_check(
                 f"{BUILD_SOURCE_NAME} inputs {str(src.get('inputs'))[:12]} != current inputs "
                 f"{expected_inputs[:12]} (data/serving, web/static/geo, GoatCounter code)"
             )
-        problem = exports_problem(src, main_tree)
-        if problem:
-            problems.append(problem)
+        for problem in (sources_problem(src), exports_problem(src, main_tree)):
+            if problem:
+                problems.append(problem)
     if not problems:
         say(
             f"release-deploy: smoke check passed ({pages} HTML pages, "
@@ -262,7 +284,7 @@ def rebuild_steps(repo: Path) -> list[tuple[list[str], Path]]:
     ]
     if not (web / "node_modules").is_dir():
         steps.append(([npm, "ci"], web))
-    steps += [([npm, "run", "sources"], web), ([npm, "run", "build"], web)]
+    steps += [([npm, "run", "sources:strict"], web), ([npm, "run", "build"], web)]
     return steps
 
 

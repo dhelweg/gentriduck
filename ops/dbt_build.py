@@ -21,6 +21,9 @@ the warehouse was completely and cleanly built from origin/main's tree, so a rel
 export marts built from different model code. Only `poe build` / `poe build-full-refresh` go
 through this wrapper: `poe materialize-oa-getis-ord` and direct `dbt` calls bypass it.
 
+`poe build --help` / `--version` (INFO_ONLY_ARGS) build nothing, so they run dbt without
+touching the record (#369).
+
 dbt's own exit code is returned unchanged. Recording is best-effort: any provenance failure is
 reported but never masks the dbt result.
 
@@ -50,6 +53,9 @@ from ops.build_provenance import (  # noqa: E402 -- after the sys.path insert ab
     read_json,
     utc_now,
 )
+
+# #369: args that make dbt print help or its version and exit without building anything.
+INFO_ONLY_ARGS = frozenset({"--help", "-h", "--version"})
 
 
 def git_state(repo: Path) -> tuple[str, str, bool]:
@@ -113,6 +119,11 @@ def finish(
 def main(argv: list[str] | None = None) -> int:
     args = list(sys.argv[1:] if argv is None else argv)
     repo = REPO_ROOT
+    dbt = shutil.which("dbt") or "dbt"
+    cmd = [dbt, "build", "--project-dir", "transform", "--profiles-dir", "transform", *args]
+    if INFO_ONLY_ARGS.intersection(args):
+        # #369: `poe build --help` / `--version` builds nothing, so it leaves the record alone.
+        return subprocess.run(cmd, cwd=repo).returncode  # noqa: S603 -- as below
     existing, state = None, None
     try:
         existing, state = mark_in_progress(repo)
@@ -125,8 +136,6 @@ def main(argv: list[str] | None = None) -> int:
             (repo / WAREHOUSE_SOURCE_REL).unlink(missing_ok=True)
         except OSError:
             pass
-    dbt = shutil.which("dbt") or "dbt"
-    cmd = [dbt, "build", "--project-dir", "transform", "--profiles-dir", "transform", *args]
     result = subprocess.run(cmd, cwd=repo)  # noqa: S603 -- fixed argv + operator's dbt args
     try:
         finish(repo, result.returncode, args, existing, state)
