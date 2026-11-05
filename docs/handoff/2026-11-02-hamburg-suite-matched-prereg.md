@@ -25,8 +25,8 @@ request because the weekly limit was close. Previous note: `archive/2026-11-01.m
 
 ## Maintainer decisions (2026-11-02)
 1. **Auto-deploy (option A).** The PM deploys unprompted after the release merge.
-   - The ADR-0012 **Amendment C text is approved**. It is staged at
-     `<scratchpad>/adr-0012-amendment-autodeploy.md` (Accepted). Commit it with #369 and give it a
+   - The ADR-0012 **Amendment C text is approved**. It is committed (Accepted) on
+     branch `feat/369-release-deploy-sources` (pushed), where the #369 fix also goes. It still needs a
      brief geo/domain pass, since it sits under `docs/adr/`.
    - Add the permission rule `Bash(uv run poe release-deploy)` only after #369 lands.
 2. **#358.** Neutral "status trend" (improving / stable / worsening) plus a **leading stage number**
