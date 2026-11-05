@@ -1163,3 +1163,43 @@ other permitted later-edition input is s3_2019_rev (E1). No other exemption exis
 | Item | Change |
 |---|---|
 | A4 rev. 1 | E1 R19 becomes primary, R19-pub the sensitivity, §4.3 seam; E2 full recompute list; E3 disclosure by revision; E4 to DE (gate waits on provenance); E5 W24 flag and wording; E6 f unchanged in W24; E7 `popgrowth_driven`, BZR totals over all children; E8 no cross-city level ranking (§10); E9 accommodation channel and page wording; O1 adopted; O4 not adopted; §8.2 guard exemption scoped to W24 and s3_2019_rev |
+
+**Amendment 5 (post-results-generation, pre-interpretation, 2026-11-05).** The binding matched run (B = 1999, commits 0fb5fb00..13d9f3ff)
+existed when this amendment was written. The geo-DS did not open the outputs. The DE's
+implementation readings were raised while producing that run. One of them (reading 3) described a
+specific row pattern (BER H2: primary not significant after BH, sensitivities significant
+unadjusted). The PM had seen a verdict summary. The domain ratification was done without opening
+the outputs. Each change is justified from the pre-registration text alone (§0, §5, §6.3, §6.5,
+§7.5). A5.2 makes the statement rule stricter. Both changes resolve text that was ambiguous before implementation. The
+rulings are in `docs/epic-e/371-implementation-readings-geo.md`.
+
+- **A5.1 Definition of a flip.** A sensitivity "flip" flag (`small_units_flip`, `core3m_flip`, `core2_flip`, `core1u_flip`, `w24_weight_sensitive`,
+  `r19_revision_sensitive`) is set when either:
+  - (a) the point estimate changes sign relative to the primary (for AUC rows the sign is that of AUC − 0.5; for X8 rows that of Δ); or
+  - (b) unadjusted significance (p < 0.05, two-sided, block bootstrap) differs between the primary
+    and the sensitivity.
+
+  Both sides are compared on the **same, unadjusted** scale. The BH-adjusted primary verdict is never
+  compared with an uncorrected sensitivity result. The primary verdict itself is unchanged and stays
+  BH-adjusted (T8, N-family, X8). Rationale: a mixed comparison flags rows that differ only by the
+  multiplicity correction, not by the data.
+- **A5.2 The ≥ 5,000 condition of the statement rule (§0, §6.3).** "X8 gives DIFFERS … in the ≥ 5,000
+  panel" means BH over the 8 X8 rows **within the ≥ 5,000 panel**, the same procedure as the primary.
+  The T-free condition stays unadjusted, as written ("sensitivity criterion, no BH"). The explicit
+  "no BH" on that condition alone shows the contrast was intended. Every other sensitivity stays
+  uncorrected (§7.5).
+- **A5.1 scope (F1).** `maup_flip`, `mapping_driven` and `popgrowth_driven` stay **sign-only**, as
+  defined in §6.5 and §5. The fine grain and the top-decile drops change n substantially, so a change
+  in significance there reflects power, not grain or composition.
+- **A5.1 labels (domain O1, adopted).** A sign change between two estimates that are both
+  non-significant (unadjusted) is labelled "sign unstable around zero", not as a substantive flip.
+- **A5.2 m (domain O2, adopted).** NO DATA rows are not tests and do not count toward m in the
+  ≥ 5,000-panel X8 BH. This is the same convention as the primary families (for example, Berlin
+  N-family m = 1).
+- **N1 wording (domain O3, adopted).** Berlin N1 NO DATA is worded "could not be tested at this
+  grain", never "not supported".
+- **Reference and deviations (F2).** The result CSV as of commit 13d9f3ff is the pre-A5 reference.
+  The findings' deviations section (§9.2 item 7) lists A5 as a post-results-generation deviation,
+  with every row whose flags or statement-rule outcome changed under A5 (before → after).
+  Disclosure: A5.1 removes flags from the row that triggered reading 3 (BER H2,
+  `small_units_flip`/`core2_flip`).
