@@ -4711,6 +4711,45 @@ def _variant_of(r: dict) -> str:
     return m.group(1) if m else "primary"
 
 
+def _reading3_disclosure(records: list[dict], prim: dict) -> str:
+    """A5 F2 disclosure, generated from the rows: does A5.1 remove the Berlin H2 flags that
+    reading 3 was about? Stated as found, with the numbers that decide it under A5.1."""
+    r = prim.get(("BER", "H2"))
+    if r is None:
+        return "Reading-3 disclosure: Berlin H2 primary row not found."
+    base = r["operationalisation"]
+    side = {
+        v: next(
+            (
+                x
+                for x in records
+                if x["city"] == "BER" and x["operationalisation"] == f"[{v}] {base}"
+            ),
+            None,
+        )
+        for v in ("ge5000", "core2")
+    }
+    kept = [f for f in ("small_units_flip", "core2_flip") if f in r["flags"].split(";")]
+    nums = "; ".join(
+        f"{v} p_unadj {_rf(x['p_boot'], 4)} ({x['verdict']})" for v, x in side.items() if x
+    )
+    head = (
+        "**Reading-3 disclosure (A5 F2), generated.** Amendment 5 states that A5.1 removes "
+        '`small_units_flip` / `core2_flip` from Berlin H2, the row reading 3 described as "not '
+        'significant after BH, sensitivities significant unadjusted". '
+    )
+    if not kept:
+        return head + "In this run both flags are removed, as A5 states."
+    return (
+        head + f"In this run {' and '.join(f'`{k}`' for k in kept)} remain: the primary is "
+        f"{r['verdict']} (p_unadj {_rf(r['p_boot'], 4)}, p_BH {_rf(r['p_bh'], 4)}), while {nums}. "
+        "That is a difference in unadjusted significance, which A5.1 flags. The reading-3 "
+        "description was taken from a low-B debug run (B = 29), in which this primary was NOT "
+        "SIGNIFICANT after BH; it does not describe the binding B = 1999 run. Raised with the PM "
+        "and the geo-DS for the results sign-off."
+    )
+
+
 def write_matched_findings(path: Path, records: list[dict], meta: dict) -> None:
     run = meta.get("run", {})
     rm = run.get("run", {})
@@ -5220,11 +5259,12 @@ def write_matched_findings(path: Path, records: list[dict], meta: dict) -> None:
         "Δ) or a difference in unadjusted significance, both sides unadjusted; a sign change between "
         'two non-significant estimates is labelled "sign unstable around zero"; `maup_flip`, '
         "`mapping_driven` and `popgrowth_driven` stay sign-only. A5.2 reads the ≥ 5,000 condition of "
-        "the statement rule as BH over that panel's 8 X8 rows (NO DATA not in m). Disclosure (A5 F2): "
-        "A5.1 removes flags from the row that triggered reading 3 (Berlin H2, `small_units_flip` / "
-        "`core2_flip`). Rows whose flags, statement-rule outcome, family or verdict changed against the "
-        "reference, before → after, generated from the two CSVs:"
+        "the statement rule as BH over that panel's 8 X8 rows (NO DATA not in m). Rows whose flags, "
+        "statement-rule outcome, family or verdict changed against the reference, before → after, "
+        "generated from the two CSVs, follow the reading-3 disclosure."
     )
+    a("")
+    a(_reading3_disclosure(records, prim))
     a("")
     ac = meta.get("run", {}).get("a5_changes", {})
     if not ac.get("available"):

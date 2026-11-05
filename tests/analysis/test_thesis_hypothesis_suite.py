@@ -1815,3 +1815,29 @@ def test_371_ewr_flag_follows_the_rows_window():
     M.apply_flags([a, b, c], {})
     assert "ewr_2022_interpolated" not in a["flags"] | c["flags"]
     assert "ewr_2022_interpolated" in b["flags"]
+
+
+def test_371_reading3_disclosure_is_generated_from_the_rows():
+    base = "category OA at window start"
+    prim_row = {
+        "city": "BER",
+        "hypothesis": "H2",
+        "operationalisation": base,
+        "flags": "small_units_flip;core2_flip;ewr_2022_interpolated",
+        "verdict": "SUPPORTED",
+        "p_boot": "0.013",
+        "p_bh": "0.0256",
+    }
+    side = [
+        {
+            "city": "BER",
+            "operationalisation": f"[{v}] {base}",
+            "p_boot": p,
+            "verdict": "NOT SIGNIFICANT",
+        }
+        for v, p in (("ge5000", "0.105"), ("core2", "0.918"))
+    ]
+    txt = M._reading3_disclosure(side, {("BER", "H2"): prim_row})
+    assert "remain" in txt and "ge5000 p_unadj 0.1050" in txt and "B = 29" in txt
+    prim_row["flags"] = "ewr_2022_interpolated"
+    assert "both flags are removed" in M._reading3_disclosure(side, {("BER", "H2"): prim_row})
