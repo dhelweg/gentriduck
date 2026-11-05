@@ -18,10 +18,24 @@
 <script>
 	/** Box heading (plain text). */
 	export let title = '';
+	/**
+	 * Heading level of the title (2, 3 or 4; default 3), so the box title is a real heading in
+	 * the page outline (#371 page review low 7). Pick the level that fits where the box sits,
+	 * e.g. 3 inside an h2 section.
+	 */
+	export let level = 3;
 </script>
 
-<section class="methods-box" aria-label={title || undefined}>
-	{#if title}<div class="methods-box-title">{title}</div>{/if}
+<section class="methods-box">
+	{#if title}
+		{#if level === 2}
+			<h2 class="methods-box-title">{title}</h2>
+		{:else if level === 4}
+			<h4 class="methods-box-title">{title}</h4>
+		{:else}
+			<h3 class="methods-box-title">{title}</h3>
+		{/if}
+	{/if}
 	<div class="methods-box-body"><slot /></div>
 </section>
 
@@ -36,6 +50,8 @@
 		overflow-wrap: break-word;
 	}
 	.methods-box-title {
+		margin: 0;
+		line-height: 1.3;
 		font-size: 0.78rem;
 		font-weight: 700;
 		letter-spacing: 0.06em;

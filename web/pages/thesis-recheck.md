@@ -453,7 +453,7 @@ For the **current** picture these hypotheses take a back seat to the live typolo
 
 - [Berlin hypothesis-suite findings (#354)](https://github.com/dhelweg/gentriduck/blob/main/docs/epic-e/E1b-berlin-hypothesis-suite-findings.md) — the full results behind the table above, including every secondary and sensitivity check
 - [The 2018 thesis, re-tested on Hamburg](/hamburg/thesis-recheck) — the same eight hypotheses as an out-of-sample transfer test on Hamburg, side by side with the thesis and Berlin today (#355)
-- [Berlin vs Hamburg, like for like](/berlin-vs-hamburg) — the thesis hypotheses in both cities on matched areas, shared indicators and the same years, with a tested city difference for each (#371)
+- [Berlin vs Hamburg, like for like](/berlin-vs-hamburg) — the thesis hypotheses in both cities on matched areas, shared indicators and the same years, with each hypothesis tested for a difference between the cities (#371)
 - [Pre-registration](https://github.com/dhelweg/gentriduck/blob/main/docs/methodology/354-355-hypothesis-suite-preregistration.md) — the design fixed before the results were computed, including what the results must not be used to claim (§9)
 - [Results table (CSV)](https://github.com/dhelweg/gentriduck/blob/main/docs/epic-e/thesis-hypothesis-suite-results.csv) — every row, machine-readable
 - [Epic B milestone write-up](https://github.com/dhelweg/gentriduck/blob/main/docs/epic-g/O4-milestone-B-narrative.md) — the original signed-off revival findings; its hypothesis results predate the November 2026 re-test

@@ -369,7 +369,7 @@ cited.
 ## Further reading
 
 - [The 2018 thesis, re-checked](/thesis-recheck) — the Berlin re-test in full, including how the re-test works
-- [Berlin vs Hamburg, like for like](/berlin-vs-hamburg) — both cities on matched areas, shared indicators and the same years, with a tested city difference for each hypothesis (#371)
+- [Berlin vs Hamburg, like for like](/berlin-vs-hamburg) — both cities on matched areas, shared indicators and the same years, with each hypothesis tested for a difference between the cities (#371)
 - [Hamburg hypothesis-suite findings (#355)](https://github.com/dhelweg/gentriduck/blob/main/docs/epic-h/H-thesis-hypothesis-suite-findings.md) — the full results behind the table above, including every secondary and sensitivity check
 - [Pre-registration](https://github.com/dhelweg/gentriduck/blob/main/docs/methodology/354-355-hypothesis-suite-preregistration.md) — the design fixed before the results were computed, including the Hamburg comparability statement (§4.5) and what the results must not be used to claim (§9)
 - [Results table (CSV)](https://github.com/dhelweg/gentriduck/blob/main/docs/epic-e/thesis-hypothesis-suite-results.csv) — every row, machine-readable

@@ -14,8 +14,17 @@ sidebar_position: 13
   BINDING WORDING (domain sign-off §3, geo sign-off R1-R3):
   - The page lead is the domain §3 binding headline sentence, verbatim (Hero lede).
   - The five domain §3 supporting sentences, verbatim, in "What the comparison shows"; the Berlin
-    H2 sentence (bullet 3) is also placed in the Berlin H2 cell itself (domain O2).
-  - The R7 and E9 page wordings and the R1 scale caveat, verbatim, in "Read this first".
+    H2 sentence (bullet 3) is also placed directly below the first table, with a pointer to it in
+    the Berlin H2 cell (domain O2; page review low 9 keeps the mobile row short).
+  - The R7 and E9 page wordings and the R1 scale caveat (findings §1 text), verbatim, in "Read
+    this first", followed by the methods box.
+
+  PAGE REVIEW ROUND (docs/epic-e/371c-page-domain-signoff.md, 371c-page-geo-signoff.md, web
+  review): "Reading the checks" core-3M sentence = domain P2 verbatim (the geo item 1 text says
+  the same); methods-box "Fixed in advance" = domain P1 verbatim (the geo item 2 text additionally
+  says "before the results were interpreted"); domain O1 (H1a label), O2 (link texts) and O3
+  ("changed that result's sign or its significance before correction") adopted. The D6 note and
+  the Berlin N1 sentence are guarded by the rows they describe (review lows 4 and 5).
   - Every X8 "no difference detected" whose MDD is above the pre-registered threshold (0.30 rho,
     0.10 AUC) carries "too imprecise to say the cities agree (MDD x > t)" in the cell (geo R1).
     The rule is evaluated from the CSV's `mdd` and `estimator`, so H3c (MDD 0.213) and the N3
@@ -167,9 +176,11 @@ select
                     || ' spatial blocks are occupied; at least 20 are needed for a verdict.</span>'
                 else ''
             end
-            -- Domain O2: the Berlin H2 sentence (domain §3, bullet 3, verbatim) sits with the verdict.
+            -- Domain O2: the Berlin H2 sentence (domain §3, bullet 3, verbatim) sits directly
+            -- below the table; the cell carries a short pointer to it, so the row stays short on
+            -- mobile (review low 9). Same condition as the sentence's guard (BER H2 SUPPORTED).
             || case when city = 'BER' and hypothesis = 'H2' and verdict = 'SUPPORTED' then
-                '<br><span style="opacity:0.9">In Berlin, the business mix gave a weak hint of which areas fell behind in 2021–2023 only. It disappears without the welfare-receipt indicator and adds nothing to knowing how disadvantaged an area already was. That period coincides with refugees from Ukraine entering basic income support (Grundsicherung), so we do not read it as an effect of local businesses.</span>'
+                '<br><span style="opacity:0.9"><i>Weak, 2021–2023 only: see the Berlin H2 note directly below this table.</i></span>'
                 else '' end
         -- city differences (X8, and the exploratory N1-N3 differences)
         else
@@ -203,7 +214,7 @@ from base
 select * from (
     values
         (1, 'H1',  'An area''s social status is linked to its local business mix'),
-        (2, 'H1a', 'Areas with many cafés have higher status'),
+        (2, 'H1a', 'Areas where cafés make up more of the gastronomy mix have higher status'),
         (3, 'H1b', 'Areas where fast food makes up more of the gastronomy mix have lower status'),
         (4, 'H1c', 'Areas with many sport and leisure facilities have higher status'),
         (5, 'H2',  'Today''s mix of shops, services and public facilities is linked to the next change in officially measured disadvantage'),
@@ -261,8 +272,23 @@ select
      where city = 'BER' and family = 'T8' and hypothesis = 'H2' and verdict = 'SUPPORTED') = 1 as s3_ok,
     (select count(*) from ${mc_shown}
      where city = 'BER' and family = 'T8' and hypothesis = 'H1c' and verdict = 'CONTRADICTED') = 1 as h1c_ok,
+    -- D6 note (review low 4): only while the primary X8 H2 row is NO DIFFERENCE DETECTED, the
+    -- Berlin H2 sentence holds (as s3_ok), and the W2-only exploratory BER-HH H2 row (window
+    -- 2021-2023) is DIFFERS with Hamburg below chance (flag amendment3_below_chance).
     (select count(*) from ${mc_shown}
-     where family = 'X8' and hypothesis = 'H2' and flags like '%w2_only%') = 1 as w2_note_ok,
+     where family = 'X8' and hypothesis = 'H2' and verdict = 'NO DIFFERENCE DETECTED') = 1
+        and (select count(*) from ${mc_shown}
+             where city = 'BER' and family = 'T8' and hypothesis = 'H2'
+               and verdict = 'SUPPORTED') = 1
+        and (select count(*) from gentriduck_findings.matched_comparison
+             where city = 'BER-HH' and role = 'exploratory' and sens_tag = ''
+               and hypothesis = 'H2' and time_window = '2021-2023'
+               and verdict = 'DIFFERS'
+               and flags like '%amendment3_below_chance%') = 1 as w2_note_ok,
+    -- Berlin N1 sentence (review low 5): only while the BER N1 primary row is NO DATA.
+    (select count(*) from ${mc_shown}
+     where city = 'BER' and role = 'primary' and hypothesis = 'N1'
+       and verdict = 'NO DATA') = 1 as n1_ok,
     (select count(*) from ${mc_shown} where family = 'X8') as x8_n,
     (select count(*) from ${mc_shown} where family = 'X8' and verdict = 'DIFFERS') as x8_differs,
     (select string_agg(distinct run_sha, ', ') from ${mc_shown}) as run_sha
@@ -271,6 +297,10 @@ select
 <script>
   // #371: hand-written sentences are guarded by the rows they describe (see the header comment).
   $: g = guards?.[0] ?? {};
+  // Plain expression for the "(run …)" line: a `<Value>` there renders a trailing space (page
+  // review low 8), and quotes inside a markdown {expression} get smart-quoted, so the fallback
+  // lives here.
+  $: runSha = g.run_sha ?? '';
 </script>
 
 {#if g.lead_ok}
@@ -342,14 +372,44 @@ show the current results.
   benefits. Where the city opens or closes refugee accommodation, an area's figure can change by
   tens of percentage points without any change among its existing residents. Such changes show
   where accommodation was placed. We do not read them as neighbourhood decline or improvement.
-- **Scale.** The areas compared (15,000–26,000 residents) are coarser than the scale at which
-  gentrification is usually observed, so a null result here does not rule out a process at
-  neighbourhood scale.
+- **Scale.** The matched units (15–26k residents) are coarser than the scale at which
+  gentrification is usually observed, so a null here does not rule out a neighbourhood-scale
+  process.
 - **Within-city scores.** The disadvantage score is standardised within each city, so it ranks
   areas within a city only. A Berlin and a Hamburg area with the same score are not equally
   disadvantaged, and this page does not compare the cities' levels.
 - **Change is not either city's official trend.** The change measure here is built from the three
   shared indicators. It is not either city's own published change classification.
+
+<MethodsBox title="How the comparison works">
+
+- **Matched grain.** Berlin Bezirksregionen (BZR, 143) and Hamburg Stadtteile (99): areas of
+  roughly 15,000–26,000 residents and 4–6 km². Each is built up from the city's smaller areas
+  (Berlin planning areas, Hamburg statistical areas), weighted by residents.
+- **Harmonised core.** The same three indicators in both cities: unemployment, welfare receipt and
+  child poverty. Berlin's welfare figure is re-based to all recipients (T\*), so that both cities
+  weigh unemployment the same way. The remaining differences in what each figure counts are
+  disclosed above.
+- **Same years.** The 2019, 2021, 2023 and 2025 editions of each city's social monitor, with the
+  same reference dates and three two-year windows, and the same OpenStreetMap snapshots and
+  business categories. Berlin's end-2022 population, used as weights, is interpolated between
+  2020 and 2024, as fixed in advance.
+- **Spatial block bootstrap.** Confidence intervals resample 24 blocks of neighbouring areas per
+  city (1,999 draws), so neighbours are not treated as independent. Benjamini–Hochberg corrects
+  across each city's eight tests and across the eight city comparisons.
+- **Hamburg 2019 base revised by the publisher.** Hamburg's 2019 welfare figures come from an S3
+  base revised by the publisher (a change in how asylum-seeker benefits are counted, Hamburg
+  Sozialmonitoring report 2021). The comparison uses the revised base; the figures as first
+  published are a check.
+- **Fixed in advance.** The design, the checks and this page's statement rule were registered
+  before the results were computed. Two clarifications (how a check is marked as moving a result,
+  and how the 5,000-resident condition of the statement rule is tested) were added after the
+  results were computed and are disclosed in Amendment 5 of the pre-registration:
+  [pre-registration](https://github.com/dhelweg/gentriduck/blob/main/docs/methodology/371-matched-comparison-preregistration.md),
+  [data checks](https://github.com/dhelweg/gentriduck/blob/main/docs/epic-e/371-data-checks.md),
+  [findings](https://github.com/dhelweg/gentriduck/blob/main/docs/epic-e/E1c-matched-comparison-findings.md).
+
+</MethodsBox>
 
 ## The thesis hypotheses in each city
 
@@ -364,6 +424,15 @@ well the mix tells areas apart (0.5 is chance). Brackets give the 95% confidence
     <Column id=berlin title="Berlin (143 Bezirksregionen)" contentType=html wrap=true/>
     <Column id=hamburg title="Hamburg (99 Stadtteile)" contentType=html wrap=true/>
 </DataTable>
+
+{#if g.s3_ok}
+
+**Berlin H2.** In Berlin, the business mix gave a weak hint of which areas fell behind in
+2021–2023 only. It disappears without the welfare-receipt indicator and adds nothing to knowing how
+disadvantaged an area already was. That period coincides with refugees from Ukraine entering basic
+income support (Grundsicherung), so we do not read it as an effect of local businesses.
+
+{/if}
 
 {#if g.h1c_ok}
 
@@ -420,50 +489,29 @@ uncorrected. These are ordering tests, not warning, forecasting or investment in
 </DataTable>
 
 N1 is about the more disadvantaged half of neighbourhoods in each city, which mixes very different
-kinds of area; it is not about gentrifying areas. In Berlin, N1 could not be tested at this grain:
-the areas above the median fall into too few of the spatial blocks used for the confidence
-intervals.
+kinds of area; it is not about gentrifying areas.
+
+{#if g.n1_ok}
+
+In Berlin, N1 could not be tested at this grain: the areas above the median fall into too few of
+the spatial blocks used for the confidence intervals.
+
+{/if}
 
 **Reading the checks.** Each result was also re-run with one change at a time. A check is listed
-under a result only where it moved that result. *Sign unstable around zero*: the estimate changes
+under a result only where it changed that result's sign or its significance before correction.
+*Sign unstable around zero*: the estimate changes
 sign, but is not statistically significant in either version, so it is not a substantive change.
 *Unadjusted significance change*: significant before correction in one version and not in the
 other. *Grain-dependent, MAUP*: the result depends on the size of the areas (the modifiable areal
 unit problem). No check can change a verdict, and a check is not a finding on its own. Berlin's
-uncorrected welfare indicator, for example, counts unemployment twice in the disadvantage score,
-which is why the corrected one is used for every verdict.
+uncorrected welfare indicator, for example, leaves out recipients who are unemployed, while
+Hamburg's includes them, so the two cities' scores would weigh unemployment differently. That is
+why the corrected one is used for every verdict.
 
 The tables are read directly from the committed
 [results table](https://github.com/dhelweg/gentriduck/blob/main/docs/epic-e/matched-comparison-results.csv)
-(run <Value data={guards} column=run_sha/>).
-
-<MethodsBox title="How the comparison works">
-
-- **Matched grain.** Berlin Bezirksregionen (BZR, 143) and Hamburg Stadtteile (99): areas of
-  roughly 15,000–26,000 residents and 4–6 km². Each is built up from the city's smaller areas
-  (Berlin planning areas, Hamburg statistical areas), weighted by residents.
-- **Harmonised core.** The same three indicators in both cities: unemployment, welfare receipt and
-  child poverty. Berlin's welfare figure is re-based to all recipients (T\*), so that both cities
-  weigh unemployment the same way. The remaining differences in what each figure counts are
-  disclosed above.
-- **Same years.** The 2019, 2021, 2023 and 2025 editions of each city's social monitor, with the
-  same reference dates and three two-year windows, and the same OpenStreetMap snapshots and
-  business categories. Berlin's end-2022 population, used as weights, is interpolated between
-  2020 and 2024, as fixed in advance.
-- **Spatial block bootstrap.** Confidence intervals resample 24 blocks of neighbouring areas per
-  city (1,999 draws), so neighbours are not treated as independent. Benjamini–Hochberg corrects
-  across each city's eight tests and across the eight city comparisons.
-- **Hamburg 2019 base revised by the publisher.** Hamburg's 2019 welfare figures come from an S3
-  base revised by the publisher (a change in how asylum-seeker benefits are counted, Hamburg
-  Sozialmonitoring report 2021). The comparison uses the revised base; the figures as first
-  published are a check.
-- **Fixed in advance.** The design, the checks and this page's statement rule were registered
-  before the results were computed:
-  [pre-registration](https://github.com/dhelweg/gentriduck/blob/main/docs/methodology/371-matched-comparison-preregistration.md),
-  [data checks](https://github.com/dhelweg/gentriduck/blob/main/docs/epic-e/371-data-checks.md),
-  [findings](https://github.com/dhelweg/gentriduck/blob/main/docs/epic-e/E1c-matched-comparison-findings.md).
-
-</MethodsBox>
+(run {runSha}).
 
 ## Honest caveats
 

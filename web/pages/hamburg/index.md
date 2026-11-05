@@ -177,7 +177,7 @@ where city_code = 'HH' and area_level = 'subarea_l2'
   </LinkCard>
   <LinkCard href="/berlin-vs-hamburg" icon="⚖️" title="Berlin vs Hamburg, like for like" cta="See the comparison →">
     The thesis hypotheses in both cities on matched areas of similar size, the same three
-    indicators and the same years, with a tested city difference for each hypothesis.
+    indicators and the same years, with each hypothesis tested for a difference between the cities.
   </LinkCard>
 </LinkCards>
 
