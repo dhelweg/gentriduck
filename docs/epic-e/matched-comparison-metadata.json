@@ -1592,7 +1592,9 @@
     "a5_changes": {
       "available": true,
       "reference": "13d9f3ff",
+      "reference_path": "docs/epic-e/matched-comparison-results.csv",
       "reference_rows_missing": 0,
+      "reference_sha256": "43afd85d245c3333b8176c3b17e996c3c69185071577d13f916d17beee12d14b",
       "rows": [
         {
           "city": "BER",
@@ -4227,7 +4229,7 @@
     },
     "run": {
       "n_boot": 1999,
-      "run_sha": "14d20548b5be",
+      "run_sha": "635166279667",
       "seed": 42,
       "seed_x8_hh": 43
     },
