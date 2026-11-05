@@ -16,7 +16,12 @@ export stamps. Covered:
   - the precondition refusals (HEAD not at origin/main, dirty tree, origin/main missing);
   - `poe build` provenance: in-progress voiding (incl. an interrupted build), args classification;
   - Python/Node parity of the inputs fingerprint and the embedded export stamps, via the real
-    postbuild-build-source.mjs (skipped if `node` isn't on PATH).
+    postbuild-build-source.mjs (skipped if `node` isn't on PATH);
+  - #369, via the real web/scripts/sources-stamp.mjs (npm `presources`/`postsources`) and
+    postbuild-build-source.mjs: the issue's scenario (sources on F, export + build on T) and a
+    sources-time serving fingerprint that differs from the live one both REBUILD, as do partial
+    sources runs, a failed/killed run, extracted data changed afterwards, a dirty-tree run and a
+    build without a sources record; `poe build --help`/`--version` leave the warehouse record.
 Dry-run never executes a step, so neither `poe export-*`, `npm` nor `deploy-gh-pages.sh` runs.
 """
 
