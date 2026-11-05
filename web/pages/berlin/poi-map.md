@@ -66,6 +66,12 @@ sidebar_position: 5
   (OA-C.1, #174) -- it does NOT claim the sweep characterizes the oa_domain values actually shown
   on this map. This IS methodology-bearing at the page-display level (new suppression logic + a
   bandwidth disclosure) -- see the R-C1 sign-off files for this ticket.
+
+  #357: mart_poi_offering_advantage_map now zero-fills PLR-years with no mapped place of a domain
+  (is_zero_filled, poi_count 0, density 0, oa_domain NULL), so the density view draws them as 0
+  (the scale's lowest colour, PolygonMap's default data min) instead of hatched "No data". No
+  oa_domain/oa_delta value changes: zero-filled rows carry no OA and the OA lag skips them. The
+  hatching alert now separates "no place of this domain mapped" from "thinly mapped".
 -->
 
 <script>
@@ -141,20 +147,25 @@ for the full method, or the [methodology page](/methodology) for a plain-languag
 </Alert>
 
 <Alert status="warning">
-  <b>Thinly-mapped PLRs are hatched grey.</b> Offering Advantage is a compositional ratio (a location
-  quotient) -- in a PLR-year with very few mapped places overall, a single new or removed business
-  can swing its Offering Advantage value disproportionately. PLR-years with fewer than 10 total
-  mapped places (across every domain) are shown as a hatched grey "No data" area on the map rather than a
-  potentially misleading Offering Advantage value; the raw mapped-place count for the selected
-  domain is always visible in the tooltip so you can judge borderline cases yourself. <b>A hatched
-  area means only "too thinly observed to compute a stable ratio" -- never "commercially dead."</b>
+  <b>What 0 and the grey hatching mean.</b> On the <b>POI density</b> view, a PLR with no mapped
+  place of the selected domain that year is shown as <b>0</b>, the lowest colour on the scale.
+  On the <b>Offering Advantage</b> view, a PLR is hatched grey ("No data") in two cases. First, the
+  selected domain has no mapped place there that year: Offering Advantage is only computed for a
+  domain present in the area, so there is no value to show. Second, the PLR-year is thinly mapped:
+  Offering Advantage is a compositional ratio (a location quotient), so in a PLR-year with very few
+  mapped places overall a single new or removed business can swing its value disproportionately.
+  PLR-years with fewer than 10 total mapped places (across every domain) are therefore hatched
+  rather than given a potentially misleading Offering Advantage value. The raw mapped-place count
+  for the selected domain is always visible in the tooltip, so you can judge borderline cases
+  yourself. <b>A 0 or a hatched area means only "nothing of this kind is mapped here" or "too
+  thinly observed to compute a stable ratio" -- never "commercially dead."</b>
   OSM's mapping coverage is not spatially neutral: besides the early-year effect on the citywide
   chart below, completeness also varies *within* a given year and tends to correlate with area
   advantage -- poorer/peripheral areas are typically less thoroughly mapped than richer/central ones
   (Haklay, M. 2010, "How Good is Volunteered Geographical Information?", *Environment and Planning
-  B*). So a low mapped-place count -- and the blank cell it produces -- can reflect an OSM coverage
-  gap rather than a real absence of commercial activity; please don't read a blank PLR as evidence
-  that nothing is happening there. <b>A
+  B*). So a low or zero mapped-place count -- and the 0 or blank cell it produces -- can reflect an
+  OSM coverage gap rather than a real absence of commercial activity; please don't read such a PLR
+  as evidence that nothing is happening there. <b>A
   bandwidth sweep found the Gaussian-weighted Offering Advantage construct bandwidth-sensitive at
   wide catchments</b>: it is stable close to its 1000 m headline catchment (500m vs 1000m and 1000m
   vs 1500m both rank-correlate above 0.7 across every year 2008-2026), but re-ranks meaningfully
@@ -256,8 +267,14 @@ with
             - lag(poi_density_per_km2) over (
                 partition by area_code order by snapshot_year
             ) as density_delta,
-            oa_domain
-            - lag(oa_domain) over (partition by area_code order by snapshot_year) as oa_delta_raw
+            -- #357: the mart now zero-fills domain-years with no POI (is_zero_filled,
+            -- oa_domain NULL). Partitioning the OA lag by is_zero_filled keeps
+            -- oa_delta exactly as before (previous year WITH an OA value); the
+            -- density lag above now runs over the complete yearly series, so a
+            -- 0 -> n year reads +n instead of "no data".
+            oa_domain - lag(oa_domain) over (
+                partition by area_code, is_zero_filled order by snapshot_year
+            ) as oa_delta_raw
         from gentriduck_marts.mart_poi_offering_advantage_map
         where
             city_code = 'BER'
@@ -488,10 +505,12 @@ order by snapshot_year
 - **Offering Advantage is unstable in thinly-mapped PLRs — now suppressed, not just flagged.** It
   is a compositional ratio (a location quotient), so in a PLR-year with very few mapped businesses
   a single new or removed business can swing its OA value disproportionately (#274, ADR-0017 D5
-  D-3). PLR-years with fewer than 10 total mapped places are shown as a blank/unshaded gap on the
-  map above rather than a potentially misleading value; the raw mapped-place count is always in
-  the tooltip so you can judge near-threshold cases yourself. **A blank/low cell means "too thinly
-  observed to compute a stable ratio," never "commercially dead."** OSM coverage is not spatially
+  D-3). On the Offering Advantage view, PLR-years with fewer than 10 total mapped places are shown
+  as a hatched gap on the map above rather than a potentially misleading value; the raw
+  mapped-place count is always in the tooltip so you can judge near-threshold cases yourself. **A
+  blank/low cell means "too thinly observed to compute a stable ratio," never "commercially
+  dead."** The same holds for a 0 on the density view, which only means no place of that domain is
+  mapped there. OSM coverage is not spatially
   neutral — beyond the early-year completeness bias noted above, mapping completeness also varies
   *within* a given year and tends to correlate with area advantage, with poorer/peripheral areas
   typically less thoroughly mapped than richer/central ones (Haklay, M. 2010, "How Good is

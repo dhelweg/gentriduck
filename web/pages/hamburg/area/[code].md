@@ -564,7 +564,9 @@ this across all of Hamburg.
 -- #353: the same mart rows /hamburg/poi-map colours its map by (HH, standard/faithful), this
 -- Gebiet, latest snapshot_year with a value. Rows carrying the mart's minimum-base flag are
 -- dropped here -- /hamburg/poi-map shows the same Gebiet-years as hatched "No data" -- and their
--- count is disclosed below via poi_oa_suppressed.
+-- count is disclosed below via poi_oa_suppressed. #357: the mart's zero-filled rows (no POI of
+-- the domain, oa_domain NULL) are excluded here and in poi_oa_suppressed, so both read the same
+-- rows as before the zero-fill.
 select
     poi_domain_h,
     oa_domain,
@@ -575,6 +577,7 @@ where
     and weight_variant = 'standard'
     and methodology_variant = 'faithful'
     and area_code = '${params.code}'
+    and not is_zero_filled
     and not oa_domain_min_base_flag
     and snapshot_year = (
         select max(snapshot_year)
@@ -597,6 +600,7 @@ where
     and weight_variant = 'standard'
     and methodology_variant = 'faithful'
     and area_code = '${params.code}'
+    and not is_zero_filled
     and oa_domain_min_base_flag
     and snapshot_year = (
         select max(snapshot_year)
@@ -606,6 +610,7 @@ where
             and weight_variant = 'standard'
             and methodology_variant = 'faithful'
             and area_code = '${params.code}'
+            and not is_zero_filled
     )
 ```
 

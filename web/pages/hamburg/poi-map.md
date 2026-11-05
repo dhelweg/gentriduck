@@ -33,6 +33,9 @@ sidebar_position: 5
     OA-by-domain radar.
   - Separate <PolygonMap> instance (#351; formerly <AreaMap>)/route from Berlin's, per the H3-domain-signoff.md structural guard
     (no shared cross-city component instance) -- same principle as pages/hamburg/maps.md.
+  - #357: mart_poi_offering_advantage_map zero-fills Gebiet-years with no mapped place of a domain
+    (is_zero_filled, poi_count 0, density 0, oa_domain NULL), so the density view draws them as 0
+    instead of hatched "No data" (Retail 2025: 282 Gebiete). No oa_domain/oa_delta value changes.
 -->
 
 <script>
@@ -90,20 +93,24 @@ city-agnostic mart that has carried real Hamburg rows since H1 (#40).
 </Alert>
 
 <Alert status="warning">
-  <b>Gebiet names are labels, and thinly-mapped Gebiete are hatched grey.</b> Hamburg's
+  <b>Gebiet names are labels; 0 and the grey hatching have set meanings.</b> Hamburg's
   statistische Gebiete carry only a numeric code, so each is labelled by its Stadtteil plus an
   OpenStreetMap neighbourhood name or its code (see the <a href="/hamburg/maps">gentrification
-  map</a>); hover any area for its label. Offering Advantage is a compositional ratio (a
-  location quotient) — in a Gebiet-year with very few mapped places overall, a single new or
-  removed business can swing its Offering Advantage value disproportionately, so Gebiet-years
-  below the same minimum-mapped-place threshold used for Berlin are shown as a hatched grey "No data" area rather
-  than a potentially misleading value; the raw mapped-place count is always visible in the
-  tooltip. <b>OSM's mapping coverage is not spatially neutral: completeness tends to correlate with
+  map</a>); hover any area for its label. On the <b>POI density</b> view, a Gebiet with no mapped
+  place of the selected domain that year is shown as <b>0</b>, the lowest colour on the scale. On
+  the <b>Offering Advantage</b> view, a Gebiet is hatched grey ("No data") in two cases: the
+  selected domain has no mapped place there that year (Offering Advantage is only computed for a
+  domain present in the area), or the Gebiet-year is thinly mapped. Offering Advantage is a
+  compositional ratio (a location quotient) — in a Gebiet-year with very few mapped places overall,
+  a single new or removed business can swing its value disproportionately, so Gebiet-years below
+  the same minimum-mapped-place threshold used for Berlin are hatched rather than given a
+  potentially misleading value. The raw mapped-place count is always visible in the tooltip.
+  <b>OSM's mapping coverage is not spatially neutral: completeness tends to correlate with
   area advantage, and poorer/peripheral areas are typically less thoroughly mapped than
   richer/central ones</b> (Haklay, M. 2010, "How Good is Volunteered Geographical Information?",
-  *Environment and Planning B*). So a blank Gebiet-year can reflect an OSM coverage gap rather than
-  a real absence of commercial activity — please don't read it as evidence that nothing is
-  happening there. Hamburg's own affluent Alster–Elbe axis against a deprived eastern/southern
+  *Environment and Planning B*). So a 0 or a blank Gebiet-year can reflect an OSM coverage gap
+  rather than a real absence of commercial activity — please don't read it as evidence that
+  nothing is happening there. Hamburg's own affluent Alster–Elbe axis against a deprived eastern/southern
   periphery is a sharper socio-spatial divide than Berlin's more mosaic pattern, so this
   cross-sectional under-mapping gradient may be even steeper here (see the
   <a href="/berlin/poi-map">Berlin POI map</a> for the same caveat applied there).
@@ -186,8 +193,12 @@ with
             - lag(poi_density_per_km2) over (
                 partition by area_code order by snapshot_year
             ) as density_delta,
-            oa_domain
-            - lag(oa_domain) over (partition by area_code order by snapshot_year) as oa_delta_raw
+            -- #357: same as /berlin/poi-map. Zero-filled rows (is_zero_filled, oa_domain
+            -- NULL) get their own lag partition so oa_delta is exactly as before; the
+            -- density lag runs over the complete yearly series.
+            oa_domain - lag(oa_domain) over (
+                partition by area_code, is_zero_filled order by snapshot_year
+            ) as oa_delta_raw
         from gentriduck_marts.mart_poi_offering_advantage_map
         where
             city_code = 'HH'
@@ -345,9 +356,11 @@ limit 15
   chart or section is built from it on this page.
 - **Offering Advantage and POI density are commercial-side signals, not the outcome variable** —
   see [methodology §1](/methodology).
-- **Thinly-mapped Gebiete are suppressed, not shown as zero** — same D-3 minimum-mapped-place
-  threshold as Berlin's map (#274, ADR-0017 D5 D-3); a blank cell means "too thinly observed,"
-  never "commercially dead."
+- **On the Offering Advantage view, thinly-mapped Gebiete are suppressed, not shown as zero** —
+  same D-3 minimum-mapped-place threshold as Berlin's map (#274, ADR-0017 D5 D-3); a blank cell
+  means "too thinly observed," never "commercially dead." The density view does show 0 where no
+  place of the selected domain is mapped; that is a count of mapped places, so it too can reflect
+  an OSM coverage gap.
 - **This map's Offering Advantage baseline is Hamburg-wide, never pooled with Berlin's** — see
   [methodology §6](/methodology)'s structural rule against pooled cross-city comparison.
 
