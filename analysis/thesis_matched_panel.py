@@ -327,8 +327,8 @@ SQL: dict[str, str] = {
     """,
     "hh_zone_cover": """
         WITH z AS (
-            SELECT ST_Union_Agg(ST_Transform(ST_GeomFromWKB(geometry_wkb), 'EPSG:4326',
-                                             'EPSG:25832', always_xy := true)) AS zg
+            -- the staged zone WKB is already in EPSG:25832 (ETRS89 / UTM 32N)
+            SELECT ST_Union_Agg(ST_GeomFromWKB(geometry_wkb)) AS zg
             FROM main.stg_hamburg_displacement_zones
             WHERE CAST(LEFT(in_force_date, 10) AS DATE) <= DATE '2024-12-31'
         ), g AS (
