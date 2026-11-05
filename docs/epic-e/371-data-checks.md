@@ -105,7 +105,7 @@ the deviation.
 
 ## 2. Hamburg annex checks (PR §3.3, binding)
 
-All five are also dbt tests (severity error) and pass in `uv run poe build`.
+All six are also dbt tests (severity error) and pass in `uv run poe build`.
 
 1. **Moments (`test_371_hh_annex_z_moments`).** All 130 edition × indicator cells have
    |mean z| ≤ 0.01 and |SD z − 1| ≤ 0.01. The largest deviations are mean −0.0033 (S7 2025) and SD
