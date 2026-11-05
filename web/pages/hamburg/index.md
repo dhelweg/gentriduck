@@ -175,6 +175,10 @@ where city_code = 'HH' and area_level = 'subarea_l2'
     The eight hypotheses of the 2018 Berlin thesis, re-tested on Hamburg's Sozialmonitoring and set
     side by side with the thesis and Berlin today: an out-of-sample transfer test, not a replication.
   </LinkCard>
+  <LinkCard href="/berlin-vs-hamburg" icon="⚖️" title="Berlin vs Hamburg, like for like" cta="See the comparison →">
+    The thesis hypotheses in both cities on matched areas of similar size, the same three
+    indicators and the same years, with a tested city difference for each hypothesis.
+  </LinkCard>
 </LinkCards>
 
 ## Honest caveats

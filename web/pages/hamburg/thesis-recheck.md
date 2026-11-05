@@ -58,6 +58,9 @@ hide_breadcrumbs: true
 
   Not methodology-bearing as a page change: no statistic is computed or altered here; every label
   and estimate comes from the signed-off CSV, and every sentence from the signed-off Addendum.
+
+  #371 (2026-11): links only. The end of "Not like-for-like" and "Further reading" now point to
+  /berlin-vs-hamburg, the matched comparison. No result is stated here; the table is unchanged.
 -->
 
 <script>
@@ -268,6 +271,9 @@ both Hamburg columns, so it is shown once and counts once.
 - **Different era.** The Hamburg full chain covers 2013–2025, Berlin today 2019–2025; the Hamburg
   2019–2025 column is the era-matched comparison.
 
+A separate comparison puts both cities on matched areas of similar size, the same three indicators
+and the same years: [Berlin vs Hamburg, like for like](/berlin-vs-hamburg).
+
 ### Each hypothesis in a sentence
 
 {#if perRowCurrent}
@@ -363,6 +369,7 @@ cited.
 ## Further reading
 
 - [The 2018 thesis, re-checked](/thesis-recheck) — the Berlin re-test in full, including how the re-test works
+- [Berlin vs Hamburg, like for like](/berlin-vs-hamburg) — both cities on matched areas, shared indicators and the same years, with a tested city difference for each hypothesis (#371)
 - [Hamburg hypothesis-suite findings (#355)](https://github.com/dhelweg/gentriduck/blob/main/docs/epic-h/H-thesis-hypothesis-suite-findings.md) — the full results behind the table above, including every secondary and sensitivity check
 - [Pre-registration](https://github.com/dhelweg/gentriduck/blob/main/docs/methodology/354-355-hypothesis-suite-preregistration.md) — the design fixed before the results were computed, including the Hamburg comparability statement (§4.5) and what the results must not be used to claim (§9)
 - [Results table (CSV)](https://github.com/dhelweg/gentriduck/blob/main/docs/epic-e/thesis-hypothesis-suite-results.csv) — every row, machine-readable
