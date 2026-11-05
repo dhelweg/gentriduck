@@ -934,3 +934,232 @@ computed, and the DB was not opened for this revision.
 | D9b | §3.7: the 2019 backcast is on the 2021 definition, so it converts with 15–<RAG at 31.12.2018 (65 y 7 m, f = 0.292). |
 | R7 | Public sentence adopted verbatim as binding page wording (§6.3). |
 | R8 | Not adopted. Hamburg publishes no 65+ population per Gebiet, so S6 cannot be converted to counts at the grain where T is formed. The Stadtteil-level approximation would add a construct the D8 T-free check already protects against. |
+
+**Amendment 4 (pre-results, 2026-11-05): LOR crosswalk artefact, one Berlin population series,
+data-phase notes.** No matched-panel statistic had been computed. The DB was opened read-only to
+verify the per-PLR population figures that the data checks report (`docs/epic-e/371-data-checks.md`
+§4.4); no outcome was joined to a predictor. Amendment 4 is listed in this log but binds as part of
+the pre-registration. Anything it does not change stays as written above.
+
+*A4.1: Areal crosswalk (data checks §4.4).* `seed_lor_crosswalk_2006_to_2021` is labelled
+`areal_pop_weighted` but uses purely areal weights. About 10,100 residents in 2018 and 2020 (about
+5,000 in the interpolated 2022) land on 03400831 Pankower Tor and 06200418 Landweg, which are
+uninhabited in 2024/2025. Verified: 03400831 has 6,295 residents in 2020 and 0 in 2024; 06200418
+has 3,801 and 0; 06200419 Thermometersiedlung has 1,081 and 4,539.
+
+- **Matched BZR grain (primary): unchanged, disclose plus one sensitivity.** BZR totals are
+  correct, because both source PLRs keep ≥ 99.9 % of their weight inside the same BZR. Neither
+  phantom PLR has MSS values, so neither is a balanced child. The artefact therefore only shifts
+  *relative* weights among the balanced children of BZR 034008 and 062004 (2 of 143). It affects
+  the 2019 and 2021 levels fully and the 2023 level by half. This is a bounded re-weighting inside
+  two units, not a level error. Correcting it in the primary would mean changing a signed seed for
+  two units, which is not proportionate.
+- **New sensitivity "W24" (extends M3).** All Berlin editions (2019, 2021, 2023, 2025) use the
+  native 31.12.2024 weights from `int_berlin_ewr_age_bands_plr2021` (`residents_total`,
+  reference_year 2024). This applies both to the §3.4 aggregation weights and to the T\* conversion
+  factor P^(U)/P in §3.7. W24 replaces the M3 "2024 only" sensitivity: for 2023 the two are the same,
+  and W24 extends it to 2019/2021. The M3 "2020 only" sensitivity stays. W24 is reported for every
+  primary and for X8, at both grains, as exploratory and uncorrected (§7.5). Reading rule: if a
+  matched-grain verdict changes under W24, the row is flagged "weight-sensitive (LOR 2019→2021
+  crosswalk)". Because W24 also absorbs genuine 2018–2024 population change (new-build quarters),
+  a flag is not attributed to the artefact alone.
+- **Dropping the two BZRs is not pre-registered.** W24 covers them and every other split, and a
+  separate drop rule would add a forking path without new information.
+- **PLR/Gebiet grain (§6.5): no new model; disclose.** At PLR grain, population does **not** enter
+  the aggregation: the units are the MSS PLRs themselves, z-scores are unweighted (§3.4), and OA
+  depends on POIs only. Population enters only (i) through the ratio P^(U)/P in T\*, which is an
+  area-weighted mix of old-PLR age structures and therefore much less distorted than counts
+  (data checks §4.4; P^(U)/P range 0.465–0.867), and (ii) through any population threshold. The
+  "102 of 540 PLRs > 25 % off" figure concerns counts, which the PLR rows do not use. So the PLR rows
+  are not misleading, and a dasymetric crosswalk (Eicher & Brewer 2001; Mennis 2003) is **not** built
+  for #371. The question stays open for any future use of crosswalked 2018/2020 Berlin *counts* at
+  PLR grain. W24 also runs at PLR grain, where it replaces P^(U)/P with the 2024 ratio.
+- **Population thresholds** (for example the ≥ 5,000 panel, if it is applied to Berlin units) use
+  native 31.12.2024 population for Berlin.
+- **Binding disclosure** (methods note of the results and findings files; DE writes it verbatim):
+  "Berlin populations for 31.12.2018 and 31.12.2020 are mapped from LOR 2019 to LOR 2021 by area
+  share, not by population. About 10,100 residents (0.27 %) are assigned to two areas that are
+  uninhabited in 2024. This shifts the weights inside 2 of 143 Bezirksregionen; Bezirksregion totals
+  are unaffected. Sensitivity W24 uses 2024 populations throughout."
+
+*A4.2: One Berlin population series (data checks §4.3).* **Single P:** `residents_total` from
+`int_berlin_ewr_age_bands_plr2021` is the only Berlin population series of the matched analysis.
+It is used for the §3.4 weights, for the T\* base P and P^(U) (§3.7), for W24 and for thresholds.
+This replaces the reference to `int_berlin_ewr_plr2021` in §3.4. `int_berlin_ewr_plr2021` is not
+read by the matched analysis. That also removes the risk of a failed join on its 2024 code
+`06200318` (data checks §6 item 5).
+
+**Renormalisation accepted.** Per old PLR, the seed weights sum to 0.9993–1.0000. The shortfall is
+rounding in the areal intersection, not a real allocation. Rescaling to 1 is the
+volume-preserving (pycnophylactic) requirement of areal interpolation (Tobler 1979; Goodchild & Lam
+1980). It keeps city totals and band totals exact and moves no PLR by more than 0.07 %. Taking P and
+P^(U) from one model also guarantees P^(U) ≤ P by construction. Implementation: the existing warn
+test `test_371_ewr_age_bands_vs_ewr_plr2021` (≤ 0.1 %) stays; the analysis code asserts that it
+reads only the band model for Berlin population.
+
+*A4.3: Other data-phase notes.*
+- **Hamburg descriptive levels.** The annex mean row is an unweighted Gebiet mean. City-level
+  descriptive levels are shown for both cities **population-weighted** over the matched units, from
+  share × population (Hamburg) and the A4.2 P (Berlin), so the two are comparable. Wherever the
+  annex mean row itself is quoted, it is labelled "unweighted mean over scored Gebiete". K, z and all
+  hypothesis statistics are unaffected (§3.4 already weights by population).
+- **Balanced Hamburg panel: 849 Gebiete**, adopted as the §2.3 child set. The 8 scored-2025
+  Gebiete that drop out (10 ever scored) are listed by ID in the methods note. This is within the
+  pre-registered expectation (< 10).
+- **HH S4 SD rounding** (3 decimals in the matched editions): disclose only. Within an edition, a
+  uniform scale error on recovered shares cancels in the z-score over matched units. Across
+  editions it bounds pp changes in U to ±1.5–2.1 % in scale. AUC, Spearman and rank statistics are
+  invariant. Any U change reported in pp carries the note "±2 % scale (annex SD rounding)". No
+  correction.
+- **Noisy small Gebiete 39005 Lokstedt and 67012 Poppenbüttel** (S3/S4/S5 series consistent with
+  small-cell disclosure control): **kept** in the primary. They have a few hundred residents each
+  and enter the Stadtteil by population weight, so their influence is negligible, and excluding
+  them would be a data-driven exclusion. Disclosed by ID; no sensitivity.
+- **S7 exclusion codes:** the NULL rule (`s7_zero_exclusion_code`) is accepted. S7 is context only
+  and never enters K, so per-edition ambiguity has no inferential effect. The context correlation
+  with K is computed on non-NULL cells, with n reported per edition.
+- **Missing 2022 Hamburg Stadtteil age shares:** these feed only the S4/S3 plausibility check (the
+  direction-B check, which was rejected in Revision 2). No primary or sensitivity construct uses
+  them. The 2023 row of that check stays "not computed"; disclose and do not backfill.
+
+| Item | Change |
+|---|---|
+| A4.1 | Areal crosswalk artefact disclosed (binding wording); new sensitivity W24 (2024 weights and P^(U)/P for all Berlin editions, both grains), replacing M3 "2024 only"; no BZR drop rule; no dasymetric model for #371 |
+| A4.2 | One Berlin P = `int_berlin_ewr_age_bands_plr2021.residents_total` for §3.4 and §3.7; renormalisation accepted |
+| A4.3 | HH levels population-weighted for display, annex row labelled; 849-Gebiete panel adopted; S4 rounding disclosed; 39005/67012 kept; S7 NULL rule accepted; missing HH 2022 age shares have no effect |
+
+Additional references: Tobler, W. R. (1979). Smooth pycnophylactic interpolation for geographical
+regions. *JASA* 74(367), 519–530. Goodchild, M. F., & Lam, N. S.-N. (1980). Areal interpolation: a
+variant of the traditional spatial problem. *Geo-Processing* 1, 297–312. Eicher, C. L., & Brewer,
+C. A. (2001). Dasymetric mapping and areal interpolation. *CaGIS* 28(2), 125–138. Mennis, J. (2003).
+Generating surface models of population using dasymetric mapping. *The Professional Geographer*
+55(1), 31–42.
+
+*A4.4: Hamburg S3 2019 back-revision (DE reviewer check, read-only, added 2026-11-05, pre-results).* The published Dynamik should satisfy D3_E = s_E − s_{E−3}. It does in 2019, 2021, 2024 and 2025 (ρ ≥ 0.9999, no |Δ| > 0.5 pp). In 2022 (base 2019; ρ 0.913, 52 Gebiete with |Δ| > 0.5 pp) and 2023 (base 2020; ρ 0.951, 44) it fails, and the outliers are concentrated in high-S3 Gebiete with refugee accommodation (for example 25005, 73009, 101003, 6004, 48005, 13001, 46003, 84002). The 2020 failure is the known AsylbLG seam. Because s2021 and s2022 check clean against later D, the likely reading is that the publisher later **revised the 2019 (and 2020) S3 bases**, plausibly through AsylbLG counting at accommodation sites (data checks §3). The levels are not small: W2 |ΔS3| has median 0.74, p90 3.07, p99 15.0 and max 44.9 pp. The affected matched window is therefore **W1 = [2019, 2021]**, which uses the as-published 2019 level. W2 cannot be tested for s2023 (there is no D2026), but its start level s2021 is clean. Decisions:
+- **Primary unchanged:** each edition's own published level, as pre-registered.
+- **Sensitivity R19:** for **every** balanced Hamburg Gebiet (no data-driven threshold), s3_2019_rev = s3_2022 − D3_2022. For clean Gebiete this is a rounding-level change. Where s3_2022 or D3_2022 is missing, the published 2019 level is kept, and the count of such Gebiete is reported. Stadtteil aggregation and 2019 weights are unchanged (§3.4). T, K, dK for W1, the pooled W1–W3 rows (H2, N2) and X8 are recomputed. Exploratory and uncorrected (§7.5). A verdict or X8 sign that changes is flagged "revision-sensitive (HH S3 2019 back-revision)".
+- **Disclosure:** the methods note lists, by ID, every Gebiet with |D3_E − (s_E − s_{E−3})| > 0.5 pp in 2022 or 2023, with its W1 and W2 S3 change. W2 is not claimed to be revision-free; it is untestable, with a clean start level.
+- **Relation to core-2:** core-2 (U + C; and core-1U if triggered) does not use S3, so it is unaffected. Through the D8 statement rule, a public city difference already needs a same-sign Δ with a CI excluding 0 under the T-free construct, so the stated claims are bounded. R19 is still required, because the city-level verdicts and the H/N rows are reported under core-3H, where T enters.
+- **Data guard:** the DE dbt test (median |Δ| ≤ 0.2 pp per edition × indicator; seams S4 2019/2021 and S3 2020 excluded) is adopted. Medians are 0.033–0.047 pp, so it passes while still allowing the outliers, which are handled by R19 and the disclosure above.
+
+**Amendment 4, revision 1 (pre-results, 2026-11-05): domain review E1–E9.** Source:
+`docs/methodology/371-amendment4-domain-review.md` §8 (verdict CONCERNS). No matched-panel statistic
+had been computed. Geo-DS adopts E1–E3 and E5–E9 in full and O1. E4 is a provenance task for the DE.
+**Where this block differs from A4.1–A4.4 above, this block binds.** The quoted texts are the
+binding replacements.
+
+*E1: R19 becomes the primary (A4.4, §4.3).* Geo-DS agrees. The publisher documents the definition
+change (Bericht 2021, PDF p. 8), and the revisions run in one direction (51/52 and 44/44 upward). So
+the as-published 2019 level sits on the other side of a definition seam. Re-basing it is the same
+logic as the Berlin backcast (§4.2).
+- A4.4 "Primary unchanged" is replaced by: "**Primary (amended, §4.3 seam):** Hamburg S3 for
+  edition 2019 is the publisher's same-definition base s3_2019_rev = s3_2022 − D3_2022 for every
+  balanced Gebiet. Bericht 2021 (PDF p. 8) documents that from edition 2021 the AsylbLG part of S3
+  counts recipients of Regelleistungen and of ausschließlich besondere Leistungen. W1 would
+  otherwise straddle a definition seam. This parallels the Berlin backcast (§4.2)." The A4.4 rule
+  for missing s3_2022/D3_2022 (keep the published level, report the count) carries over.
+- The A4.4 sensitivity becomes "**Sensitivity R19-pub:** the as-published 2019 level". A verdict or
+  X8 sign that changes under it is flagged "revision-sensitive (HH S3 2019 counting change)".
+- §4.3 "Known seams" gains: "Hamburg T, 2019 → 2021: AsylbLG counting widened from edition 2021
+  (Bericht 2021, PDF p. 8). Neutralised by the publisher's re-based 2019 level s3_2022 − D3_2022
+  (A4.4)."
+- In A4.4, the phrase "the likely reading is that the publisher later revised … at accommodation
+  sites" is replaced by: "the publisher documents a widened AsylbLG count from edition 2021
+  (Bericht 2021, PDF p. 8). The re-basing of the 2019/2020 values in D3_2022/D3_2023 is inferred
+  from the annex (51/52 and 44/44 revisions upward). The concentration in high-S3 Gebiete is
+  consistent with accommodation sites but is not stated by the publisher."
+- §8.2 leakage guard: s3_2019_rev uses data from edition 2022. It is still a 31.12.2018 level and
+  contains no information about any outcome beyond that level (D3_2022 only links s3_2022 to the
+  re-based 2019 base). Like the Berlin backcast, it is listed by name as a permitted later-edition
+  input for a level.
+
+*E2: Recompute scope.* Under both versions (primary R19 and R19-pub), compute every row that uses
+Hamburg K_2019 or dK_W1: H2, H3a, H3b (dK_P is the predictor at pivot 2021), H3c, N1, N2, N3, X8, the
+core-3M rows and the §3.6 Hamburg change check.
+
+*E3: Disclosure by revision, not by site.* The A4.4 disclosure bullet is replaced by: "The methods
+note lists, by ID, every Gebiet with |D3_E − (s_E − s_{E−3})| > 0.5 pp in 2022 or 2023, with its W1
+and W2 S3 change, under the heading 'S3 base revised by the publisher (AsylbLG counting change,
+Bericht 2021)'. Individual Gebiete are not labelled as refugee-accommodation sites in any output.
+The accommodation reading is stated only in aggregate, with the publisher's citation. W2 is not
+claimed to be revision-free; it is untestable, with a clean start level." In the A4.4 paragraph,
+"with refugee accommodation (for example …)" reads "consistent with accommodation sites (confirmed
+by the publisher for 48005)".
+
+*E4: Provenance (DE task, referenced only).* The A4.4 evidence goes into
+`docs/epic-e/371-data-checks.md`:
+- per-edition ρ;
+- counts and sign split of |Δ| > 0.5 pp;
+- level quantiles;
+- the Bericht 2021 PDF p. 8 quote;
+- `test_371_hh_annex_d_vs_s_consistency`.
+
+A4.4's citation "data checks §3" then points to that new section. Until that lands, the methodology
+gate treats A4.4 as uncited.
+
+*E5: W24 flag and disclosure (A4.1).*
+- The flag becomes "**weight-sensitive (2024 population weights)**".
+- The binding disclosure is replaced by: "Berlin populations for 31.12.2018 and 31.12.2020 are
+  mapped from LOR 2019 to LOR 2021 by area share, not by population. About 10,100 residents (0.27 %)
+  are assigned to two development sites that had no housing at either date, and are missing from
+  the neighbouring areas where they lived. This shifts the weights inside 2 of 143
+  Bezirksregionen. Their totals including the two sites are unaffected. Sensitivity W24 uses 2024
+  populations throughout. Because 2024 populations also reflect real change since 2018 (new
+  housing, refugee arrivals, ageing), a result that changes under W24 is not by itself evidence of
+  the mapping error."
+- Added to the W24 bullet: "W24 measures fixed-composition change. It does not include population
+  shifts between areas within a unit, which can be part of neighbourhood change (new-build
+  gentrification)."
+- O4 (a targeted artefact sensitivity inside 034008/062004) is not adopted. With E5's wording, W24
+  no longer claims to isolate the artefact, and a third weight variant adds a forking path for two
+  units.
+
+*E6: f in W24.* At both grains, "replaces P^(U)/P with the 2024 ratio" reads "P and the age bands
+are taken from 31.12.2024 and f stays the edition's own Regelaltersgrenze value (0.292 / 0.375 /
+0.458 / 0.500, §3.7)". The age-structure weights are swapped; the U definition at each edition is
+not.
+
+*E7: R5 diagnostic (§5, §9.1, A4.1).*
+- The flag "possibly new-build-driven" becomes "**possibly population-growth-driven (new-build or
+  refugee accommodation)**". The §9.1 column `newbuild_driven` becomes `popgrowth_driven`.
+- Added: "Berlin population growth for this diagnostic is computed on BZR totals over **all** child
+  PLRs (correct to 0.14 %), not on the balanced-child sum, and it is not computed at PLR grain for
+  windows that use 2018/2020/2022 crosswalked counts (reported as 'not computed: areal crosswalk')."
+- The A4.1 sentence "Population enters only (i) … and (ii) …" gains "(iii) the R5 diagnostic,
+  handled as in §5".
+
+*E8: City levels (A4.3, §10).*
+- "so the two are comparable" is replaced by: "so both use the same aggregation (weighted by total
+  residents). The indicator definitions still differ (§3.2, R7), so the levels are shown per city
+  with their definitions and are not ranked against each other. Both differ from the official
+  headline figures (Hamburg: unweighted Gebiet mean; Berlin: PLR aggregate about 0.5 pp below the
+  published S3), and the display says so."
+- §10 gains: "Which city has more unemployment, transfer receipt or child poverty, from the
+  matched U/T/C levels (definitions differ, §3.2)."
+
+*E9: Accommodation channel (§4.4).* The "Local sites" bullet is replaced by: "**Accommodation sites
+(all windows, mainly W2/W3).** On 31.12.2022, 259 refugee-accommodation sites were in use in 170
+of 856 Hamburg Gebiete, and 30 of the 37 Gebiete with negative Dynamik in 2023 contain one
+(Bericht 2023, PDF pp. 12, 16). Their residents are in the Hamburg population counts. Because
+AsylbLG is in Hamburg T, an opening raises Hamburg K. In Berlin, AsylbLG is in no indicator, so
+registered residents of a new site lower Berlin K through the denominators until recognition.
+Under core-2 both cities show only the denominator effect. Whether residents of the Berlin arrival
+centre at Tegel are registered is unknown. Disclosed, not corrected." Binding page wording,
+wherever Hamburg change is shown: "In Hamburg, the welfare indicator includes asylum-seeker
+benefits. Where the city opens or closes refugee accommodation, an area's figure can change by
+tens of percentage points without any change among its existing residents. Such changes show
+where accommodation was placed. We do not read them as neighbourhood decline or improvement."
+
+*O1 (adopted):* 39005/67012 are described as "consistent with small-number effects in the published
+data", never as "errors".
+
+*§8.2 guard exemption (scoped).* The assertion "aggregation weights date from the outcome's own
+reference date, never later" stays active for the primary and for every other run. It is exempted
+**only** for runs tagged `sensitivity = 'W24'`. That tag is set in one place, and the analysis
+asserts that W24 rows never feed a primary or BH-corrected row. W24 deliberately uses later
+weights; a 31.12.2024 population is not an outcome variable and carries no outcome label. The
+other permitted later-edition input is s3_2019_rev (E1). No other exemption exists.
+
+| Item | Change |
+|---|---|
+| A4 rev. 1 | E1 R19 becomes primary, R19-pub the sensitivity, §4.3 seam; E2 full recompute list; E3 disclosure by revision; E4 to DE (gate waits on provenance); E5 W24 flag and wording; E6 f unchanged in W24; E7 `popgrowth_driven`, BZR totals over all children; E8 no cross-city level ranking (§10); E9 accommodation channel and page wording; O1 adopted; O4 not adopted; §8.2 guard exemption scoped to W24 and s3_2019_rev |
