@@ -8,7 +8,7 @@
 
 import { execFileSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
-import { createReadStream } from 'node:fs';
+import { createReadStream, readFileSync } from 'node:fs';
 import { readdir, readFile, stat } from 'node:fs/promises';
 import { join, relative, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -154,22 +154,59 @@ export async function extractedFingerprint() {
   return h.digest('hex');
 }
 
-// #369: the parquet files manifest.json points to that this `npm run sources` run did not write.
-// Evidence keeps the previous run's file (and its manifest entry) for every query it doesn't
-// re-run: partial runs (--changed, --queries, --sources), and in non-strict mode a query that
-// failed or returned no rows. Those files are older than `startMs` (or gone). Returns a list of
-// problems; empty = every bundled query result was written by this run.
-export async function staleExtractedFiles(startMs) {
+export const SOURCES_DIR = join(WEB_DIR, 'sources');
+
+// #369: the queries a complete `npm run sources` must extract, as "<source>/<query>", named as
+// Evidence names them (@evidence-dev/sdk wrapSimpleConnector.js + @evidence-dev/duckdb getRunner):
+// the source is connection.yaml's `name:` (else the directory name); every file below the source
+// directory, recursively, except connection(.options).yaml, is a query named after the part of its
+// file name before the first '.'; the duckdb runner ignores non-.sql files and *initialize.sql.
+export async function expectedQueries() {
+  let dirs;
+  try {
+    dirs = (await readdir(SOURCES_DIR, { withFileTypes: true })).filter((d) => d.isDirectory());
+  } catch {
+    return [];
+  }
+  const out = [];
+  for (const dir of dirs) {
+    const sourceDir = join(SOURCES_DIR, dir.name);
+    let name = dir.name;
+    try {
+      const yaml = await readFile(join(sourceDir, 'connection.yaml'), 'utf8');
+      const m = yaml.match(/^name:\s*["']?([^"'\s#]+)/m);
+      if (m) name = m[1];
+    } catch {
+      continue; // no connection.yaml: Evidence doesn't treat the directory as a source
+    }
+    const files = await filesUnder(sourceDir, true, (n) => n.endsWith('.sql') && !n.endsWith('initialize.sql'));
+    for (const file of files) out.push(`${name}/${file.split(sep).at(-1).split('.')[0]}`);
+  }
+  return [...new Set(out)].sort();
+}
+
+// #369: why this `npm run sources` run (started at `startMs`) didn't produce every bundled query
+// result. Two ways a result goes wrong without the run failing:
+//   - stale: Evidence keeps the previous run's file and manifest entry for every query it skips,
+//     i.e. partial runs (--changed, --queries, --sources), and a query that returned no rows. Every
+//     file manifest.json points to must be at least as new as the run (and exist).
+//   - dropped: in a non-strict run, a query that fails is left out of manifest.json altogether
+//     (evalSources.js doesn't count it as located, so updateManifest.js drops it), as is a query
+//     that never returned rows. Every expectedQueries() entry must be in the manifest.
+// Returns a list of problems; empty = every query was extracted by this run.
+export async function extractionProblems(startMs) {
   const manifest = await readJson(join(DATA_DIR, 'manifest.json'));
   if (!manifest || typeof manifest.renderedFiles !== 'object' || manifest.renderedFiles === null) {
     return ['no readable manifest.json in the extracted data'];
   }
   const problems = [];
+  const rendered = new Set();
   for (const urls of Object.values(manifest.renderedFiles)) {
     for (const url of Array.isArray(urls) ? urls : []) {
       // <url prefix>/<source>/<query>/<query>.parquet, mapped to disk as `evidence build` does.
       const diskParts = String(url).split('/').slice(-3);
       const shown = diskParts.join('/');
+      rendered.add(shown);
       let mtimeMs;
       try {
         ({ mtimeMs } = await stat(join(DATA_DIR, ...diskParts)));
@@ -178,6 +215,12 @@ export async function staleExtractedFiles(startMs) {
         continue;
       }
       if (mtimeMs < startMs) problems.push(`${shown} was not rewritten by this run`);
+    }
+  }
+  for (const query of await expectedQueries()) {
+    const [source, name] = query.split('/');
+    if (!rendered.has(`${source}/${name}/${name}.parquet`)) {
+      problems.push(`${query} has no extracted result (the query failed or returned no rows)`);
     }
   }
   return problems;
@@ -203,7 +246,23 @@ export function sourcesProblem(record, live) {
   return null;
 }
 
-// EVIDENCE_DATA_DIR moves the extracted data elsewhere; the records only cover the default place.
-export function dataDirOverridden() {
-  return Boolean(process.env.EVIDENCE_DATA_DIR) && process.env.EVIDENCE_DATA_DIR !== './.evidence/template/static/data';
+// The env files Evidence's loadEnvFile() reads: vite `loadEnv('', '.')` in web/, i.e. .env,
+// .env.local, .env.<mode> and .env.<mode>.local with an empty mode.
+export const ENV_FILES = ['.env', '.env.local', '.env.', '.env..local'];
+
+// EVIDENCE_DATA_DIR moves the extracted data elsewhere (`sources` and `build` resolve it
+// differently), and the records only cover the default place. So any definition counts, even an
+// empty or default-looking one, in the environment or in an env file. Returns where, or null.
+export function dataDirOverride() {
+  if ('EVIDENCE_DATA_DIR' in process.env) return 'EVIDENCE_DATA_DIR is set in the environment';
+  for (const file of ENV_FILES) {
+    let text;
+    try {
+      text = readFileSync(join(WEB_DIR, file), 'utf8');
+    } catch {
+      continue;
+    }
+    if (/^\s*(?:export\s+)?EVIDENCE_DATA_DIR\s*[=:]/m.test(text)) return `EVIDENCE_DATA_DIR is set in web/${file}`;
+  }
+  return null;
 }

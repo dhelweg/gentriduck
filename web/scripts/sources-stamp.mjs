@@ -17,11 +17,17 @@
 //             serving: sha256 over data/serving/*.parquet at sources time.
 //             serving_export: data/serving/.export-source at sources time.
 //             extracted: sha256 over the extracted data (manifest.json + the per-source dirs).
-//             complete: false (+ reason) if any query result manifest.json points to was not
-//               written by this run. npm doesn't pass `npm run sources -- --changed` args to the
-//               hooks, so partial runs (--changed, --queries, --sources) are detected by their
-//               effect instead: Evidence keeps the old file for every query it skips. The same
-//               catches a non-strict run in which a query failed or returned no rows.
+//             complete: false (+ reason) unless this run extracted every query
+//               (build-provenance.mjs extractionProblems()). npm doesn't pass
+//               `npm run sources -- --changed` args to the hooks, so partial runs are detected by
+//               their effect on the extracted data instead:
+//               - every file manifest.json points to must have been written by this run. Evidence
+//                 keeps the old file for every query it skips (--changed, --queries, --sources)
+//                 and for a query that returned no rows;
+//               - every query in web/sources must be in manifest.json. A query that fails in a
+//                 non-strict run is dropped from the manifest, so no stale file is left behind.
+//             The release rebuild runs `npm run sources:strict` anyway, which fails on a failed
+//             query (npm then skips postsources, so the in-progress record stays).
 //
 // postbuild-build-source.mjs embeds the record and records `inputs: null` (release-deploy then
 // rebuilds) unless it is complete and matches the build's tree, data/serving and extracted data.
@@ -36,12 +42,12 @@ import {
   REPO_ROOT,
   SOURCES_RECORD,
   SOURCES_RECORD_REL,
-  dataDirOverridden,
+  dataDirOverride,
   extractedFingerprint,
+  extractionProblems,
   gitState,
   readJson,
   servingFingerprint,
-  staleExtractedFiles,
   utcNow,
 } from './build-provenance.mjs';
 
@@ -89,14 +95,15 @@ async function finish() {
   record.serving = await servingFingerprint();
   record.serving_export = await readJson(join(REPO_ROOT, 'data', 'serving', '.export-source'));
   record.extracted = await extractedFingerprint();
-  if (dataDirOverridden()) reasons.push('EVIDENCE_DATA_DIR is set; only the default data dir is recorded');
+  const override = dataDirOverride();
+  if (override) reasons.push(`${override}; only the default data dir is recorded`);
   if (startMs !== null) {
-    const stale = await staleExtractedFiles(startMs);
-    if (stale.length) {
+    const problems = await extractionProblems(startMs);
+    if (problems.length) {
       reasons.push(
-        `${stale.length} bundled query result(s) not written by this run (a partial run such as ` +
-          `--changed/--queries/--sources, or a failed or empty query): ${stale.slice(0, 5).join('; ')}` +
-          (stale.length > 5 ? '; ...' : ''),
+        `${problems.length} query result(s) not extracted by this run (a partial run such as ` +
+          `--changed/--queries/--sources, or a failed or empty query): ${problems.slice(0, 5).join('; ')}` +
+          (problems.length > 5 ? '; ...' : ''),
       );
     }
   }

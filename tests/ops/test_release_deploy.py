@@ -20,8 +20,11 @@ export stamps. Covered:
   - #369, via the real web/scripts/sources-stamp.mjs (npm `presources`/`postsources`) and
     postbuild-build-source.mjs: the issue's scenario (sources on F, export + build on T) and a
     sources-time serving fingerprint that differs from the live one both REBUILD, as do partial
-    sources runs, a failed/killed run, extracted data changed afterwards, a dirty-tree run and a
-    build without a sources record; `poe build --help`/`--version` leave the warehouse record.
+    sources runs, a non-strict run with a failed query (dropped from the manifest), a
+    failed/killed run, extracted data changed afterwards, a dirty-tree run, EVIDENCE_DATA_DIR in
+    web/.env* and a build without a sources record; the embedded serving export stamp is the
+    sources-time one; the release rebuild runs `sources:strict`; `poe build --help`/`--version`
+    leave the warehouse record.
 Dry-run never executes a step, so neither `poe export-*`, `npm` nor `deploy-gh-pages.sh` runs.
 """
 
@@ -424,7 +427,7 @@ def repo(tmp_path, monkeypatch):
     (r / "web" / "goatcounter-code.txt").write_text("gentriduck\n", encoding="utf-8")
     (r / ".gitignore").write_text(
         "data/\nweb/build/\nweb/node_modules/\nweb/static/geo/\n"
-        "web/.evidence/\nweb/.sources-source\n",
+        "web/.evidence/\nweb/.sources-source\nweb/.env\nweb/.env.local\n",
         encoding="utf-8",
     )
     _git(r, "init", "-q")
@@ -496,7 +499,8 @@ def test_dry_run_rebuilds_when_serving_data_changed(repo, capsys):
     assert _run(repo) == 0
     out = capsys.readouterr().out
     assert "REBUILD: build inputs changed since the build" in out
-    for step in ("export-serving", "export-area-geojson", " ci`", "run sources", "run build"):
+    steps = ("export-serving", "export-area-geojson", " ci`", "run sources:strict", "run build")
+    for step in steps:
         assert step in out, step
     assert "would run the smoke check" in out
     assert sorted(p.relative_to(build) for p in build.rglob("*")) == before  # nothing ran
@@ -758,16 +762,24 @@ def _age_extracted(repo: Path) -> None:
             os.utime(path, (old, old))
 
 
-def _npm_sources(repo: Path, *, only: tuple[str, ...] | None = None, finish: bool = True) -> None:
-    """`npm run sources` (all queries) or a partial run such as `-- --changed` (only `only`)."""
+def _npm_sources(
+    repo: Path,
+    *,
+    only: tuple[str, ...] | None = None,
+    fail: tuple[str, ...] = (),
+    finish: bool = True,
+) -> None:
+    """`npm run sources` (all queries), a partial run such as `-- --changed` (only `only`), or a
+    non-strict run in which the `fail` queries fail. Like real Evidence, a skipped query keeps its
+    old file and manifest entry, while a failed one is dropped from manifest.json."""
     _age_extracted(repo)
     _node(repo, "sources-stamp.mjs", "start")
     serving = (repo / "data" / "serving" / "gentrification_index.parquet").read_bytes()
     for q in QUERIES:
-        if only is None or q in only:
+        if (only is None or q in only) and q not in fail:
             _extracted(repo, q).parent.mkdir(parents=True, exist_ok=True)
             _extracted(repo, q).write_bytes(serving + q.encode())
-    urls = [f"static/data/gentriduck_marts/{q}/{q}.parquet" for q in QUERIES]
+    urls = [f"static/data/gentriduck_marts/{q}/{q}.parquet" for q in QUERIES if q not in fail]
     manifest = {"renderedFiles": {"gentriduck_marts": urls}}
     (_data_dir(repo) / "manifest.json").write_text(json.dumps(manifest), encoding="utf-8")
     # copied in from web/static/data at build time: not extracted data
@@ -791,7 +803,23 @@ def _set_serving(repo: Path, parquet: bytes, tree: str) -> None:
 
 @pytest.fixture
 def node_repo(repo):
-    """`repo` with the real web scripts committed; origin/main = HEAD (= T)."""
+    """`repo` with the real web scripts and a web/sources tree committed; origin/main = HEAD (= T).
+
+    web/sources follows Evidence's naming rules: the source name comes from connection.yaml (not
+    the directory), queries may be nested, a query is named after its file name up to the first
+    '.', and initialize.sql, non-.sql files and directories without connection.yaml are no
+    queries. So QUERIES are exactly the queries a complete run must extract."""
+    marts = repo / "web" / "sources" / "marts"
+    (marts / "nested").mkdir(parents=True)
+    (marts / "connection.yaml").write_text(
+        "# comment\nname: gentriduck_marts\ntype: duckdb\n", encoding="utf-8"
+    )
+    (marts / f"{QUERIES[0]}.sql").write_text("select 1\n", encoding="utf-8")
+    (marts / "nested" / f"{QUERIES[1]}.v2.sql").write_text("select 2\n", encoding="utf-8")
+    (marts / "initialize.sql").write_text("install spatial;\n", encoding="utf-8")
+    (marts / "README.md").write_text("not a query\n", encoding="utf-8")
+    (repo / "web" / "sources" / "no_connection").mkdir()
+    (repo / "web" / "sources" / "no_connection" / "orphan.sql").write_text("select 3\n")
     scripts = repo / "web" / "scripts"
     scripts.mkdir()
     for name in WEB_SCRIPTS:
@@ -901,7 +929,68 @@ def test_partial_sources_run_is_unusable(node_repo, capsys):
     assert src["inputs"] is None
     assert _run(repo) == 0
     out = capsys.readouterr().out
-    assert UNPROVEN + "web/.sources-source: the last npm run sources is unusable (1 bundled" in out
+    assert (
+        UNPROVEN
+        + "web/.sources-source: the last npm run sources is unusable (1 query result(s) not extracted"
+        in out
+    )
+
+
+@needs_node
+def test_serving_export_stamp_is_the_sources_time_one(node_repo):
+    """#369 review: byte-identical serving data re-stamped from another warehouse record after
+    sources. The bundle still holds the sources-time extraction, so `exports.serving` must be the
+    sources-time stamp, not the live one."""
+    repo = node_repo
+    _npm_sources(repo)
+    _write_warehouse(repo, tree=_tree(repo), recorded_at="re-certified later")
+    _export(repo)  # same parquet bytes, new stamp
+    live = read_json(repo / SERVING_STAMP_REL)
+    src = _npm_build(repo)
+    assert src["sources_problem"] is None and src["inputs"]  # same bytes: still vouched for
+    assert src["exports"]["serving"] == src["sources"]["serving_export"]
+    assert src["exports"]["serving"] != live
+    assert live["warehouse"]["recorded_at"] == "re-certified later"
+
+
+@pytest.mark.parametrize("previous_run", [True, False])
+@needs_node
+def test_failed_query_in_non_strict_run_is_unusable(node_repo, capsys, previous_run):
+    """#369 review (medium): in a non-strict run a failed query is dropped from manifest.json
+    (no stale entry is left behind; with a previous run its old file stays on disk). Every query
+    in web/sources must have a manifest entry written by this run."""
+    repo = node_repo
+    if previous_run:
+        _npm_sources(repo)
+    _npm_sources(repo, fail=(QUERIES[1],))
+    assert _extracted(repo, QUERIES[1]).exists() is previous_run
+    rec = read_json(repo / SOURCES_REC)
+    assert rec["complete"] is False
+    assert f"gentriduck_marts/{QUERIES[1]} has no extracted result" in rec["reason"]
+    assert "orphan" not in rec["reason"] and "initialize" not in rec["reason"]
+    src = _npm_build(repo)
+    assert src["inputs"] is None
+    assert _run(repo) == 0
+    assert UNPROVEN + "web/.sources-source: the last npm run sources is unusable" in (
+        capsys.readouterr().out
+    )
+
+
+@pytest.mark.parametrize("env_file", [".env", ".env.local"])
+@needs_node
+def test_evidence_data_dir_in_env_file_is_unusable(node_repo, env_file):
+    """#369 review: Evidence's loadEnvFile() also reads EVIDENCE_DATA_DIR from web/.env*."""
+    repo = node_repo
+    (repo / "web" / env_file).write_text(
+        "EVIDENCE_X=1\nEVIDENCE_DATA_DIR=./elsewhere\n", encoding="utf-8"
+    )
+    _npm_sources(repo)
+    rec = read_json(repo / SOURCES_REC)
+    assert rec["complete"] is False
+    assert f"EVIDENCE_DATA_DIR is set in web/{env_file}" in rec["reason"]
+    src = _npm_build(repo)
+    assert src["inputs"] is None
+    assert src["sources_problem"].startswith(f"EVIDENCE_DATA_DIR is set in web/{env_file}")
 
 
 @needs_node

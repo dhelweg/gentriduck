@@ -27,8 +27,8 @@ ADR-0012 Amendment A) must be rebuilt from `main` and republished. Nothing deplo
           doesn't matter here: an unrelated later `poe build` (e.g. the pre-push hook) doesn't
           change what `web/build` contains.
       Otherwise it rebuilds: `poe export-serving`, `poe export-area-geojson`, `npm ci` (only if
-      `web/node_modules` is missing), `npm run sources`, `npm run build`. Before rebuilding it
-      refuses unless `data/.warehouse-source` proves the warehouse was built from
+      `web/node_modules` is missing), `npm run sources:strict` (fails on a failed query, #369),
+      `npm run build`. Before rebuilding it refuses unless `data/.warehouse-source` proves the warehouse was built from
       `origin/main`'s tree, so it never exports marts built from other model code.
   (c) Smoke check (`smoke_check()`): non-empty build, at least `--min-pages` HTML pages, no
       `cartocdn` string in any text asset (#351 removed the CARTO basemap; its reappearance means
@@ -284,7 +284,7 @@ def rebuild_steps(repo: Path) -> list[tuple[list[str], Path]]:
     ]
     if not (web / "node_modules").is_dir():
         steps.append(([npm, "ci"], web))
-    steps += [([npm, "run", "sources"], web), ([npm, "run", "build"], web)]
+    steps += [([npm, "run", "sources:strict"], web), ([npm, "run", "build"], web)]
     return steps
 
 

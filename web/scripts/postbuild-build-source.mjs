@@ -41,7 +41,7 @@ import {
   BUILD_DIR,
   REPO_ROOT,
   SOURCES_RECORD,
-  dataDirOverridden,
+  dataDirOverride,
   extractedFingerprint,
   gitState,
   inputsFingerprint,
@@ -74,8 +74,9 @@ try {
 const sources = await readJson(SOURCES_RECORD);
 let problem;
 try {
-  problem = dataDirOverridden()
-    ? 'EVIDENCE_DATA_DIR is set; only the default extracted-data dir is recorded'
+  const override = dataDirOverride();
+  problem = override
+    ? `${override}; only the default extracted-data dir is recorded`
     : sourcesProblem(sources, {
         tree: record.tree,
         serving: await servingFingerprint(),

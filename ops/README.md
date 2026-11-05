@@ -266,7 +266,8 @@ uv run poe release-deploy               # check → skip-or-rebuild → smoke ch
    This is the common case after a release with no new data: the PM already built and checked
    the site from `develop`, and the release merge didn't change the tree. Otherwise it
    **rebuilds**: `poe export-serving` → `poe export-area-geojson` → `npm ci` (only if
-   `web/node_modules` is missing) → `npm run sources` → `npm run build`. Before rebuilding it
+   `web/node_modules` is missing) → `npm run sources:strict` (fails if any query fails) →
+   `npm run build`. Before rebuilding it
    **refuses** unless `data/.warehouse-source` shows a complete, clean `poe build` from
    `origin/main`'s tree. The message is "run `uv run poe build` on main first", because the
    exports would otherwise publish marts built from different model code.
@@ -314,17 +315,28 @@ sources: it bundles whatever the last `npm run sources` extracted into
   failed or killed run leaves no usable record.
 - **After** sources, it records the tree, commit and dirty flag, a fingerprint of
   `data/serving/*.parquet`, the serving export stamp, and a fingerprint of the extracted data.
-  It marks the run unusable if any query result in Evidence's `manifest.json` wasn't written
-  by this run. That catches partial runs (`npm run sources -- --changed`, `--queries`,
-  `--sources`; npm doesn't pass those args to the hooks, so the check looks at the result) and
-  non-strict runs in which a query failed or returned no rows, because Evidence then keeps
-  the previous run's file.
+  It marks the run unusable unless this run extracted every query. npm doesn't pass
+  `npm run sources -- --changed` (or `--queries`, `--sources`) to the hooks, so the check
+  looks at the result:
+  - every file in Evidence's `manifest.json` must have been written by this run. Evidence
+    keeps the previous run's file for every query a partial run skips, and for a query that
+    returned no rows;
+  - every query in `web/sources/` (each `*.sql` except `initialize.sql`, named as Evidence
+    names it) must be in `manifest.json`. In a non-strict run, a query that fails is dropped
+    from the manifest instead, so no stale file is left to catch.
+
+  Release rebuilds run `npm run sources:strict`, which stops on a failed query. A query that
+  legitimately returns no rows also counts as missing, so it forces a rebuild every time.
+  If `EVIDENCE_DATA_DIR` is set in the environment or in `web/.env`, `web/.env.local` (the
+  files Evidence reads), the record is unusable: it only covers the default data directory.
 
 `postbuild-build-source.mjs` accepts the record only if it is complete, ran on a clean tree
 equal to the build's tree, and its serving and extracted-data fingerprints equal the ones at
 build time. Otherwise the build gets `inputs: null` and `release-deploy` rebuilds. A direct
 `npx evidence sources` skips the hooks, but if it changes the extracted data, the
-extracted-data check catches it.
+extracted-data check catches it. Evidence's parquet output isn't guaranteed to be
+byte-identical across runs, so an extra direct run after the recorded one can force a rebuild
+even with the same data. That errs on the safe side.
 
 **First release after #361:** no machine has the warehouse record or export stamps yet, and
 older builds lack the fingerprint. So the first `release-deploy` will rebuild, and it refuses
