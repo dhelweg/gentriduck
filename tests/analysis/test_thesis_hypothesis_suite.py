@@ -1862,7 +1862,21 @@ def test_371_rendered_flags_and_imprecise_cells():
     fine_sig = dict(fine_ns, p_boot="0.01")
     assert "maup_flip (grain-dependent, MAUP)" in M.render_flags(base, [fine_sig])
     sig = dict(base, notes="small_units_flip: unadjusted significance change (A5.1)")
-    assert M.render_flags(sig, [fine_ns]).split("; ")[0] == "small_units_flip"
+    assert M.render_flags(sig, [fine_ns]).split("; ")[0] == (
+        "small_units_flip (unadjusted significance change)"
+    )
+    two = dict(
+        base,
+        flags="small_units_flip;core2_flip;ewr_2022_interpolated",
+        notes="small_units_flip: unadjusted significance change (primary p_unadj 0.013, A5.1); "
+        "core2_flip: unadjusted significance change (primary p_unadj 0.013, A5.1)",
+    )
+    assert M.render_flags(two, []) == (
+        "small_units_flip (unadjusted significance change); "
+        "core2_flip (unadjusted significance change); ewr_2022_interpolated"
+    )
+    with pytest.raises(AssertionError, match="without its label"):
+        M.render_flags(dict(base, notes=""), [fine_ns])
     x = {
         "verdict": M.NDD,
         "estimate": "0.03",

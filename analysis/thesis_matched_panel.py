@@ -3302,7 +3302,8 @@ def apply_flags(rows: list[dict], meta: dict) -> None:
                         f", and in W2 {below} shows no transferable discrimination, so that window "
                         "differs in transferable discrimination only (Amendment 3, D6)"
                     )
-                note += f". The primary X8 row (W1–W3 pooled) is {r['verdict']}."
+                # no final period: notes are joined with "; " (geo re-check R5)
+                note += f". The primary X8 row (W1–W3 pooled) is {r['verdict']}"
                 r["notes"].append(note)
     # ewr_2022_interpolated on every Berlin / X8 row whose status used the 2022 interpolation.
     for r in rows:
@@ -4685,9 +4686,12 @@ def _sig_unadj(r: dict | None) -> bool | None:
     return float(r["p_boot"]) < ALPHA
 
 
+A51_FLAGS = frozenset(f for _v, f in FLIP_SPECS) | {"core1u_flip"}
+
+
 def render_flags(r: dict, records: list[dict]) -> str:
     """Results sign-offs (geo R2 = domain R1): a flag token renders with its meaning. A5.1 flags
-    whose note says "sign unstable around zero" carry that label; `maup_flip` carries it when the
+    carry the label of their own note (A5.1, geo re-check R5); `maup_flip` carries it when the
     matched and the fine-grain estimate are both non-significant (unadjusted), otherwise
     "grain-dependent, MAUP" (§6.5). Other tokens render bare. The CSV `flags` column is unchanged."""
     out = []
@@ -4707,8 +4711,16 @@ def render_flags(r: dict, records: list[dict]) -> str:
             out.append(
                 f"{f} ({'sign unstable around zero' if both_ns else 'grain-dependent, MAUP'})"
             )
-        elif any(n.startswith(f"{f}: sign unstable around zero") for n in notes):
-            out.append(f"{f} (sign unstable around zero)")
+        elif f in A51_FLAGS:
+            # Geo re-check R5: every A5.1 flag renders the label its own note records ("sign
+            # unstable around zero", "unadjusted significance change", "sign change", "sign and
+            # unadjusted significance change"); none renders bare.
+            lab = next(
+                (n[len(f) + 2 :].split(" (", 1)[0] for n in notes if n.startswith(f"{f}: ")),
+                None,
+            )
+            assert lab, f"A5.1 flag {f} without its label note"  # noqa: S101
+            out.append(f"{f} ({lab})")
         else:
             out.append(f)
     return "; ".join(out)
