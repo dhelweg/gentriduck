@@ -1477,3 +1477,11 @@ def test_371_weighted_median_and_top_decile():
     assert M.weighted_median(np.array([1.0, 2.0, 3.0]), np.array([5.0, 1.0, 1.0])) == 1.0
     s = pd.Series({f"u{i}": float(i) for i in range(20)})
     assert M.top_decile(s, s.index) == {"u18", "u19"}
+
+
+def test_371_fine_grain_without_commercial_features_is_not_comparable():
+    """PR §6.5: H1/H2 with no commercial category in the common list read 'not comparable'."""
+    assert M._comparability_note(["Gastronomy|Cafe", "Mobility|Individual"]) == []
+    note = M._comparability_note(["Mobility|Individual", "Public Space|Bench"])
+    assert len(note) == 1 and note[0].startswith("not comparable") and "§6.5" in note[0]
+    assert M._comparability_note([])[0].startswith("not comparable")

@@ -1916,14 +1916,7 @@ class Builder:
                 feats = self.feats["H1_cat"]
                 x = S.oa_features(fr, feats, "cat")
                 self._guard([f"oa_cat:{k}" for k in feats], [], "K")
-                note = (
-                    []
-                    if feats
-                    else [
-                        "no category passes A1.1 in both cities at this grain: not comparable (the "
-                        "measurability of the business mix is grain-dependent, PR §6.5)"
-                    ]
-                )
+                note = _comparability_note(feats)
                 out["H1"] = (
                     self.spec(
                         "H1",
@@ -1974,15 +1967,7 @@ class Builder:
                     predictor=f"{len(feats)} common category OA features @window start",
                     outcome=f"{self.out_dk} > 0",
                     window="2019-2025",
-                    notes=self.notes_for(WINDOWS, True)
-                    + (
-                        []
-                        if feats
-                        else [
-                            "no category passes A1.1 in both cities at this grain: not comparable "
-                            "(PR §6.5)"
-                        ]
-                    ),
+                    notes=self.notes_for(WINDOWS, True) + _comparability_note(feats),
                 ),
                 auc_design(x, (fr["dK"] > 0).astype(int), self.groups(fr["unit"])),
             )
@@ -2723,6 +2708,18 @@ class Builder:
             ),
             d,
         )
+
+
+def _comparability_note(feats: Sequence[str]) -> list[str]:
+    """PR §6.5: at a grain where no commercial category passes A1.1 in both cities, H1/H2 test
+    transport and public facilities only and are 'not comparable' with the thesis's H1/H2."""
+    if any(k.split("|")[0] in COMMERCIAL_DOMAINS for k in feats):
+        return []
+    return [
+        "not comparable: no commercial category passes A1.1 in both cities at this grain "
+        f"({len(feats)} common features, none commercial); the measurability of the business mix "
+        "is grain-dependent (PR §6.5)"
+    ]
 
 
 def _expected(hyp: str) -> str:
