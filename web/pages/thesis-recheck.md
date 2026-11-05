@@ -63,6 +63,10 @@ sidebar_position: 10
   unchanged. Page review R1 (docs/epic-h/355c-page-domain-signoff.md): the study table's grain row
   now gives the pre-registration §4.5 figure, "about 7,000 residents on average" (median 7,224),
   so this page and /hamburg/thesis-recheck agree.
+
+  #371 (2026-11): links only. The Hamburg bullet under "Reading the two right-hand columns" and
+  "Further reading" now point to /berlin-vs-hamburg, the matched Berlin-Hamburg comparison. No
+  result is stated here; the Berlin table and its filter are unchanged.
 -->
 
 <Hero compact eyebrow="The historical reproduction study" title="The 2018 thesis, re-checked" lede="Gentriduck began as a question: an <a href='https://github.com/dhelweg/masterthesis2018_gentrification'>award-era master's thesis</a> from 2018 claimed that the churn of shops, cafés and restaurants in a Berlin neighbourhood tracks — and partly <i>predicts</i> — its social change. Eight years and a completely rebuilt, open-source stack later: <b>does that result still hold?</b>" />
@@ -292,7 +296,9 @@ statistics in 2016–18 and 2022, the 2023 Bürgergeld reform).
   re-test's and are not shown.
 - **Hamburg:** the same eight hypotheses have also been re-tested on Hamburg, as an out-of-sample
   transfer test rather than a replication, with its own monitor, grain and windows; see the
-  [Hamburg thesis re-check](/hamburg/thesis-recheck).
+  [Hamburg thesis re-check](/hamburg/thesis-recheck). For a comparison of the two cities on matched
+  areas, shared indicators and the same years, see
+  [Berlin vs Hamburg, like for like](/berlin-vs-hamburg).
 
 ## Corrections
 
@@ -447,6 +453,7 @@ For the **current** picture these hypotheses take a back seat to the live typolo
 
 - [Berlin hypothesis-suite findings (#354)](https://github.com/dhelweg/gentriduck/blob/main/docs/epic-e/E1b-berlin-hypothesis-suite-findings.md) — the full results behind the table above, including every secondary and sensitivity check
 - [The 2018 thesis, re-tested on Hamburg](/hamburg/thesis-recheck) — the same eight hypotheses as an out-of-sample transfer test on Hamburg, side by side with the thesis and Berlin today (#355)
+- [Berlin vs Hamburg, like for like](/berlin-vs-hamburg) — the thesis hypotheses in both cities on matched areas, shared indicators and the same years, with each hypothesis tested for a difference between the cities (#371)
 - [Pre-registration](https://github.com/dhelweg/gentriduck/blob/main/docs/methodology/354-355-hypothesis-suite-preregistration.md) — the design fixed before the results were computed, including what the results must not be used to claim (§9)
 - [Results table (CSV)](https://github.com/dhelweg/gentriduck/blob/main/docs/epic-e/thesis-hypothesis-suite-results.csv) — every row, machine-readable
 - [Epic B milestone write-up](https://github.com/dhelweg/gentriduck/blob/main/docs/epic-g/O4-milestone-B-narrative.md) — the original signed-off revival findings; its hypothesis results predate the November 2026 re-test

@@ -149,7 +149,9 @@ maps, per-neighbourhood profiles, time series, and the commercial-mix data — s
 Gentriduck now also tracks **Hamburg** — admitted 2026-07-18 after its own methodology gate, and
 live since with the same kinds of views as Berlin: maps, a time series, a district browse,
 per-area profiles, and a POI map. It is a narrower dataset than Berlin's, honestly scoped on its
-own page: the **[Hamburg data hub](/hamburg)**.
+own page: the **[Hamburg data hub](/hamburg)**. To see the 2018 thesis's hypotheses tested in both
+cities on matched areas and shared indicators, see
+**[Berlin vs Hamburg, like for like](/berlin-vs-hamburg)**.
 
 ### Where each neighbourhood sits in the gentrification cycle
 

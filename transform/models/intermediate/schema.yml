@@ -5984,3 +5984,74 @@ models:
         data_tests:
 
           - not_null
+
+  - name: int_berlin_ewr_age_bands_plr2021
+    description: >
+      #371 (pre-registration §3.7 DE checks 4 and 6; PM decision M3): EWR narrow
+      age bands per LOR 2021 PLR for 31.12.2018, 2020, 2022, 2024 and 2025. 2018 and
+      2020 are apportioned with seed_lor_crosswalk_2006_to_2021 using weights
+      renormalised per pre-2021 PLR, so every city and band total is preserved
+      exactly (volume-preserving areal interpolation, Tobler 1979). 2022 has no EWR
+      release (#346) and is the per-PLR, per-band midpoint of 2020 and 2024
+      (is_interpolated = TRUE). residents_total = sum of the 32 bands. Population
+      counts only: the Regelaltersgrenze fraction and the T* construct are applied
+      in the analysis phase (pre-registration §3.7).
+    meta:
+      dbt_meta_owner: data-engineer
+    data_tests:
+
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns:
+              - reference_year
+              - plr_id_2021
+              - band_code
+      - assert_not_empty:
+          config:
+            severity: error
+    columns:
+      - name: plr_id_2021
+        description: LOR 2021 PLR code.
+        data_tests:
+
+          - not_null
+      - name: reference_year
+        description: 31 December snapshot year; 2022 is interpolated.
+        data_tests:
+
+          - not_null
+          - accepted_values:
+              arguments:
+                values: [2018, 2020, 2022, 2024, 2025]
+      - name: band_code
+        description: EWR band column, e.g. 'E_E65_67'.
+        data_tests:
+
+          - not_null
+      - name: residents
+        description: Residents in the band (fractional for crosswalked and interpolated years).
+        data_tests:
+
+          - not_null
+      - name: residents_total
+        description: Sum of the 32 bands for the PLR-year.
+        data_tests:
+
+          - not_null
+      - name: is_interpolated
+        description: TRUE only for reference_year 2022 (M3 linear interpolation).
+        data_tests:
+
+          - not_null
+      - name: derivation
+        description: "'native_lor_2021', 'crosswalk_areal_renormalised' (areal seed weights, renormalised per old PLR) or 'linear_interpolation_2020_2024'."
+        data_tests:
+
+          - accepted_values:
+              arguments:
+                values:
+                  - native_lor_2021
+                  - crosswalk_areal_renormalised
+                  - linear_interpolation_2020_2024
+      - name: is_blank_row
+        description: TRUE for an uninhabited PLR-year (residents_total = 0); equals the publisher's whole-row-blank flag in the native years.
