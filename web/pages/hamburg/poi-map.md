@@ -357,8 +357,9 @@ limit 15
 - **Offering Advantage and POI density are commercial-side signals, not the outcome variable** —
   see [methodology §1](/methodology).
 - **On the Offering Advantage view, thinly-mapped Gebiete are suppressed, not shown as zero** —
-  same D-3 minimum-mapped-place threshold as Berlin's map (#274, ADR-0017 D5 D-3); a blank cell
-  means "too thinly observed," never "commercially dead." The density view does show 0 where no
+  same D-3 minimum-mapped-place threshold as Berlin's map (#274, ADR-0017 D5 D-3); a hatched cell
+  means "no place of this kind is mapped here" or "too thinly observed," never "commercially
+  dead." The density view does show 0 where no
   place of the selected domain is mapped; that is a count of mapped places, so it too can reflect
   an OSM coverage gap.
 - **This map's Offering Advantage baseline is Hamburg-wide, never pooled with Berlin's** — see

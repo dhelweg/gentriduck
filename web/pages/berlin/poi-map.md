@@ -248,9 +248,10 @@ for the full method, or the [methodology page](/methodology) for a plain-languag
 -- ships the whole referenced table to the client for any reactive query
 -- against it, so this page never needed the poi_category_h/poi_type_h leaf
 -- grain it doesn't read.
--- density_delta / oa_delta: year-over-year change vs. the immediately preceding snapshot_year
--- present in the mart for the same area + domain (window function over the full series, before
--- the year filter below) -- "development" = movement, not a re-derived indicator. Computed on
+-- density_delta / oa_delta: year-over-year change for the same area + domain (window functions
+-- over the full series, before the year filter below). density_delta compares with the previous
+-- calendar year (the mart's yearly series is complete since #357); oa_delta compares with the
+-- previous year that has an OA value (see the inline #357 note) -- "development" = movement, not a re-derived indicator. Computed on
 -- the RAW (pre-suppression) oa_domain_raw so a suppressed neighbouring year doesn't break the
 -- lag chain; suppression (#274, ADR-0017 D5 D-3) is applied once, at the very end, based on
 -- THIS row's own oa_domain_min_base_flag (see final select below).
@@ -508,9 +509,9 @@ order by snapshot_year
   D-3). On the Offering Advantage view, PLR-years with fewer than 10 total mapped places are shown
   as a hatched gap on the map above rather than a potentially misleading value; the raw
   mapped-place count is always in the tooltip so you can judge near-threshold cases yourself. **A
-  blank/low cell means "too thinly observed to compute a stable ratio," never "commercially
-  dead."** The same holds for a 0 on the density view, which only means no place of that domain is
-  mapped there. OSM coverage is not spatially
+  hatched cell means "no place of this kind is mapped here" or "too thinly observed to compute a
+  stable ratio," never "commercially dead."** The same holds for a 0 on the density view, which
+  only means no place of that domain is mapped there. OSM coverage is not spatially
   neutral — beyond the early-year completeness bias noted above, mapping completeness also varies
   *within* a given year and tends to correlate with area advantage, with poorer/peripheral areas
   typically less thoroughly mapped than richer/central ones (Haklay, M. 2010, "How Good is
