@@ -1589,6 +1589,800 @@
     }
   },
   "run": {
+    "a5_changes": {
+      "available": true,
+      "reference": "13d9f3ff",
+      "reference_rows_missing": 0,
+      "rows": [
+        {
+          "city": "BER",
+          "cluster_unit": "spatial_block_k24",
+          "flags": {
+            "added": [
+              "w24_weight_sensitive"
+            ],
+            "cause": [
+              "A5.1"
+            ],
+            "removed": []
+          },
+          "hypothesis": "H3a",
+          "row": "partial Spearman(g(c)_P, dK_F | dK_P, K_pivot), pivots 2021 and 2023 pooled"
+        },
+        {
+          "city": "BER",
+          "cluster_unit": "spatial_block_k24",
+          "flags": {
+            "added": [
+              "w24_weight_sensitive"
+            ],
+            "cause": [
+              "A5.1"
+            ],
+            "removed": []
+          },
+          "hypothesis": "N2",
+          "row": "partial Spearman(Delta r_P, dK_F | dK_P, K_pivot), r = ln((Cafe + 0.5) / (Fast Food + 0.5)"
+        },
+        {
+          "city": "HH",
+          "cluster_unit": "spatial_block_k24",
+          "flags": {
+            "added": [
+              "small_units_flip"
+            ],
+            "cause": [
+              "A5.1"
+            ],
+            "removed": []
+          },
+          "hypothesis": "H2",
+          "row": "category OA at window start (42 common fixed features) => dK_W > 0, W1-W3 pooled; GroupKFo"
+        },
+        {
+          "city": "HH",
+          "cluster_unit": "spatial_block_k24",
+          "flags": {
+            "added": [
+              "small_units_flip"
+            ],
+            "cause": [
+              "A5.1"
+            ],
+            "removed": []
+          },
+          "hypothesis": "H3a",
+          "row": "partial Spearman(g(c)_P, dK_F | dK_P, K_pivot), pivots 2021 and 2023 pooled"
+        },
+        {
+          "city": "HH",
+          "cluster_unit": "spatial_block_k24",
+          "flags": {
+            "added": [
+              "small_units_flip"
+            ],
+            "cause": [
+              "A5.1"
+            ],
+            "removed": []
+          },
+          "hypothesis": "H3c",
+          "row": "Spearman(g(c)_W, dK_W), same window, W1-W3 pooled"
+        },
+        {
+          "city": "HH",
+          "cluster_unit": "spatial_block_k24",
+          "flags": {
+            "added": [
+              "core2_flip"
+            ],
+            "cause": [
+              "A5.1"
+            ],
+            "removed": [
+              "small_units_flip"
+            ]
+          },
+          "hypothesis": "N1",
+          "row": "H3a restricted to units with K_pivot above the city's median at the pivot (partial Spearma"
+        },
+        {
+          "city": "HH",
+          "cluster_unit": "spatial_block_k24",
+          "flags": {
+            "added": [
+              "small_units_flip"
+            ],
+            "cause": [
+              "A5.1"
+            ],
+            "removed": []
+          },
+          "hypothesis": "N3",
+          "row": "partial Spearman(Wg(c)_P, dK_F | g(c)_P, dK_P, K_pivot); W = row-standardised queen contig"
+        },
+        {
+          "city": "BER-HH",
+          "cluster_unit": "spatial_block_k24",
+          "flags": {
+            "added": [
+              "small_units_flip"
+            ],
+            "cause": [
+              "A5.1",
+              "review 1 (§6.5 not comparable)"
+            ],
+            "removed": [
+              "maup_flip"
+            ]
+          },
+          "hypothesis": "H1",
+          "row": "Delta = theta_BER - theta_HH (oof_auc_logit; category OA 2025 (44 common fixed features, f"
+        },
+        {
+          "city": "BER-HH",
+          "cluster_unit": "spatial_block_k24",
+          "flags": {
+            "added": [
+              "core2_flip"
+            ],
+            "cause": [
+              "A5.1"
+            ],
+            "removed": []
+          },
+          "hypothesis": "H2",
+          "row": "Delta = theta_BER - theta_HH (oof_auc_logit; category OA at window start (42 common fixed "
+        },
+        {
+          "city": "BER-HH",
+          "cluster_unit": "spatial_block_k24",
+          "flags": {
+            "added": [
+              "core2_flip",
+              "small_units_flip"
+            ],
+            "cause": [
+              "A5.1"
+            ],
+            "removed": []
+          },
+          "hypothesis": "H3a",
+          "row": "Delta = theta_BER - theta_HH (partial_spearman; partial Spearman(g(c)_P, dK_F | dK_P, K_pi"
+        },
+        {
+          "city": "BER-HH",
+          "cluster_unit": "spatial_block_k24",
+          "flags": {
+            "added": [
+              "small_units_flip"
+            ],
+            "cause": [
+              "A5.1"
+            ],
+            "removed": []
+          },
+          "hypothesis": "H3b",
+          "row": "Delta = theta_BER - theta_HH (partial_spearman; partial Spearman(dK_P, g(c)_F | g(c)_P, K_"
+        },
+        {
+          "city": "BER-HH",
+          "cluster_unit": "spatial_block_k24",
+          "flags": {
+            "added": [
+              "core3m_flip",
+              "w24_weight_sensitive"
+            ],
+            "cause": [
+              "A5.1"
+            ],
+            "removed": []
+          },
+          "hypothesis": "H3c",
+          "row": "Delta = theta_BER - theta_HH (spearman; Spearman(g(c)_W, dK_W), same window, W1-W3 pooled)"
+        },
+        {
+          "city": "BER",
+          "cluster_unit": "spatial_block_k24",
+          "flags": {
+            "added": [],
+            "cause": [
+              "review 4 (band-year bookkeeping)"
+            ],
+            "removed": [
+              "ewr_2022_interpolated"
+            ]
+          },
+          "hypothesis": "H2",
+          "row": "H2 window 2019-2021 only"
+        },
+        {
+          "city": "BER",
+          "cluster_unit": "spatial_block_k24",
+          "flags": {
+            "added": [],
+            "cause": [
+              "review 4 (band-year bookkeeping)"
+            ],
+            "removed": [
+              "ewr_2022_interpolated"
+            ]
+          },
+          "hypothesis": "H3c",
+          "row": "H3c window 2019-2021 only"
+        },
+        {
+          "city": "BER",
+          "cluster_unit": "spatial_block_k24",
+          "flags": {
+            "added": [
+              "ewr_2022_interpolated"
+            ],
+            "cause": [
+              "review 4 (band-year bookkeeping)"
+            ],
+            "removed": []
+          },
+          "hypothesis": "H3a",
+          "row": "H3a primary without the 15 units in the top decile of OSM total-POI growth 2019-2025"
+        },
+        {
+          "city": "BER",
+          "cluster_unit": "spatial_block_k24",
+          "flags": {
+            "added": [
+              "ewr_2022_interpolated"
+            ],
+            "cause": [
+              "review 4 (band-year bookkeeping)"
+            ],
+            "removed": []
+          },
+          "hypothesis": "H3b",
+          "row": "H3b primary without the 15 units in the top decile of OSM total-POI growth 2019-2025"
+        },
+        {
+          "city": "BER",
+          "cluster_unit": "spatial_block_k24",
+          "flags": {
+            "added": [
+              "ewr_2022_interpolated"
+            ],
+            "cause": [
+              "review 4 (band-year bookkeeping)"
+            ],
+            "removed": []
+          },
+          "hypothesis": "H3c",
+          "row": "H3c primary without the 15 units in the top decile of OSM total-POI growth 2019-2025"
+        },
+        {
+          "city": "BER",
+          "cluster_unit": "spatial_block_k24",
+          "flags": {
+            "added": [
+              "ewr_2022_interpolated"
+            ],
+            "cause": [
+              "review 4 (band-year bookkeeping)"
+            ],
+            "removed": []
+          },
+          "hypothesis": "H3a",
+          "row": "H3a primary without the 15 units in the top decile of population growth 31.12.2018-31.12.2"
+        },
+        {
+          "city": "BER",
+          "cluster_unit": "spatial_block_k24",
+          "flags": {
+            "added": [
+              "ewr_2022_interpolated"
+            ],
+            "cause": [
+              "review 4 (band-year bookkeeping)"
+            ],
+            "removed": []
+          },
+          "hypothesis": "H3b",
+          "row": "H3b primary without the 15 units in the top decile of population growth 31.12.2018-31.12.2"
+        },
+        {
+          "city": "BER",
+          "cluster_unit": "spatial_block_k24",
+          "flags": {
+            "added": [
+              "ewr_2022_interpolated"
+            ],
+            "cause": [
+              "review 4 (band-year bookkeeping)"
+            ],
+            "removed": []
+          },
+          "hypothesis": "H3c",
+          "row": "H3c primary without the 15 units in the top decile of population growth 31.12.2018-31.12.2"
+        },
+        {
+          "city": "BER-HH",
+          "cluster_unit": "spatial_block_k24",
+          "flags": {
+            "added": [
+              "ewr_2022_interpolated"
+            ],
+            "cause": [
+              "review 4 (band-year bookkeeping)"
+            ],
+            "removed": []
+          },
+          "hypothesis": "N1",
+          "row": "Delta = theta_BER - theta_HH (partial_spearman; H3a restricted to units with K_pivot above"
+        },
+        {
+          "city": "BER-HH",
+          "cluster_unit": "spatial_block_k24",
+          "flags": {
+            "added": [
+              "ewr_2022_interpolated"
+            ],
+            "cause": [
+              "review 4 (band-year bookkeeping)"
+            ],
+            "removed": []
+          },
+          "hypothesis": "N2",
+          "row": "Delta = theta_BER - theta_HH (partial_spearman; partial Spearman(Delta r_P, dK_F | dK_P, K"
+        },
+        {
+          "city": "BER-HH",
+          "cluster_unit": "spatial_block_k24",
+          "flags": {
+            "added": [
+              "ewr_2022_interpolated"
+            ],
+            "cause": [
+              "review 4 (band-year bookkeeping)"
+            ],
+            "removed": []
+          },
+          "hypothesis": "N3",
+          "row": "Delta = theta_BER - theta_HH (partial_spearman; partial Spearman(Wg(c)_P, dK_F | g(c)_P, d"
+        },
+        {
+          "city": "BER-HH",
+          "cluster_unit": "spatial_block_k24",
+          "flags": {
+            "added": [
+              "ewr_2022_interpolated"
+            ],
+            "cause": [
+              "review 4 (band-year bookkeeping)"
+            ],
+            "removed": []
+          },
+          "hypothesis": "H2",
+          "row": "Delta = theta_BER - theta_HH (oof_auc_logit; H2 window 2021-2023 only); independent block "
+        },
+        {
+          "city": "BER-HH",
+          "cluster_unit": "spatial_block_k24",
+          "flags": {
+            "added": [
+              "ewr_2022_interpolated"
+            ],
+            "cause": [
+              "review 4 (band-year bookkeeping)"
+            ],
+            "removed": []
+          },
+          "hypothesis": "H2",
+          "row": "Delta = theta_BER - theta_HH (oof_auc_logit; H2 window 2023-2025 only); independent block "
+        },
+        {
+          "city": "BER-HH",
+          "cluster_unit": "spatial_block_k24",
+          "flags": {
+            "added": [
+              "ewr_2022_interpolated"
+            ],
+            "cause": [
+              "review 4 (band-year bookkeeping)"
+            ],
+            "removed": []
+          },
+          "hypothesis": "H3c",
+          "row": "Delta = theta_BER - theta_HH (spearman; H3c window 2021-2023 only); independent block boot"
+        },
+        {
+          "city": "BER-HH",
+          "cluster_unit": "spatial_block_k24",
+          "flags": {
+            "added": [
+              "ewr_2022_interpolated"
+            ],
+            "cause": [
+              "review 4 (band-year bookkeeping)"
+            ],
+            "removed": []
+          },
+          "hypothesis": "H3c",
+          "row": "Delta = theta_BER - theta_HH (spearman; H3c window 2023-2025 only); independent block boot"
+        },
+        {
+          "city": "BER-HH",
+          "cluster_unit": "spatial_block_k16",
+          "flags": {
+            "added": [
+              "ewr_2022_interpolated"
+            ],
+            "cause": [
+              "review 4 (band-year bookkeeping)"
+            ],
+            "removed": []
+          },
+          "hypothesis": "H2",
+          "row": "[k16] Delta = theta_BER - theta_HH (oof_auc_logit; category OA at window start (42 common "
+        },
+        {
+          "city": "BER-HH",
+          "cluster_unit": "spatial_block_k16",
+          "flags": {
+            "added": [
+              "ewr_2022_interpolated"
+            ],
+            "cause": [
+              "review 4 (band-year bookkeeping)"
+            ],
+            "removed": []
+          },
+          "hypothesis": "H3a",
+          "row": "[k16] Delta = theta_BER - theta_HH (partial_spearman; partial Spearman(g(c)_P, dK_F | dK_P"
+        },
+        {
+          "city": "BER-HH",
+          "cluster_unit": "spatial_block_k16",
+          "flags": {
+            "added": [
+              "ewr_2022_interpolated"
+            ],
+            "cause": [
+              "review 4 (band-year bookkeeping)"
+            ],
+            "removed": []
+          },
+          "hypothesis": "H3b",
+          "row": "[k16] Delta = theta_BER - theta_HH (partial_spearman; partial Spearman(dK_P, g(c)_F | g(c)"
+        },
+        {
+          "city": "BER-HH",
+          "cluster_unit": "spatial_block_k16",
+          "flags": {
+            "added": [
+              "ewr_2022_interpolated"
+            ],
+            "cause": [
+              "review 4 (band-year bookkeeping)"
+            ],
+            "removed": []
+          },
+          "hypothesis": "H3c",
+          "row": "[k16] Delta = theta_BER - theta_HH (spearman; Spearman(g(c)_W, dK_W), same window, W1-W3 p"
+        },
+        {
+          "city": "BER-HH",
+          "cluster_unit": "spatial_block_k36",
+          "flags": {
+            "added": [
+              "ewr_2022_interpolated"
+            ],
+            "cause": [
+              "review 4 (band-year bookkeeping)"
+            ],
+            "removed": []
+          },
+          "hypothesis": "H2",
+          "row": "[k36] Delta = theta_BER - theta_HH (oof_auc_logit; category OA at window start (42 common "
+        },
+        {
+          "city": "BER-HH",
+          "cluster_unit": "spatial_block_k36",
+          "flags": {
+            "added": [
+              "ewr_2022_interpolated"
+            ],
+            "cause": [
+              "review 4 (band-year bookkeeping)"
+            ],
+            "removed": []
+          },
+          "hypothesis": "H3a",
+          "row": "[k36] Delta = theta_BER - theta_HH (partial_spearman; partial Spearman(g(c)_P, dK_F | dK_P"
+        },
+        {
+          "city": "BER-HH",
+          "cluster_unit": "spatial_block_k36",
+          "flags": {
+            "added": [
+              "ewr_2022_interpolated"
+            ],
+            "cause": [
+              "review 4 (band-year bookkeeping)"
+            ],
+            "removed": []
+          },
+          "hypothesis": "H3b",
+          "row": "[k36] Delta = theta_BER - theta_HH (partial_spearman; partial Spearman(dK_P, g(c)_F | g(c)"
+        },
+        {
+          "city": "BER-HH",
+          "cluster_unit": "spatial_block_k36",
+          "flags": {
+            "added": [
+              "ewr_2022_interpolated"
+            ],
+            "cause": [
+              "review 4 (band-year bookkeeping)"
+            ],
+            "removed": []
+          },
+          "hypothesis": "H3c",
+          "row": "[k36] Delta = theta_BER - theta_HH (spearman; Spearman(g(c)_W, dK_W), same window, W1-W3 p"
+        },
+        {
+          "city": "BER-HH",
+          "cluster_unit": "iid",
+          "flags": {
+            "added": [
+              "ewr_2022_interpolated"
+            ],
+            "cause": [
+              "review 4 (band-year bookkeeping)"
+            ],
+            "removed": []
+          },
+          "hypothesis": "H2",
+          "row": "[iid] Delta = theta_BER - theta_HH (oof_auc_logit; category OA at window start (42 common "
+        },
+        {
+          "city": "BER-HH",
+          "cluster_unit": "iid",
+          "flags": {
+            "added": [
+              "ewr_2022_interpolated"
+            ],
+            "cause": [
+              "review 4 (band-year bookkeeping)"
+            ],
+            "removed": []
+          },
+          "hypothesis": "H3a",
+          "row": "[iid] Delta = theta_BER - theta_HH (partial_spearman; partial Spearman(g(c)_P, dK_F | dK_P"
+        },
+        {
+          "city": "BER-HH",
+          "cluster_unit": "iid",
+          "flags": {
+            "added": [
+              "ewr_2022_interpolated"
+            ],
+            "cause": [
+              "review 4 (band-year bookkeeping)"
+            ],
+            "removed": []
+          },
+          "hypothesis": "H3b",
+          "row": "[iid] Delta = theta_BER - theta_HH (partial_spearman; partial Spearman(dK_P, g(c)_F | g(c)"
+        },
+        {
+          "city": "BER-HH",
+          "cluster_unit": "iid",
+          "flags": {
+            "added": [
+              "ewr_2022_interpolated"
+            ],
+            "cause": [
+              "review 4 (band-year bookkeeping)"
+            ],
+            "removed": []
+          },
+          "hypothesis": "H3c",
+          "row": "[iid] Delta = theta_BER - theta_HH (spearman; Spearman(g(c)_W, dK_W), same window, W1-W3 p"
+        },
+        {
+          "city": "BER-HH",
+          "cluster_unit": "bezirk",
+          "flags": {
+            "added": [
+              "ewr_2022_interpolated"
+            ],
+            "cause": [
+              "review 4 (band-year bookkeeping)"
+            ],
+            "removed": []
+          },
+          "hypothesis": "H2",
+          "row": "[bezirk] Delta = theta_BER - theta_HH (oof_auc_logit; category OA at window start (42 comm"
+        },
+        {
+          "city": "BER-HH",
+          "cluster_unit": "bezirk",
+          "flags": {
+            "added": [
+              "ewr_2022_interpolated"
+            ],
+            "cause": [
+              "review 4 (band-year bookkeeping)"
+            ],
+            "removed": []
+          },
+          "hypothesis": "H3a",
+          "row": "[bezirk] Delta = theta_BER - theta_HH (partial_spearman; partial Spearman(g(c)_P, dK_F | d"
+        },
+        {
+          "city": "BER-HH",
+          "cluster_unit": "bezirk",
+          "flags": {
+            "added": [
+              "ewr_2022_interpolated"
+            ],
+            "cause": [
+              "review 4 (band-year bookkeeping)"
+            ],
+            "removed": []
+          },
+          "hypothesis": "H3b",
+          "row": "[bezirk] Delta = theta_BER - theta_HH (partial_spearman; partial Spearman(dK_P, g(c)_F | g"
+        },
+        {
+          "city": "BER-HH",
+          "cluster_unit": "bezirk",
+          "flags": {
+            "added": [
+              "ewr_2022_interpolated"
+            ],
+            "cause": [
+              "review 4 (band-year bookkeeping)"
+            ],
+            "removed": []
+          },
+          "hypothesis": "H3c",
+          "row": "[bezirk] Delta = theta_BER - theta_HH (spearman; Spearman(g(c)_W, dK_W), same window, W1-W"
+        },
+        {
+          "city": "BER-HH",
+          "cluster_unit": "spatial_block_k24",
+          "hypothesis": "H1",
+          "row": "[ge5000] Delta = theta_BER - theta_HH (oof_auc_logit; category OA 2025 (44 common fixed fe",
+          "verdict": {
+            "after": "NO DIFFERENCE DETECTED",
+            "before": "NO DIFFERENCE DETECTED",
+            "cause": "A5.2",
+            "family": [
+              "none",
+              "X8_ge5000"
+            ]
+          }
+        },
+        {
+          "city": "BER-HH",
+          "cluster_unit": "spatial_block_k24",
+          "hypothesis": "H1a",
+          "row": "[ge5000] Delta = theta_BER - theta_HH (spearman; Spearman(OA category Cafe 2025, K_2025), ",
+          "verdict": {
+            "after": "NO DIFFERENCE DETECTED",
+            "before": "NO DIFFERENCE DETECTED",
+            "cause": "A5.2",
+            "family": [
+              "none",
+              "X8_ge5000"
+            ]
+          }
+        },
+        {
+          "city": "BER-HH",
+          "cluster_unit": "spatial_block_k24",
+          "hypothesis": "H1b",
+          "row": "[ge5000] Delta = theta_BER - theta_HH (spearman; Spearman(OA category Fast Food 2025, K_20",
+          "verdict": {
+            "after": "NO DIFFERENCE DETECTED",
+            "before": "NO DIFFERENCE DETECTED",
+            "cause": "A5.2",
+            "family": [
+              "none",
+              "X8_ge5000"
+            ]
+          }
+        },
+        {
+          "city": "BER-HH",
+          "cluster_unit": "spatial_block_k24",
+          "hypothesis": "H1c",
+          "row": "[ge5000] Delta = theta_BER - theta_HH (spearman; Spearman(OA domain Sports and Recreation ",
+          "verdict": {
+            "after": "NO DIFFERENCE DETECTED",
+            "before": "NO DIFFERENCE DETECTED",
+            "cause": "A5.2",
+            "family": [
+              "none",
+              "X8_ge5000"
+            ]
+          }
+        },
+        {
+          "city": "BER-HH",
+          "cluster_unit": "spatial_block_k24",
+          "hypothesis": "H2",
+          "row": "[ge5000] Delta = theta_BER - theta_HH (oof_auc_logit; category OA at window start (42 comm",
+          "verdict": {
+            "after": "NO DIFFERENCE DETECTED",
+            "before": "NO DIFFERENCE DETECTED",
+            "cause": "A5.2",
+            "family": [
+              "none",
+              "X8_ge5000"
+            ]
+          }
+        },
+        {
+          "city": "BER-HH",
+          "cluster_unit": "spatial_block_k24",
+          "hypothesis": "H3a",
+          "row": "[ge5000] Delta = theta_BER - theta_HH (partial_spearman; partial Spearman(g(c)_P, dK_F | d",
+          "verdict": {
+            "after": "NO DIFFERENCE DETECTED",
+            "before": "NO DIFFERENCE DETECTED",
+            "cause": "A5.2",
+            "family": [
+              "none",
+              "X8_ge5000"
+            ]
+          }
+        },
+        {
+          "city": "BER-HH",
+          "cluster_unit": "spatial_block_k24",
+          "hypothesis": "H3b",
+          "row": "[ge5000] Delta = theta_BER - theta_HH (partial_spearman; partial Spearman(dK_P, g(c)_F | g",
+          "verdict": {
+            "after": "NO DIFFERENCE DETECTED",
+            "before": "NO DIFFERENCE DETECTED",
+            "cause": "A5.2",
+            "family": [
+              "none",
+              "X8_ge5000"
+            ]
+          }
+        },
+        {
+          "city": "BER-HH",
+          "cluster_unit": "spatial_block_k24",
+          "hypothesis": "H3c",
+          "row": "[ge5000] Delta = theta_BER - theta_HH (spearman; Spearman(g(c)_W, dK_W), same window, W1-W",
+          "verdict": {
+            "after": "NO DIFFERENCE DETECTED",
+            "before": "NO DIFFERENCE DETECTED",
+            "cause": "A5.2",
+            "family": [
+              "none",
+              "X8_ge5000"
+            ]
+          }
+        },
+        {
+          "city": "BER",
+          "cluster_unit": "none",
+          "flags": {
+            "added": [
+              "ewr_2022_interpolated"
+            ],
+            "cause": [
+              "review 4 (band-year bookkeeping)"
+            ],
+            "removed": []
+          },
+          "hypothesis": "H3c",
+          "row": "[PGR] Spearman(g(c)_W, dK_W), same window, W1-W3 pooled"
+        }
+      ]
+    },
     "annex_recovery": [
       {
         "edition": 2019,
@@ -1809,6 +2603,14 @@
         "threshold": 0.95
       }
     ],
+    "bh_family_m": {
+      "N/BER": 1,
+      "N/HH": 2,
+      "T8/BER": 8,
+      "T8/HH": 8,
+      "X8": 8,
+      "X8_ge5000": 8
+    },
     "city_levels": {
       "BER/2019": {
         "C": 26.434422,
@@ -2080,6 +2882,172 @@
         "rho_with_K": 0.839641
       }
     ],
+    "diagnostic_drop_sets": {
+      "BER/diag:mapping": {
+        "basis": "OSM total-POI growth 2019-2025",
+        "units": [
+          "033004",
+          "035009",
+          "035010",
+          "082006",
+          "092008",
+          "095017",
+          "101001",
+          "101002",
+          "101003",
+          "102004",
+          "102005",
+          "111002",
+          "111003",
+          "113006",
+          "126012"
+        ]
+      },
+      "BER/diag:popgrowth": {
+        "basis": "population growth 31.12.2018-31.12.2024",
+        "units": [
+          "051001",
+          "053007",
+          "082006",
+          "092006",
+          "092007",
+          "092008",
+          "093009",
+          "093010",
+          "093011",
+          "094014",
+          "095018",
+          "102004",
+          "111001",
+          "115013",
+          "122003"
+        ]
+      },
+      "HH/diag:mapping": {
+        "basis": "OSM total-POI growth 2019-2025",
+        "units": [
+          "02102",
+          "02117",
+          "02203",
+          "02205",
+          "02206",
+          "02309",
+          "02403",
+          "02404",
+          "02508",
+          "02704"
+        ]
+      },
+      "HH/diag:popgrowth": {
+        "basis": "population growth 31.12.2018-31.12.2024",
+        "units": [
+          "02101",
+          "02102",
+          "02106",
+          "02107",
+          "02114",
+          "02203",
+          "02403",
+          "02506",
+          "02701",
+          "02714"
+        ]
+      }
+    },
+    "disclosures": {
+      "debug_runs": [
+        {
+          "B": 29,
+          "code": "uncommitted pre-0fb5fb00 working tree",
+          "date": "2026-11-05",
+          "runs": 2
+        },
+        {
+          "B": 99,
+          "code": "uncommitted pre-0fb5fb00 working tree",
+          "date": "2026-11-05",
+          "runs": 1
+        },
+        {
+          "B": 49,
+          "code": "332a64f6",
+          "date": "2026-11-05",
+          "runs": 2
+        },
+        {
+          "B": 1999,
+          "code": "0fb5fb00 (superseded, not committed)",
+          "date": "2026-11-05",
+          "runs": 1
+        }
+      ],
+      "fix_evidence": {
+        "metadata": "8e2e9b4d changes only protection_share_2024 (Hamburg: 0 -> the zone cover)",
+        "method": "result CSV of 0fb5fb00 and of 8e2e9b4d vs 332a64f6, all at B = 49, compared column by column over all 492 rows",
+        "notes_rows": "the 10 fine-grain H1/H2 rows (city and X8, incl. fine_W24) that gained the §6.5 'not comparable' note in 332a64f6",
+        "rows_differing": {
+          "ci_high": 0,
+          "ci_low": 0,
+          "estimate": 0,
+          "flags": 0,
+          "n": 0,
+          "notes": 10,
+          "operationalisation": 0,
+          "p_boot": 0,
+          "verdict": 0
+        },
+        "sha256_16_of_estimate_and_n": {
+          "0fb5fb00": "964b2f7f828e97b3",
+          "332a64f6": "964b2f7f828e97b3",
+          "8e2e9b4d": "964b2f7f828e97b3"
+        }
+      },
+      "later_fixes": {
+        "332a64f6": "PR §6.5 'not comparable' note on H1/H2 where no commercial category survives (fine grain); note text only",
+        "8e2e9b4d": "Hamburg protection-zone cover read the EPSG:25832 zone WKB as is (was transformed twice, giving zero cover); descriptive context only"
+      }
+    },
+    "dropped_berlin_plr": {
+      "dropped": [
+        {
+          "plr": "03300515",
+          "reason": "no MSS value in any edition (2021/2023/2025)"
+        },
+        {
+          "plr": "03400831",
+          "reason": "no MSS value in any edition (2021/2023/2025), uninhabited at 31.12.2024"
+        },
+        {
+          "plr": "04400725",
+          "reason": "no MSS value in any edition (2021/2023/2025)"
+        },
+        {
+          "plr": "05300838",
+          "reason": "no MSS value in any edition (2021/2023/2025)"
+        },
+        {
+          "plr": "06200418",
+          "reason": "no MSS value in any edition (2021/2023/2025), uninhabited at 31.12.2024"
+        },
+        {
+          "plr": "10100205",
+          "reason": "no MSS value in any edition (2021/2023/2025)"
+        },
+        {
+          "plr": "12200411",
+          "reason": "no MSS values in edition 2025"
+        }
+      ],
+      "n_balanced": 535,
+      "n_lor2021_plr": 542
+    },
+    "families": {
+      "N": "per city, N1 and N2, BH within the pair (PR §7.5); NO DATA rows not counted in m",
+      "T8": "per city, the 8 thesis primaries, BH (P354 §5.5)",
+      "X8": "the 8 city differences, BH (PR §6.3)",
+      "X8_ge5000": "sensitivity family: the 8 X8 rows of the >= 5,000-resident panel, BH with NO DATA rows not counted in m; used only for the statement rule (A5.2); outside every confirmatory family",
+      "none": "every other row: uncorrected (PR §0, §7.5)"
+    },
     "fold_auc": {
       "BER/H1": [
         0.759804,
@@ -2109,6 +3077,14 @@
         0.485222,
         0.29
       ]
+    },
+    "ge5000_population_dates": {
+      "BER": "31.12.2024, int_berlin_ewr_age_bands_plr2021.residents_total, balanced child PLRs",
+      "HH": "edition 2025 Sozialmonitoring population (31.12.2024), balanced Gebiete",
+      "n_units_kept": {
+        "BER": 141,
+        "HH": 77
+      }
     },
     "grain_distribution": {
       "BER": {
@@ -2515,6 +3491,13 @@
     "moran_blocks_too_small": {
       "BER": true,
       "HH": false
+    },
+    "outcome_suffixes": {
+      " > 0": "binary target of an AUC row (H1: K_2025 > 0; H2: dK_W > 0)",
+      "@F": "the change over the following window F (cross-lag rows)",
+      "@P": "the change over the predictor window P (cross-lag rows)",
+      "@W": "the change over the same window W (H3c rows)",
+      "_core3m / _core2": "status_construct of a construct sensitivity (§9.1)"
     },
     "panel": {
       "BER": {
@@ -3214,6 +4197,18 @@
         "2025:transferbezug_dynamik": "d3"
       }
     },
+    "prereg_inputs": {
+      "interpolated_inputs": {
+        "BER bands 2022": "M3: 31.12.2022 EWR bands = midpoint of 31.12.2020 and 31.12.2024 (int_berlin_ewr_age_bands_plr2021, derivation linear_interpolation_2020_2024)"
+      },
+      "later_edition_level_inputs": {
+        "BER S1 2019 from 2021": "backcast anteil_2021 - dynamik_2021 (§4.2)",
+        "BER S3 2019 from 2021": "backcast anteil_2021 - dynamik_2021 (§4.2)",
+        "BER S4 2019 from 2021": "backcast anteil_2021 - dynamik_2021 (§4.2)",
+        "HH S3 2019 from 2022": "s3_2019_rev = s3_2022 - D3_2022 (A4 rev. 1 E1)"
+      },
+      "note": "The M3 interpolation is a pre-registered input (PM decision M3); the geo-DS confirms it in the results sign-off (review finding 8)."
+    },
     "protection_share_2024": {
       "BER": {
         "mean": 0.172331,
@@ -3232,9 +4227,75 @@
     },
     "run": {
       "n_boot": 1999,
-      "run_sha": "332a64f6d460",
+      "run_sha": "14d20548b5be",
       "seed": 42,
       "seed_x8_hh": 43
+    },
+    "statement_rule": {
+      "H1": {
+        "below_chance": [],
+        "core2_same_sign_ci_excl_0": false,
+        "core3m_same_sign": true,
+        "ge5000_bh_verdict": "NO DIFFERENCE DETECTED",
+        "outcome": "not applicable (no DIFFERS)",
+        "x8_verdict": "NO DIFFERENCE DETECTED"
+      },
+      "H1a": {
+        "below_chance": [],
+        "core2_same_sign_ci_excl_0": false,
+        "core3m_same_sign": true,
+        "ge5000_bh_verdict": "NO DIFFERENCE DETECTED",
+        "outcome": "not applicable (no DIFFERS)",
+        "x8_verdict": "NO DIFFERENCE DETECTED"
+      },
+      "H1b": {
+        "below_chance": [],
+        "core2_same_sign_ci_excl_0": false,
+        "core3m_same_sign": true,
+        "ge5000_bh_verdict": "NO DIFFERENCE DETECTED",
+        "outcome": "not applicable (no DIFFERS)",
+        "x8_verdict": "NO DIFFERENCE DETECTED"
+      },
+      "H1c": {
+        "below_chance": [],
+        "core2_same_sign_ci_excl_0": false,
+        "core3m_same_sign": true,
+        "ge5000_bh_verdict": "NO DIFFERENCE DETECTED",
+        "outcome": "not applicable (no DIFFERS)",
+        "x8_verdict": "NO DIFFERENCE DETECTED"
+      },
+      "H2": {
+        "below_chance": [],
+        "core2_same_sign_ci_excl_0": false,
+        "core3m_same_sign": true,
+        "ge5000_bh_verdict": "NO DIFFERENCE DETECTED",
+        "outcome": "not applicable (no DIFFERS)",
+        "x8_verdict": "NO DIFFERENCE DETECTED"
+      },
+      "H3a": {
+        "below_chance": [],
+        "core2_same_sign_ci_excl_0": false,
+        "core3m_same_sign": true,
+        "ge5000_bh_verdict": "NO DIFFERENCE DETECTED",
+        "outcome": "not applicable (no DIFFERS)",
+        "x8_verdict": "NO DIFFERENCE DETECTED"
+      },
+      "H3b": {
+        "below_chance": [],
+        "core2_same_sign_ci_excl_0": false,
+        "core3m_same_sign": true,
+        "ge5000_bh_verdict": "NO DIFFERENCE DETECTED",
+        "outcome": "not applicable (no DIFFERS)",
+        "x8_verdict": "NO DIFFERENCE DETECTED"
+      },
+      "H3c": {
+        "below_chance": [],
+        "core2_same_sign_ci_excl_0": false,
+        "core3m_same_sign": false,
+        "ge5000_bh_verdict": "NO DIFFERENCE DETECTED",
+        "outcome": "not applicable (no DIFFERS)",
+        "x8_verdict": "NO DIFFERENCE DETECTED"
+      }
     },
     "validity": [
       {

@@ -2,7 +2,7 @@
 
 > **Generated** by `analysis/thesis_hypothesis_suite.py --panel matched` from `docs/epic-e/matched-comparison-results.csv` and `docs/epic-e/matched-comparison-metadata.json` — do not hand-edit (pre-registration §9.2). Interpretation is left to the reviewers and the analyst.
 
-- **Run:** `run_sha` 332a64f6d460; B = 1999 block-bootstrap draws; seed 42 (Hamburg X8 stream 43); α = 0.05; G = 24 k-means blocks per city.
+- **Run:** `run_sha` 14d20548b5be; B = 1999 block-bootstrap draws; seed 42 (Hamburg X8 stream 43); α = 0.05; G = 24 k-means blocks per city.
 - **Binding design:** `docs/methodology/371-matched-comparison-preregistration.md` (Revisions 1–3, Amendment 4 and Amendment 4 revision 1), with `docs/methodology/354-355-hypothesis-suite-preregistration.md` (Amendments 1–3) for the shared estimators. Data evidence: `docs/epic-e/371-data-checks.md`.
 - **Gate:** methodology-bearing (R-C1). Geo-DS and domain `Verdict: PASS` on these results are required before integration into `develop` or any publication.
 
@@ -12,7 +12,7 @@ E1c compares the eight thesis hypotheses in Berlin and Hamburg on a matched desi
 
 **Power (pre-registration §6.4, stated up front).** At n ≈ 130 vs 65 (H1a/H1b), SE(Δρ) ≈ √(1/130 + 1/65) ≈ 0.15 before the design effect, so MDD ≈ 0.42. For the H3 pooled rows (286 vs 198), MDD ≈ 0.26 before the design effect. **X8 can detect only large city differences.** Every interaction row prints its own MDD (2.8 × the bootstrap SE of Δ).
 
-**Robust-DIFFERS rule (§6.3, D1, D8, D10; binding).** A city difference may be **stated** only if X8 gives DIFFERS under the primary **core-3H** **and** in the ≥ 5,000-resident panel, **and** under the T-free construct (core-2, because Hamburg S5 excludes AsylbLG; data checks §3) Δ has the same sign **and** its unadjusted 95% block-bootstrap CI excludes 0 (sensitivity criterion, no BH); **and** its Δ has the same sign under core-3M (sign only). A DIFFERS that fails any condition is reported as "differs only under <condition>; not stated as a city difference". DIFFERS states only that the within-city association differs at the harmonised construct and the matched grain; it does not say that the processes differ. "Same verdict in both cities" is never shown as agreement unless X8 says NO DIFFERENCE DETECTED and the MDD is at most 0.30 (ρ) / 0.10 (AUC); even then it reads "no difference detected", never "the same".
+**Robust-DIFFERS rule (§6.3, D1, D8, D10; binding).** A city difference may be **stated** only if X8 gives DIFFERS under the primary **core-3H** **and** in the ≥ 5,000-resident panel (BH over that panel's 8 X8 rows, NO DATA rows not counted in m; Amendment 5, A5.2), **and** under the T-free construct (core-2, because Hamburg S5 excludes AsylbLG; data checks §3) Δ has the same sign **and** its unadjusted 95% block-bootstrap CI excludes 0 (sensitivity criterion, no BH); **and** its Δ has the same sign under core-3M (sign only). A DIFFERS that fails any condition is reported as "differs only under <condition>; not stated as a city difference". DIFFERS states only that the within-city association differs at the harmonised construct and the matched grain; it does not say that the processes differ. "Same verdict in both cities" is never shown as agreement unless X8 says NO DIFFERENCE DETECTED and the MDD is at most 0.30 (ρ) / 0.10 (AUC); even then it reads "no difference detected", never "the same".
 
 **Scale caveat (R1).** The matched units (15–26k residents) are coarser than the scale at which gentrification is usually observed, so a null here does not rule out a neighbourhood-scale process.
 
@@ -26,43 +26,54 @@ Primary per city: BH across the city's 8 thesis primaries (T8). City difference:
 
 | # | Hypothesis | 2018 thesis | Berlin matched | Hamburg matched | City difference tested |
 |---|---|---|---|---|---|
-| H1 | Der soziale Status einer Nachbarschaft hängt mit den lokalen Angebotsstrukturen zusammen. | supported | AUC 0.784 [0.692, 0.861], n = 143 (24 blocks), p_BH = 0.0020: **SUPPORTED** (acceptable); *holds* | AUC 0.754 [0.646, 0.844], n = 99 (24 blocks), p_BH = 0.0020: **SUPPORTED** (acceptable); *holds* | **NO DIFFERENCE DETECTED**, Δ 0.030 [-0.099, 0.160], MDD 0.188, p_BH = 0.9035; flags: `maup_flip` |
+| H1 | Der soziale Status einer Nachbarschaft hängt mit den lokalen Angebotsstrukturen zusammen. | supported | AUC 0.784 [0.692, 0.861], n = 143 (24 blocks), p_BH = 0.0020: **SUPPORTED** (acceptable); *holds* | AUC 0.754 [0.646, 0.844], n = 99 (24 blocks), p_BH = 0.0020: **SUPPORTED** (acceptable); *holds* | **NO DIFFERENCE DETECTED**, Δ 0.030 [-0.099, 0.160], MDD 0.188, p_BH = 0.9035; flags: `small_units_flip` |
 | H1a | Umgebungen mit vielen Cafés haben einen vergleichsweise hohen sozialen Status. | undecided | ρ -0.249 [-0.452, -0.054], n = 130 (24 blocks), p_BH = 0.0256: **SUPPORTED** (small); *stronger than thesis* | ρ -0.486 [-0.699, -0.190], n = 67 (21 blocks), p_BH = 0.0080: **SUPPORTED** (moderate); *stronger than thesis* | **NO DIFFERENCE DETECTED**, Δ 0.236 [-0.112, 0.528], MDD 0.474, p_BH = 0.5823 |
 | H1b | Umgebungen mit vielen Fast Food Geschäften haben einen vergleichsweise niedrigeren sozialen Status. | supported | ρ 0.546 [0.385, 0.686], n = 130 (24 blocks), p_BH = 0.0020: **SUPPORTED** (large); *holds* | ρ 0.682 [0.492, 0.808], n = 67 (21 blocks), p_BH = 0.0020: **SUPPORTED** (large); *holds* | **NO DIFFERENCE DETECTED**, Δ -0.136 [-0.357, 0.102], MDD 0.320, p_BH = 0.5823 |
 | H1c | Umgebungen mit vielen Sportmöglichkeiten haben einen vergleichsweise hohen sozialen Status. | undecided | ρ 0.334 [0.119, 0.534], n = 143 (24 blocks), p_BH = 0.0053: **CONTRADICTED** (moderate); *opposite direction (thesis: undecided); consistent with the sign of the thesis's own planning-area OA correlations (Tabelle 6-14)* | ρ 0.168 [-0.088, 0.406], n = 99 (24 blocks), p_BH = 0.4382: **NOT SIGNIFICANT** (small); *consistent (still unclear)* | **NO DIFFERENCE DETECTED**, Δ 0.165 [-0.135, 0.515], MDD 0.464, p_BH = 0.5823 |
-| H2 | Die aktuellen lokalen Angebotsstrukturen haben einen Einfluss auf die zukünftige Veränderung des sozialen Status. | undecided | AUC 0.582 [0.521, 0.643], n = 429 (24 blocks), p_BH = 0.0256: **SUPPORTED** (negligible); *consistent (still unclear)*; flags: `small_units_flip;core2_flip;ewr_2022_interpolated` | AUC 0.508 [0.430, 0.575], n = 297 (24 blocks), p_BH = 0.8354: **NOT SIGNIFICANT** (negligible); *consistent (still unclear)* | **NO DIFFERENCE DETECTED**, Δ 0.074 [-0.018, 0.175], MDD 0.137, p_BH = 0.5823; flags: `core3m_flip;ewr_2022_interpolated;w2_only;w24_weight_sensitive` |
-| H3a | Die Veränderung des sozialen Status folgt der Veränderung der lokalen Angebotsstruktur, ist diesem also zeitlich nachgelagert. | rejected | ρ 0.036 [-0.092, 0.149], n = 286 (24 blocks), p_BH = 0.6103: **NOT SIGNIFICANT** (negligible); *consistent (rejected)*; flags: `ewr_2022_interpolated` | ρ 0.048 [-0.116, 0.222], n = 198 (24 blocks), p_BH = 0.8137: **NOT SIGNIFICANT** (negligible); *consistent (rejected)* | **NO DIFFERENCE DETECTED**, Δ -0.011 [-0.230, 0.189], MDD 0.302, p_BH = 0.9035; flags: `ewr_2022_interpolated` |
-| H3b | Die Veränderung des sozialen Status geht der Veränderung der lokalen Angebotsstruktur voraus. | partly supported | ρ -0.036 [-0.166, 0.082], n = 286 (24 blocks), p_BH = 0.6103: **NOT SIGNIFICANT** (negligible); *not reproduced*; flags: `ewr_2022_interpolated` | ρ -0.071 [-0.236, 0.100], n = 198 (24 blocks), p_BH = 0.7028: **NOT SIGNIFICANT** (negligible); *not reproduced*; flags: `maup_flip` | **NO DIFFERENCE DETECTED**, Δ 0.034 [-0.181, 0.241], MDD 0.304, p_BH = 0.9035; flags: `ewr_2022_interpolated;maup_flip` |
-| H3c | Die Veränderung des sozialen Status geschieht zeitgleich mit der Veränderung der lokalen Angebotsstruktur. | undecided | ρ 0.026 [-0.062, 0.132], n = 429 (24 blocks), p_BH = 0.6103: **NOT SIGNIFICANT** (negligible); *consistent (still unclear)*; flags: `ewr_2022_interpolated;maup_flip` | ρ 0.020 [-0.090, 0.144], n = 297 (24 blocks), p_BH = 0.8187: **NOT SIGNIFICANT** (negligible); *consistent (still unclear)*; flags: `maup_flip` | **NO DIFFERENCE DETECTED**, Δ 0.006 [-0.147, 0.153], MDD 0.213, p_BH = 0.9035; flags: `ewr_2022_interpolated;maup_flip` |
+| H2 | Die aktuellen lokalen Angebotsstrukturen haben einen Einfluss auf die zukünftige Veränderung des sozialen Status. | undecided | AUC 0.582 [0.521, 0.643], n = 429 (24 blocks), p_BH = 0.0256: **SUPPORTED** (negligible); *consistent (still unclear)*; flags: `small_units_flip;core2_flip;ewr_2022_interpolated` | AUC 0.508 [0.430, 0.575], n = 297 (24 blocks), p_BH = 0.8354: **NOT SIGNIFICANT** (negligible); *consistent (still unclear)*; flags: `small_units_flip` | **NO DIFFERENCE DETECTED**, Δ 0.074 [-0.018, 0.175], MDD 0.137, p_BH = 0.5823; flags: `core3m_flip;core2_flip;ewr_2022_interpolated;w2_only;w24_weight_sensitive` |
+| H3a | Die Veränderung des sozialen Status folgt der Veränderung der lokalen Angebotsstruktur, ist diesem also zeitlich nachgelagert. | rejected | ρ 0.036 [-0.092, 0.149], n = 286 (24 blocks), p_BH = 0.6103: **NOT SIGNIFICANT** (negligible); *consistent (rejected)*; flags: `ewr_2022_interpolated;w24_weight_sensitive` | ρ 0.048 [-0.116, 0.222], n = 198 (24 blocks), p_BH = 0.8137: **NOT SIGNIFICANT** (negligible); *consistent (rejected)*; flags: `small_units_flip` | **NO DIFFERENCE DETECTED**, Δ -0.011 [-0.230, 0.189], MDD 0.302, p_BH = 0.9035; flags: `small_units_flip;core2_flip;ewr_2022_interpolated` |
+| H3b | Die Veränderung des sozialen Status geht der Veränderung der lokalen Angebotsstruktur voraus. | partly supported | ρ -0.036 [-0.166, 0.082], n = 286 (24 blocks), p_BH = 0.6103: **NOT SIGNIFICANT** (negligible); *not reproduced*; flags: `ewr_2022_interpolated` | ρ -0.071 [-0.236, 0.100], n = 198 (24 blocks), p_BH = 0.7028: **NOT SIGNIFICANT** (negligible); *not reproduced*; flags: `maup_flip` | **NO DIFFERENCE DETECTED**, Δ 0.034 [-0.181, 0.241], MDD 0.304, p_BH = 0.9035; flags: `small_units_flip;ewr_2022_interpolated;maup_flip` |
+| H3c | Die Veränderung des sozialen Status geschieht zeitgleich mit der Veränderung der lokalen Angebotsstruktur. | undecided | ρ 0.026 [-0.062, 0.132], n = 429 (24 blocks), p_BH = 0.6103: **NOT SIGNIFICANT** (negligible); *consistent (still unclear)*; flags: `ewr_2022_interpolated;maup_flip` | ρ 0.020 [-0.090, 0.144], n = 297 (24 blocks), p_BH = 0.8187: **NOT SIGNIFICANT** (negligible); *consistent (still unclear)*; flags: `small_units_flip;maup_flip` | **NO DIFFERENCE DETECTED**, Δ 0.006 [-0.147, 0.153], MDD 0.213, p_BH = 0.9035; flags: `core3m_flip;ewr_2022_interpolated;maup_flip;w24_weight_sensitive` |
 
 New hypotheses (§7; N1 and N2 confirmatory with BH within the pair, N3 exploratory; city differences exploratory and uncorrected):
 
 | # | Hypothesis | Berlin matched | Hamburg matched | City difference (exploratory) |
 |---|---|---|---|---|
-| N1 | Among neighbourhoods with above-median disadvantage at the pivot, a relative growth of the commercial offering precedes a relative decline in officially measured disadvantage. | NO DATA (n = 142, 19 blocks) | ρ 0.014 [-0.201, 0.235], n = 98 (20 blocks), p_BH = 0.9755: **NOT SIGNIFICANT** (negligible); flags: `small_units_flip` | NO DATA |
-| N2 | A relative shift in the gastronomy mix toward cafés precedes a relative decline in officially measured disadvantage. | ρ -0.010 [-0.148, 0.127], n = 243 (24 blocks), p_BH = 0.8604: **NOT SIGNIFICANT** (negligible); flags: `ewr_2022_interpolated` | ρ 0.130 [-0.051, 0.310], n = 126 (21 blocks), p_BH = 0.3322: **NOT SIGNIFICANT** (small) | **NO DIFFERENCE DETECTED**, Δ -0.140 [-0.373, 0.087], MDD 0.325, p = 0.2071 |
-| N3 | Relative commercial growth in adjacent neighbourhoods precedes a relative decline in a neighbourhood's officially measured disadvantage, beyond its own commercial growth. | ρ -0.019 [-0.132, 0.104], n = 286 (24 blocks), p_BH = –: **NOT SIGNIFICANT** (negligible); flags: `ewr_2022_interpolated` | ρ -0.055 [-0.214, 0.114], n = 198 (24 blocks), p_BH = –: **NOT SIGNIFICANT** (negligible) | **NO DIFFERENCE DETECTED**, Δ 0.036 [-0.162, 0.240], MDD 0.280, p = 0.7204 |
+| N1 | Among neighbourhoods with above-median disadvantage at the pivot, a relative growth of the commercial offering precedes a relative decline in officially measured disadvantage. | NO DATA: could not be tested at this grain (n = 142, 19 of 24 blocks < 20) | ρ 0.014 [-0.201, 0.235], n = 98 (20 blocks), p_BH = 0.9755: **NOT SIGNIFICANT** (negligible); flags: `core2_flip` | NO DATA |
+| N2 | A relative shift in the gastronomy mix toward cafés precedes a relative decline in officially measured disadvantage. | ρ -0.010 [-0.148, 0.127], n = 243 (24 blocks), p_BH = 0.8604: **NOT SIGNIFICANT** (negligible); flags: `ewr_2022_interpolated;w24_weight_sensitive` | ρ 0.130 [-0.051, 0.310], n = 126 (21 blocks), p_BH = 0.3322: **NOT SIGNIFICANT** (small) | **NO DIFFERENCE DETECTED**, Δ -0.140 [-0.373, 0.087], MDD 0.325, p = 0.2071; flags: `ewr_2022_interpolated` |
+| N3 | Relative commercial growth in adjacent neighbourhoods precedes a relative decline in a neighbourhood's officially measured disadvantage, beyond its own commercial growth. | ρ -0.019 [-0.132, 0.104], n = 286 (24 blocks), p_BH = –: **NOT SIGNIFICANT** (negligible); flags: `ewr_2022_interpolated` | ρ -0.055 [-0.214, 0.114], n = 198 (24 blocks), p_BH = –: **NOT SIGNIFICANT** (negligible); flags: `small_units_flip` | **NO DIFFERENCE DETECTED**, Δ 0.036 [-0.162, 0.240], MDD 0.280, p = 0.7204; flags: `ewr_2022_interpolated` |
+
+- Berlin N-family: BH runs with m = 1 (N1 is NO DATA and not a test, so it does not count toward m; A5, geo readings ruling 1).
+- Berlin N1 **could not be tested at this grain**: the units above the median occupy fewer than 20 of the 24 blocks (PR §6.2 / P354 §5.3 floor). It is never read as 'not supported' (A5, domain O3). Its inference-sensitivity rows (G = 16, G = 36, iid, Bezirk) are in §5 under those headings and in the CSV with `cluster_unit` `spatial_block_k16`, `spatial_block_k36`, `iid` and `bezirk`.
+- Hamburg N-family: BH runs with m = 2.
 
 **Notes on the primary rows** (verbatim from the CSV `notes` column, binding texts omitted):
 
+- BER H1: MAUP: not comparable (§6.5)
 - BER H1a: significant at FDR 5%, not at family-wise 5%
-- BER H2: significant at FDR 5%, not at family-wise 5%
-- BER N1: scope (D7): pools inner-city disadvantaged areas with peripheral large estates, public wording 'among the more disadvantaged half of neighbourhoods', never 'gentrifying areas' (PR §7.1); not reported: < 20 blocks
-- BER N2: an ordering test, not a warning, forecasting or investment indicator (D5a), described only as 'a shift in the gastronomy mix toward cafés', never as 'fewer fast-food outlets' (D5b)
+- BER H2: significant at FDR 5%, not at family-wise 5%; small_units_flip: unadjusted significance change (primary p_unadj 0.01301, sign +1, ge5000 p_unadj 0.1051, sign +1, A5.1); core2_flip: unadjusted significance change (primary p_unadj 0.01301, sign +1, core2 p_unadj 0.9175, sign +1, A5.1); MAUP: not comparable (§6.5)
+- BER H3a: w24_weight_sensitive: sign unstable around zero (primary p_unadj 0.6103, sign +1, W24 p_unadj 0.9325, sign -1, A5.1)
+- BER N1: scope (D7): pools inner-city disadvantaged areas with peripheral large estates, public wording 'among the more disadvantaged half of neighbourhoods', never 'gentrifying areas' (PR §7.1); not reported: < 20 blocks; could not be tested at this grain (fewer than 20 occupied blocks, PR §6.2 / P354 §5.3), never 'not supported' (A5, domain O3)
+- BER N2: an ordering test, not a warning, forecasting or investment indicator (D5a), described only as 'a shift in the gastronomy mix toward cafés', never as 'fewer fast-food outlets' (D5b); w24_weight_sensitive: sign unstable around zero (primary p_unadj 0.8604, sign -1, W24 p_unadj 0.7694, sign +1, A5.1)
 - BER N3: exploratory (PR §7.3): the spatial lag smooths over the neighbours the block bootstrap keeps together
-- HH N1: scope (D7): pools inner-city disadvantaged areas with peripheral large estates, public wording 'among the more disadvantaged half of neighbourhoods', never 'gentrifying areas' (PR §7.1)
+- HH H1: MAUP: not comparable (§6.5)
+- HH H2: small_units_flip: sign unstable around zero (primary p_unadj 0.8354, sign +1, ge5000 p_unadj 0.8994, sign -1, A5.1); MAUP: not comparable (§6.5)
+- HH H3a: small_units_flip: sign unstable around zero (primary p_unadj 0.6103, sign +1, ge5000 p_unadj 0.7574, sign -1, A5.1)
+- HH H3c: small_units_flip: sign unstable around zero (primary p_unadj 0.7164, sign +1, ge5000 p_unadj 0.5923, sign -1, A5.1)
+- HH N1: scope (D7): pools inner-city disadvantaged areas with peripheral large estates, public wording 'among the more disadvantaged half of neighbourhoods', never 'gentrifying areas' (PR §7.1); small_units_flip not evaluated: sensitivity not computable (< 20 blocks); core2_flip: sign unstable around zero (primary p_unadj 0.9755, sign +1, core2 p_unadj 0.5823, sign -1, A5.1)
 - HH N2: an ordering test, not a warning, forecasting or investment indicator (D5a), described only as 'a shift in the gastronomy mix toward cafés', never as 'fewer fast-food outlets' (D5b)
-- HH N3: exploratory (PR §7.3): the spatial lag smooths over the neighbours the block bootstrap keeps together
-- BER-HH H1: too imprecise to say the cities agree (MDD 0.188 > 0.10)
-- BER-HH H1a: too imprecise to say the cities agree (MDD 0.474 > 0.30)
-- BER-HH H1b: too imprecise to say the cities agree (MDD 0.320 > 0.30)
-- BER-HH H1c: too imprecise to say the cities agree (MDD 0.464 > 0.30)
-- BER-HH H2: coincides with the Rechtskreiswechsel asymmetry (W2 only, PR §4.4); too imprecise to say the cities agree (MDD 0.137 > 0.10)
-- BER-HH H3a: too imprecise to say the cities agree (MDD 0.302 > 0.30)
-- BER-HH H3b: too imprecise to say the cities agree (MDD 0.304 > 0.30)
-- BER-HH N1: scope (D7): pools inner-city disadvantaged areas with peripheral large estates, public wording 'among the more disadvantaged half of neighbourhoods', never 'gentrifying areas' (PR §7.1)
-- BER-HH N2: an ordering test, not a warning, forecasting or investment indicator (D5a), described only as 'a shift in the gastronomy mix toward cafés', never as 'fewer fast-food outlets' (D5b); too imprecise to say the cities agree (MDD 0.325 > 0.30)
-- BER-HH N3: exploratory (PR §7.3): the spatial lag smooths over the neighbours the block bootstrap keeps together
+- HH N3: exploratory (PR §7.3): the spatial lag smooths over the neighbours the block bootstrap keeps together; small_units_flip: sign unstable around zero (primary p_unadj 0.4832, sign -1, ge5000 p_unadj 0.8734, sign +1, A5.1)
+- BER-HH H1: n_BER=143;n_HH=99;clusters_BER=24;clusters_HH=24; small_units_flip: sign unstable around zero (primary p_unadj 0.6293, sign +1, ge5000 p_unadj 0.4962, sign -1, A5.1); MAUP: not comparable (§6.5); too imprecise to say the cities agree (MDD 0.188 > 0.10)
+- BER-HH H1a: n_BER=130;n_HH=67;clusters_BER=24;clusters_HH=21; too imprecise to say the cities agree (MDD 0.474 > 0.30)
+- BER-HH H1b: n_BER=130;n_HH=67;clusters_BER=24;clusters_HH=21; too imprecise to say the cities agree (MDD 0.320 > 0.30)
+- BER-HH H1c: n_BER=143;n_HH=99;clusters_BER=24;clusters_HH=24; too imprecise to say the cities agree (MDD 0.464 > 0.30)
+- BER-HH H2: n_BER=429;n_HH=297;clusters_BER=24;clusters_HH=24; core3m_flip: unadjusted significance change (primary p_unadj 0.1151, sign +1, core3m p_unadj 0.005003, sign +1, A5.1); core2_flip: sign unstable around zero (primary p_unadj 0.1151, sign +1, core2 p_unadj 0.8744, sign -1, A5.1); w24_weight_sensitive: unadjusted significance change (primary p_unadj 0.1151, sign +1, W24 p_unadj 0.02601, sign +1, A5.1); MAUP: not comparable (§6.5); coincides with the Rechtskreiswechsel asymmetry (W2 only, PR §4.4), and in W2 Hamburg shows no transferable discrimination: it differs in transferable discrimination only (Amendment 3, D6); too imprecise to say the cities agree (MDD 0.137 > 0.10)
+- BER-HH H3a: n_BER=286;n_HH=198;clusters_BER=24;clusters_HH=24; small_units_flip: sign unstable around zero (primary p_unadj 0.9035, sign -1, ge5000 p_unadj 0.5203, sign +1, A5.1); core2_flip: sign unstable around zero (primary p_unadj 0.9035, sign -1, core2 p_unadj 0.8744, sign +1, A5.1); too imprecise to say the cities agree (MDD 0.302 > 0.30)
+- BER-HH H3b: n_BER=286;n_HH=198;clusters_BER=24;clusters_HH=24; small_units_flip: sign unstable around zero (primary p_unadj 0.7874, sign +1, ge5000 p_unadj 0.6403, sign -1, A5.1); too imprecise to say the cities agree (MDD 0.304 > 0.30)
+- BER-HH H3c: n_BER=429;n_HH=297;clusters_BER=24;clusters_HH=24; core3m_flip: sign unstable around zero (primary p_unadj 0.8884, sign +1, core3m p_unadj 0.9885, sign -1, A5.1); w24_weight_sensitive: sign unstable around zero (primary p_unadj 0.8884, sign +1, W24 p_unadj 0.9795, sign -1, A5.1)
+- BER-HH N1: scope (D7): pools inner-city disadvantaged areas with peripheral large estates, public wording 'among the more disadvantaged half of neighbourhoods', never 'gentrifying areas' (PR §7.1); n_BER=142;n_HH=98;clusters_BER=19;clusters_HH=20
+- BER-HH N2: an ordering test, not a warning, forecasting or investment indicator (D5a), described only as 'a shift in the gastronomy mix toward cafés', never as 'fewer fast-food outlets' (D5b); n_BER=243;n_HH=126;clusters_BER=24;clusters_HH=21; too imprecise to say the cities agree (MDD 0.325 > 0.30)
+- BER-HH N3: exploratory (PR §7.3): the spatial lag smooths over the neighbours the block bootstrap keeps together; n_BER=286;n_HH=198;clusters_BER=24;clusters_HH=24
 
 **What FDR means.** Benjamini–Hochberg bounds the expected share of false claims among the rows marked significant in each family (T8 per city, N per city, X8); it does not protect each row. `p_holm` is reported for transparency and does not decide verdicts.
 
@@ -183,7 +194,7 @@ All rows below are outside every confirmatory family (uncorrected; P354 §5.4). 
 | City | Hyp | Role | Operationalisation | Estimate [95% CI] | n | Verdict | Flags |
 |---|---|---|---|---|---|---|---|
 | BER | N3 | exploratory | partial Spearman(Wg(c)_P, dK_F | g(c)_P, dK_P, K_pivot); W = row-standardised queen contiguity of the match... | -0.019 [-0.132, 0.104] | 286 | NOT SIGNIFICANT | ewr_2022_interpolated |
-| HH | N3 | exploratory | partial Spearman(Wg(c)_P, dK_F | g(c)_P, dK_P, K_pivot); W = row-standardised queen contiguity of the match... | -0.055 [-0.214, 0.114] | 198 | NOT SIGNIFICANT |  |
+| HH | N3 | exploratory | partial Spearman(Wg(c)_P, dK_F | g(c)_P, dK_P, K_pivot); W = row-standardised queen contiguity of the match... | -0.055 [-0.214, 0.114] | 198 | NOT SIGNIFICANT | small_units_flip |
 | BER | H1 | secondary | domain-level OA 2025 (common domains) => K_2025 > 0 | 0.759 [0.654, 0.855] | 143 | SUPPORTED |  |
 | BER | H1 | secondary | commercial-only category OA (4 commercial domains, common list) => K_2025 > 0 | 0.800 [0.716, 0.873] | 143 | SUPPORTED |  |
 | BER | H1 | sensitivity | category OA + one base indicator per domain (A1.1 (i)) | 0.778 [0.689, 0.855] | 143 | SUPPORTED |  |
@@ -198,7 +209,7 @@ All rows below are outside every confirmatory family (uncorrected; P354 §5.4). 
 | BER | H2 | sensitivity | category OA, complete-case in the four commercial domains (A1.1 (ii)) | – [–, –] | 182 | NO DATA | ewr_2022_interpolated |
 | BER | H2 | secondary | H2 incremental: delta AUC of (K at window start + category OA) over K at window start alone | -0.040 [-0.083, 0.009] | 429 | NOT SIGNIFICANT | ewr_2022_interpolated |
 | BER | H2 | exploratory | directional continuity: Spearman(OA basket of the 4 commercial domains at window start, dK_W) | -0.105 [-0.249, 0.011] | 429 | NOT SIGNIFICANT | ewr_2022_interpolated |
-| BER | H2 | sensitivity | H2 window 2019-2021 only | 0.423 [0.313, 0.519] | 143 | NOT SIGNIFICANT | ewr_2022_interpolated |
+| BER | H2 | sensitivity | H2 window 2019-2021 only | 0.423 [0.313, 0.519] | 143 | NOT SIGNIFICANT |  |
 | BER | H2 | sensitivity | H2 window 2021-2023 only | 0.743 [0.666, 0.831] | 143 | SUPPORTED | ewr_2022_interpolated |
 | BER | H2 | sensitivity | H2 window 2023-2025 only | 0.536 [0.443, 0.627] | 143 | NOT SIGNIFICANT | ewr_2022_interpolated |
 | BER | H3a | sensitivity | H3a with the alternative level control (window_start) | 0.040 [-0.083, 0.147] | 286 | NOT SIGNIFICANT | ewr_2022_interpolated |
@@ -217,7 +228,7 @@ All rows below are outside every confirmatory family (uncorrected; P354 §5.4). 
 | BER | H3b | exploratory | H3b with café-growth cross-lag, g(café C5 share) (P354 R4) | 0.007 [-0.093, 0.124] | 271 | NOT SIGNIFICANT | ewr_2022_interpolated |
 | BER | H3c | secondary | H3c with total-share growth | 0.043 [-0.072, 0.154] | 429 | NOT SIGNIFICANT | ewr_2022_interpolated |
 | BER | H3c | secondary | H3c with OA-basket change | -0.028 [-0.146, 0.094] | 429 | NOT SIGNIFICANT | ewr_2022_interpolated |
-| BER | H3c | sensitivity | H3c window 2019-2021 only | 0.060 [-0.078, 0.181] | 143 | NOT SIGNIFICANT | ewr_2022_interpolated |
+| BER | H3c | sensitivity | H3c window 2019-2021 only | 0.060 [-0.078, 0.181] | 143 | NOT SIGNIFICANT |  |
 | BER | H3c | sensitivity | H3c window 2021-2023 only | 0.002 [-0.163, 0.194] | 143 | NOT SIGNIFICANT | ewr_2022_interpolated |
 | BER | H3c | sensitivity | H3c window 2023-2025 only | 0.030 [-0.178, 0.231] | 143 | NOT SIGNIFICANT | ewr_2022_interpolated |
 | BER | N1 | exploratory | stratum difference rho(K_pivot above median) - rho(below), H3a form | 0.264 [0.003, 0.503] | 286 | – | ewr_2022_interpolated |
@@ -227,12 +238,12 @@ All rows below are outside every confirmatory family (uncorrected; P354 §5.4). 
 | BER | N2 | secondary | N2 component: partial Spearman(g(fast-food share within Gastronomy)_P, dK_F | dK_P, K_pivot) (D5b) | 0.025 [-0.127, 0.173] | 243 | NOT SIGNIFICANT | ewr_2022_interpolated |
 | BER | N2 | sensitivity | N2 at pivot 2021 only (P = W1; the pandemic closed sit-down cafés while takeaway stayed permitted, D5c) | -0.011 [-0.205, 0.178] | 120 | NOT SIGNIFICANT | ewr_2022_interpolated |
 | BER | N2 | sensitivity | N2 without döner/kebab types (354 R4, conditional on the taxonomy) | – [–, –] | 0 | NO DATA | ewr_2022_interpolated |
-| BER | H3a | sensitivity | H3a primary without the 15 units in the top decile of OSM total-POI growth 2019-2025 | 0.027 [-0.128, 0.150] | 256 | NOT SIGNIFICANT |  |
-| BER | H3b | sensitivity | H3b primary without the 15 units in the top decile of OSM total-POI growth 2019-2025 | -0.034 [-0.163, 0.085] | 256 | NOT SIGNIFICANT |  |
-| BER | H3c | sensitivity | H3c primary without the 15 units in the top decile of OSM total-POI growth 2019-2025 | 0.026 [-0.081, 0.147] | 384 | NOT SIGNIFICANT |  |
-| BER | H3a | sensitivity | H3a primary without the 15 units in the top decile of population growth 31.12.2018-31.12.2024 | 0.055 [-0.081, 0.177] | 256 | NOT SIGNIFICANT |  |
-| BER | H3b | sensitivity | H3b primary without the 15 units in the top decile of population growth 31.12.2018-31.12.2024 | -0.043 [-0.175, 0.092] | 256 | NOT SIGNIFICANT |  |
-| BER | H3c | sensitivity | H3c primary without the 15 units in the top decile of population growth 31.12.2018-31.12.2024 | 0.047 [-0.054, 0.160] | 384 | NOT SIGNIFICANT |  |
+| BER | H3a | sensitivity | H3a primary without the 15 units in the top decile of OSM total-POI growth 2019-2025 | 0.027 [-0.128, 0.150] | 256 | NOT SIGNIFICANT | ewr_2022_interpolated |
+| BER | H3b | sensitivity | H3b primary without the 15 units in the top decile of OSM total-POI growth 2019-2025 | -0.034 [-0.163, 0.085] | 256 | NOT SIGNIFICANT | ewr_2022_interpolated |
+| BER | H3c | sensitivity | H3c primary without the 15 units in the top decile of OSM total-POI growth 2019-2025 | 0.026 [-0.081, 0.147] | 384 | NOT SIGNIFICANT | ewr_2022_interpolated |
+| BER | H3a | sensitivity | H3a primary without the 15 units in the top decile of population growth 31.12.2018-31.12.2024 | 0.055 [-0.081, 0.177] | 256 | NOT SIGNIFICANT | ewr_2022_interpolated |
+| BER | H3b | sensitivity | H3b primary without the 15 units in the top decile of population growth 31.12.2018-31.12.2024 | -0.043 [-0.175, 0.092] | 256 | NOT SIGNIFICANT | ewr_2022_interpolated |
+| BER | H3c | sensitivity | H3c primary without the 15 units in the top decile of population growth 31.12.2018-31.12.2024 | 0.047 [-0.054, 0.160] | 384 | NOT SIGNIFICANT | ewr_2022_interpolated |
 | HH | H1 | secondary | domain-level OA 2025 (common domains) => K_2025 > 0 | 0.521 [0.437, 0.604] | 99 | NOT SIGNIFICANT |  |
 | HH | H1 | secondary | commercial-only category OA (4 commercial domains, common list) => K_2025 > 0 | 0.723 [0.636, 0.791] | 99 | SUPPORTED |  |
 | HH | H1 | sensitivity | category OA + one base indicator per domain (A1.1 (i)) | 0.760 [0.651, 0.858] | 99 | SUPPORTED |  |
@@ -282,15 +293,15 @@ All rows below are outside every confirmatory family (uncorrected; P354 §5.4). 
 | HH | H3a | sensitivity | H3a primary without the 10 units in the top decile of population growth 31.12.2018-31.12.2024 | 0.051 [-0.129, 0.241] | 178 | NOT SIGNIFICANT |  |
 | HH | H3b | sensitivity | H3b primary without the 10 units in the top decile of population growth 31.12.2018-31.12.2024 | -0.061 [-0.243, 0.121] | 178 | NOT SIGNIFICANT |  |
 | HH | H3c | sensitivity | H3c primary without the 10 units in the top decile of population growth 31.12.2018-31.12.2024 | 0.009 [-0.107, 0.140] | 267 | NOT SIGNIFICANT |  |
-| BER-HH | N1 | exploratory | Delta = theta_BER - theta_HH (partial_spearman; H3a restricted to units with K_pivot above the city's media... | – [–, –] | 240 | NO DATA |  |
-| BER-HH | N2 | exploratory | Delta = theta_BER - theta_HH (partial_spearman; partial Spearman(Delta r_P, dK_F | dK_P, K_pivot), r = ln((... | -0.140 [-0.373, 0.087] | 369 | NO DIFFERENCE DETECTED |  |
-| BER-HH | N3 | exploratory | Delta = theta_BER - theta_HH (partial_spearman; partial Spearman(Wg(c)_P, dK_F | g(c)_P, dK_P, K_pivot); W ... | 0.036 [-0.162, 0.240] | 484 | NO DIFFERENCE DETECTED |  |
+| BER-HH | N1 | exploratory | Delta = theta_BER - theta_HH (partial_spearman; H3a restricted to units with K_pivot above the city's media... | – [–, –] | 240 | NO DATA | ewr_2022_interpolated |
+| BER-HH | N2 | exploratory | Delta = theta_BER - theta_HH (partial_spearman; partial Spearman(Delta r_P, dK_F | dK_P, K_pivot), r = ln((... | -0.140 [-0.373, 0.087] | 369 | NO DIFFERENCE DETECTED | ewr_2022_interpolated |
+| BER-HH | N3 | exploratory | Delta = theta_BER - theta_HH (partial_spearman; partial Spearman(Wg(c)_P, dK_F | g(c)_P, dK_P, K_pivot); W ... | 0.036 [-0.162, 0.240] | 484 | NO DIFFERENCE DETECTED | ewr_2022_interpolated |
 | BER-HH | H2 | exploratory | Delta = theta_BER - theta_HH (oof_auc_logit; H2 window 2019-2021 only); independent block bootstraps, BER s... | -0.124 [-0.264, 0.006] | 242 | NO DIFFERENCE DETECTED | amendment3_below_chance |
-| BER-HH | H2 | exploratory | Delta = theta_BER - theta_HH (oof_auc_logit; H2 window 2021-2023 only); independent block bootstraps, BER s... | 0.271 [0.111, 0.440] | 242 | DIFFERS | amendment3_below_chance |
-| BER-HH | H2 | exploratory | Delta = theta_BER - theta_HH (oof_auc_logit; H2 window 2023-2025 only); independent block bootstraps, BER s... | 0.018 [-0.121, 0.158] | 242 | NO DIFFERENCE DETECTED |  |
+| BER-HH | H2 | exploratory | Delta = theta_BER - theta_HH (oof_auc_logit; H2 window 2021-2023 only); independent block bootstraps, BER s... | 0.271 [0.111, 0.440] | 242 | DIFFERS | ewr_2022_interpolated;amendment3_below_chance |
+| BER-HH | H2 | exploratory | Delta = theta_BER - theta_HH (oof_auc_logit; H2 window 2023-2025 only); independent block bootstraps, BER s... | 0.018 [-0.121, 0.158] | 242 | NO DIFFERENCE DETECTED | ewr_2022_interpolated |
 | BER-HH | H3c | exploratory | Delta = theta_BER - theta_HH (spearman; H3c window 2019-2021 only); independent block bootstraps, BER seed ... | -0.105 [-0.376, 0.173] | 242 | NO DIFFERENCE DETECTED |  |
-| BER-HH | H3c | exploratory | Delta = theta_BER - theta_HH (spearman; H3c window 2021-2023 only); independent block bootstraps, BER seed ... | 0.107 [-0.116, 0.362] | 242 | NO DIFFERENCE DETECTED |  |
-| BER-HH | H3c | exploratory | Delta = theta_BER - theta_HH (spearman; H3c window 2023-2025 only); independent block bootstraps, BER seed ... | -0.024 [-0.351, 0.292] | 242 | NO DIFFERENCE DETECTED |  |
+| BER-HH | H3c | exploratory | Delta = theta_BER - theta_HH (spearman; H3c window 2021-2023 only); independent block bootstraps, BER seed ... | 0.107 [-0.116, 0.362] | 242 | NO DIFFERENCE DETECTED | ewr_2022_interpolated |
+| BER-HH | H3c | exploratory | Delta = theta_BER - theta_HH (spearman; H3c window 2023-2025 only); independent block bootstraps, BER seed ... | -0.024 [-0.351, 0.292] | 242 | NO DIFFERENCE DETECTED | ewr_2022_interpolated |
 
 ### core-3M: Berlin T = S3 (non-unemployed recipients); construct gap 5 applies (§3.2)
 
@@ -584,10 +595,10 @@ All rows below are outside every confirmatory family (uncorrected; P354 §5.4). 
 | BER-HH | H1a | sensitivity | Delta = theta_BER - theta_HH (spearman; Spearman(OA category Cafe 2025, K_2025), min-base flag dropped); in... | 0.236 [-0.135, 0.511] | 197 | NO DIFFERENCE DETECTED |  |
 | BER-HH | H1b | sensitivity | Delta = theta_BER - theta_HH (spearman; Spearman(OA category Fast Food 2025, K_2025), min-base flag dropped... | -0.136 [-0.330, 0.090] | 197 | NO DIFFERENCE DETECTED |  |
 | BER-HH | H1c | sensitivity | Delta = theta_BER - theta_HH (spearman; Spearman(OA domain Sports and Recreation 2025, K_2025), min-base fl... | 0.165 [-0.160, 0.524] | 242 | NO DIFFERENCE DETECTED |  |
-| BER-HH | H2 | sensitivity | Delta = theta_BER - theta_HH (oof_auc_logit; category OA at window start (42 common fixed features) => dK_W... | 0.074 [-0.021, 0.173] | 726 | NO DIFFERENCE DETECTED |  |
-| BER-HH | H3a | sensitivity | Delta = theta_BER - theta_HH (partial_spearman; partial Spearman(g(c)_P, dK_F | dK_P, K_pivot), pivots 2021... | -0.011 [-0.247, 0.195] | 484 | NO DIFFERENCE DETECTED |  |
-| BER-HH | H3b | sensitivity | Delta = theta_BER - theta_HH (partial_spearman; partial Spearman(dK_P, g(c)_F | g(c)_P, K_start(P)), pivots... | 0.034 [-0.196, 0.247] | 484 | NO DIFFERENCE DETECTED |  |
-| BER-HH | H3c | sensitivity | Delta = theta_BER - theta_HH (spearman; Spearman(g(c)_W, dK_W), same window, W1-W3 pooled); independent blo... | 0.006 [-0.132, 0.156] | 726 | NO DIFFERENCE DETECTED |  |
+| BER-HH | H2 | sensitivity | Delta = theta_BER - theta_HH (oof_auc_logit; category OA at window start (42 common fixed features) => dK_W... | 0.074 [-0.021, 0.173] | 726 | NO DIFFERENCE DETECTED | ewr_2022_interpolated |
+| BER-HH | H3a | sensitivity | Delta = theta_BER - theta_HH (partial_spearman; partial Spearman(g(c)_P, dK_F | dK_P, K_pivot), pivots 2021... | -0.011 [-0.247, 0.195] | 484 | NO DIFFERENCE DETECTED | ewr_2022_interpolated |
+| BER-HH | H3b | sensitivity | Delta = theta_BER - theta_HH (partial_spearman; partial Spearman(dK_P, g(c)_F | g(c)_P, K_start(P)), pivots... | 0.034 [-0.196, 0.247] | 484 | NO DIFFERENCE DETECTED | ewr_2022_interpolated |
+| BER-HH | H3c | sensitivity | Delta = theta_BER - theta_HH (spearman; Spearman(g(c)_W, dK_W), same window, W1-W3 pooled); independent blo... | 0.006 [-0.132, 0.156] | 726 | NO DIFFERENCE DETECTED | ewr_2022_interpolated |
 
 ### G = 36 blocks (§6.2)
 
@@ -617,10 +628,10 @@ All rows below are outside every confirmatory family (uncorrected; P354 §5.4). 
 | BER-HH | H1a | sensitivity | Delta = theta_BER - theta_HH (spearman; Spearman(OA category Cafe 2025, K_2025), min-base flag dropped); in... | 0.236 [-0.165, 0.579] | 197 | NO DIFFERENCE DETECTED |  |
 | BER-HH | H1b | sensitivity | Delta = theta_BER - theta_HH (spearman; Spearman(OA category Fast Food 2025, K_2025), min-base flag dropped... | -0.136 [-0.361, 0.119] | 197 | NO DIFFERENCE DETECTED |  |
 | BER-HH | H1c | sensitivity | Delta = theta_BER - theta_HH (spearman; Spearman(OA domain Sports and Recreation 2025, K_2025), min-base fl... | 0.165 [-0.132, 0.495] | 242 | NO DIFFERENCE DETECTED |  |
-| BER-HH | H2 | sensitivity | Delta = theta_BER - theta_HH (oof_auc_logit; category OA at window start (42 common fixed features) => dK_W... | 0.074 [-0.012, 0.170] | 726 | NO DIFFERENCE DETECTED |  |
-| BER-HH | H3a | sensitivity | Delta = theta_BER - theta_HH (partial_spearman; partial Spearman(g(c)_P, dK_F | dK_P, K_pivot), pivots 2021... | -0.011 [-0.207, 0.173] | 484 | NO DIFFERENCE DETECTED |  |
-| BER-HH | H3b | sensitivity | Delta = theta_BER - theta_HH (partial_spearman; partial Spearman(dK_P, g(c)_F | g(c)_P, K_start(P)), pivots... | 0.034 [-0.171, 0.231] | 484 | NO DIFFERENCE DETECTED |  |
-| BER-HH | H3c | sensitivity | Delta = theta_BER - theta_HH (spearman; Spearman(g(c)_W, dK_W), same window, W1-W3 pooled); independent blo... | 0.006 [-0.133, 0.141] | 726 | NO DIFFERENCE DETECTED |  |
+| BER-HH | H2 | sensitivity | Delta = theta_BER - theta_HH (oof_auc_logit; category OA at window start (42 common fixed features) => dK_W... | 0.074 [-0.012, 0.170] | 726 | NO DIFFERENCE DETECTED | ewr_2022_interpolated |
+| BER-HH | H3a | sensitivity | Delta = theta_BER - theta_HH (partial_spearman; partial Spearman(g(c)_P, dK_F | dK_P, K_pivot), pivots 2021... | -0.011 [-0.207, 0.173] | 484 | NO DIFFERENCE DETECTED | ewr_2022_interpolated |
+| BER-HH | H3b | sensitivity | Delta = theta_BER - theta_HH (partial_spearman; partial Spearman(dK_P, g(c)_F | g(c)_P, K_start(P)), pivots... | 0.034 [-0.171, 0.231] | 484 | NO DIFFERENCE DETECTED | ewr_2022_interpolated |
+| BER-HH | H3c | sensitivity | Delta = theta_BER - theta_HH (spearman; Spearman(g(c)_W, dK_W), same window, W1-W3 pooled); independent blo... | 0.006 [-0.133, 0.141] | 726 | NO DIFFERENCE DETECTED | ewr_2022_interpolated |
 
 ### iid unit bootstrap (§6.2)
 
@@ -650,10 +661,10 @@ All rows below are outside every confirmatory family (uncorrected; P354 §5.4). 
 | BER-HH | H1a | sensitivity | Delta = theta_BER - theta_HH (spearman; Spearman(OA category Cafe 2025, K_2025), min-base flag dropped); in... | 0.236 [-0.056, 0.515] | 197 | NO DIFFERENCE DETECTED |  |
 | BER-HH | H1b | sensitivity | Delta = theta_BER - theta_HH (spearman; Spearman(OA category Fast Food 2025, K_2025), min-base flag dropped... | -0.136 [-0.318, 0.094] | 197 | NO DIFFERENCE DETECTED |  |
 | BER-HH | H1c | sensitivity | Delta = theta_BER - theta_HH (spearman; Spearman(OA domain Sports and Recreation 2025, K_2025), min-base fl... | 0.165 [-0.080, 0.406] | 242 | NO DIFFERENCE DETECTED |  |
-| BER-HH | H2 | sensitivity | Delta = theta_BER - theta_HH (oof_auc_logit; category OA at window start (42 common fixed features) => dK_W... | 0.074 [-0.011, 0.167] | 726 | NO DIFFERENCE DETECTED |  |
-| BER-HH | H3a | sensitivity | Delta = theta_BER - theta_HH (partial_spearman; partial Spearman(g(c)_P, dK_F | dK_P, K_pivot), pivots 2021... | -0.011 [-0.197, 0.167] | 484 | NO DIFFERENCE DETECTED |  |
-| BER-HH | H3b | sensitivity | Delta = theta_BER - theta_HH (partial_spearman; partial Spearman(dK_P, g(c)_F | g(c)_P, K_start(P)), pivots... | 0.034 [-0.149, 0.227] | 484 | NO DIFFERENCE DETECTED |  |
-| BER-HH | H3c | sensitivity | Delta = theta_BER - theta_HH (spearman; Spearman(g(c)_W, dK_W), same window, W1-W3 pooled); independent blo... | 0.006 [-0.137, 0.157] | 726 | NO DIFFERENCE DETECTED |  |
+| BER-HH | H2 | sensitivity | Delta = theta_BER - theta_HH (oof_auc_logit; category OA at window start (42 common fixed features) => dK_W... | 0.074 [-0.011, 0.167] | 726 | NO DIFFERENCE DETECTED | ewr_2022_interpolated |
+| BER-HH | H3a | sensitivity | Delta = theta_BER - theta_HH (partial_spearman; partial Spearman(g(c)_P, dK_F | dK_P, K_pivot), pivots 2021... | -0.011 [-0.197, 0.167] | 484 | NO DIFFERENCE DETECTED | ewr_2022_interpolated |
+| BER-HH | H3b | sensitivity | Delta = theta_BER - theta_HH (partial_spearman; partial Spearman(dK_P, g(c)_F | g(c)_P, K_start(P)), pivots... | 0.034 [-0.149, 0.227] | 484 | NO DIFFERENCE DETECTED | ewr_2022_interpolated |
+| BER-HH | H3c | sensitivity | Delta = theta_BER - theta_HH (spearman; Spearman(g(c)_W, dK_W), same window, W1-W3 pooled); independent blo... | 0.006 [-0.137, 0.157] | 726 | NO DIFFERENCE DETECTED | ewr_2022_interpolated |
 
 ### Bezirk cluster bootstrap (§6.2; too few clusters for reliable coverage)
 
@@ -683,10 +694,10 @@ All rows below are outside every confirmatory family (uncorrected; P354 §5.4). 
 | BER-HH | H1a | sensitivity | Delta = theta_BER - theta_HH (spearman; Spearman(OA category Cafe 2025, K_2025), min-base flag dropped); in... | 0.236 [-0.073, 0.573] | 197 | NO DIFFERENCE DETECTED |  |
 | BER-HH | H1b | sensitivity | Delta = theta_BER - theta_HH (spearman; Spearman(OA category Fast Food 2025, K_2025), min-base flag dropped... | -0.136 [-0.300, 0.012] | 197 | NO DIFFERENCE DETECTED |  |
 | BER-HH | H1c | sensitivity | Delta = theta_BER - theta_HH (spearman; Spearman(OA domain Sports and Recreation 2025, K_2025), min-base fl... | 0.165 [-0.244, 0.566] | 242 | NO DIFFERENCE DETECTED |  |
-| BER-HH | H2 | sensitivity | Delta = theta_BER - theta_HH (oof_auc_logit; category OA at window start (42 common fixed features) => dK_W... | 0.074 [-0.012, 0.165] | 726 | NO DIFFERENCE DETECTED |  |
-| BER-HH | H3a | sensitivity | Delta = theta_BER - theta_HH (partial_spearman; partial Spearman(g(c)_P, dK_F | dK_P, K_pivot), pivots 2021... | -0.011 [-0.285, 0.270] | 484 | NO DIFFERENCE DETECTED |  |
-| BER-HH | H3b | sensitivity | Delta = theta_BER - theta_HH (partial_spearman; partial Spearman(dK_P, g(c)_F | g(c)_P, K_start(P)), pivots... | 0.034 [-0.199, 0.207] | 484 | NO DIFFERENCE DETECTED |  |
-| BER-HH | H3c | sensitivity | Delta = theta_BER - theta_HH (spearman; Spearman(g(c)_W, dK_W), same window, W1-W3 pooled); independent blo... | 0.006 [-0.115, 0.120] | 726 | NO DIFFERENCE DETECTED |  |
+| BER-HH | H2 | sensitivity | Delta = theta_BER - theta_HH (oof_auc_logit; category OA at window start (42 common fixed features) => dK_W... | 0.074 [-0.012, 0.165] | 726 | NO DIFFERENCE DETECTED | ewr_2022_interpolated |
+| BER-HH | H3a | sensitivity | Delta = theta_BER - theta_HH (partial_spearman; partial Spearman(g(c)_P, dK_F | dK_P, K_pivot), pivots 2021... | -0.011 [-0.285, 0.270] | 484 | NO DIFFERENCE DETECTED | ewr_2022_interpolated |
+| BER-HH | H3b | sensitivity | Delta = theta_BER - theta_HH (partial_spearman; partial Spearman(dK_P, g(c)_F | g(c)_P, K_start(P)), pivots... | 0.034 [-0.199, 0.207] | 484 | NO DIFFERENCE DETECTED | ewr_2022_interpolated |
+| BER-HH | H3c | sensitivity | Delta = theta_BER - theta_HH (spearman; Spearman(g(c)_W, dK_W), same window, W1-W3 pooled); independent blo... | 0.006 [-0.115, 0.120] | 726 | NO DIFFERENCE DETECTED | ewr_2022_interpolated |
 
 ### Berlin BZR vs PGR (§6.5; point estimates only)
 
@@ -695,7 +706,7 @@ All rows below are outside every confirmatory family (uncorrected; P354 §5.4). 
 | BER | H1a | sensitivity | Spearman(OA category Cafe 2025, K_2025), min-base flag dropped | -0.247 [–, –] | 57 | – |  |
 | BER | H1b | sensitivity | Spearman(OA category Fast Food 2025, K_2025), min-base flag dropped | 0.562 [–, –] | 57 | – |  |
 | BER | H1c | sensitivity | Spearman(OA domain Sports and Recreation 2025, K_2025), min-base flag dropped | 0.370 [–, –] | 58 | – |  |
-| BER | H3c | sensitivity | Spearman(g(c)_W, dK_W), same window, W1-W3 pooled | 0.055 [–, –] | 174 | – |  |
+| BER | H3c | sensitivity | Spearman(g(c)_W, dK_W), same window, W1-W3 pooled | 0.055 [–, –] | 174 | – | ewr_2022_interpolated |
 
 ### Moran's I of the H3 residuals (§6.2, #365 on the matched panel)
 
@@ -718,6 +729,13 @@ All rows below are outside every confirmatory family (uncorrected; P354 §5.4). 
 
 - **Berlin:** a block-mean Moran's I is significant at 5%, so the blocks are judged too small and the **G = 16 sensitivity is promoted** (§6.2); verdicts still come from G = 24.
 - Hamburg: no block-mean Moran's I is significant at 5%.
+
+G = 16 against G = 24 for the confirmatory rows (§6.2: G = 16 is promoted into the text; verdicts come from G = 24). The point estimate is identical; only the resampling unit changes. Compared on the same unadjusted scale (A5.1): rows where the unadjusted significance (p < 0.05) differs.
+
+| City | Hyp | G = 24 verdict (BH) | G = 16 verdict (unadjusted) |
+|---|---|---|---|
+| BER | N1 | NO DATA (p_unadj –) | NOT SIGNIFICANT (p 0.0580) |
+| HH | N2 | NOT SIGNIFICANT (p_unadj 0.1661) | CONTRADICTED (p 0.0270) |
 
 ## 6. Context (no verdict)
 
@@ -919,24 +937,88 @@ Significant under BH but not under Holm ("significant at FDR 5%; not at family-w
 
 ### 7.8 Deviations and implementation readings
 
-No numbered deviation from the pre-registration was needed. Where the text left an operational detail open, the implementation reads it as follows (for geo-DS/domain ratification):
+**Amendment 5 (post-results-generation, pre-interpretation; binding).** It was written after the first binding run (reference result CSV at commit 13d9f3ff) existed. A5.1 redefines the six verdict-defined flip flags: a sign change (AUC rows: AUC − 0.5; X8: Δ) or a difference in unadjusted significance, both sides unadjusted; a sign change between two non-significant estimates is labelled "sign unstable around zero"; `maup_flip`, `mapping_driven` and `popgrowth_driven` stay sign-only. A5.2 reads the ≥ 5,000 condition of the statement rule as BH over that panel's 8 X8 rows (NO DATA not in m). Rows whose flags, statement-rule outcome, family or verdict changed against the reference, before → after, generated from the two CSVs, follow the reading-3 disclosure.
+
+**Reading-3 disclosure (A5 F2), generated.** Amendment 5 states that A5.1 removes `small_units_flip` / `core2_flip` from Berlin H2, the row reading 3 described as "not significant after BH, sensitivities significant unadjusted". In this run `small_units_flip` and `core2_flip` remain: the primary is SUPPORTED (p_unadj 0.0130, p_BH 0.0256), while ge5000 p_unadj 0.1051 (NOT SIGNIFICANT); core2 p_unadj 0.9175 (NOT SIGNIFICANT). That is a difference in unadjusted significance, which A5.1 flags. The reading-3 description was taken from a low-B debug run (B = 29), in which this primary was NOT SIGNIFICANT after BH; it does not describe the binding B = 1999 run. Raised with the PM and the geo-DS for the results sign-off.
+
+| City | Hyp | Row | Flags removed | Flags added | Other change | Cause |
+|---|---|---|---|---|---|---|
+| BER | H3a | partial Spearman(g(c)_P, dK_F | dK_P, K_pivot), pivots 2021 and 202... | – | w24_weight_sensitive | – | A5.1 |
+| BER | N2 | partial Spearman(Delta r_P, dK_F | dK_P, K_pivot), r = ln((Cafe + 0... | – | w24_weight_sensitive | – | A5.1 |
+| HH | H2 | category OA at window start (42 common fixed features) => dK_W > 0,... | – | small_units_flip | – | A5.1 |
+| HH | H3a | partial Spearman(g(c)_P, dK_F | dK_P, K_pivot), pivots 2021 and 202... | – | small_units_flip | – | A5.1 |
+| HH | H3c | Spearman(g(c)_W, dK_W), same window, W1-W3 pooled | – | small_units_flip | – | A5.1 |
+| HH | N1 | H3a restricted to units with K_pivot above the city's median at the... | small_units_flip | core2_flip | – | A5.1 |
+| HH | N3 | partial Spearman(Wg(c)_P, dK_F | g(c)_P, dK_P, K_pivot); W = row-st... | – | small_units_flip | – | A5.1 |
+| BER-HH | H1 | Delta = theta_BER - theta_HH (oof_auc_logit; category OA 2025 (44 c... | maup_flip | small_units_flip | – | A5.1, review 1 (§6.5 not comparable) |
+| BER-HH | H2 | Delta = theta_BER - theta_HH (oof_auc_logit; category OA at window ... | – | core2_flip | – | A5.1 |
+| BER-HH | H3a | Delta = theta_BER - theta_HH (partial_spearman; partial Spearman(g(... | – | core2_flip, small_units_flip | – | A5.1 |
+| BER-HH | H3b | Delta = theta_BER - theta_HH (partial_spearman; partial Spearman(dK... | – | small_units_flip | – | A5.1 |
+| BER-HH | H3c | Delta = theta_BER - theta_HH (spearman; Spearman(g(c)_W, dK_W), sam... | – | core3m_flip, w24_weight_sensitive | – | A5.1 |
+| BER | H2 | H2 window 2019-2021 only | ewr_2022_interpolated | – | – | review 4 (band-year bookkeeping) |
+| BER | H3c | H3c window 2019-2021 only | ewr_2022_interpolated | – | – | review 4 (band-year bookkeeping) |
+| BER | H3a | H3a primary without the 15 units in the top decile of OSM total-POI... | – | ewr_2022_interpolated | – | review 4 (band-year bookkeeping) |
+| BER | H3b | H3b primary without the 15 units in the top decile of OSM total-POI... | – | ewr_2022_interpolated | – | review 4 (band-year bookkeeping) |
+| BER | H3c | H3c primary without the 15 units in the top decile of OSM total-POI... | – | ewr_2022_interpolated | – | review 4 (band-year bookkeeping) |
+| BER | H3a | H3a primary without the 15 units in the top decile of population gr... | – | ewr_2022_interpolated | – | review 4 (band-year bookkeeping) |
+| BER | H3b | H3b primary without the 15 units in the top decile of population gr... | – | ewr_2022_interpolated | – | review 4 (band-year bookkeeping) |
+| BER | H3c | H3c primary without the 15 units in the top decile of population gr... | – | ewr_2022_interpolated | – | review 4 (band-year bookkeeping) |
+| BER-HH | N1 | Delta = theta_BER - theta_HH (partial_spearman; H3a restricted to u... | – | ewr_2022_interpolated | – | review 4 (band-year bookkeeping) |
+| BER-HH | N2 | Delta = theta_BER - theta_HH (partial_spearman; partial Spearman(De... | – | ewr_2022_interpolated | – | review 4 (band-year bookkeeping) |
+| BER-HH | N3 | Delta = theta_BER - theta_HH (partial_spearman; partial Spearman(Wg... | – | ewr_2022_interpolated | – | review 4 (band-year bookkeeping) |
+| BER-HH | H2 | Delta = theta_BER - theta_HH (oof_auc_logit; H2 window 2021-2023 on... | – | ewr_2022_interpolated | – | review 4 (band-year bookkeeping) |
+| BER-HH | H2 | Delta = theta_BER - theta_HH (oof_auc_logit; H2 window 2023-2025 on... | – | ewr_2022_interpolated | – | review 4 (band-year bookkeeping) |
+| BER-HH | H3c | Delta = theta_BER - theta_HH (spearman; H3c window 2021-2023 only);... | – | ewr_2022_interpolated | – | review 4 (band-year bookkeeping) |
+| BER-HH | H3c | Delta = theta_BER - theta_HH (spearman; H3c window 2023-2025 only);... | – | ewr_2022_interpolated | – | review 4 (band-year bookkeeping) |
+| BER-HH | H2 | [k16] Delta = theta_BER - theta_HH (oof_auc_logit; category OA at w... | – | ewr_2022_interpolated | – | review 4 (band-year bookkeeping) |
+| BER-HH | H3a | [k16] Delta = theta_BER - theta_HH (partial_spearman; partial Spear... | – | ewr_2022_interpolated | – | review 4 (band-year bookkeeping) |
+| BER-HH | H3b | [k16] Delta = theta_BER - theta_HH (partial_spearman; partial Spear... | – | ewr_2022_interpolated | – | review 4 (band-year bookkeeping) |
+| BER-HH | H3c | [k16] Delta = theta_BER - theta_HH (spearman; Spearman(g(c)_W, dK_W... | – | ewr_2022_interpolated | – | review 4 (band-year bookkeeping) |
+| BER-HH | H2 | [k36] Delta = theta_BER - theta_HH (oof_auc_logit; category OA at w... | – | ewr_2022_interpolated | – | review 4 (band-year bookkeeping) |
+| BER-HH | H3a | [k36] Delta = theta_BER - theta_HH (partial_spearman; partial Spear... | – | ewr_2022_interpolated | – | review 4 (band-year bookkeeping) |
+| BER-HH | H3b | [k36] Delta = theta_BER - theta_HH (partial_spearman; partial Spear... | – | ewr_2022_interpolated | – | review 4 (band-year bookkeeping) |
+| BER-HH | H3c | [k36] Delta = theta_BER - theta_HH (spearman; Spearman(g(c)_W, dK_W... | – | ewr_2022_interpolated | – | review 4 (band-year bookkeeping) |
+| BER-HH | H2 | [iid] Delta = theta_BER - theta_HH (oof_auc_logit; category OA at w... | – | ewr_2022_interpolated | – | review 4 (band-year bookkeeping) |
+| BER-HH | H3a | [iid] Delta = theta_BER - theta_HH (partial_spearman; partial Spear... | – | ewr_2022_interpolated | – | review 4 (band-year bookkeeping) |
+| BER-HH | H3b | [iid] Delta = theta_BER - theta_HH (partial_spearman; partial Spear... | – | ewr_2022_interpolated | – | review 4 (band-year bookkeeping) |
+| BER-HH | H3c | [iid] Delta = theta_BER - theta_HH (spearman; Spearman(g(c)_W, dK_W... | – | ewr_2022_interpolated | – | review 4 (band-year bookkeeping) |
+| BER-HH | H2 | [bezirk] Delta = theta_BER - theta_HH (oof_auc_logit; category OA a... | – | ewr_2022_interpolated | – | review 4 (band-year bookkeeping) |
+| BER-HH | H3a | [bezirk] Delta = theta_BER - theta_HH (partial_spearman; partial Sp... | – | ewr_2022_interpolated | – | review 4 (band-year bookkeeping) |
+| BER-HH | H3b | [bezirk] Delta = theta_BER - theta_HH (partial_spearman; partial Sp... | – | ewr_2022_interpolated | – | review 4 (band-year bookkeeping) |
+| BER-HH | H3c | [bezirk] Delta = theta_BER - theta_HH (spearman; Spearman(g(c)_W, d... | – | ewr_2022_interpolated | – | review 4 (band-year bookkeeping) |
+| BER-HH | H1 | [ge5000] Delta = theta_BER - theta_HH (oof_auc_logit; category OA 2... | – | – | none/NO DIFFERENCE DETECTED → X8_ge5000/NO DIFFERENCE DETECTED | A5.2 |
+| BER-HH | H1a | [ge5000] Delta = theta_BER - theta_HH (spearman; Spearman(OA catego... | – | – | none/NO DIFFERENCE DETECTED → X8_ge5000/NO DIFFERENCE DETECTED | A5.2 |
+| BER-HH | H1b | [ge5000] Delta = theta_BER - theta_HH (spearman; Spearman(OA catego... | – | – | none/NO DIFFERENCE DETECTED → X8_ge5000/NO DIFFERENCE DETECTED | A5.2 |
+| BER-HH | H1c | [ge5000] Delta = theta_BER - theta_HH (spearman; Spearman(OA domain... | – | – | none/NO DIFFERENCE DETECTED → X8_ge5000/NO DIFFERENCE DETECTED | A5.2 |
+| BER-HH | H2 | [ge5000] Delta = theta_BER - theta_HH (oof_auc_logit; category OA a... | – | – | none/NO DIFFERENCE DETECTED → X8_ge5000/NO DIFFERENCE DETECTED | A5.2 |
+| BER-HH | H3a | [ge5000] Delta = theta_BER - theta_HH (partial_spearman; partial Sp... | – | – | none/NO DIFFERENCE DETECTED → X8_ge5000/NO DIFFERENCE DETECTED | A5.2 |
+| BER-HH | H3b | [ge5000] Delta = theta_BER - theta_HH (partial_spearman; partial Sp... | – | – | none/NO DIFFERENCE DETECTED → X8_ge5000/NO DIFFERENCE DETECTED | A5.2 |
+| BER-HH | H3c | [ge5000] Delta = theta_BER - theta_HH (spearman; Spearman(g(c)_W, d... | – | – | none/NO DIFFERENCE DETECTED → X8_ge5000/NO DIFFERENCE DETECTED | A5.2 |
+| BER | H3c | [PGR] Spearman(g(c)_W, dK_W), same window, W1-W3 pooled | – | ewr_2022_interpolated | – | review 4 (band-year bookkeeping) |
+
+52 rows changed; reference rows without a counterpart: 0. Review-finding causes (1: MAUP not comparable; 4: `ewr_2022_interpolated` bookkeeping; 5: cluster floor 20 for G = 36 and iid) are code-review corrections, listed for completeness.
+
+Implementation readings (ruled on in `docs/epic-e/371-implementation-readings-geo.md`, binding):
 
 - **Code placement.** The matched panel lives in `analysis/thesis_matched_panel.py` and runs through the suite's CLI (`analysis/thesis_hypothesis_suite.py --panel matched`, §9.3). The existing `BER/*` and `HH/*` code paths and outputs are untouched.
-- **Sensitivity verdicts are uncorrected** (§0 Families; P354 §5.4): per-city sensitivity rows use the unadjusted 95% CI; X8 sensitivity rows read DIFFERS at unadjusted p < 0.05. The robust-DIFFERS condition 'DIFFERS in the ≥ 5,000-resident panel' is evaluated with that standard.
-- **Flip flags compare the verdict columns as written** (`small_units_flip`, `core3m_flip`, `core2_flip`, `w24_weight_sensitive`, `r19_revision_sensitive`): the primary's verdict (BH-adjusted) against the sensitivity row's verdict (uncorrected). A primary that is NOT SIGNIFICANT only after BH can therefore carry a flip flag. Sign flags (`maup_flip`, `mapping_driven`, `popgrowth_driven`, and the X8 sign part of `r19_revision_sensitive`) compare the sign of θ − θ0 (Δ for X8).
-- **Coarse-cluster sensitivities** (G = 16, Bezirk 12 / 7) use the directional_inference default floor of 5 clusters, because §6.2 requires them to be reported; every confirmatory row keeps the P354 20-cluster floor.
-- **R19-pub** is the as-published 2019 level with pp changes (A4.4's original construction); the §4.3 z-change fallback is not applied to it.
-- **M3 '2020 only'** swaps the Berlin edition-2023 aggregation weights only; the T\* base of each PLR stays the 2022 interpolation. W24 swaps both (A4.1, E6).
-- **Mapping and population-growth diagnostics** (§5, R5/E7): the units in the top decile of OSM total-POI growth 2019–2025 (DHS growth) or of population growth 31.12.2018–31.12.2024 are dropped from the H3a/H3b/H3c primary rows; the outcome is not re-standardised. Berlin growth uses Bezirksregion totals over all child PLRs (E7); Hamburg uses the balanced Gebiete.
-- **N1** uses the city's median of K at each pivot edition; the R2 centrality split uses 31.12.2024 populations (A4.1). **N3** computes the spatial lag over all matched units, also inside the ≥ 5,000 run.
-- **≥ 5,000 threshold** on the population of the unit's balanced children at 31.12.2024 (Berlin, A4.1) / edition 2025 (Hamburg).
-- **Feature lists.** The common lists (A1.1 rule per city, then the intersection) are computed once on the matched units and reused by every matched-grain sensitivity; the fine grain has its own common lists. Both were written to the metadata before any fit.
-- **P354 §4.4 Hamburg low-power rule not applied.** It belonged to the class-based Hamburg H2 (4–10% positives); §3.5 replaces that operationalisation with dK > 0 in both cities.
-- **Carried-over secondaries.** D4 rows are dropped (§8.1 allow-list: OA, g(c), Δr, Wg(c), K, dK only), published-class rows are not defined at the matched grain, and the POI-derived P354 §5.2 variants (domain/commercial OA, base indicators, per-1k stock, OA basket, total-share and café growth) are kept. Per-1k rows use the population of all children (all PLRs at 31.12.2024; Hamburg Gebiete scored in 2025).
+- **Load order (§8.4).** Phase 1 loads geometry, POIs, populations and presence only; the balanced sets, units, blocks and common feature lists are fixed and written to the metadata before any outcome value (MSS indicators, annex shares) is loaded in phase 2, which asserts the same balanced sets.
+- **Sensitivity verdicts are uncorrected** (§0, §7.5; P354 §5.4; ruling 2): per-city sensitivity rows use the unadjusted 95% CI, X8 sensitivity rows unadjusted p < 0.05. The one exception is the ≥ 5,000 X8 panel, scored by BH within its 8 rows (family `X8_ge5000`, A5.2), used only for the statement rule.
+- **Flip flags follow A5.1** (ruling 3): sign or unadjusted significance, both sides unadjusted; never set when either side is NO DATA (the row then notes 'not evaluated'); the compared sensitivity rows carry `primary_p_unadj` in `notes`.
+- **Cluster floors** (ruling 4): G = 16 and Bezirk (12 / 7) use the directional_inference default of 5 and say so on every row; G = 36 and iid keep the P354 floor of 20.
+- **R19-pub** is the as-published 2019 level with pp changes; the general §4.3 z-change view is the separate z-change sensitivity (ruling 5).
+- **M3 '2020 only'** swaps the Berlin edition-2023 aggregation weights only; the age bands and P^(U)/P stay at the interpolated 31.12.2022 values (noted on every M3 row). W24 swaps both (A4.1, E6). The interpolation itself is a pre-registered input (M3) listed in the §8.2 guard.
+- **Mapping and population-growth diagnostics** (§5, R5/E7, ruling 6): the units in the top decile of OSM total-POI growth 2019–2025 (DHS growth) or of population growth 31.12.2018–31.12.2024 are dropped from the H3a/H3b/H3c primary rows; the outcome is not re-standardised. The dropped IDs are in the metadata. Berlin growth uses Bezirksregion totals over all child PLRs (E7); Hamburg uses the balanced Gebiete.
+- **N1** uses the city's median of K at each pivot edition; the R2 centrality split uses 31.12.2024 populations (A4.1). **N3** computes the spatial lag over all matched units, also inside the ≥ 5,000 run (ruling 6).
+- **≥ 5,000 threshold** on the population of the unit's balanced children: Berlin 31.12.2024 (A4.1), Hamburg edition 2025 (ruling 6; dates in the metadata).
+- **Feature lists.** The common lists (A1.1 rule per city, then the intersection) are computed once on the matched units and reused by every matched-grain sensitivity; the fine grain has its own common lists. Where no commercial category survives (the fine grain), H1/H2 read 'not comparable' (§6.5) and `maup_flip` is not evaluated for them.
+- **P354 §4.4 Hamburg low-power rule not applied** (ruling 6): it belonged to the class-based Hamburg H2 (4–10% positives); §3.5 replaces that operationalisation with dK > 0.
+- **Carried-over secondaries.** D4 rows are dropped (§8.1 allow-list), published-class rows are not defined at the matched grain, and the POI-derived P354 §5.2 variants are kept. Per-1k rows use the population of all children (all PLRs at 31.12.2024; Hamburg Gebiete scored in 2025).
+- **Berlin PLRs** (ruling 7): 535 balanced of the lor_2021 PLRs; every dropped PLR is listed with its reason in the metadata (`dropped_berlin_plr`).
+- **X8 bookkeeping** (ruling 8): `n` / `n_clusters` are the sums of both cities; the per-city values are in `notes` (`n_BER`, `n_HH`, `clusters_BER`, `clusters_HH`); the outcome suffixes are documented in the metadata (`outcome_suffixes`).
 - **Moran's I residuals** are the rank-regression residuals of the outcome on the predictor and the controls (the linear model behind the partial Spearman), per pivot (H3a/H3b) or window (H3c).
 - **Protection-zone shares (context, unlinked).** Berlin: Milieuschutz panel, snapshot 2025, areas designated by 2024, overlap fraction × 31.12.2024 population. Hamburg: soziale Erhaltungsverordnungen in force by 31.12.2024, area cover of each Gebiet × edition-2025 population.
-- **Regelaltersgrenze f** uses the exact fractions 7/24, 9/24, 11/24, 12/24 (§3.7 prints them rounded to 0.292 / 0.375 / 0.458 / 0.500).
-- **Debug runs.** Low-B smoke runs (B = 29 and B = 99) were executed while debugging the code, before the B = 1999 run that produced this file. No design choice was changed after them.
+- **Regelaltersgrenze f** uses the exact fractions 7/24, 9/24, 11/24, 12/24 (ruling 6).
+- **Debug runs and later fixes** (ruling 9): the low-B runs (B = 29, 49, 99) and the two later fixes (8e2e9b4d, 332a64f6) are disclosed in the metadata (`disclosures`), with the evidence that neither fix changed an estimate, n, CI, p, verdict or flag.
 
 ## 8. Reconciliation with the P354 panels
 
