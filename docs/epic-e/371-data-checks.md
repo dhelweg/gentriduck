@@ -168,7 +168,7 @@ All six are also dbt tests (severity error) and pass in `uv run poe build`.
    SD rows of edition 2022 makes the test fail (4 rows: S3 and S4 in 2022 and 2025, median
    |Δ| 4.2–4.8 pp), while the z-moment test still passes.
    **S3 2022/2023 outliers:** correlation between D3 and the S3 level change is only 0.913 / 0.951
-   (medians 0.05 / 0.04 pp). A minority of Gebiete disagree, because the publisher re-based the
+   (medians 0.05 / 0.04 pp). A minority of Gebiete disagree, because, as inferred from the annex, the publisher re-based the
    2019/2020 S3 values after widening the AsylbLG count from edition 2021 (§3.1). **This does
    affect the design.** Under pre-registration Amendment 4 revision 1 (E1), the primary Hamburg S3
    level for edition 2019 is the publisher-revised s3_2019_rev = s3_2022 − D3_2022 (R19). The
