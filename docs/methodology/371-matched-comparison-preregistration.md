@@ -1210,3 +1210,5 @@ rulings are in `docs/epic-e/371-implementation-readings-geo.md`.
   "A5.1 removes flags from the row that triggered reading 3", is withdrawn. The rule in A5.1 is
   unchanged and no method changed. The findings (§7.8) generate the A5 before → after disclosure
   from the result rows. The geo-DS did not open the outputs for this note.
+
+**Clarification (results sign-off, 2026-11-05; no rule changed).** The A4 rev. 1 sentence "No other exemption exists" in the §8.2 guard exemption omitted the M3 interpolation, which was pre-registered before A4 (PM decision M3, 2026-11-02). Berlin 31.12.2022 bands and weights are the midpoint of 31.12.2020 and 31.12.2024 and so embed 2024 data by design. They are a permitted pre-registered input, alongside W24 and s3_2019_rev. They are population weights and age structure, not outcome values, so no outcome information enters a predictor. The M3 "2020 only" sensitivity bounds their effect.
