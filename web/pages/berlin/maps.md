@@ -870,7 +870,7 @@ Bezirksregion (BZR) map instead? It now lives on
 - **[POI & Offering Advantage map](/berlin/poi-map)** — the commercial-mix (shops/cafés) view of
   the same neighbourhoods.
 - **[The 2018 thesis, re-checked](/thesis-recheck)** — the fixed 2018 thesis reproduction map
-  (Bezirksregion, Dec 2016 snapshot) and six-hypothesis writeup.
+  (Bezirksregion, Dec 2016 snapshot) and the re-test of all eight hypotheses.
 - **[Methodology & data sources](/methodology)** — what "gentrification pressure" and the six-stage
   typology mean.
 

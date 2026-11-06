@@ -72,8 +72,9 @@ stable-established, or the named ambiguous case "improving-vulnerable" — see �
 
 ## 2. Where the numbers come from
 
-Four open data sources feed the index. Each is free, requires no signup, and is used at the finest
-grain it publishes — Berlin's **Planungsraum (PLR)**, a small statistical area of roughly 2,000–5,000
+Four open data sources feed the index. Each is free and openly licensed (only the OpenStreetMap
+full-history download needs a free OSM contributor login, see [open data](/open-data)), and is used
+at the finest grain it publishes — Berlin's **Planungsraum (PLR)**, a small statistical area of roughly 2,000–5,000
 residents (Hamburg's equivalent is its **statistisches Gebiet**).
 
 ### MSS — Monitoring Soziale Stadtentwicklung (Berlin's official social monitor)
@@ -330,8 +331,10 @@ We would rather state these plainly than have you discover them by surprise.
   re-fit on Hamburg's own 2008–2026 coverage curve), [C2/#159](https://github.com/dhelweg/gentriduck/issues/159)
   (trajectory-window thresholds re-derived for Hamburg's annual cadence, holding panel span
   constant so the ordinal step means the same *rate* in both cities), [C3/#160](https://github.com/dhelweg/gentriduck/issues/160)
-  (an independent re-run of the lead-lag hypotheses on Hamburg's own annual panel — an honest,
-  correctly-signed-but-under-powered partial null, not a confirmation or refutation),
+  (an early re-run of the lead-lag hypotheses on Hamburg's own annual panel, since superseded by
+  the pre-registered Hamburg re-test of all eight thesis hypotheses,
+  [#355](https://github.com/dhelweg/gentriduck/issues/355), reported on the
+  [Hamburg thesis re-check](/hamburg/thesis-recheck)),
   [C4/#161](https://github.com/dhelweg/gentriduck/issues/161) (the Gebiet↔Stadtteil crosswalk
   match-rate guard behind point 3 above, closed at 98.6%), [C5/#203](https://github.com/dhelweg/gentriduck/issues/203)
   (Wohnlage/Mietenspiegel-input and displacement-zone integration, confirming Hamburg's *soziale

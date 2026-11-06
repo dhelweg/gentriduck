@@ -141,9 +141,9 @@ for the full method, or the [methodology page](/methodology) for a plain-languag
   and any "Change since previous year" view use a <b>two-colour (diverging) legend</b> centred on
   that neutral point (1.0 for Offering Advantage, 0 for a year-over-year change) -- one hue means
   above it, the other means below; plain POI-density "stock" values use a single-colour scale
-  instead, since there's no natural centre to diverge around. This map covers Berlin only for now;
-  Hamburg's underlying gentrification index isn't signed off yet
-  ([#125](https://github.com/dhelweg/gentriduck/issues/125)).
+  instead, since there's no natural centre to diverge around. Hamburg has its own map at
+  [/hamburg/poi-map](/hamburg/poi-map); the two cities' Offering Advantage baselines are never
+  pooled.
 </Alert>
 
 <Alert status="warning">

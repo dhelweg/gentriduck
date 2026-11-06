@@ -103,6 +103,18 @@ where variant = 'live_data' and area_level = 'plr' and city_code = 'BER'
     composition, and how their neighbourhoods are spread across stages — never a re-scored index
     for the larger area.
   </LinkCard>
+  <!-- #368: the Hamburg hub links its thesis re-check and the #371 comparison; Berlin's hub had
+       neither, so the two hubs no longer linked the same routes (#353 parity). Card copy restates
+       the /thesis-recheck "How the re-test works" paragraph and reuses the Hamburg hub's
+       /berlin-vs-hamburg card verbatim; no result sentence. -->
+  <LinkCard href="/thesis-recheck" icon="🔬" title="The 2018 thesis, re-checked" cta="See the re-check →">
+    The eight hypotheses of the 2018 Berlin thesis, re-tested with a design fixed in advance, in
+    the thesis era (2013–2019) and in 2019–2025, and set side by side with what the thesis found.
+  </LinkCard>
+  <LinkCard href="/berlin-vs-hamburg" icon="⚖️" title="Berlin vs Hamburg, like for like" cta="See the comparison →">
+    The thesis hypotheses in both cities on matched areas of similar size, the same three
+    indicators and the same years, with each hypothesis tested for a difference between the cities.
+  </LinkCard>
 </LinkCards>
 
 ## Honest caveats
