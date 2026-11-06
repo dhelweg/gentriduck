@@ -91,12 +91,14 @@ specific household was *involuntarily displaced*. Displacement is an *inference*
 D5 (#258, D5-wire) now exists as PREDICTOR columns (`displacement_subindex`,
 `under_milieuschutz`/`milieuschutz_overlap_frac`) in `int_gentrification_ts`, but is **not** wired
 into the D1×D2 typology matrix below — no stage name currently reads D5, so this guardrail's
-conclusion is unchanged: stage names must still use risk/signal/pressure framing, not an asserted
+conclusion is unchanged: stage names must still use risk/signal framing, not an asserted
 displacement event. Therefore:
 
 - The candidate name **"post-displacement"** is **prohibited** — it asserts displacement *occurred*.
-- Use **risk/signal/pressure** framing: `consolidation-pressure`, `high-displacement-signal`. These
-  name a *measured signal of elevated risk*, not a confirmed outcome.
+- Use **risk/signal** framing: `consolidation-pressure`, `high-displacement-signal`. These
+  name a *measured signal of elevated risk*, not a confirmed outcome. The key `consolidation-pressure`
+  stays as a stable identifier (a data contract: tests, seeds, CSVs, sign-offs), but is never shown
+  publicly; its public label is "5 · Consolidation" (§1.3; #358).
 - Any stage name implying a *population* outcome must carry the disclaimer in G-2.
 
 **G-2 — Small-area aggregate, not an individual statement (ecological-inference guard).** A stage is
@@ -111,16 +113,25 @@ second clause]
 Six stages, ordered along the invasion-succession process. Stage names are **binding**; the geo-DS
 draft owns the numeric cut-point assignment and the D3 within-cell split method.
 
-| Stage key | Public label | Process meaning (Dangschat / Döring-Ulbricht) |
-|---|---|---|
-| `stable-established` | Stable / established | High social status, no upgrading dynamic. Not a gentrification target; process either completed or never applied. |
-| `pre-gentrification` | Pre-gentrification (vulnerable) | Low status, stable/declining dynamic, sparse commercial amenity. Stage 0: susceptible area before any pioneer invasion. |
-| `pioneer-signal` | Pioneer / early-signal | Low status still, but first upgrading signals: Dynamik uptick and/or small D3 commercial uptick. Social *invasion* beginning; commercial *succession* not yet visible. |
-| `active-gentrification` | Actively gentrifying | Status improving toward `hoch`, Dynamik positiv, D3 dynamism high. Social *succession* underway with commercial *succession* visible — the double cycle in full motion. |
-| `consolidation-pressure` | Consolidation / displacement-pressure | Status reached high/upper-middle, Dynamik stable-positiv, amenity high or levelling, D4 demographics shifted. **Elevated displacement-pressure signal, NOT confirmed displacement (G-1).** |
-| `improving-vulnerable` | Improving (ambiguous) | Low status but positiv Dynamik with little/no commercial succession — a named tension cell. Could be incumbent-led improvement OR early gentrification; model cannot yet distinguish (needs D5). |
+| # | Stage key | Public label | Process meaning (Dangschat / Döring-Ulbricht) |
+|---|---|---|---|
+| 1 | `pre-gentrification` | 1 · Pre-gentrification | Low status, stable/declining dynamic, sparse commercial amenity. Stage 0: susceptible area before any pioneer invasion. |
+| 2 | `improving-vulnerable` | 2 · Improving from very low status (ambiguous) | Low status but positiv Dynamik with little/no commercial succession — a named tension cell. Could be incumbent-led improvement OR early gentrification; model cannot yet distinguish (needs D5). |
+| 3 | `pioneer-signal` | 3 · Pioneer signal | Low status still, but first upgrading signals: Dynamik uptick and/or small D3 commercial uptick. Social *invasion* beginning; commercial *succession* not yet visible. |
+| 4 | `active-gentrification` | 4 · Active gentrification | Status improving toward `hoch`, Dynamik positiv, D3 dynamism high. Social *succession* underway with commercial *succession* visible — the double cycle in full motion. |
+| 5 | `consolidation-pressure` | 5 · Consolidation | Status reached high/upper-middle, Dynamik stable-positiv, amenity high or levelling, D4 demographics shifted. **Elevated displacement-risk signal, NOT confirmed displacement (G-1).** |
+| 6 | `stable-established` | 6 · Stable / established | High social status, no upgrading dynamic. Not a gentrification target; process either completed or never applied. |
+| — | NULL / `'uninhabited / no data'` | No stage on record | Uninhabited, no MSS / Sozialmonitoring value, or not scored. No number; sorts last. |
 
 Notes:
+- **`#` (#358)** is the stage's position in the double invasion-succession cycle (Dangschat 1988;
+  §9): the precondition (1, incl. filtering-down as the rent-gap precondition, Smith 1979), then
+  improvement from the lowest (2), low (3), middle (4) and high (5) status rung — the Dynamik =
+  positiv column of the §1.5 matrix in descending status-rung order — then the settled end (6).
+  Clay's (1979) pioneer → expanding → maturing phases map onto 3 → 4 → 5. It is a **position, not a
+  timetable**: areas can stay, skip or move back, and stage 6 also holds areas never in the cycle and
+  high-status areas whose status is worsening. Number and label come from the dbt macro
+  `typology_stage_display` (`stage_number`, `stage_label`); the keys are unchanged.
 - `improving-vulnerable` is a *named tension cell*, not a process stage — it flags the ambiguity that
   MSS Dynamik alone cannot resolve (R-A3 assessment b, R-A4 assessment c). Naming it honestly is
   better than forcing it into `pioneer-signal`.
@@ -138,7 +149,9 @@ Notes:
   for the worked sign example.
 - **D2 Dynamik** (`dynamik_index`, `stg_berlin_mss`): `1=positiv` (improving social status),
   `2=stabil`, `3=negativ` (worsening). Mapped from WFS odd-step codes `{1,3,5}` (R-A3 §a).
-  `1=positiv = improving`; `3=negativ = worsening = the gentrification-relevant upward-pressure end`.
+  `1=positiv = improving`; `3=negativ = worsening`. Worsening is filtering-down: at most a rent-gap
+  precondition (Smith 1979), not a gentrification signal. In the typology, the upgrading signal is
+  `positiv` Dynamik in low- or middle-status areas (§1.5).
   **This ordering MUST be confirmed against the published per-class distribution before consumption**
   (R-A3 C1; §3.4) — a reversed code silently inverts the entire typology and the lead-lag sign.
 

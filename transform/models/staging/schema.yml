@@ -65,9 +65,10 @@ models:
       - name: dynamism_class_bi
         description: >
           Projected dynamism class (binary English label).
-          positive = high gentrification pressure / above-average POI churn (was 'positiv').
-          negative = low gentrification pressure / below-average POI churn (was 'negativ').
-          See B5-findings-check.md for the label polarity explanation.
+          Thesis 2018 projected POI-dynamism class (not the official MSS Dynamik); polarity
+          as documented in B5-findings-check.md.
+          positive = above-average POI churn (was 'positiv').
+          negative = below-average POI churn (was 'negativ').
         data_tests:
 
           - accepted_values:
