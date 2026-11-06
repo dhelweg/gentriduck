@@ -20,6 +20,17 @@ sidebar_position: 24
   IFG-adjacent closing paragraph, which is why this page carries a narrower, single-gate
   domain-expert framing check (not the full dual R-C1 gate) -- see
   docs/epic-i/I6-open-data-domain-signoff.md, Verdict: PASS, before merge into develop.
+
+  #368 (2026-11): source table re-checked against ADR-0014 (incl. its Amendment 2026-11-02) and
+  the current ingests (ingestion/manifest/*.json; licence/attribution strings from each ingester's
+  SOURCE_ATTRIBUTION and docs/epic-g/G3-attribution-licensing.md). Changes: EWR no longer listed
+  as feeding transfer recipients (that is MSS; EWR is demographic, per the 2026-10
+  evidence-integrity domain sign-off and /methodology); EWR narrow age bands named (staged for
+  #371, an existing source: docs/methodology/371-matched-comparison-preregistration.md);
+  Ortsteile and Milieuschutz rows added (dl-de-zero-2.0, ingest_ortsteil_geometries.py,
+  ingest_milieuschutz.py); Hamburg split into its pillars with the Sozialmonitoring annex row
+  (daten.transparenz.hamburg.de, editions 2016-2025, dl-de/by-2.0) and the per-publisher
+  attribution strings. The IFG-adjacent passage that the I6 domain check covered is unchanged.
 -->
 
 <Hero
@@ -46,12 +57,25 @@ for the full per-source table and exact attribution strings).
 
 | Source | What it feeds | Licence |
 |---|---|---|
-| OpenStreetMap full history | Point-of-interest counts (commercial/amenity mix over time) | ODbL |
-| Berlin EWR (population register) | Socio-economic time series (residence duration, age structure, transfer recipients) | CC BY 3.0 DE |
-| Berlin MSS (Monitoring Soziale Stadtentwicklung) | The status/dynamism outcome the index is built from | `dl-de-zero-2.0` |
+| OpenStreetMap full history (both cities) | Point-of-interest counts (commercial/amenity mix over time); neighbourhood names used to label Hamburg's unnamed areas | ODbL |
+| Berlin EWR (population register) | The demographic baseline (age structure, nationality, migration background, residence duration). Its narrow age bands (e.g. 15–18, 63–65) also put Berlin's indicators on the same population bases as Hamburg's for the [Berlin vs Hamburg](/berlin-vs-hamburg) comparison | CC BY 3.0 DE |
+| Berlin MSS (Monitoring Soziale Stadtentwicklung) | The status/dynamism outcome, and its indicators (unemployment, transfer receipt, child poverty) | `dl-de-zero-2.0` |
 | Berlin LOR / Planungsraum geometries | The small-area boundaries everything is aggregated to | CC BY 3.0 DE |
-| Bodenrichtwerte / Verkaufte Grundstücke / Mietspiegel / Wohnlagen | The price/rent dimension | `dl-de-zero-2.0` (geodata); Mietspiegel numeric values re-tabulated, PDF not redistributed |
-| Hamburg equivalents (Sozialmonitoring, geometry, EWR-equivalent, Wohnlagen/Mietenspiegel) | The second-city onboarding (Epic H) | `dl-de/by-2.0` |
+| Berlin Ortsteile geometries | The Ortsteil profiles and their crosswalk to Planungsräume | `dl-de-zero-2.0` |
+| Berlin Milieuschutz (social preservation) areas | Displacement-protection context and the back-test | `dl-de-zero-2.0` |
+| Bodenrichtwerte / Verkaufte Grundstücke / Mietspiegel / Wohnlagen | The price/rent dimension | `dl-de-zero-2.0` (geodata); Mietspiegel numeric values and its street directory's Wohnlage assignments re-tabulated, PDFs not redistributed |
+| Hamburg Sozialmonitoring (status/Dynamik classes per statistisches Gebiet) | Hamburg's status/dynamism outcome | `dl-de/by-2.0` |
+| Hamburg Sozialmonitoring report annex (indicator tables, editions 2016–2025, from `daten.transparenz.hamburg.de`) | Indicator-level values (unemployment, transfer receipt, child poverty) for the [Berlin vs Hamburg](/berlin-vs-hamburg) comparison | `dl-de/by-2.0` |
+| Hamburg statistische Gebiete geometry | Hamburg's small-area boundaries | `dl-de/by-2.0` |
+| Hamburg Stadtteil statistics (Regionalstatistische Daten) | Hamburg's demographic baseline | `dl-de/by-2.0` |
+| Hamburg soziale Erhaltungsverordnungen, Wohnlagen / Mietenspiegel | Displacement-protection context and the price/rent dimension | `dl-de/by-2.0` |
+
+Hamburg's `dl-de/by-2.0` licence requires attribution. This project credits **"Freie und Hansestadt
+Hamburg, Behörde für Stadtentwicklung und Wohnen"** for the Sozialmonitoring and its annex, the
+soziale Erhaltungsverordnungen and the Mietenspiegel / Wohnlagen; **"Freie und Hansestadt Hamburg,
+Landesbetrieb Geoinformation und Vermessung"** for the geometry; and **"Statistisches Amt für Hamburg
+und Schleswig-Holstein"** for the Stadtteil statistics. OpenStreetMap data is
+**"© OpenStreetMap contributors"**.
 
 ## What only worked *because* the data is open
 
@@ -68,7 +92,9 @@ for the full per-source table and exact attribution strings).
   data model (ADR-0005) because Hamburg publishes an open equivalent of every Berlin pillar — a
   full OSM history (already global), a small-area social monitor, small-area demographics, and
   price/rent references — under `dl-de/by-2.0` rather than Berlin's mostly-zero-attribution
-  family. Open, comparably-shaped data made that comparison possible at all.
+  family. Open, comparably-shaped data made that comparison possible at all. Hamburg also
+  publishes the indicator tables behind its Sozialmonitoring as an annex to each report, which is
+  what made a [like-for-like comparison](/berlin-vs-hamburg) on shared indicators possible.
 
 ## What was hard, concretely
 
