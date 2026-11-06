@@ -118,15 +118,16 @@ like](/berlin-vs-hamburg) go through a stricter route than ordinary code:
    result, and what the results must not be used to claim. The domain expert reviews this plan
    too, before the analysis runs.
 2. **Changes are disclosed, never silent.** If the work has to deviate from the plan, the change is
-   recorded as a numbered amendment, and an amendment made after the results were seen is marked
-   as such. An undisclosed deviation is a serious review finding.
+   recorded as a numbered amendment, and an amendment made after the results were computed is
+   marked as such. An undisclosed deviation is a serious review finding.
 3. **Two independent sign-offs on the results.** The geo-data-scientist (statistics) and the domain
    expert (urban sociology and housing policy) each have to record a `PASS`. The domain sign-off
    also fixes the exact public wording and lists what must not be said.
 4. **The page gets its own check.** The page that reports the results is reviewed again by both,
    against that binding wording, before it is integrated.
 
-Each of these documents is public in the repository, linked from the pages that use them.
+Each of these documents is public in the repository, and the pages link to the plan and the
+findings behind them.
 
 ## What the human maintainer actually does
 

@@ -65,10 +65,10 @@ for the full per-source table and exact attribution strings).
 | Berlin Milieuschutz (social preservation) areas | Displacement-protection context and the back-test | `dl-de-zero-2.0` |
 | Bodenrichtwerte / Verkaufte Grundstücke / Mietspiegel / Wohnlagen | The price/rent dimension | `dl-de-zero-2.0` (geodata); Mietspiegel numeric values and its street directory's Wohnlage assignments re-tabulated, PDFs not redistributed |
 | Hamburg Sozialmonitoring (status/Dynamik classes per statistisches Gebiet) | Hamburg's status/dynamism outcome | `dl-de/by-2.0` |
-| Hamburg Sozialmonitoring report annex (indicator tables, editions 2016–2025, from `daten.transparenz.hamburg.de`) | Indicator-level values (unemployment, transfer receipt, child poverty) for the [Berlin vs Hamburg](/berlin-vs-hamburg) comparison | `dl-de/by-2.0` |
+| Hamburg Sozialmonitoring report annex (indicator tables, editions 2016–2025, from Transparenzportal Hamburg (daten.<wbr>transparenz.<wbr>hamburg.<wbr>de)) | Indicator-level values (unemployment, transfer receipt, child poverty) for the [Berlin vs Hamburg](/berlin-vs-hamburg) comparison | `dl-de/by-2.0` |
 | Hamburg statistische Gebiete geometry | Hamburg's small-area boundaries | `dl-de/by-2.0` |
 | Hamburg Stadtteil statistics (Regionalstatistische Daten) | Hamburg's demographic baseline | `dl-de/by-2.0` |
-| Hamburg soziale Erhaltungsverordnungen, Wohnlagen / Mietenspiegel | Displacement-protection context and the price/rent dimension | `dl-de/by-2.0` |
+| Hamburg soziale Erhaltungs&shy;verordnungen, Wohnlagen / Mietenspiegel | Displacement-protection context and the price/rent dimension | `dl-de/by-2.0` |
 
 Hamburg's `dl-de/by-2.0` licence requires attribution. This project credits **"Freie und Hansestadt
 Hamburg, Behörde für Stadtentwicklung und Wohnen"** for the Sozialmonitoring and its annex, the

@@ -91,9 +91,10 @@ the short version; that page is the full one.
 A few rules constrain everything built here, and they're enforced, not aspirational:
 
 - **Free and open only.** No paid tools, no proprietary or internal data sources — ever. Every data
-  source behind this site is public and requires no signup: Berlin and Hamburg's official
+  source behind this site is openly licensed and free: Berlin and Hamburg's official
   social-monitoring reports, the population register, OpenStreetMap, and official land-value/rent
-  references. See [methodology & data sources](/methodology) for the full list.
+  references. Only the OpenStreetMap full-history download needs a free OSM contributor login (see
+  [open data](/open-data)). See [methodology & data sources](/methodology) for the full list.
 - **Local-first.** The data warehouse is [DuckDB](https://duckdb.org/), a free, open-source, local
   analytical database — no cloud data platform required to build or run this project.
 - **Self-contained site.** This website is static files: the data is bundled in and queried in

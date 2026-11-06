@@ -41,7 +41,7 @@ sidebar_position: 15
   compact
   eyebrow="Chapter 1→2 — Origins &amp; the Revival"
   title="Timeline"
-  lede="The project's evolution end to end: a 2018 master's thesis, revived in mid-2026 by a supervised team of AI agents, and grown into a public, multi-city statistics project. Every date below is cited to a repository artifact (an ADR, a sign-off document, or an issue's close date) — never derived from commit dates, which are squashed and dated wrong for this purpose."
+  lede="The project's evolution end to end: a 2018 master's thesis, revived in mid-2026 by a supervised team of AI agents, and grown into a public, multi-city statistics project. Every date below is cited to a repository artifact (an ADR or a sign-off document) or to an issue's close date — never derived from commit dates, which are squashed and dated wrong for this purpose."
 />
 
 <ChapterLabel>Chapters 1–2, laid end to end</ChapterLabel>

@@ -37,8 +37,9 @@ see [how it's organised](/how-its-organised).
 
 ## The stack: local-first, free, open
 
-Gentriduck runs entirely on free, open-source tooling — no paid service, no proprietary data, no
-account required to reproduce it:
+Gentriduck runs entirely on free, open-source tooling — no paid service and no proprietary data.
+The only account needed to reproduce it is a free OpenStreetMap contributor login for the
+full-history download (see [open data](/open-data)):
 
 - **[dbt](https://www.getdbt.com/) + [DuckDB](https://duckdb.org/)** — a local, file-based
   analytical database and a SQL transformation framework, run through staging → intermediate →
@@ -65,18 +66,21 @@ folder](https://github.com/dhelweg/gentriduck/tree/main/docs/adr) — before the
 
 ## The data sources
 
-All of it is open and requires no signup. The site covers two cities, Berlin and Hamburg, each
-read from its own city's official sources:
+All of it is openly licensed and free; only the OpenStreetMap full-history download needs a free
+OSM contributor login (see [open data](/open-data)). The site covers two cities, Berlin and
+Hamburg, each read from its own city's official sources:
 
 - **OpenStreetMap** — a full crowd-mapped history of points of interest (shops, cafés,
   restaurants, amenities) back to 2008, for both cities, licensed
   [ODbL](https://opendatacommons.org/licenses/odbl/1-0/).
 - **Official social monitoring** — Berlin's MSS and Hamburg's Sozialmonitoring: each city's own
   status and dynamics classification of its small areas, and indicators behind it such as
-  unemployment, transfer receipt and child poverty. This is the outcome the analyses explain.
+  unemployment, transfer receipt and child poverty. This is the outcome the analyses model (the
+  variable they test against).
 - **Population statistics** — Berlin's population register (EWR: age structure, nationality and
   migration background, how long residents have lived at their address) and Hamburg's Stadtteil
-  statistics (age structure and nationality, for the larger Stadtteile). These are demographic
+  statistics (age structure and nationality, at the coarser Stadtteil level only, not per
+  statistisches Gebiet). These are demographic
   snapshots, not social-status measures.
 - **Land values and rents** — Bodenrichtwerte, Mietspiegel / Mietenspiegel and Wohnlagen.
 - **Small-area geographies** — Berlin's LOR / Planungsräume and Hamburg's statistische Gebiete,
