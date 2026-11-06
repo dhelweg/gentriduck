@@ -497,7 +497,7 @@ order by snapshot_year
   [methodology §6](/methodology)), but the simple citywide totals above do not.
 - **Land value and estimated rent are reference values, not transaction prices**, and their
   *level* is a context/desirability signal, not a vulnerability score — only their *change* over
-  time carries any displacement-pressure reading, and even that is not yet part of the governed
+  time carries any displacement-risk reading, and even that is not yet part of the governed
   index (see [methodology §2/§6](/methodology)).
 - **Offering Advantage and POI density are commercial-side signals, not the outcome variable.**
   A high OA or fast-growing POI count is read as a signal of commercial succession, never as a
@@ -543,7 +543,7 @@ for how Offering Advantage is computed, the
 [bandwidth-sweep findings](https://github.com/dhelweg/gentriduck/blob/main/docs/epic-g/G2-oa-bandwidth-sweep-findings.md)
 for the C-4 discharge detail, the [area detail page](/berlin/area-detail) for a
 single-neighbourhood breakdown of these same signals alongside the governed index, the
-[gentrification-pressure map](/berlin/maps) for the governed index itself, or
+[gentrification-stage map](/berlin/maps) for the governed index itself, or
 [Offering Advantage — modes, scales & dominance](/methodology-oa-modes) for the other eight
 calculation methods, the area-hierarchy scale switch, and the within-group dominance construct
 this map does not yet surface (this map shows only the canonical nested-LQ method at PLR grain).

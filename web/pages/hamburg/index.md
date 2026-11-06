@@ -155,8 +155,8 @@ where city_code = 'HH' and area_level = 'subarea_l2'
     the Gebiete whose status changed.
   </LinkCard>
   <LinkCard href="/hamburg/area-detail" icon="🏘️" title="Area detail — start here" cta="Browse by district →">
-    The primary way in: browse by district (Bezirk), then read a headline spotlight on one Gebiet
-    with that district's strongest pressure reading, with a link to its full profile. If you
+    The primary way in: browse a district (Bezirk) and its Gebiete, then read a headline spotlight
+    with a snapshot of any one of them, with a link to its full profile. If you
     already know the Gebiet, the full searchable list (next card) is faster.
   </LinkCard>
   <LinkCard href="/hamburg/area" icon="🔍" title="All Gebiete (full list)" cta="Search Gebiete →">

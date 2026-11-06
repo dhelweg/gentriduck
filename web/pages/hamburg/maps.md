@@ -1,5 +1,5 @@
 ---
-title: Maps — gentrification pressure by area
+title: Maps — gentrification stages by area
 sidebar_position: 2
 ---
 
@@ -25,8 +25,9 @@ sidebar_position: 2
     exports (web/scripts/export_area_geojson.py), not a variant of the existing plr_*/bzr_* files.
 
   The stage color palette and dropdown/indicator options are otherwise the same convention as
-  /berlin/maps (RdYlBu-6 for the six-stage typology, single-hue sequential for the raw ordinals) --
-  same D1xD2 matrix, same colour semantics -- but this is a SEPARATE <PolygonMap> instance/data query,
+  /berlin/maps (#358: a cycle-ordered stage palette keyed on stage_number; single-hue sequential
+  for the raw ordinals) -- same D1xD2 matrix, same colour semantics -- but this is a SEPARATE
+  <PolygonMap> instance/data query,
   not the same component instance reused across cities, so there is no shared legend/colour-scale
   object a reader could misread as asserting Berlin/Hamburg equivalence.
 
@@ -46,74 +47,67 @@ sidebar_position: 2
   this is the fix that matters most for Hamburg specifically, since its whole rollup surface is
   currently equal-weighted (see the has_incomplete_population prevalence already documented below).
   D3 -- directional caveat (coarser levels resolve toward the most common AND LEAST ACUTE stage)
-  added to both the rollup Alert and Honest caveats. D4 -- acute_stage_share composition
-  counterweight, computed page-side, added to the tooltip and table. R-310-1/R-310-5 -- Stage-mix
+  added to both the rollup Alert and Honest caveats. D4 -- acute_stage_share (#358: now
+  stages_2_4_share) composition counterweight, computed page-side, added to the tooltip and table. R-310-1/R-310-5 -- Stage-mix
   table de-jargoned/row cap raised; reader-facing copy prefers "most widespread stage" (internal
   column keys untouched). No Ortsteil equivalent here (C5 is Berlin-only).
 
   #310 domain re-review fixes (2026-07-30, second round -- see /berlin/maps' identical header
   comment and docs/epic-e/310-map-granularity-domain-signoff.md, "Re-review after fix commit
   18dfeda3", for the full rationale, not city-specific): the D4 counterweight and C1 scalar-column
-  relabelling each reintroduced the D2 label-overreach defect this fix closes. D2-R1 --
-  `acute_stage_share`'s "Residents in an acute-pressure stage" label (tooltip, table column, D3
-  Alert, Honest-caveats bullet) was an unconditional residents claim, false on Hamburg's
-  wholly-equal-weighted rollup surface (7/7 districts, 99/104 Stadtteile) where it is really a
-  share of constituent Gebiete -- relabelled "Share in an acute-pressure stage" with the same
+  relabelling each reintroduced the D2 label-overreach defect this fix closes. D2-R1 -- that
+  share's "Residents in ..." label (tooltip, table column, D3 Alert, Honest-caveats bullet) was an
+  unconditional residents claim, false on Hamburg's wholly-equal-weighted rollup surface (7/7
+  districts, 99/104 Stadtteile) where it is really a share of constituent Gebiete -- relabelled as
+  a neutral "Share in ..." (#358: now "Share in stages 2–4") with the same
   incomplete-population hedge `dominant_share` already carries. D2-R2 -- the scalar column
   titles/Indicator note/caveats bullet lost their "where available" qualifier; restored as "mean
   ordinal class (mean rank), population-weighted where population data is complete and
   equal-weighted otherwise".
+
+  #358 (docs/epic-g/358-spec.md §1, §4, §5; Revision 1): same change as /berlin/maps (see its
+  header comment) -- stage labels/numbers from the dbt display columns, no page-side CASE or
+  "severity" sort, cycle-ordered palette without an alarm colour, "Share in stages 2–4", old
+  wording replaced per spec §5, shared <StageNumberLegend>/<StatusTrendLegend>. "No stage on
+  record" rows in the Stage-mix table carry the C2 note "not scored by the Sozialmonitoring".
 -->
 
 <script>
   import { base } from '$app/paths';
 
-  // #152/#233 (I16): intuitive "worse -> red, best -> blue" ramp for the six-stage typology.
-  // ColorBrewer RdYlBu-6 (colorblind-safe per colorbrewer2.org).
+  // #358 (docs/epic-g/358-spec.md §1 "Colours"): stage palette keyed on stage_number, in cycle
+  // order, no alarm colour -- the same constant and rationale (incl. the CVD check) as
+  // /berlin/maps' stageColorByNumber comment. Kept as a separate constant here so each city keeps
+  // its own colour-scale computation (H3 structural guard above).
   //
-  // #310 review fix (HIGH-1): EvidenceMap assigns this ramp POSITIONALLY over the DISTINCT
-  // indicator values present in the `data` array actually passed to <AreaMap>, in first-occurrence
-  // order -- see @evidence-dev/core-components' EvidenceMap.js: `handleLegendValues()` computes
-  // `values = [...new Set(data.map(d => d[value]))]`, and `handleFillColor()` then looks up
-  // `colorPalette[values.indexOf(item[value])]`. At the subarea_l2 leaf grain all six stages are
-  // (usually) present, so a flat 6-entry array happened to line up with `stage_sort` order below --
-  // but at a rollup level (Stadtteil/Bezirk) typically only a SUBSET of the six stages occurs, so
-  // the same palette slot silently gets reassigned to a different (often much less severe) stage
-  // -- e.g. a Bezirk where every constituent Gebiet happens to be 'active-gentrification' would
-  // still render solid RED (correct, coincidentally), but a Bezirk that's entirely
-  // 'stable-established' would ALSO render solid RED (palette index 0), inverting this page's own
-  // "red = highest pressure" legend/Alert -- this is exactly the bug reported for Hamburg's
-  // district level (see the #310 review findings). Fix: a fixed stage_label -> hex lookup
-  // (`stageColorByLabel`) plus `presentStagePalette()`, which derives the colorPalette array from
-  // the CURRENT query result's own distinct stage_label values in first-occurrence order -- the
-  // exact same `[...new Set(data.map(d => d[value]))]` derivation EvidenceMap.js performs -- so
-  // `colorPalette[i]` always names the same stage `values[i]` will resolve to, regardless of how
-  // many/which stages are present at the selected area_level. (The `areas_leaf`/`areas_rollup`
-  // queries below stay ordered by `stage_sort` -- most-acute-first -- purely so first-occurrence
-  // order is deterministic/readable.)
+  // #310 review fix (HIGH-1), still applicable: PolygonMap assigns `colorPalette` POSITIONALLY
+  // over the DISTINCT values of the map's `value` column in first-occurrence order, so
+  // `presentStagePalette()` derives the palette from the current query result's own distinct
+  // stage_label values in that order, looking each colour up by the row's stage_number. The
+  // `areas_leaf`/`areas_rollup` queries below are ordered by stage_number (NULLs last), so the
+  // legend reads 1..6, then "No stage on record".
   //
-  // #351: the map is now drawn by web/components/PolygonMap.svelte (SVG, no Leaflet/tile basemap)
-  // instead of <AreaMap>; PolygonMap keeps exactly this positional first-occurrence colour rule.
-  // It is still a separate map instance and query from Berlin's (the H3 structural guard above);
-  // only the drawing component is shared, as every Evidence chart component already is.
-  const stageColorByLabel = {
-    'Active gentrification': '#d73027',
-    'Early pioneer signal': '#fc8d59',
-    'Improving, vulnerable area': '#fee090',
-    'Pre-gentrification watch': '#e0f3f8',
-    'Consolidated, still intensifying': '#91bfdb',
-    'Stable, established': '#4575b4'
+  // #351: the map is drawn by web/components/PolygonMap.svelte (SVG, no Leaflet/tile basemap)
+  // instead of <AreaMap>; it is still a separate map instance and query from Berlin's (the H3
+  // structural guard above); only the drawing component is shared.
+  const stageColorByNumber = {
+    1: '#bddf26',
+    2: '#5ec962',
+    3: '#21918c',
+    4: '#31688e',
+    5: '#482878',
+    6: '#bdbdbd'
   };
+  const noStageColor = '#f0f0f0';
 
   function presentStagePalette(rows) {
     const seen = new Set();
     const palette = [];
     for (const row of rows ?? []) {
       const label = row?.stage_label;
-      if (label != null && !seen.has(label) && label in stageColorByLabel) {
-        seen.add(label);
-        palette.push(stageColorByLabel[label]);
-      }
+      if (label == null || seen.has(label)) continue;
+      seen.add(label);
+      palette.push(stageColorByNumber[row?.stage_number] ?? noStageColor);
     }
     return palette;
   }
@@ -179,15 +173,13 @@ sidebar_position: 2
         { id: 'dominant_share', title: "Most widespread stage's share", fmt: 'pct0' },
         // #310 review fix (D4 -- domain sign-off blocking): composition counterweight, computed
         // in the areas_rollup query below as a sum over already-published stage_population_share
-        // rows (no mart change) -- the share of the area in the three most acute stages
-        // (active-gentrification + pioneer-signal + improving-vulnerable), shown in the same
-        // visual unit as the fill colour/most-widespread-stage label (see the D3 caveat below).
-        // #310 review fix (D2-R1 -- domain re-review blocking): "Residents in an acute-pressure
-        // stage" was an unconditional residents claim, false today for Hamburg's entire rollup
-        // surface (has_incomplete_population -- see the Alert above) -- neutral "share" label
-        // here, same fix as dominant_share above; the population_note line below still discloses
-        // per-row whenever THIS area fell back to equal weighting.
-        { id: 'acute_stage_share', title: 'Share in an acute-pressure stage', fmt: 'pct0' },
+        // rows (no mart change) -- the share of the area in stages 2-4 (#358 label; the same
+        // three stages as before), shown in the same visual unit as the fill colour/most-
+        // widespread-stage label (see the D3 caveat below). #310 D2-R1: a neutral "share" label
+        // (not "residents"), since Hamburg's entire rollup surface has has_incomplete_population;
+        // the population_note line below discloses per-row whenever THIS area fell back to equal
+        // weighting.
+        { id: 'stages_2_4_share', title: 'Share in stages 2–4', fmt: 'pct0' },
         { id: 'n_habitable_children', title: 'Constituent Gebiete with data', fmt: 'id' },
         {
           id: 'fragile_note',
@@ -215,20 +207,27 @@ sidebar_position: 2
       ];
 </script>
 
-<Hero compact eyebrow="Chapter 3 — The Evidence" title="Maps — gentrification pressure by area" lede="Colours each of Hamburg's statistische Gebiete by its current gentrification-pressure signal, from Hamburg's own official Sozialmonitoring — the same D1×D2 typology matrix used for Berlin, applied to Hamburg's own indicators and observation window." />
+<Hero compact eyebrow="Chapter 3 — The Evidence" title="Maps — gentrification stages by area" lede="Colours each of Hamburg's statistische Gebiete by its current gentrification stage (numbered 1–6 by position in the cycle; see the legend), from Hamburg's own official Sozialmonitoring — the same D1×D2 typology matrix used for Berlin, applied to Hamburg's own indicators and observation window." />
 
 <Alert status="info">
   <b>How to read the map:</b> the <b>"Gentrification stage"</b> option colours each area by one of
-  six plain-language stages (red = highest pressure / earliest displacement risk, blue = most
-  stable) — the same six-stage typology used on <a href="/berlin/maps">Berlin's map</a>. At the
-  statistisches Gebiet level, the <b>"Social status"</b> and <b>"Dynamism"</b> options are also
-  offered, showing the raw ordinal inputs (not offered as a map colour at Stadtteil/Bezirk grain —
-  see the Indicator note there for why): "Social status" is ordinal — higher shading means <b>more
-  deprived</b>, not more prosperous. "Dynamism" — higher means the area's status is improving
-  <b>faster</b>, over Hamburg's own <b>3-year</b> observation window (Berlin's is 2 years) — see
+  six plain-language stages (numbered 1–6 by position in the cycle; see the legend) — the same
+  six-stage typology used on <a href="/berlin/maps">Berlin's map</a>. At the statistisches Gebiet
+  level, the <b>"Social status"</b> and <b>"Dynamism"</b> options are also offered, showing the raw
+  ordinal inputs (not offered as a map colour at Stadtteil/Bezirk grain — see the Indicator note
+  there for why): "Social status" is ordinal — higher shading means <b>more deprived</b>, not more
+  prosperous. "Dynamism" is the official status-trend class: 1 = improving, 2 = stable,
+  3 = worsening relative to the city, so higher shading means a <b>worsening</b> trend, over
+  Hamburg's own <b>3-year</b> observation window (Berlin's is 2 years) — see
   <a href="/methodology">methodology §6</a> for why that is a qualitative difference in what
-  "active" means, not just a numeric-scale one. Areas without a value are drawn with grey hatching ("No data").
+  "active" means, not just a numeric-scale one. Under "Gentrification stage", areas without a stage
+  are drawn in very light grey as "No stage on record"; areas without a value for the other two
+  options are drawn with grey hatching ("No data").
 </Alert>
+
+<StageNumberLegend />
+
+<StatusTrendLegend />
 
 <Alert status="warning">
   <b>Gebiet names on this map are labels, not official names.</b> Hamburg's statistische Gebiete
@@ -266,15 +265,15 @@ sidebar_position: 2
   incomplete" in the table and map tooltip below.
 </Alert>
 <Alert status="warning">
-  <b>A "Stable, established" reading at this grain is not evidence that pressure is absent.</b>
-  Plurality voting resolves an area to whichever stage is most widespread among its constituent
-  Gebiete — and because "Stable, established" is, by construction, the most common and <b>least
-  acute</b> stage citywide, coarser levels are systematically biased toward reading as calm, not
-  toward neutral noise. An area whose map colour reads "Stable, established" can still contain
-  neighbourhoods under active gentrification pressure; this map alone cannot show you whether it
-  does. The share of the area in an acute-pressure stage (residents where population data exists,
-  otherwise constituent areas — in the tooltip and table below) and the statistisches Gebiet
-  level — the finest grain this site publishes — are where that pressure is actually locatable.
+  <b>A "6 · Stable / established" reading at this grain does not mean that no part of the area is
+  changing.</b> Plurality voting resolves an area to whichever stage is most widespread among its
+  constituent Gebiete — and because "6 · Stable / established" is, by construction, the most common
+  stage citywide, coarser levels are systematically biased toward reading as calm, not toward
+  neutral noise. An area whose map colour reads "6 · Stable / established" can still contain
+  smaller neighbourhoods in stages 2–4; this map alone cannot show you whether it does. The share
+  of the area in stages 2–4 (residents where population data exists, otherwise constituent areas —
+  in the tooltip and table below) and the statistisches Gebiet level — the finest grain this site
+  publishes — are where such change can actually be located.
 </Alert>
 {/if}
 
@@ -299,10 +298,10 @@ sidebar_position: 2
 
 ```sql areas_leaf
 -- Only one (variant, area_level) combination exists for Hamburg's leaf grain in
--- gentrification_index: live_data / subarea_l2 (H3, #237). stage_label/stage_sort follow the
--- exact same D1xD2 typology-stage convention as /berlin/maps' `areas_plr` query (see that page's
--- header comment for the Dangschat 1988 / Döring & Ulbricht 2016 ordering rationale) -- same
--- matrix, reused unmodified per H1-domain-signoff.md §1.
+-- gentrification_index: live_data / subarea_l2 (H3, #237). #358: stage_label/stage_number are
+-- gentrification_index's own dbt display columns (typology_stage_display), the same as
+-- /berlin/maps' `areas_plr` -- same D1xD2 matrix, reused unmodified per H1-domain-signoff.md §1.
+-- Ordered by cycle position so the legend reads 1..6, then "No stage on record".
 select
     city_code,
     area_code,
@@ -314,23 +313,8 @@ select
     status_index,
     dynamism_index,
     status_class,
-    case status_class
-        when 'active-gentrification' then 'Active gentrification'
-        when 'pioneer-signal' then 'Early pioneer signal'
-        when 'improving-vulnerable' then 'Improving, vulnerable area'
-        when 'pre-gentrification' then 'Pre-gentrification watch'
-        when 'consolidation-pressure' then 'Consolidated, still intensifying'
-        when 'stable-established' then 'Stable, established'
-    end as stage_label,
-    case status_class
-        when 'active-gentrification' then 1
-        when 'pioneer-signal' then 2
-        when 'improving-vulnerable' then 3
-        when 'pre-gentrification' then 4
-        when 'consolidation-pressure' then 5
-        when 'stable-established' then 6
-        else 99
-    end as stage_sort,
+    stage_label,
+    stage_number,
     -- #353: click-through to this Gebiet's profile page, same `${base}`-prefixed column
     -- convention as /berlin/maps' areas_plr `link` (PolygonMap expects an already-prefixed URL).
     '${base}/hamburg/area/' || area_code as link
@@ -341,7 +325,7 @@ where variant = 'live_data' and area_level = 'subarea_l2' and city_code = 'HH'
       from gentriduck_marts.gentrification_index
       where variant = 'live_data' and area_level = 'subarea_l2' and city_code = 'HH'
   )
-order by stage_sort
+order by stage_number nulls last, area_name, area_code
 ```
 
 ```sql areas_rollup
@@ -370,19 +354,18 @@ order by stage_sort
 -- creates a literal self-reference the resolver reports as "Compiler error: circular reference"
 -- (hit and fixed during this review pass, both here and in /berlin/maps' `bezirk_names` block).
 --
--- #310 review fix (D4 -- domain sign-off blocking): `acute` sums stage_population_share over the
--- three most acute typology_stage values -- see /berlin/maps' identical `areas_rollup` query for
+-- #310 review fix (D4 -- domain sign-off blocking): `stages_2_4` (#358: formerly `acute`) sums
+-- stage_population_share over stage_number 2-4 (the same three typology_stage values) -- see /berlin/maps' identical `areas_rollup` query for
 -- the full rationale/citation and the NULL-vs-0 note (the mart is sparse, so a filtered SUM over
--- zero matching rows is NULL, not 0 -- `acute_stage_share_raw` is coalesced to 0 below only when
+-- zero matching rows is NULL, not 0 -- `stages_2_4_share_raw` is coalesced to 0 below only when
 -- the area has at least one habitable child).
 with
-    acute as (
+    stages_2_4 as (
         select
             area_code,
             sum(stage_population_share) filter (
-                where typology_stage in
-                    ('active-gentrification', 'pioneer-signal', 'improving-vulnerable')
-            ) as acute_stage_share_raw
+                where stage_number between 2 and 4
+            ) as stages_2_4_share_raw
         from gentriduck_marts.mart_area_rollup_stage_mix
         where area_level = '${inputs.area_level.value}'
           and city_code = 'HH'
@@ -409,28 +392,13 @@ select
     m.dominant_share,
     case
         when m.n_habitable_children = 0 then null
-        else coalesce(a.acute_stage_share_raw, 0)
-    end as acute_stage_share,
+        else coalesce(a.stages_2_4_share_raw, 0)
+    end as stages_2_4_share,
     m.n_habitable_children,
     m.is_dominant_fragile,
     m.has_incomplete_population,
-    case m.dominant_stage
-        when 'active-gentrification' then 'Active gentrification'
-        when 'pioneer-signal' then 'Early pioneer signal'
-        when 'improving-vulnerable' then 'Improving, vulnerable area'
-        when 'pre-gentrification' then 'Pre-gentrification watch'
-        when 'consolidation-pressure' then 'Consolidated, still intensifying'
-        when 'stable-established' then 'Stable, established'
-    end as stage_label,
-    case m.dominant_stage
-        when 'active-gentrification' then 1
-        when 'pioneer-signal' then 2
-        when 'improving-vulnerable' then 3
-        when 'pre-gentrification' then 4
-        when 'consolidation-pressure' then 5
-        when 'stable-established' then 6
-        else 99
-    end as stage_sort,
+    m.dominant_stage_label as stage_label,
+                m.dominant_stage_number as stage_number,
     -- #310 review fix (MEDIUM-4): pairs the most-widespread-stage reading with an explicit
     -- caveat whenever is_dominant_fragile -- per the #310 design decision (issue comment point 3)
     -- this must never be shown as a standalone, confident-looking label. Blank ('') rather than
@@ -457,7 +425,7 @@ select
         else '${base}/hamburg/area/${inputs.area_level.value}/' || m.area_code
     end as link
 from gentriduck_marts.mart_area_rollup_stage_mix as m
-left join acute as a on m.area_code = a.area_code
+left join stages_2_4 as a on m.area_code = a.area_code
 where m.area_level = '${inputs.area_level.value}'
   and m.city_code = 'HH'
   -- #310 review fix (LOW-6): explicit even though the mart is currently single-variant --
@@ -469,7 +437,7 @@ where m.area_level = '${inputs.area_level.value}'
       where area_level = '${inputs.area_level.value}' and city_code = 'HH' and variant = 'live_data'
   )
 qualify row_number() over (partition by m.area_code order by m.typology_stage) = 1
-order by stage_sort
+order by m.dominant_stage_number nulls last, m.area_name, m.area_code
 ```
 
 <PolygonMap
@@ -498,14 +466,7 @@ select
         as code_note,
     status_index,
     dynamism_index,
-    case status_class
-        when 'active-gentrification' then 'Active gentrification'
-        when 'pioneer-signal' then 'Early pioneer signal'
-        when 'improving-vulnerable' then 'Improving, vulnerable area'
-        when 'pre-gentrification' then 'Pre-gentrification watch'
-        when 'consolidation-pressure' then 'Consolidated, still intensifying'
-        when 'stable-established' then 'Stable, established'
-    end as stage_label
+    stage_label
 from gentriduck_marts.gentrification_index
 where variant = 'live_data' and area_level = 'subarea_l2' and city_code = 'HH'
   and period_yyyymm = (
@@ -513,12 +474,14 @@ where variant = 'live_data' and area_level = 'subarea_l2' and city_code = 'HH'
       from gentriduck_marts.gentrification_index
       where variant = 'live_data' and area_level = 'subarea_l2' and city_code = 'HH'
   )
-order by dynamism_index desc
+-- #358 (spec §3): cycle order (stage_number, NULLs last), then name, then code -- no longer
+-- ordered by the Dynamik reading. User-sortable via the DataTable headers.
+order by stage_number nulls last, area_name, area_code
 ```
 
 ```sql area_table_rollup
--- #310 review fix (D4 -- domain sign-off blocking): `acute` sums stage_population_share over the
--- three most acute typology_stage values -- see /berlin/maps' `area_table_rollup` query for the
+-- #310 review fix (D4 -- domain sign-off blocking): `stages_2_4` (#358: formerly `acute`) sums
+-- stage_population_share over stage_number 2-4 (the same three typology_stage values) -- see /berlin/maps' `area_table_rollup` query for the
 -- full rationale/citation and the NULL-vs-0 note.
 --
 -- #310 review fix (D1/C1 -- domain sign-off section (b)): this table no longer
@@ -530,13 +493,12 @@ order by dynamism_index desc
 -- ordinal class (mean rank)", not a score -- #310 review fix D2-R2: population-weighted where
 -- population data is complete and equal-weighted otherwise, not unconditionally).
 with
-    acute as (
+    stages_2_4 as (
         select
             area_code,
             sum(stage_population_share) filter (
-                where typology_stage in
-                    ('active-gentrification', 'pioneer-signal', 'improving-vulnerable')
-            ) as acute_stage_share_raw
+                where stage_number between 2 and 4
+            ) as stages_2_4_share_raw
         from gentriduck_marts.mart_area_rollup_stage_mix
         where area_level = '${inputs.area_level.value}'
           and city_code = 'HH'
@@ -554,24 +516,17 @@ select
     m.area_name,
     m.status_index_weighted_mean as status_index,
     m.dynamism_index_weighted_mean as dynamism_index,
-    case m.dominant_stage
-        when 'active-gentrification' then 'Active gentrification'
-        when 'pioneer-signal' then 'Early pioneer signal'
-        when 'improving-vulnerable' then 'Improving, vulnerable area'
-        when 'pre-gentrification' then 'Pre-gentrification watch'
-        when 'consolidation-pressure' then 'Consolidated, still intensifying'
-        when 'stable-established' then 'Stable, established'
-    end as stage_label,
+    m.dominant_stage_label as stage_label,
     m.dominant_share,
     case
         when m.n_habitable_children = 0 then null
-        else coalesce(a.acute_stage_share_raw, 0)
-    end as acute_stage_share,
+        else coalesce(a.stages_2_4_share_raw, 0)
+    end as stages_2_4_share,
     m.n_habitable_children,
     m.is_dominant_fragile,
     m.has_incomplete_population
 from gentriduck_marts.mart_area_rollup_stage_mix as m
-left join acute as a on m.area_code = a.area_code
+left join stages_2_4 as a on m.area_code = a.area_code
 where m.area_level = '${inputs.area_level.value}'
   and m.city_code = 'HH'
   and m.variant = 'live_data'
@@ -592,7 +547,7 @@ order by area_name
     <Column id=dynamism_index title="Speed of change — mean ordinal class (mean rank; 3-year window), population-weighted where population data is complete and equal-weighted otherwise"/>
     <Column id=stage_label title="Most widespread gentrification stage"/>
     <Column id=dominant_share title="Most widespread stage's share (population-weighted, or equal-weighted — see the incomplete-data column)" fmt="pct0"/>
-    <Column id=acute_stage_share title="Share in an acute-pressure stage (Active gentrification + Early pioneer signal + Improving, vulnerable area; population-weighted, or equal-weighted — see the incomplete-data column)" fmt="pct0"/>
+    <Column id=stages_2_4_share title="Share in stages 2–4 (improving from very low, low or middle status; population-weighted, or equal-weighted — see the incomplete-data column)" fmt="pct0"/>
     <Column id=n_habitable_children title="Gebiete with data"/>
     <Column id=is_dominant_fragile title="Fragile (< 3 Gebiete)?"/>
     <Column id=has_incomplete_population title="Population data incomplete (share above is equal-weighted, not population-weighted)?"/>
@@ -603,8 +558,9 @@ order by area_name
 Never rely on the most widespread stage alone: this table is the full stage-mix distribution
 behind every area above — population-weighted where an area's population data is complete,
 equal-weighted as a flagged fallback otherwise (see the "population data incomplete" column) —
-including the `uninhabited / no data` bucket, shown as a count of constituent areas, not a share
-(it is excluded from the share calculation by design; see that column's own values below).
+including the "No stage on record" bucket (Gebiete not scored by the Sozialmonitoring), shown as
+a count of constituent areas, not a share (it is excluded from the share calculation by design;
+see that column's own values below).
 
 ```sql area_mix_table
 -- #310 review fix (LOW-6): explicit variant filter, same as areas_rollup/area_table_rollup above
@@ -617,17 +573,15 @@ including the `uninhabited / no data` bucket, shown as a count of constituent ar
 -- did so. has_incomplete_population is added (D2) so this table -- unlike area_table_rollup above,
 -- which has one row per area -- can disclose per-row whether THIS area's shares are population- or
 -- equal-weighted, since a single mix table spans every area at the selected level.
+-- #358: stage_label is the mart's dbt display column; stages listed in cycle order within each
+-- area; stage_note carries the spec §1 C2 text for the "No stage on record" bucket.
 select
     area_name,
-    case typology_stage
-        when 'active-gentrification' then 'Active gentrification'
-        when 'pioneer-signal' then 'Early pioneer signal'
-        when 'improving-vulnerable' then 'Improving, vulnerable area'
-        when 'pre-gentrification' then 'Pre-gentrification watch'
-        when 'consolidation-pressure' then 'Consolidated, still intensifying'
-        when 'stable-established' then 'Stable, established'
-        else typology_stage -- 'uninhabited / no data' -- already plain language, pass through
-    end as stage_label,
+    stage_label,
+    case
+        when stage_number is null then 'not scored by the Sozialmonitoring'
+        else ''
+    end as stage_note,
     stage_population_share,
     stage_n_children,
     has_incomplete_population
@@ -640,12 +594,13 @@ where area_level = '${inputs.area_level.value}'
       from gentriduck_marts.mart_area_rollup_stage_mix
       where area_level = '${inputs.area_level.value}' and city_code = 'HH' and variant = 'live_data'
   )
-order by area_name, stage_population_share desc nulls last
+order by area_name, stage_number nulls last
 ```
 
 <DataTable data={area_mix_table} rows=50 search=true>
     <Column id=area_name title="Area"/>
     <Column id=stage_label title="Stage"/>
+    <Column id=stage_note title="Note"/>
     <Column id=stage_population_share title="Share (population-weighted, or equal-weighted — see last column)" fmt="pct0"/>
     <Column id=stage_n_children title="Constituent Gebiete"/>
     <Column id=has_incomplete_population title="Population data incomplete for this area?"/>
@@ -657,7 +612,7 @@ order by area_name, stage_population_share desc nulls last
     <Column id=area_name title="Statistisches Gebiet"/>
     <Column id=code_note title="Code (if not in the name)"/>
     <Column id=status_index title="Social status (1=least deprived … 4=most deprived)"/>
-    <Column id=dynamism_index title="Speed of change (higher = faster upward change, 3-year window)"/>
+    <Column id=dynamism_index title="Status trend class (1 = improving, 2 = stable, 3 = worsening; 3-year window)"/>
     <Column id=stage_label title="Gentrification stage"/>
 </DataTable>
 
@@ -676,7 +631,7 @@ Offering Advantage by domain — see the
   **more deprived**, not more prosperous. See [methodology & data sources](/methodology) for the
   full decoder.
 - **Hamburg's Dynamik window is 3 years, Berlin's is 2** — this is a qualitative difference in
-  what "active-gentrification" means, not just a numeric-scale one; see
+  what "4 · Active gentrification" means, not just a numeric-scale one; see
   [methodology §6](/methodology) point 1.
 - **Stadtteil / Bezirk are population-weighted rollups, where possible, never a re-scored index.**
   The map colours by the *most widespread* ("dominant") stage among each area's constituent
@@ -685,13 +640,13 @@ Offering Advantage by domain — see the
   standalone label. Areas with fewer than 3 Gebiete contributing real data are flagged fragile.
 - **A coarse-grain reading is directionally biased toward "calm", not neutral.** Plurality voting
   resolves an area to whichever stage is most widespread among its constituents, and the most
-  widespread stage is, by construction, usually the least acute one — so coarser levels
-  systematically understate pressure rather than randomly blurring it. An area shown as "Stable,
-  established" can still contain neighbourhoods under acute pressure; this map cannot be read as
-  evidence that pressure is absent anywhere in it. The share of the area in an acute-pressure stage
+  widespread stage is, by construction, usually "6 · Stable / established" — so coarser levels
+  systematically understate local change rather than randomly blurring it. An area shown as
+  "6 · Stable / established" can still contain smaller neighbourhoods in stages 2–4; this map
+  cannot be read as evidence that no part of it is changing. The share of the area in stages 2–4
   (residents where population data exists, otherwise constituent areas — in the tooltip and table
-  above) and the statistisches Gebiet level — the finest grain this site publishes — are where that
-  pressure is actually locatable.
+  above) and the statistisches Gebiet level — the finest grain this site publishes — are where such
+  change can actually be located.
 - **The rollup "Social status"/"Speed of change" figures are a mean ordinal class (a mean rank),
   population-weighted where population data is complete and equal-weighted otherwise, not a
   rescaled score.** They are not offered as a map colour at Stadtteil/Bezirk grain, and the table
@@ -719,8 +674,8 @@ Offering Advantage by domain — see the
   via a map click.
 - **[POI & Offering Advantage map](/hamburg/poi-map)** — the commercial-mix (shops/cafés) view of
   the same Gebiete.
-- **[Methodology & data sources](/methodology)** — what "gentrification pressure" and the six-stage
-  typology mean, and (§6) how Hamburg's data differs from Berlin's.
+- **[Methodology & data sources](/methodology)** — what the six gentrification stages
+  mean, and (§6) how Hamburg's data differs from Berlin's.
 
 ---
 

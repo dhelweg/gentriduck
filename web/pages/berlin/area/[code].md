@@ -31,7 +31,7 @@ hide_breadcrumbs: true
   What changed:
 
   1. **Portrait block** ("<AreaName> at a glance"): a deterministic template composed from already-
-     published mart columns (gentrification_index's current stage/pressure, fct_gentrification_trajectory's
+     published mart columns (gentrification_index's current stage/status trend, fct_gentrification_trajectory's
      trajectory summary, mart_poi_offering_advantage_map's domain mix) -- no free-generated text, no
      new statistic. The stage-to-plain-language mapping is a fixed dictionary over the six
      ADR-0008 typology_stage values (see script block below); the "how fast" wording buckets the
@@ -41,6 +41,12 @@ hide_breadcrumbs: true
      reviews. Degrades explicitly for the two sparse cases confirmed present in the current 542
      PLRs: uninhabited PLRs (status_index/typology_stage NULL -- 7 of 542 at the time of writing)
      and areas with < 2 MSS editions on record (trajectory_confidence='low', no speed claim made).
+
+  #358 (docs/epic-g/358-spec.md §1, §5): stage labels shown on this page are the dbt display
+  columns (gentrification_index.stage_label, fct_gentrification_trajectory.dominant_stage_label),
+  never the raw typology key; the portrait's stage sentences use the numbered labels and the §5
+  wording (no "pressure" framing). Per spec C2, "uninhabited" is only said where the population is
+  0; other unscored PLRs read "no stage on record".
 
   2. **OA radar dedup fix (I15 root cause, applied here as scoped):** the previous query read raw
      leaf-grain rows from `mart_poi_offering_advantage` with no GROUP BY/DISTINCT, so a domain with
@@ -129,7 +135,7 @@ select
 ```
 
 ```sql context_current
--- Current (latest published period) status/pressure for this area, plus the simple district and
+-- Current (latest published period) stage/status trend for this area, plus the simple district and
 -- citywide averages at that same period -- for the portrait's "compared to district/city" claim
 -- and the status chart's context lines' current-value anchor. Unweighted means, same style as the
 -- citywide averages already used on /berlin/poi-map's "Citywide context" section.
@@ -162,7 +168,11 @@ with
     )
 select
     gi.status_class as stage,
-    gi.dynamism_class as pressure_trend,
+    -- #358: display label + official status trend from dbt (spec §1-§2); population drives the
+    -- C2 "uninhabited only where population = 0" wording below.
+    gi.stage_label,
+    gi.status_trend,
+    gi.population,
     gi.status_index,
     gi.dynamism_index,
     d.district_avg_status_index,
@@ -223,27 +233,35 @@ where
   $: hasStatus = cur && cur.status_index !== null && cur.status_index !== undefined;
 
   // Fixed dictionary over ADR-0008's six typology_stage values (index-definition.md §1.5) --
-  // this is the wording the domain-expert framing gate reviews. Risk/pressure language only
+  // this is the wording the domain-expert framing gate reviews. Risk/signal language only
   // (storytelling-guide.md §3 rule 5): never "is gentrifying," always a named stage + what it
-  // does and doesn't claim.
+  // does and doesn't claim. Keyed on the stable stage key (data contract); the bold label is the
+  // public #358 numbered label (docs/epic-g/358-spec.md §1). #358 §5: active-gentrification and
+  // consolidation-pressure use the spec's exact sentences; pioneer-signal keeps its sentence with
+  // only the label changed (and its closing "pressure" dropped -- see the PR note).
   const stageWording = {
     'stable-established':
-      "classified **stable-established** — consistently low deprivation, with no sign of an active gentrification-type process",
+      "classified **6 · Stable / established** — consistently low deprivation, with no sign of an active gentrification-type process",
     'pre-gentrification':
-      "classified **pre-gentrification** — still comparatively deprived, and not yet showing the upward status movement that would signal an active process",
+      "classified **1 · Pre-gentrification** — still comparatively deprived, and not yet showing the upward status movement that would signal an active process",
     'pioneer-signal':
-      "showing a **pioneer signal** — an early, small-scale upward shift in status, the kind of movement that sometimes precedes wider gentrification pressure",
+      "showing a **3 · Pioneer signal** — an early, small-scale upward shift in status, the kind of movement that sometimes precedes wider gentrification",
     'active-gentrification':
-      "in **active-gentrification** — the strongest form of the upward-status pressure this site tracks",
+      "in **4 · Active gentrification**: a middle-status area whose official status is still improving, the core of the upgrading process this site tracks",
     'consolidation-pressure':
-      "under **consolidation pressure** — status is already comparatively high and continuing to firm up, consistent with a later stage of the process",
+      "in **5 · Consolidation**: status is already comparatively high and still improving, consistent with a later stage of the cycle",
     'improving-vulnerable':
-      "a named, deliberately ambiguous **\"improving-vulnerable\"** case — status is improving even though the area remains comparatively deprived; the site reports this combination without resolving it (see methodology)"
+      "in the deliberately ambiguous **2 · Improving from very low status (ambiguous)** — status is improving even though the area remains comparatively deprived; the site reports this combination without resolving it (see methodology)"
   };
 
+  // #358 (spec §1, C2): "uninhabited" only where the population is 0; any other unscored PLR has
+  // "no stage on record".
+  $: isUninhabited = cur && Number(cur.population) === 0;
   $: stageSentence = !hasStatus
-    ? `${areaName()} is classified as **uninhabited** in Berlin's official population register (no resident population) — the social-status figures on this page do not apply here.`
-    : `${areaName()} is currently ${stageWording[cur.stage] ?? `classified **${cur.stage ?? 'unclassified'}**`} ([what this does and doesn't mean](/methodology)).`;
+    ? (isUninhabited
+        ? `${areaName()} is classified as **uninhabited** in Berlin's official population register (no resident population) — the social-status figures on this page do not apply here.`
+        : `${areaName()} has **no stage on record**: Berlin's latest social-monitoring edition gives it no status classification, so the social-status figures on this page do not apply here.`)
+    : `${areaName()} is currently ${stageWording[cur.stage] ?? `classified **${cur.stage_label ?? 'No stage on record'}**`} ([what this does and doesn't mean](/methodology)).`;
 
   // -- Portrait: how it compares to district & city (current status level) --------------------
   $: comparisonSentence = (() => {
@@ -483,7 +501,8 @@ select
     status_index_last,
     status_delta,
     trajectory_type,
-    dominant_stage,
+    -- #358: display label, not the raw key (spec §1).
+    dominant_stage_label,
     trajectory_confidence
 from gentriduck_marts.fct_gentrification_trajectory
 where city_code = 'BER' and area_vintage = 'lor_2021' and area_code = '${params.code}'
@@ -499,16 +518,26 @@ group by trajectory_type
 ```
 
 {#if hasStatus}
-<BigValue data={context_current} value=stage title="Current stage"/>
-{:else}
+<BigValue data={context_current} value=stage_label title="Current stage"/>
+<BigValue data={context_current} value=status_trend title="Status trend"/>
+{:else if isUninhabited}
 <Alert status="info">
   This is an uninhabited planning area in Berlin's official population register (e.g. a park,
   development site, or similar) — no current stage applies here.
 </Alert>
+{:else}
+<Alert status="info">
+  No stage on record: Berlin's latest social-monitoring edition gives this planning area no status
+  classification, so no current stage applies here.
+</Alert>
 {/if}
 <BigValue data={trajectory_summary} value=trajectory_type title="Overall trajectory" emptySet="warn"/>
-<BigValue data={trajectory_summary} value=dominant_stage title="Most common stage" emptySet="warn"/>
+<BigValue data={trajectory_summary} value=dominant_stage_label title="Most common stage" emptySet="warn"/>
 <BigValue data={trajectory_summary} value=trajectory_confidence title="Confidence" emptySet="warn"/>
+
+<StageNumberLegend />
+
+<StatusTrendLegend />
 
 Trajectory labels are explained on the [methodology page](/methodology) — an "improving" label does
 not by itself mean the change was good for existing residents; rising status can reflect
@@ -621,7 +650,7 @@ domain as a **percentage above or below Berlin's citywide average share** for th
 average; a **negative** percentage means the opposite, under-representation, shown the same way.
 OA is one input among several into the governed index (see [methodology](/methodology)), never a
 standalone gentrification score on its own — and vacancy (if shown) marks the *opposite* pole from
-the others, a pre-reinvestment signal, not a "more OA is more pressure" reading. See the
+the others, a pre-reinvestment signal, not a "more OA means more gentrification" reading. See the
 [POI & Offering Advantage map](/berlin/poi-map) to explore this across all of Berlin.
 
 ```sql poi_oa_radar

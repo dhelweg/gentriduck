@@ -116,7 +116,9 @@ order by stadtteil_name
 -- (see header note). Same shape as pages/berlin/area/bezirk/[code].md's stage_mix.
 select
     -- Not 'uninhabited': see pages/hamburg/area/subarea_l1/[code].md's stage_mix comment.
-    coalesce(gi.status_class, 'no stage on record') as stage,
+    -- #358: dbt display label (spec §1); unscored Gebiete read "No stage on record".
+    coalesce(gi.stage_label, 'No stage on record') as stage,
+    gi.stage_number,
     count(*) as n_areas
 from gentriduck_marts.mart_area_hierarchy as g2
 join
@@ -140,7 +142,7 @@ order by n_areas desc
 -- Modal stage + heterogeneity flag from the SAME rows as stage_mix (Gebiete with a stage only).
 with
     mix as (
-        select gi.status_class as stage, count(*) as n_areas
+        select gi.stage_label as stage, gi.stage_number, count(*) as n_areas
         from gentriduck_marts.mart_area_hierarchy as g2
         join
             gentriduck_marts.mart_area_hierarchy as g1
@@ -156,7 +158,7 @@ with
             )
         where
             g2.city_code = 'HH' and g2.area_level = 'subarea_l2'
-            and g1.parent_area_code = '${params.code}' and gi.status_class is not null
+            and g1.parent_area_code = '${params.code}' and gi.stage_number is not null
         group by all
     ),
     totals as (select sum(n_areas) as n_total from mix),
@@ -164,7 +166,7 @@ with
     advanced as (
         select coalesce(sum(n_areas), 0) as n_advanced
         from mix
-        where stage in ('active-gentrification', 'pioneer-signal')
+        where stage_number in (3, 4) -- 3 · Pioneer signal, 4 · Active gentrification
     )
 select
     t.n_total,
@@ -200,7 +202,7 @@ from totals as t cross join top cross join advanced as a
         const majorityClause = (topShare != null && topShare > 0.5)
           ? `<b>${mssMix.top_stage}</b> is the only stage holding a majority (${Math.round(topShare * 100)}%)`
           : 'no single stage holds a majority';
-        return `<b>${nAdvanced}</b> of <b>${nTotal}</b> Gebiete with a current stage here are classified <b>active-gentrification</b> or <b>pioneer-signal</b>; ${majorityClause} — a distribution across this district's own Gebiete, never a single re-scored gentrification-index value for the district itself.`;
+        return `<b>${nAdvanced}</b> of <b>${nTotal}</b> Gebiete with a current stage here are classified <b>4 · Active gentrification</b> or <b>3 · Pioneer signal</b>; ${majorityClause} — a distribution across this district's own Gebiete, never a single re-scored gentrification-index value for the district itself.`;
       })();
 
   $: trajMix = trajectory_mix_summary?.[0];
@@ -249,6 +251,8 @@ same-named Berlin stages (Hamburg's Dynamik window is 3 years, Berlin's 2;
 {/if}
 
 <BarChart data={stage_mix} x=stage y=n_areas title="Gebiete by current stage, {district_name[0] ? district_name[0].area_name : 'this district'}" swapXY=true emptySet="warn" emptyMessage="No Gebiet stage data for this district."/>
+
+<StageNumberLegend />
 
 Which Gebiete belong to this district comes from its Stadtteile (a source-provided attribute) and,
 one level down, a spatial crosswalk assigning each Gebiet to the Stadtteil that contains it
@@ -469,7 +473,7 @@ source-provided district attribute on its Stadtteil geodata — published withou
 
 See the [Hamburg data hub](/hamburg) for what's published today, [Hamburg's map](/hamburg/maps)
 (switch the area level to Bezirk for this district's stage mix on the map),
-[browse by district](/hamburg/area-detail) for this district's Gebiete ordered by their pressure reading, or
+[browse by district](/hamburg/area-detail) for this district's Gebiete ordered by stage, or
 [the area-hierarchy reference](/reference/area-hierarchy) for how Hamburg's small-area geography is
 structured.
 

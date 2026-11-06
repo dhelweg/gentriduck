@@ -368,7 +368,7 @@ limit 15
 ## Further reading
 
 See [ADR-0017](https://github.com/dhelweg/gentriduck/blob/main/docs/adr/0017-poi-offering-advantage-revival.md)
-for how Offering Advantage is computed, the [Hamburg gentrification-pressure map](/hamburg/maps)
+for how Offering Advantage is computed, the [Hamburg gentrification-stage map](/hamburg/maps)
 for the governed D1/D2 outcome, the [Hamburg data hub](/hamburg) for the full inventory of what is
 and isn't built for Hamburg, or [methodology & data sources](/methodology) for the full
 Berlin/Hamburg comparability caveats.

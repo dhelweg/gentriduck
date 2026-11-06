@@ -33,8 +33,9 @@ every neighbourhood has a real, findable page (see this file's header comment).
 select
     area_name,
     substr(area_code, 1, 2) as bezirk,
-    status_class as stage,
-    dynamism_class as pressure_trend,
+    -- #358: dbt display columns (spec §1-§2), never the raw key.
+    stage_label as stage,
+    status_trend,
     '/berlin/area/' || area_code as area_link
 from gentriduck_marts.gentrification_index
 where variant = 'live_data' and area_level = 'plr' and city_code = 'BER'
@@ -49,8 +50,12 @@ order by area_name
     <Column id=area_name title="Neighbourhood (PLR)"/>
     <Column id=bezirk title="District code"/>
     <Column id=stage title="Stage"/>
-    <Column id=pressure_trend title="Pressure trend"/>
+    <Column id=status_trend title="Status trend"/>
 </DataTable>
+
+<StageNumberLegend />
+
+<StatusTrendLegend />
 
 ---
 

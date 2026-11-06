@@ -86,10 +86,9 @@ and [the back-test methodology](https://github.com/dhelweg/gentriduck/blob/main/
 ### 3. A six-stage typology is more decision-useful than a single blended score
 
 **What the data shows:** rather than collapsing status and change into one number, the governed
-index places every area into one of six named stages (`stable-established`,
-`pre-gentrification`, `pioneer-signal`, `active-gentrification`, `consolidation-pressure`,
-`improving-vulnerable`) built from the official status and dynamism axes together — deliberately
-keeping the deprived-and-rising cell (`improving-vulnerable`) as a *named, honest ambiguity* rather
+index places every area into one of six numbered stages (1 · Pre-gentrification, 2 · Improving from very low status (ambiguous), 3 · Pioneer signal, 4 · Active gentrification,
+5 · Consolidation, 6 · Stable / established) built from the official status and dynamism axes together — deliberately
+keeping the deprived-and-rising cell (2 · Improving from very low status (ambiguous)) as a *named, honest ambiguity* rather
 than forcing it into either a clearly-good or clearly-bad bucket. A single score cannot represent
 that ambiguity; a two-axis typology can. **Read as: ask any tool or vendor "does this give me a
 status AND a trend, or one blended number that hides the difference?" — the two-axis version is
@@ -103,7 +102,7 @@ social monitor, price/rent references — runs on free, open, official data with
 proprietary source, and produces a monitoring view that passes its own pipeline-integrity and
 label-consistency back-test; its one partially independent check, against Berlin's Milieuschutz
 designations, gives only weak support. A harder ask — predicting *which* areas will move
-into elevated-pressure stages before they do, using only openly-available precursor signals — was
+into stages 2–4 before they do, using only openly-available precursor signals — was
 tested out-of-time (train on one wave, test strictly later) and came back **below chance** on the
 held-out data. That is reported as a genuine negative result, not tuned away. **Read as: open data
 is enough to build a credible "where are we now" monitoring tool today; it is not yet enough, on
@@ -129,8 +128,8 @@ price/rent data — and the grains of each need to be checked, not assumed to ma
 
 - **Not a displacement measurement.** Every number on this site describes a small-area aggregate of
   a few thousand residents — it cannot observe that a specific household was, or will be,
-  involuntarily displaced. This project deliberately uses risk/pressure/signal language throughout
-  (`consolidation-pressure`, not "post-displacement") rather than a claim that displacement has
+  involuntarily displaced. This project deliberately uses risk and signal language throughout
+  ('5 · Consolidation', not 'post-displacement') rather than a claim that displacement has
   occurred. Inferring an individual's or a building's situation from an area-level stage is an
   ecological fallacy.
 - **Not a causal effect.** Every relationship above (commerce ↔ status, precursor ↔ later stage) is
@@ -140,7 +139,7 @@ price/rent data — and the grains of each need to be checked, not assumed to ma
   parked, not attempted here.
 - **Not a reliable early-warning tool, yet.** Takeaway 4 is blunt about this on purpose: the
   out-of-time prediction test underperformed chance. Treat the live typology as a *monitoring*
-  view of where pressure currently sits, not a forecast of where it is going next.
+  view of where each area currently sits in the cycle, not a forecast of where it is going next.
 - **Not a number-for-number replay of the 2018 thesis.** This is a directional revival on a rebuilt
   stack and largely different data vintages, not an exact reproduction — see
   [the 2018 thesis, re-checked](/thesis-recheck) for exactly where it agrees and where it diverges.

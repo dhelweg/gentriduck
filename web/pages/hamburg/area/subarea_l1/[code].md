@@ -104,8 +104,9 @@ limit 1
 select
     h.area_code as gebiet_code,
     coalesce(g.area_name, h.area_code) as gebiet_name,
-    gi.status_class as stage,
-    gi.dynamism_class as pressure_trend,
+    -- #358: dbt display columns (spec §1-§2), never the raw key.
+    coalesce(gi.stage_label, 'No stage on record') as stage,
+    coalesce(gi.status_trend, 'No trend on record') as status_trend,
     '/hamburg/area/' || h.area_code as gebiet_link
 from gentriduck_marts.mart_area_hierarchy as h
 left join
@@ -132,7 +133,9 @@ select
     -- Not 'uninhabited': a Gebiet without a stage may simply be below Hamburg's own reporting
     -- threshold, so the label only says what is known (no stage on record). Cf. the #313 domain
     -- sign-off's D-7 finding about an unconditional 'uninhabited' label.
-    coalesce(gi.status_class, 'no stage on record') as stage,
+    -- #358: dbt display label (spec §1); unscored Gebiete read "No stage on record".
+    coalesce(gi.stage_label, 'No stage on record') as stage,
+    gi.stage_number,
     count(*) as n_areas
 from gentriduck_marts.mart_area_hierarchy as h
 left join
@@ -155,7 +158,7 @@ order by n_areas desc
 -- total, so the sentence only counts Gebiete that actually carry a stage.
 with
     mix as (
-        select gi.status_class as stage, count(*) as n_areas
+        select gi.stage_label as stage, gi.stage_number, count(*) as n_areas
         from gentriduck_marts.mart_area_hierarchy as h
         join
             gentriduck_marts.gentrification_index as gi
@@ -168,7 +171,7 @@ with
             )
         where
             h.city_code = 'HH' and h.area_level = 'subarea_l2'
-            and h.parent_area_code = '${params.code}' and gi.status_class is not null
+            and h.parent_area_code = '${params.code}' and gi.stage_number is not null
         group by all
     ),
     totals as (select sum(n_areas) as n_total from mix),
@@ -176,7 +179,7 @@ with
     advanced as (
         select coalesce(sum(n_areas), 0) as n_advanced
         from mix
-        where stage in ('active-gentrification', 'pioneer-signal')
+        where stage_number in (3, 4) -- 3 · Pioneer signal, 4 · Active gentrification
     )
 select
     t.n_total,
@@ -214,7 +217,7 @@ from totals as t cross join top cross join advanced as a
         const majorityClause = (topShare != null && topShare > 0.5)
           ? `<b>${mssMix.top_stage}</b> is the only stage holding a majority (${Math.round(topShare * 100)}%)`
           : 'no single stage holds a majority';
-        return `<b>${nAdvanced}</b> of <b>${nTotal}</b> Gebiete with a current stage here are classified <b>active-gentrification</b> or <b>pioneer-signal</b>; ${majorityClause} — a distribution across this Stadtteil's own Gebiete, never a single re-scored gentrification-index value for the Stadtteil itself.`;
+        return `<b>${nAdvanced}</b> of <b>${nTotal}</b> Gebiete with a current stage here are classified <b>4 · Active gentrification</b> or <b>3 · Pioneer signal</b>; ${majorityClause} — a distribution across this Stadtteil's own Gebiete, never a single re-scored gentrification-index value for the Stadtteil itself.`;
       })();
 
   $: trajMix = trajectory_mix_summary?.[0];
@@ -262,6 +265,8 @@ Berlin stages (Hamburg's Dynamik window is 3 years, Berlin's 2; [methodology §6
 {/if}
 
 <BarChart data={stage_mix} x=stage y=n_areas title="Gebiete by current stage, {stadtteil_name[0] ? stadtteil_name[0].area_name : 'this Stadtteil'}" swapXY=true emptySet="warn" emptyMessage="No Gebiet stage data for this Stadtteil."/>
+
+<StageNumberLegend />
 
 Which Gebiete belong to this Stadtteil comes from a spatial crosswalk (each Gebiet assigned to the
 Stadtteil that contains it; OA-D1b, #240), not from the Gebiet codes themselves.
@@ -572,8 +577,10 @@ order by sort_order, area_name
 <DataTable data={children} rows=20 link=gebiet_link emptySet="warn" emptyMessage="No constituent Gebiete found for this Stadtteil.">
     <Column id=gebiet_name title="Statistisches Gebiet"/>
     <Column id=stage title="Stage"/>
-    <Column id=pressure_trend title="Pressure trend"/>
+    <Column id=status_trend title="Status trend"/>
 </DataTable>
+
+<StatusTrendLegend />
 
 The parent district ("Up:" above) is a source-provided attribute of Hamburg's Stadtteil geodata;
 the Gebiet list comes from the OA-D1b (#240) spatial crosswalk. Both are published through
