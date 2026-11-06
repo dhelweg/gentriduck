@@ -27,6 +27,11 @@
 -- Changes require a deliberate contract edit and reviewer sign-off.
 -- Contract extended in C4 (#24): added 'live_data' to variant accepted values.
 -- status_class for live_data now carries the typology stage name (ADR-0008; R-A1).
+-- Contract extended in #358 (docs/epic-g/358-spec.md Rev. 1): four columns APPENDED
+-- (typology_stage, stage_number, stage_label, status_trend), populated for
+-- variant='live_data' only and NULL for every other variant. No pre-#358 column or
+-- value changes (verified at implementation by an EXCEPT ALL before/after comparison
+-- of the pre-#358 columns; recorded in the #358 review hand-off).
 -- PLR-level aggregate; not an individual- or building-level statement. Inferring an
 -- individual's situation from a PLR stage is an ecological fallacy (G-2 guardrail;
 -- index-definition.md §1.2).
@@ -71,6 +76,12 @@
     )
 }}
 
+-- #358: live_data typology stage, computed once with the shared D1xD2 macro and
+-- reused by the stage display columns below (ADR-0008; index-definition.md §1.5).
+{% set live_stage %}
+    ({{ typology_stage('ts.status_index', 'ts.dynamik_index') }})
+{% endset %}
+
 -- 2018 thesis baseline (unchanged)
 select
     city_code,
@@ -87,7 +98,14 @@ select
     dynamism_class,
     dynamism_class_bi,
     own_idx_class,
-    own_idx_class_bi
+    own_idx_class_bi,
+    -- #358: stage display + status trend are live_data-only (spec §1/§2, geo C3).
+    -- Thesis variants carry the 2018 POI-dynamism projection, not the official
+    -- Dynamik, so no typology stage or status trend exists for them.
+    cast(null as varchar) as typology_stage,
+    cast(null as integer) as stage_number,
+    cast(null as varchar) as stage_label,
+    cast(null as varchar) as status_trend
 from {{ ref("int_thesis_2018_area_index") }}
 
 union all
@@ -167,7 +185,43 @@ select
         then 'negative'
     end as dynamism_class_bi,
     cast(null as varchar) as own_idx_class,
-    cast(null as varchar) as own_idx_class_bi
+    cast(null as varchar) as own_idx_class_bi,
+    -- #358 (spec docs/epic-g/358-spec.md Rev. 1, §1/§2; geo review C1/C3): display
+    -- columns, appended after the pre-#358 contract columns, which are unchanged.
+    -- typology_stage: the existing D1xD2 typology_stage() macro on the same D1
+    -- Status / D2 Dynamik ordinals int_gentrification_ts uses (ADR-0008 D1xD2
+    -- typology matrix; index-definition.md §1.5; Dangschat 1988 double
+    -- invasion-succession cycle) -- identical to status_class for live_data, exposed
+    -- under its own name so consumers stop reading status_class as "stage".
+    -- Equality with int_gentrification_ts.typology_stage is asserted by
+    -- tests/test_358_gentrification_index_stage_matches_ts.sql.
+    cast({{ live_stage }} as varchar) as typology_stage,
+    -- stage_number / stage_label: cycle position + exact public label from
+    -- typology_stage_display() (Dangschat 1988; Clay 1979 pioneer -> expanding ->
+    -- maturing = stages 3 -> 4 -> 5; Smith 1979 rent-gap precondition = stage 1).
+    -- NULL stage (uninhabited / unscored) -> 'No stage on record', NULL number.
+    {{ typology_stage_display(live_stage) }},
+    -- status_trend: neutral public reading of the official D2 Dynamik class, a
+    -- RELATIVE change of the official status indicators vs the whole city (Berlin
+    -- MSS: 2-year window; Hamburg Sozialmonitoring: 3-year window -- the window
+    -- belongs in the page legend, not in the value; ADR-0005).
+    -- 1=positiv -> Improving, 2=stabil -> Stable, 3=negativ -> Worsening
+    -- (index-definition.md §1.4/§3.4; sign confirmed in both cities by
+    -- docs/epic-g/358-spec-geo-review.md §1). NOT a pressure measure: negativ
+    -- Dynamik is filtering-down, at most a rent-gap precondition (Smith 1979); the
+    -- upgrading signal is positiv Dynamik in low/middle status (Dangschat 1988;
+    -- index-definition.md §1.5). Any unmapped code yields NULL (caught by the
+    -- not_null test on live_data rows).
+    case
+        when ts.dynamik_index is null
+        then 'No trend on record'
+        when ts.dynamik_index = 1
+        then 'Improving'
+        when ts.dynamik_index = 2
+        then 'Stable'
+        when ts.dynamik_index = 3
+        then 'Worsening'
+    end as status_trend
 from {{ ref("int_gentrification_ts") }} as ts
 inner join
     {{ ref("dim_area") }} as da
@@ -209,7 +263,13 @@ select
     cast(null as varchar) as dynamism_class,
     cast(null as varchar) as dynamism_class_bi,
     cast(null as varchar) as own_idx_class,
-    cast(null as varchar) as own_idx_class_bi
+    cast(null as varchar) as own_idx_class_bi,
+    -- #358: no D1xD2 outcome is recomputed for this predictor variant (see above),
+    -- so no stage display or status trend either (live_data-only; spec §1/§2).
+    cast(null as varchar) as typology_stage,
+    cast(null as integer) as stage_number,
+    cast(null as varchar) as stage_label,
+    cast(null as varchar) as status_trend
 from {{ ref("int_gentrification_ts") }} as ts
 inner join
     {{ ref("dim_area") }} as da
