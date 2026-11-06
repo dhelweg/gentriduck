@@ -21,7 +21,9 @@ models:
 
       #358 (docs/epic-g/358-spec.md Rev. 1): four display columns appended for
       variant='live_data' only (NULL for every other variant) -- typology_stage,
-      stage_number, stage_label, status_trend. No pre-#358 column or value changed.
+      stage_number, stage_label, status_trend. Pre-#358 columns: no value change
+      beyond upstream float noise <=5e-14 in the 'improved' variant (bit-exact copies
+      of int_gentrification_ts; no upstream SQL changed).
 
       Index definition reference: docs/adr/0004-data-governance-and-index-definition.md
 

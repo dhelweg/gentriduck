@@ -1,13 +1,14 @@
 -- test_358_stage_display_mapped.sql
 -- #358 (docs/epic-g/358-spec.md Rev. 1 §1; geo review C1/C2): no unmapped stage
 -- value. For every stage key a stage mart emits (typology_stage / dominant_stage),
--- the typology_stage_display() columns must be:
--- - for one of the six D1xD2 keys (ADR-0008; index-definition.md §1.3/§1.5): a
--- number 1-6 and a label that starts with that same number followed by ' · ';
--- - for NULL or the roll-up bucket 'uninhabited / no data': NULL number and the
--- label 'No stage on record';
--- - anything else (a new, unmapped key): a failure, so a stage key added upstream
--- can never reach the site unlabelled.
+-- the typology_stage_display() columns must EXACTLY match one of the pinned
+-- (stage_key, stage_number, stage_label) triples of spec §1 (the `expected` CTE):
+-- - the six D1xD2 keys (ADR-0008; index-definition.md §1.3/§1.5) -> 1-6 + label;
+-- - NULL and the roll-up bucket 'uninhabited / no data' -> NULL number, label
+-- 'No stage on record'.
+-- A key with no triple (a new, unmapped key) or a number/label that differs from
+-- its triple (e.g. pioneer-signal mapped to '4 · Active gentrification') is a
+-- failure, so a stage key can never reach the site unlabelled or mislabelled.
 -- (gentrification_index rows are checked for variant='live_data' only; the other
 -- variants are NULL by construction, asserted in
 -- test_358_status_trend_live_data_only.sql.)
@@ -71,32 +72,42 @@ with
             dominant_stage_number,
             dominant_stage_label
         from {{ ref("mart_area_rollup_stage_mix") }}
+    ),
+
+    expected as (
+        select t.stage_key, t.stage_number, t.stage_label
+        from
+            (
+                values
+                    ('pre-gentrification', 1, '1 · Pre-gentrification'),
+                    (
+                        'improving-vulnerable',
+                        2,
+                        '2 · Improving from very low status (ambiguous)'
+                    ),
+                    ('pioneer-signal', 3, '3 · Pioneer signal'),
+                    ('active-gentrification', 4, '4 · Active gentrification'),
+                    ('consolidation-pressure', 5, '5 · Consolidation'),
+                    ('stable-established', 6, '6 · Stable / established'),
+                    (null, null, 'No stage on record'),
+                    ('uninhabited / no data', null, 'No stage on record')
+            ) as t(stage_key, stage_number, stage_label)
     )
 
 select
-    model_name, stage_column, stage_key, stage_number, stage_label, count(*) as n_rows
-from emitted
--- coalesce(..., false): a NULL comparison (e.g. a NULL label on a valid key) must
--- count as a violation, not silently drop out of the WHERE.
+    em.model_name,
+    em.stage_column,
+    em.stage_key,
+    em.stage_number,
+    em.stage_label,
+    ex.stage_number as expected_stage_number,
+    ex.stage_label as expected_stage_label,
+    count(*) as n_rows
+from emitted as em
+-- IS NOT DISTINCT FROM so the NULL-key triple matches NULL keys.
+left join expected as ex on em.stage_key is not distinct from ex.stage_key
 where
-    not coalesce(
-        (
-            stage_key in (
-                'pre-gentrification',
-                'improving-vulnerable',
-                'pioneer-signal',
-                'active-gentrification',
-                'consolidation-pressure',
-                'stable-established'
-            )
-            and stage_number between 1 and 6
-            and stage_label like cast(stage_number as varchar) || ' · %'
-        )
-        or (
-            (stage_key is null or stage_key = 'uninhabited / no data')
-            and stage_number is null
-            and stage_label = 'No stage on record'
-        ),
-        false
-    )
-group by model_name, stage_column, stage_key, stage_number, stage_label
+    ex.stage_label is null  -- unmapped key: no pinned triple
+    or em.stage_number is distinct from ex.stage_number
+    or em.stage_label is distinct from ex.stage_label
+group by all

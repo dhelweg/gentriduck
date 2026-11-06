@@ -29,9 +29,9 @@
 -- status_class for live_data now carries the typology stage name (ADR-0008; R-A1).
 -- Contract extended in #358 (docs/epic-g/358-spec.md Rev. 1): four columns APPENDED
 -- (typology_stage, stage_number, stage_label, status_trend), populated for
--- variant='live_data' only and NULL for every other variant. No pre-#358 column or
--- value changes (verified at implementation by an EXCEPT ALL before/after comparison
--- of the pre-#358 columns; recorded in the #358 review hand-off).
+-- variant='live_data' only and NULL for every other variant. Pre-#358 columns: no
+-- value change beyond upstream float noise <=5e-14 in the 'improved' variant
+-- (bit-exact copies of int_gentrification_ts; no upstream SQL changed).
 -- PLR-level aggregate; not an individual- or building-level statement. Inferring an
 -- individual's situation from a PLR stage is an ecological fallacy (G-2 guardrail;
 -- index-definition.md §1.2).
