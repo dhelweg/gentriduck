@@ -80,10 +80,10 @@ where variant = 'live_data' and area_level = 'plr' and city_code = 'BER'
     ranked list of the neighbourhoods that moved the most.
   </LinkCard>
   <LinkCard href="/berlin/area-detail" icon="🏘️" title="Area detail — start here" cta="Browse by district →">
-    <!-- #353 review: no nested <a> inside the card's own link; spotlight wording follows the
-         #353 domain spot-check R2 (the order is a 3-value reading with ties, not a ranking). -->
-    The primary way in: browse by district (Bezirk), then read a headline spotlight on one
-    neighbourhood with that district's strongest pressure reading, with a link to its full
+    <!-- #353 review: no nested <a> inside the card's own link. #358 (spec §5 hub blurb): the
+         spotlight is the reader's pick, not a "strongest reading" area. -->
+    The primary way in: browse a district (Bezirk) and its neighbourhoods, then read a headline
+    spotlight with a snapshot of any one of them, with a link to its full
     profile. If you already know the neighbourhood's name, the full searchable list (next card) is
     faster.
   </LinkCard>

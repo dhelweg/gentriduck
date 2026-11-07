@@ -16,7 +16,14 @@ models:
 
       All class labels use English values (translated at the staging boundary).
       Label polarity note: status_class 'low' = low deprivation / wealthier area;
-      dynamism_class 'negative' = high gentrification pressure. See B5-findings-check.md.
+      dynamism_class: live_data = official Dynamik class (status trend); thesis variants =
+      2018 POI-dynamism class, polarity per B5-findings-check.md. Not a pressure measure.
+
+      #358 (docs/epic-g/358-spec.md Rev. 1): four display columns appended for
+      variant='live_data' only (NULL for every other variant) -- typology_stage,
+      stage_number, stage_label, status_trend. Pre-#358 columns: no value change
+      beyond upstream float noise <=5e-14 in the 'improved' variant (bit-exact copies
+      of int_gentrification_ts; no upstream SQL changed).
 
       Index definition reference: docs/adr/0004-data-governance-and-index-definition.md
 
@@ -120,6 +127,8 @@ models:
           Values: 'stable-established', 'pre-gentrification', 'pioneer-signal',
           'active-gentrification', 'consolidation-pressure', 'improving-vulnerable'.
           NULL for uninhabited PLRs (is_uninhabited=true).
+          #358: the same key is also exposed as typology_stage, with its public label in
+          stage_label -- display that, never status_class, under a "Stage" heading.
           For thesis variants: original projected status class (three values; unchanged).
           For 'improved' (OA-B.3 #172): always NULL -- this variant carries a
           continuous predictor score (status_index above), not an MSS-derived
@@ -156,9 +165,9 @@ models:
       - name: dynamism_class
         description: >
           Projected dynamism class (three values; positive/neutral/negative).
-          Polarity note: 'negative' = high gentrification pressure / above-average POI churn
-          (thesis variants) or MSS Dynamik worsening (live_data). 'positive' = low gentrification
-          pressure / below-average POI churn (thesis) or MSS Dynamik improving (live_data).
+          live_data: official Dynamik class, positive = status indicators improved relative
+          to the city (Berlin MSS, 2 years; Hamburg Sozialmonitoring, 3 years). Thesis
+          variants: 2018 POI-dynamism class (B5-findings-check.md). Not a pressure measure.
           For live_data (G4 #138): direct relabel of the D2 Dynamik ordinal
           (1=positiv->positive, 2=stabil->neutral, 3=negativ->negative; ADR-0008 D2 binding).
           See B5-findings-check.md for the thesis-variant explanation.
@@ -183,6 +192,89 @@ models:
       - name: own_idx_class_bi
         description: Binary own index class (positive/neutral/negative English labels).
         data_type: varchar
+      - name: typology_stage
+        description: >
+          #358: D1xD2 typology stage key for variant='live_data' (the shared
+          typology_stage() macro on status_index/dynamism_index, ADR-0008;
+          index-definition.md §1.5) -- same value as status_class for live_data and
+          as int_gentrification_ts.typology_stage for the same area and period
+          (test_358_gentrification_index_stage_matches_ts). NULL for uninhabited /
+          unscored areas and for every non-live_data variant. A stable data key: never
+          shown to users -- display stage_label instead.
+          PLR-level aggregate; not an individual/building-level statement (G-2 guardrail;
+          index-definition.md §1.2).
+        data_type: varchar
+        data_tests:
+
+          - accepted_values:
+              arguments:
+                values:
+                  - pre-gentrification
+                  - improving-vulnerable
+                  - pioneer-signal
+                  - active-gentrification
+                  - consolidation-pressure
+                  - stable-established
+              config:
+                where: "typology_stage is not null"
+      - name: stage_number
+        description: >
+          #358: cycle position 1-6 of typology_stage (typology_stage_display macro;
+          Dangschat 1988 invasion-succession ascent, Clay 1979 phases 3-5). A position,
+          not a timetable. NULL for 'No stage on record' and for every non-live_data
+          variant. Default browse sort: stage_number ascending, NULLs last.
+        data_type: integer
+        data_tests:
+
+          - dbt_utils.accepted_range:
+              arguments:
+                min_value: 1
+                max_value: 6
+              config:
+                where: "stage_number is not null"
+      - name: stage_label
+        description: >
+          #358: exact public stage label (typology_stage_display macro), e.g.
+          '4 · Active gentrification'; 'No stage on record' when typology_stage is NULL.
+          Always set for live_data; NULL for every other variant.
+        data_type: varchar
+        data_tests:
+
+          - not_null:
+              config:
+                where: "variant = 'live_data'"
+          - accepted_values:
+              arguments:
+                values:
+                  - "1 · Pre-gentrification"
+                  - "2 · Improving from very low status (ambiguous)"
+                  - "3 · Pioneer signal"
+                  - "4 · Active gentrification"
+                  - "5 · Consolidation"
+                  - "6 · Stable / established"
+                  - "No stage on record"
+              config:
+                where: "stage_label is not null"
+      - name: status_trend
+        description: >
+          #358: neutral public reading of the official Dynamik class (dynamism_index)
+          for variant='live_data': 1=positiv -> 'Improving', 2=stabil -> 'Stable',
+          3=negativ -> 'Worsening', NULL -> 'No trend on record'. Relative to the whole
+          city (Berlin MSS, 2 years; Hamburg Sozialmonitoring, 3 years). "Improving"
+          means the official status indicators improved -- not that residents are better
+          off, and not a gentrification or pressure measure. NULL for every non-live_data
+          variant (their dynamism_class is the 2018 POI-dynamism projection; geo C3).
+        data_type: varchar
+        data_tests:
+
+          - not_null:
+              config:
+                where: "variant = 'live_data'"
+          - accepted_values:
+              arguments:
+                values: ["Improving", "Stable", "Worsening", "No trend on record"]
+              config:
+                where: "status_trend is not null"
     data_tests:
 
       - dbt_utils.unique_combination_of_columns:
@@ -293,6 +385,7 @@ models:
           Typology stage from D1×D2 matrix (ADR-0008; index-definition.md §1.5).
           NULL = uninhabited PLR. One of: 'stable-established', 'pre-gentrification',
           'pioneer-signal', 'active-gentrification', 'consolidation-pressure', 'improving-vulnerable'.
+          Raw data key, never shown to users: display stage_label (#358).
           PLR-level aggregate; not an individual/building-level statement (G-2 guardrail).
       - name: is_uninhabited
         description: True if PLR is uninhabited (gesamtindex IS NULL in MSS; §7.1).
@@ -332,6 +425,37 @@ models:
         description: Legacy rank from the prior edition. NULL for first edition.
       - name: rank_change
         description: rank_prev minus rank_current (positive means improved rank; legacy metric).
+      - name: stage_number
+        description: >
+          #358: cycle position 1-6 of typology_stage (typology_stage_display macro; Dangschat
+          1988 invasion-succession ascent, Clay 1979 phases 3-5). A position, not a
+          timetable. NULL when typology_stage has no stage on record.
+        data_tests:
+
+          - dbt_utils.accepted_range:
+              arguments:
+                min_value: 1
+                max_value: 6
+              config:
+                where: "stage_number is not null"
+      - name: stage_label
+        description: >
+          #358: exact public label of typology_stage (typology_stage_display macro), e.g.
+          '4 · Active gentrification'; 'No stage on record' when typology_stage is NULL.
+          Display this, never the raw stage key.
+        data_tests:
+
+          - not_null
+          - accepted_values:
+              arguments:
+                values:
+                  - "1 · Pre-gentrification"
+                  - "2 · Improving from very low status (ambiguous)"
+                  - "3 · Pioneer signal"
+                  - "4 · Active gentrification"
+                  - "5 · Consolidation"
+                  - "6 · Stable / established"
+                  - "No stage on record"
 
   - name: fct_poi_development
     description: >
@@ -628,6 +752,39 @@ models:
         data_tests:
 
           - not_null
+      - name: dominant_stage_number
+        description: >
+          #358: cycle position 1-6 of dominant_stage (typology_stage_display macro; Dangschat
+          1988 invasion-succession ascent, Clay 1979 phases 3-5). A position, not a
+          timetable. NULL when dominant_stage has no stage on record.
+        data_type: integer
+        data_tests:
+
+          - dbt_utils.accepted_range:
+              arguments:
+                min_value: 1
+                max_value: 6
+              config:
+                where: "dominant_stage_number is not null"
+      - name: dominant_stage_label
+        description: >
+          #358: exact public label of dominant_stage (typology_stage_display macro), e.g.
+          '4 · Active gentrification'; 'No stage on record' when dominant_stage is NULL.
+          Display this, never the raw stage key.
+        data_type: varchar
+        data_tests:
+
+          - not_null
+          - accepted_values:
+              arguments:
+                values:
+                  - "1 · Pre-gentrification"
+                  - "2 · Improving from very low status (ambiguous)"
+                  - "3 · Pioneer signal"
+                  - "4 · Active gentrification"
+                  - "5 · Consolidation"
+                  - "6 · Stable / established"
+                  - "No stage on record"
 
   - name: mart_price_rent_dimension
     description: >
@@ -1702,6 +1859,37 @@ models:
         data_tests:
 
           - not_null
+      - name: stage_number
+        description: >
+          #358: cycle position 1-6 of typology_stage (typology_stage_display macro; Dangschat
+          1988 invasion-succession ascent, Clay 1979 phases 3-5). A position, not a
+          timetable. NULL when typology_stage has no stage on record.
+        data_tests:
+
+          - dbt_utils.accepted_range:
+              arguments:
+                min_value: 1
+                max_value: 6
+              config:
+                where: "stage_number is not null"
+      - name: stage_label
+        description: >
+          #358: exact public label of typology_stage (typology_stage_display macro), e.g.
+          '4 · Active gentrification'; 'No stage on record' when typology_stage is NULL.
+          Display this, never the raw stage key.
+        data_tests:
+
+          - not_null
+          - accepted_values:
+              arguments:
+                values:
+                  - "1 · Pre-gentrification"
+                  - "2 · Improving from very low status (ambiguous)"
+                  - "3 · Pioneer signal"
+                  - "4 · Active gentrification"
+                  - "5 · Consolidation"
+                  - "6 · Stable / established"
+                  - "No stage on record"
 
   - name: mart_ortsteil_plr_crosswalk
     description: >
@@ -1889,6 +2077,37 @@ models:
         data_tests:
 
           - not_null
+      - name: stage_number
+        description: >
+          #358: cycle position 1-6 of typology_stage (typology_stage_display macro; Dangschat
+          1988 invasion-succession ascent, Clay 1979 phases 3-5). A position, not a
+          timetable. NULL when typology_stage has no stage on record.
+        data_tests:
+
+          - dbt_utils.accepted_range:
+              arguments:
+                min_value: 1
+                max_value: 6
+              config:
+                where: "stage_number is not null"
+      - name: stage_label
+        description: >
+          #358: exact public label of typology_stage (typology_stage_display macro), e.g.
+          '4 · Active gentrification'; 'No stage on record' when typology_stage is NULL or the 'uninhabited / no data' bucket.
+          Display this, never the raw stage key.
+        data_tests:
+
+          - not_null
+          - accepted_values:
+              arguments:
+                values:
+                  - "1 · Pre-gentrification"
+                  - "2 · Improving from very low status (ambiguous)"
+                  - "3 · Pioneer signal"
+                  - "4 · Active gentrification"
+                  - "5 · Consolidation"
+                  - "6 · Stable / established"
+                  - "No stage on record"
 
   - name: mart_area_rollup_stage_mix
     description: >
@@ -1995,7 +2214,8 @@ models:
           Sozialmonitoring classification (status_class IS NULL) -- also used
           (MEDIUM-B fix, #310 review) as the single row for a structurally
           orphaned rollup area with zero real leaf children at all (see
-          n_children/n_habitable_children).
+          n_children/n_habitable_children). Raw data key, never shown to users:
+          display stage_label (#358; the bucket maps to 'No stage on record').
         data_tests:
 
           - not_null
@@ -2152,6 +2372,68 @@ models:
                 max_value: 1
               config:
                 where: "dominant_share is not null"
+      - name: stage_number
+        description: >
+          #358: cycle position 1-6 of typology_stage (typology_stage_display macro; Dangschat
+          1988 invasion-succession ascent, Clay 1979 phases 3-5). A position, not a
+          timetable. NULL when typology_stage has no stage on record.
+        data_tests:
+
+          - dbt_utils.accepted_range:
+              arguments:
+                min_value: 1
+                max_value: 6
+              config:
+                where: "stage_number is not null"
+      - name: stage_label
+        description: >
+          #358: exact public label of typology_stage (typology_stage_display macro), e.g.
+          '4 · Active gentrification'; 'No stage on record' when typology_stage is NULL or the 'uninhabited / no data' bucket.
+          Display this, never the raw stage key.
+        data_tests:
+
+          - not_null
+          - accepted_values:
+              arguments:
+                values:
+                  - "1 · Pre-gentrification"
+                  - "2 · Improving from very low status (ambiguous)"
+                  - "3 · Pioneer signal"
+                  - "4 · Active gentrification"
+                  - "5 · Consolidation"
+                  - "6 · Stable / established"
+                  - "No stage on record"
+      - name: dominant_stage_number
+        description: >
+          #358: cycle position 1-6 of dominant_stage (typology_stage_display macro; Dangschat
+          1988 invasion-succession ascent, Clay 1979 phases 3-5). A position, not a
+          timetable. NULL when dominant_stage has no stage on record.
+        data_tests:
+
+          - dbt_utils.accepted_range:
+              arguments:
+                min_value: 1
+                max_value: 6
+              config:
+                where: "dominant_stage_number is not null"
+      - name: dominant_stage_label
+        description: >
+          #358: exact public label of dominant_stage (typology_stage_display macro), e.g.
+          '4 · Active gentrification'; 'No stage on record' when dominant_stage is NULL (n_habitable_children = 0).
+          Display this, never the raw stage key.
+        data_tests:
+
+          - not_null
+          - accepted_values:
+              arguments:
+                values:
+                  - "1 · Pre-gentrification"
+                  - "2 · Improving from very low status (ambiguous)"
+                  - "3 · Pioneer signal"
+                  - "4 · Active gentrification"
+                  - "5 · Consolidation"
+                  - "6 · Stable / established"
+                  - "No stage on record"
 
   - name: mart_poi_oa_methods
     description: >

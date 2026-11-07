@@ -56,7 +56,7 @@ the whole story chronologically, rather than the current state (which is what th
     {
       date: '2018-09-09',
       title: 'The original thesis',
-      body: 'Dennis Helweg\'s master\'s thesis analyzes gentrification pressure across Berlin\'s ' +
+      body: 'Dennis Helweg\'s master\'s thesis analyzes gentrification across Berlin\'s ' +
         'neighbourhoods, built on Hadoop + Hive SQL + Java UDFs + R + Weka. Its golden output CSVs ' +
         '(the exact per-area results it published) are the file this revival is checked against.',
       href: '/thesis-recheck',

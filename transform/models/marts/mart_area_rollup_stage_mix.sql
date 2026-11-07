@@ -710,7 +710,15 @@ select
     s.status_index_weighted_mean,
     s.dynamism_index_weighted_mean,
     d.dominant_stage,
-    d.dominant_share
+    d.dominant_share,
+    -- #358 (docs/epic-g/358-spec.md Rev. 1 §1, geo C1/C2): cycle position + exact
+    -- public label for typology_stage AND dominant_stage from the shared
+    -- typology_stage_display() macro (Dangschat 1988 double invasion-succession
+    -- cycle; Clay 1979; Smith 1979 -- see the macro header). The 'uninhabited / no
+    -- data' bucket and a NULL dominant_stage both -> 'No stage on record' with a NULL
+    -- number. Display-only, appended after the pre-#358 columns.
+    {{ typology_stage_display('s.typology_stage') }},
+    {{ typology_stage_display('d.dominant_stage', prefix='dominant_') }}
 from stage_with_totals as s
 left join
     area_name_lookup as an

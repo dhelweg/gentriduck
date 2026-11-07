@@ -44,6 +44,12 @@ select
     status_index,
     dynamik_index,
     typology_stage,
-    n_plr
+    n_plr,
+    -- #358 (docs/epic-g/358-spec.md Rev. 1 §1, geo C1): cycle position + exact
+    -- public label for typology_stage from the shared typology_stage_display()
+    -- macro (Dangschat 1988 double invasion-succession cycle; Clay 1979; Smith
+    -- 1979 -- see the macro header). Display-only, appended; NULL stage -> 'No
+    -- stage on record'.
+    {{ typology_stage_display('typology_stage') }}
 from {{ ref("int_mss_bzr_aggregate") }}
 where city_code = 'BER'

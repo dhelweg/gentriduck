@@ -140,7 +140,7 @@ before being trusted, the same as every other step here.
   mapped earlier than peripheral ones — see [methodology & data sources §6](/methodology) for the
   full statement of this and every other known limitation.
 - This page describes **the pipeline**, not the statistics it produces. It makes no claim about
-  gentrification pressure, displacement risk, or any specific area — those claims, and their own
+  gentrification, displacement risk, or any specific area — those claims, and their own
   caveats, live on [methodology](/methodology) and the [Berlin](/berlin) and [Hamburg](/hamburg)
   data pages.
 - Rebuildability is a design goal, not a guarantee that every historical run is byte-identical:

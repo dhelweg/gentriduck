@@ -17,7 +17,7 @@
 -- Trajectory classification method:
 -- Rule-based trend analysis on D1 status_index across all available MSS editions.
 -- D1 ordinal: 1=hoch (least deprived) … 4=sehr_niedrig (most deprived).
--- Vulnerability-positive: higher status_index = more deprived = higher pressure.
+-- Vulnerability-positive: higher status_index = more deprived / more vulnerable.
 --
 -- FIVE trajectory types:
 -- 1. 'stable-established'    — consistently low status_index (1–2) throughout;
@@ -25,13 +25,13 @@
 -- affluent areas. (Dangschat: pre-invasion stable zone)
 -- 2. 'persistently-deprived' — consistently high status_index (3–4) throughout;
 -- no material improvement. Thesis: chronic deprivation
--- zones. (Dangschat: high-pressure invasion-succession)
+-- zones. (Dangschat: more deprived / more vulnerable zone)
 -- 3. 'improving'             — status_index decreased materially over the panel
 -- (area status improved, deprivation fell). Could
 -- indicate gentrification-driven displacement complete,
 -- or genuine social mobility. Requires domain
 -- interpretation. (Dangschat: succession complete or
--- latent pressure building)
+-- upgrading under way)
 -- 4. 'declining'             — status_index increased materially over the panel
 -- (deprivation worsened). Counter-gentrification or
 -- suburban decline trajectory. Escalation of
@@ -384,7 +384,14 @@ with
             -- (useful for back-test validation against hotspot seed)
             (status_index_mean >= 3.0) as is_persistently_vulnerable,
             -- Flag: area with consistently low deprivation (coldspot indicator)
-            (status_index_mean <= 1.5) as is_persistently_affluent
+            (status_index_mean <= 1.5) as is_persistently_affluent,
+            -- #358 (docs/epic-g/358-spec.md Rev. 1 §1, geo C1): dominant_stage is
+            -- shown on the Berlin area page ("Most common stage"), so it gets the
+            -- cycle position + exact public label from the shared
+            -- typology_stage_display() macro (Dangschat 1988; Clay 1979; Smith 1979
+            -- -- see the macro header). NULL -> 'No stage on record'. Display-only,
+            -- appended after the pre-#358 columns.
+            {{ typology_stage_display('dominant_stage', prefix='dominant_') }}
         from with_trajectory
     )
 

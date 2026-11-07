@@ -126,6 +126,14 @@ sidebar_position: 21
 -->
 
 <script>
+  // #358 (docs/epic-g/358-spec.md §5): the methods demo reads off a reader-selected area of the
+  // district (default: first by stage number, then name) -- same per-district Dropdown pattern as
+  // pages/berlin/area-detail.md's spotlight (see that page's comment).
+  $: methodsAreaInputName = 'methods_area_' + (inputs.methods_bezirk?.value ?? '');
+  $: methodsAreaCode = String(inputs[methodsAreaInputName]?.value ?? '').replaceAll("'", '');
+  $: methodsAreaDefault = methods_district_areas?.[0]?.area_code;
+  $: methodsAreaReady = Boolean(methodsAreaDefault) &&
+    methods_district_areas?.[0]?.district_code === inputs.methods_bezirk?.value;
 </script>
 
 <Hero compact eyebrow="Chapter 3 — The Evidence · reference / rulebook" title="Offering Advantage — modes, scales & dominance" lede="Offering Advantage (OA) is not one number. It is a family of measurements along independent axes — which method, at which spatial scale — and the choice of axis changes what a figure means more than any parameter does. This page is the decoder for all of it." />
@@ -236,8 +244,8 @@ genuinely different question, never a redefinition of the thesis construct
 
 ### Live: the nine methods, for one Kiez at a time
 
-Pick a district; this reads off the district's currently-highest-gentrification-pressure
-neighbourhood (same "spotlight" rule the [area detail page](/berlin/area-detail) uses) and shows
+Pick a district and a neighbourhood; this reads off a selected area of the district (by default the
+first by stage number, then name, as on the [area detail page](/berlin/area-detail)) and shows
 every one of the nine calculation methods for the domain and year you choose — so you can see, for
 one real Kiez, exactly how differently the "same" underlying counts read depending which method you
 pick.
@@ -295,21 +303,51 @@ pick.
   <DropdownOption value="2026" valueLabel="2026"/>
 </Dropdown>
 
+```sql methods_district_areas
+-- #358 (spec §5): the district's neighbourhoods with a current stage, in the same default order
+-- as /berlin/area-detail's browse table (stage_number, then name, then code). Feeds the
+-- neighbourhood Dropdown below; the former "negative dynamism first" order is removed.
+select area_code, area_name, stage_number, '${inputs.methods_bezirk.value}' as district_code
+from gentriduck_marts.gentrification_index
+where variant = 'live_data' and area_level = 'plr' and city_code = 'BER'
+  and period_yyyymm = (
+      select max(period_yyyymm) from gentriduck_marts.gentrification_index
+      where variant = 'live_data' and area_level = 'plr' and city_code = 'BER'
+  )
+  and substr(area_code, 1, 2) = '${inputs.methods_bezirk.value}'
+  and stage_number is not null
+order by stage_number nulls last, area_name, area_code
+```
+
 ```sql methods_chosen_area
--- Same spotlight rule as /berlin/area-detail's own `chosen` query: the district's PLR currently
--- showing the strongest gentrification-pressure signal (negative dynamism first, then highest
--- dynamism_index) -- not a methods-mart concept of its own, borrowed verbatim from that page.
+-- #358: the reader's pick if it is in this district, otherwise the first area in the default
+-- order above -- not a methods-mart concept of its own.
 select area_code, area_name
 from gentriduck_marts.gentrification_index
 where variant = 'live_data' and area_level = 'plr' and city_code = 'BER'
   and period_yyyymm = (
       select max(period_yyyymm) from gentriduck_marts.gentrification_index
-      where variant = 'live_data' and area_level = 'plr'
+      where variant = 'live_data' and area_level = 'plr' and city_code = 'BER'
   )
   and substr(area_code, 1, 2) = '${inputs.methods_bezirk.value}'
-order by (dynamism_class_bi = 'negative') desc, dynamism_index desc
+  and stage_number is not null
+order by (area_code = '${methodsAreaCode}') desc, stage_number nulls last, area_name, area_code
 limit 1
 ```
+
+{#if methodsAreaReady}
+{#key methodsAreaInputName}
+<Dropdown
+    data={methods_district_areas}
+    name={methodsAreaInputName}
+    value=area_code
+    label=area_name
+    order="stage_number nulls last, area_name, area_code"
+    defaultValue={methodsAreaDefault}
+    title="Neighbourhood"
+/>
+{/key}
+{/if}
 
 ```sql methods_ratio_family
 -- Only the three methods genuinely sharing a unit ("ratio, centred on 1" per the §2 table above)

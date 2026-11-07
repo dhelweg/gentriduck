@@ -35,7 +35,7 @@ win.
   individual, household, or building. See §6 below.
 </Alert>
 
-## 1. What "gentrification pressure" means here
+## 1. What the gentrification stages mean here
 
 Gentriduck does not claim to detect gentrification directly — no open dataset observes an
 individual's decision to move, or a landlord's decision to raise rent, or a household being pushed
@@ -52,19 +52,19 @@ Döring & Ulbricht (2016) operationalised gentrification susceptibility for Berl
 areas, and the 2018 thesis tentatively found (its summary table rates it "rather confirmed") that the **social cycle leads the
 commercial cycle**: a neighbourhood's social composition tends to change *before* its commercial
 landscape visibly follows. A 2026 re-test with a design fixed in advance does not reproduce that
-ordering, for the thesis era or for 2019–2025 — see [the thesis re-check](/thesis-recheck). "Gentrification pressure," in this
+ordering, for the thesis era or for 2019–2025 — see [the thesis re-check](/thesis-recheck). "Gentrification signal," in this
 project, means: **is a small area's official social-status classification improving, and does its
 commercial/demographic profile look like an area earlier or later in that same process?** It is a
 *signal*, drawn from the official record and from OpenStreetMap, not a certainty. The site
 deliberately avoids saying an area "is gentrifying" as settled fact — it reports a **stage** in an
-observed process (pre-gentrification, pioneer-signal, active-gentrification, consolidation-pressure,
-stable-established, or the named ambiguous case "improving-vulnerable" — see §3) and a
-**displacement-*pressure* signal**, never a claim that displacement has occurred.
+observed process (1 · Pre-gentrification, 3 · Pioneer signal, 4 · Active gentrification, 5 · Consolidation, 6 · Stable / established, or the named ambiguous case
+2 · Improving from very low status (ambiguous) — see §3) and a **displacement-*risk* signal**, never a claim that displacement has
+occurred.
 
 **What the index explicitly does not do:**
 - It does not predict, or say anything about, any individual person, household, or building.
 - It does not assert that displacement *happened* anywhere — only that the measurable preconditions
-  for displacement pressure are present or absent in a given area (see the ecological-fallacy and
+  for displacement risk are present or absent in a given area (see the ecological-fallacy and
   "no displacement stage" guardrails in §6).
 - It does not currently capture the economic driver of gentrification (the "rent gap" — Smith 1979):
   it measures the *social outcome* and its *commercial/demographic correlates*, not the underlying
@@ -119,9 +119,9 @@ Berlin's official qualified rent index — a modelled net cold rent (EUR/m²/mon
 dwelling profile, combined with the per-address *Wohnlage* (locational-quality: simple / medium / good)
 classification. Together these are a **structural price-and-desirability context**, not a
 vulnerability score: a high land value is consistent with long-established wealth, completed
-gentrification, or active upward pressure, and the level alone cannot distinguish between those. The
+gentrification, or active upgrading, and the level alone cannot distinguish between those. The
 *level* is treated as a baseline/context covariate; only the *change* in these values over time carries
-any displacement-pressure reading, and even then only as one part of the still-unbuilt displacement
+any displacement-risk reading, and even then only as one part of the still-unbuilt displacement
 dimension (§6). These figures are shown on the [area detail](/berlin/area-detail) page and the
 [POI & Offering Advantage map](/berlin/poi-map)'s citywide-context section.
 
@@ -175,9 +175,10 @@ driving a score. Instead:
 
 1. The official Status × Dynamik classification is the **spine** of a six-stage typology (an
    extension of Berlin's own 4×3 classification grid), following the invasion-succession process:
-   `pre-gentrification` → `pioneer-signal` → `active-gentrification` → `consolidation-pressure`, with
-   `stable-established` for areas outside the process and `improving-vulnerable` as a named,
-   deliberately ambiguous case the model cannot yet resolve without the still-missing displacement
+   1 · Pre-gentrification → 3 · Pioneer signal → 4 · Active gentrification → 5 · Consolidation, with 6 · Stable / established for settled areas (after the cycle or
+   outside it, including high-status areas whose status is worsening) and 2 · Improving from very
+   low status (ambiguous) as a named, deliberately ambiguous case the model cannot yet resolve
+   without the still-missing displacement
    dimension.
 2. The commercial (OSM) signal refines that classification — within an official Status × Dynamik cell,
    it distinguishes areas where the commercial succession is visibly happening (`amenity-active`) from
@@ -271,7 +272,7 @@ We would rather state these plainly than have you discover them by surprise.
   don't either.
 - **No displacement measurement, and no stage claims one occurred.** Open data can observe
   socio-economic upgrading and demographic recomposition; it cannot observe that a specific household
-  was involuntarily displaced. The site therefore uses risk/signal language throughout ("pressure",
+  was involuntarily displaced. The site therefore uses risk/signal language throughout ("risk",
   "signal") and deliberately avoids any stage name that would assert displacement as a completed fact.
   The Milieuschutz flag, rent-pressure proxy, and turnover proxy (§2) are a first step toward a
   genuine displacement-*risk* dimension, but each is disclosed individually with its own
@@ -293,7 +294,7 @@ We would rather state these plainly than have you discover them by surprise.
   two cities is not the same underlying measurement:
   1. **Different observation windows, and a different meaning of "active."** Berlin's official
      Dynamik-Index is built over a **2-year** window; Hamburg's over a **3-year** window. This is
-     not just a numeric-scale difference — it changes *what counts as* "active-gentrification" in
+     not just a numeric-scale difference — it changes *what counts as* "4 · Active gentrification" in
      each city's own source methodology: a Hamburg Gebiet coded "improving" over 3 years captures
      slower-moving change than a Berlin PLR coded "improving" over 2 years, so the same typology
      label encodes a different underlying velocity threshold in each city's own classification.
@@ -320,7 +321,7 @@ We would rather state these plainly than have you discover them by surprise.
      measured sub-Stadtteil homogeneity.
   4. **A same-named typology stage is not directly equivalent across the two cities.** Any
      narrative, chart, or headline that names a Hamburg-coded typology stage (e.g.
-     "active-gentrification") alongside a Berlin-coded one must carry a one-line disclosure —
+     "4 · Active gentrification") alongside a Berlin-coded one must carry a one-line disclosure —
      **"not directly equivalent — see methodology"** — rather than presenting the two as the same
      measurement. This applies to any future public write-up, not only to this page.
 
@@ -376,7 +377,7 @@ We would rather state these plainly than have you discover them by surprise.
   gentrification stage among its constituent PLRs/Gebiete — population-weighted where an area's
   population data is complete, equal-weighted as a flagged fallback otherwise — always paired with
   that stage's share, a small-sample flag, and a composition counterweight (the combined share of the
-  area in an acute-pressure stage), never shown as a standalone label. `status_index`/`dynamism_index`
+  area in stages 2–4), never shown as a standalone label. `status_index`/`dynamism_index`
   are **not** offered as a map colour, and the table is **not** ranked by them, at any rollup grain —
   they remain visible only as a plainly-labelled, unsorted diagnostic column. This is the first time a
   rollup typology label is coloured citywide (beyond the earlier per-area-profile-only
