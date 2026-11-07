@@ -660,6 +660,13 @@ How Dangschat's (1988) **double invasion-succession cycle** maps to the D1×D2 t
 as refining predictors). This narrative is the process theory behind §1's stage table and must be
 consistent with Döring-Ulbricht (2016) and 2018 thesis Chapter 3 (*Gentrifizierung als Prozess*).
 
+**Numbering note (#358).** The 'Stage 0–4' labels below are the *process* stages of Dangschat's
+narrative, not the public stage numbers 1–6 of §1.3. Correspondence: process stage 0 →
+1 · Pre-gentrification; process stage 1 → 3 · Pioneer signal (or 2 · Improving from very low
+status); process stage 2 → 4 · Active gentrification; process stage 3 → 5 · Consolidation. Process
+stage 4 (Status 1 = hoch, Dynamik stabil) is coded **6 · Stable / established** by the §1.5 matrix
+(cell 1×2). The matrix, not this narrative, decides the stage.
+
 - **Stage 0 — pre-gentrification (susceptible).** High D1 numeric (4 = sehr niedrig, i.e. low social
   status), Dynamik stabil-or-negativ, low D3 commercial amenity, D4 vulnerability high (high transfer
   / long-tenure / migration shares). The area the social invasion has *not yet* reached. →
@@ -676,8 +683,9 @@ consistent with Döring-Ulbricht (2016) and 2018 thesis Chapter 3 (*Gentrifizier
   is consolidating. → `consolidation-pressure`.
 - **Stage 4 — consolidation-pressure zone.** Status 1 = hoch, Dynamik stabil, D4 showing a *strong*
   demographic shift. **NOT "post-displacement"** — it is a **high-displacement-signal** state: the
-  measurable signals of displacement *pressure* are at their peak, but the model cannot assert
-  displacement *occurred* without D5 (G-1). → `consolidation-pressure` with elevated-signal flag;
+  measurable signals of displacement *risk* are at their peak, but the model cannot assert
+  displacement *occurred* without D5 (G-1). → coded `stable-established` (6 · Stable / established)
+  by the §1.5 matrix; no elevated-signal flag is implemented;
   Milieuschutz overlay (§1.8) applied if designated.
 
 The **lead-lag direction is the through-line of this map**: the social cycle (D1/D2 movement) *leads*

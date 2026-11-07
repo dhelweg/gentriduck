@@ -163,7 +163,8 @@ where city_code = 'BER' and ortsteil_area_code = '${params.code}'
       select max(period_yyyymm) from gentriduck_marts.mart_ortsteil_plr_stage_mix
       where city_code = 'BER'
   )
-order by n_areas desc
+-- #358 review (web finding 4): cycle order, rendered unsorted (sort=false).
+order by stage_number nulls last
 ```
 
 ```sql poi_mix
@@ -401,7 +402,7 @@ from totals as t cross join top cross join advanced as a
 {#if mssTakeaway}
 <p>{@html mssTakeaway}</p>
 {/if}
-<BarChart data={stage_mix} x=stage y=n_areas title="Neighbourhoods by stage, {ortsteil_name[0] ? ortsteil_name[0].area_name : 'this Ortsteil'}" swapXY=true/>
+<BarChart data={stage_mix} x=stage y=n_areas title="Neighbourhoods by stage, {ortsteil_name[0] ? ortsteil_name[0].area_name : 'this Ortsteil'}" swapXY=true sort=false chartAreaHeight=300 echartsOptions={{ yAxis: { axisLabel: { width: 130, overflow: 'break', interval: 0, hideOverlap: false } }, grid: { left: 16, containLabel: true } }}/>
 
 <StageNumberLegend />
 {:else}
@@ -528,7 +529,7 @@ where city_code = 'BER' and area_level = 'ortsteil' and area_code = '${params.co
 {#if hasChildren}
 <DataTable data={children} rows=20 link=area_link>
     <Column id=area_name title="Neighbourhood (PLR)"/>
-    <Column id=stage title="Stage"/>
+    <Column id=stage title="Stage" wrap=true/>
     <Column id=status_trend title="Status trend"/>
     <Column id=overlap_frac_of_plr title="% of PLR within this Ortsteil" fmt="pct0"/>
 </DataTable>

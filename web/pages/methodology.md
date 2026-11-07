@@ -119,9 +119,9 @@ Berlin's official qualified rent index — a modelled net cold rent (EUR/m²/mon
 dwelling profile, combined with the per-address *Wohnlage* (locational-quality: simple / medium / good)
 classification. Together these are a **structural price-and-desirability context**, not a
 vulnerability score: a high land value is consistent with long-established wealth, completed
-gentrification, or active upward pressure, and the level alone cannot distinguish between those. The
+gentrification, or active upgrading, and the level alone cannot distinguish between those. The
 *level* is treated as a baseline/context covariate; only the *change* in these values over time carries
-any displacement-pressure reading, and even then only as one part of the still-unbuilt displacement
+any displacement-risk reading, and even then only as one part of the still-unbuilt displacement
 dimension (§6). These figures are shown on the [area detail](/berlin/area-detail) page and the
 [POI & Offering Advantage map](/berlin/poi-map)'s citywide-context section.
 
@@ -176,7 +176,9 @@ driving a score. Instead:
 1. The official Status × Dynamik classification is the **spine** of a six-stage typology (an
    extension of Berlin's own 4×3 classification grid), following the invasion-succession process:
    1 · Pre-gentrification → 3 · Pioneer signal → 4 · Active gentrification → 5 · Consolidation, with 6 · Stable / established for settled areas (after the cycle or
-   outside it) and 2 · Improving from very low status (ambiguous) as a named, deliberately ambiguous case the model cannot yet resolve without the still-missing displacement
+   outside it, including high-status areas whose status is worsening) and 2 · Improving from very
+   low status (ambiguous) as a named, deliberately ambiguous case the model cannot yet resolve
+   without the still-missing displacement
    dimension.
 2. The commercial (OSM) signal refines that classification — within an official Status × Dynamik cell,
    it distinguishes areas where the commercial succession is visibly happening (`amenity-active`) from

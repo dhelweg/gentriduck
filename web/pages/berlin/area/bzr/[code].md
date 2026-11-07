@@ -107,7 +107,8 @@ where variant = 'live_data' and area_level = 'plr' and city_code = 'BER'
       where variant = 'live_data' and area_level = 'plr'
   )
 group by all
-order by n_areas desc
+-- #358 review (web finding 4): cycle order, rendered unsorted (sort=false).
+order by stage_number nulls last
 ```
 
 ```sql stage_mix_summary
@@ -181,7 +182,7 @@ from totals as t cross join top cross join advanced as a
 <Alert status="warning">No neighbourhood-stage data available for this area.</Alert>
 {/if}
 
-<BarChart data={stage_mix} x=stage y=n_areas title="Neighbourhoods by stage" swapXY=true/>
+<BarChart data={stage_mix} x=stage y=n_areas title="Neighbourhoods by stage" swapXY=true sort=false chartAreaHeight=300 echartsOptions={{ yAxis: { axisLabel: { width: 130, overflow: 'break', interval: 0, hideOverlap: false } }, grid: { left: 16, containLabel: true } }}/>
 
 <StageNumberLegend />
 
@@ -602,7 +603,7 @@ order by stage_number nulls last, area_name, area_code
 
 <DataTable data={children} rows=20 link=area_link>
     <Column id=area_name title="Neighbourhood (PLR)"/>
-    <Column id=stage title="Stage"/>
+    <Column id=stage title="Stage" wrap=true/>
     <Column id=status_trend title="Status trend"/>
 </DataTable>
 

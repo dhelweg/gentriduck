@@ -135,7 +135,8 @@ left join
     )
 where g2.city_code = 'HH' and g2.area_level = 'subarea_l2' and g1.parent_area_code = '${params.code}'
 group by all
-order by n_areas desc
+-- #358 review (web finding 4): cycle order, rendered unsorted (sort=false).
+order by stage_number nulls last
 ```
 
 ```sql stage_mix_summary
@@ -250,7 +251,7 @@ same-named Berlin stages (Hamburg's Dynamik window is 3 years, Berlin's 2;
 <Alert status="warning">No Gebiet stage data available for this district.</Alert>
 {/if}
 
-<BarChart data={stage_mix} x=stage y=n_areas title="Gebiete by current stage, {district_name[0] ? district_name[0].area_name : 'this district'}" swapXY=true emptySet="warn" emptyMessage="No Gebiet stage data for this district."/>
+<BarChart data={stage_mix} x=stage y=n_areas title="Gebiete by current stage, {district_name[0] ? district_name[0].area_name : 'this district'}" swapXY=true sort=false chartAreaHeight=300 echartsOptions={{ yAxis: { axisLabel: { width: 130, overflow: 'break', interval: 0, hideOverlap: false } }, grid: { left: 16, containLabel: true } }} emptySet="warn" emptyMessage="No Gebiet stage data for this district."/>
 
 <StageNumberLegend />
 

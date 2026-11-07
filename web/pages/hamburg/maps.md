@@ -165,6 +165,8 @@ sidebar_position: 2
         // dropdown no longer offers status_index/dynamism_index at rollup grain (see
         // effectiveIndicator above), so this branch no longer needs to branch on it at all.
         { id: 'stage_label', title: 'Most widespread stage', fmt: 'id' },
+        // #358 (spec §1, C2): note for areas with no stage on record.
+        { id: 'stage_note', showColumnName: false, valueClass: 'text-xs opacity-70', fmt: 'id' },
         // #310 review fix (D2 -- domain sign-off blocking, R-310-5): "Population share of
         // dominant stage" was an unconditional claim, false wherever has_incomplete_population is
         // true -- currently the entire Hamburg rollup surface (see the Alert below). Neutral label
@@ -398,7 +400,11 @@ select
     m.is_dominant_fragile,
     m.has_incomplete_population,
     m.dominant_stage_label as stage_label,
-                m.dominant_stage_number as stage_number,
+    m.dominant_stage_number as stage_number,
+    case
+        when m.dominant_stage_number is null then 'not scored by the Sozialmonitoring'
+        else ''
+    end as stage_note,
     -- #310 review fix (MEDIUM-4): pairs the most-widespread-stage reading with an explicit
     -- caveat whenever is_dominant_fragile -- per the #310 design decision (issue comment point 3)
     -- this must never be shown as a standalone, confident-looking label. Blank ('') rather than

@@ -256,7 +256,7 @@ where
 
   // #358 (spec §1, C2): "uninhabited" only where the population is 0; any other unscored PLR has
   // "no stage on record".
-  $: isUninhabited = cur && Number(cur.population) === 0;
+  $: isUninhabited = cur?.population != null && Number(cur.population) === 0;
   $: stageSentence = !hasStatus
     ? (isUninhabited
         ? `${areaName()} is classified as **uninhabited** in Berlin's official population register (no resident population) — the social-status figures on this page do not apply here.`
@@ -650,7 +650,8 @@ domain as a **percentage above or below Berlin's citywide average share** for th
 average; a **negative** percentage means the opposite, under-representation, shown the same way.
 OA is one input among several into the governed index (see [methodology](/methodology)), never a
 standalone gentrification score on its own — and vacancy (if shown) marks the *opposite* pole from
-the others, a pre-reinvestment signal, not a "more OA means more gentrification" reading. See the
+the others, a pre-reinvestment signal. A higher Offering Advantage value is not, on its own, a sign
+of more gentrification. See the
 [POI & Offering Advantage map](/berlin/poi-map) to explore this across all of Berlin.
 
 ```sql poi_oa_radar

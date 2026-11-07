@@ -122,7 +122,8 @@ left join
         where variant = 'live_data' and area_level = 'subarea_l2' and city_code = 'HH'
     )
 where h.city_code = 'HH' and h.area_level = 'subarea_l2' and h.parent_area_code = '${params.code}'
-order by gebiet_name
+-- #358 (spec §3): cycle order, then name, then code; user-sortable.
+order by gi.stage_number nulls last, gebiet_name, gebiet_code
 ```
 
 ```sql stage_mix
@@ -149,7 +150,8 @@ left join
     )
 where h.city_code = 'HH' and h.area_level = 'subarea_l2' and h.parent_area_code = '${params.code}'
 group by all
-order by n_areas desc
+-- #358 review (web finding 4): cycle order, rendered unsorted (sort=false).
+order by stage_number nulls last
 ```
 
 ```sql stage_mix_summary
@@ -264,7 +266,7 @@ Berlin stages (Hamburg's Dynamik window is 3 years, Berlin's 2; [methodology §6
 <Alert status="warning">No Gebiet stage data available for this Stadtteil.</Alert>
 {/if}
 
-<BarChart data={stage_mix} x=stage y=n_areas title="Gebiete by current stage, {stadtteil_name[0] ? stadtteil_name[0].area_name : 'this Stadtteil'}" swapXY=true emptySet="warn" emptyMessage="No Gebiet stage data for this Stadtteil."/>
+<BarChart data={stage_mix} x=stage y=n_areas title="Gebiete by current stage, {stadtteil_name[0] ? stadtteil_name[0].area_name : 'this Stadtteil'}" swapXY=true sort=false chartAreaHeight=300 echartsOptions={{ yAxis: { axisLabel: { width: 130, overflow: 'break', interval: 0, hideOverlap: false } }, grid: { left: 16, containLabel: true } }} emptySet="warn" emptyMessage="No Gebiet stage data for this Stadtteil."/>
 
 <StageNumberLegend />
 
@@ -576,7 +578,7 @@ order by sort_order, area_name
 
 <DataTable data={children} rows=20 link=gebiet_link emptySet="warn" emptyMessage="No constituent Gebiete found for this Stadtteil.">
     <Column id=gebiet_name title="Statistisches Gebiet"/>
-    <Column id=stage title="Stage"/>
+    <Column id=stage title="Stage" wrap=true/>
     <Column id=status_trend title="Status trend"/>
 </DataTable>
 

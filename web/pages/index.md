@@ -241,6 +241,7 @@ order by stage_number nulls last, stage
     y=area_count
     swapXY=true
     sort=false
+    chartAreaHeight=300 echartsOptions={{ yAxis: { axisLabel: { width: 130, overflow: 'break', interval: 0, hideOverlap: false } }, grid: { left: 16, containLabel: true } }}
     xAxisTitle="Number of areas"
     yAxisTitle="Stage"
 />
@@ -248,9 +249,9 @@ order by stage_number nulls last, stage
 <StageNumberLegend />
 
 **What to notice:** most of the city sits in 6 · Stable / established — Berlin is not one giant
-gentrification wave. The neighbourhoods to watch are the smaller 3 · Pioneer signal and
-4 · Active gentrification bars: those are areas where status is currently deprived *and* the
-official trend is moving fast, the two-part signature this project's typology is built to catch.
+gentrification wave. The smaller 3 · Pioneer signal and 4 · Active gentrification bars are areas
+whose status is low or middle *and* whose official trend is improving relative to the city, the two-part signature
+this project's typology is built to pick up.
 2 · Improving from very low status is deliberately ambiguous (see the [methodology page](/methodology)) —
 rising status in an area that started out deprived reads as good news and displacement risk at
 once.

@@ -131,7 +131,7 @@ Click a column header to sort differently.
 
 <DataTable data={browse} rows=10 rowShading=true link=area_link>
     <Column id=area_name title="Neighbourhood (PLR)"/>
-    <Column id=stage title="Stage"/>
+    <Column id=stage title="Stage" wrap=true/>
     <Column id=status_trend title="Status trend"/>
 </DataTable>
 
