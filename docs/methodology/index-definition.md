@@ -681,7 +681,7 @@ stage 4 (Status 1 = hoch, Dynamik stabil) is coded **6 · Stable / established**
 - **Stage 3 — consolidation.** Status reached 1–2, Dynamik stable-positiv, D3 high or levelling; D4
   demographics visibly shifted (young-adult share up, transfer/long-tenure shares down). The process
   is consolidating. → `consolidation-pressure`.
-- **Stage 4 — consolidation-pressure zone.** Status 1 = hoch, Dynamik stabil, D4 showing a *strong*
+- **Stage 4 — settled high status (process stage; coded 6 · Stable / established).** Status 1 = hoch, Dynamik stabil, D4 showing a *strong*
   demographic shift. **NOT "post-displacement"** — it is a **high-displacement-signal** state: the
   measurable signals of displacement *risk* are at their peak, but the model cannot assert
   displacement *occurred* without D5 (G-1). → coded `stable-established` (6 · Stable / established)
