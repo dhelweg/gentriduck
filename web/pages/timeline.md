@@ -20,13 +20,28 @@ sidebar_position: 15
   Epic B's finding wording quotes B6-methodology-signoff.md's own verdict, per the ticket's gate
   note ("the Epic B verdict wording must quote the signed-off narrative") rather than paraphrasing
   it independently.
+
+  #368 (2026-11): ten entries after #310, one per shipped change from 2026-10-27 to 2026-11-06.
+  Dates are issue close dates (`gh issue view <n> --json closedAt`), cross-checked against the
+  matching develop integration; the evidence-integrity entry has no issue and is dated by its
+  geo + domain sign-offs (both 2026-10-27). The entries say what was done, not what it found:
+  the #354/#355/#371 entries carry no result sentence and point to the pages, whose wording is
+  bound by their own sign-offs (docs/epic-e/354-domain-signoff.md, docs/epic-h/355-domain-signoff.md,
+  docs/epic-e/371-results-domain-signoff.md §3). Descriptions follow the issue specs and the
+  evidence docs: docs/epic-c/OSM-extractor-fixes-2026-10-evidence.md,
+  docs/methodology/2026-10-evidence-integrity-domain-signoff.md, web/components/PolygonMap.svelte,
+  docs/epic-g/353-hamburg-berlin-parity-audit.md, docs/epic-c/360-mss-indicator-mapping-evidence.md,
+  docs/methodology/354-355-hypothesis-suite-preregistration.md,
+  docs/methodology/371-matched-comparison-preregistration.md (Amendment 5), ADR-0012 Amendment C,
+  ADR-0014 Amendment 2026-11-02. Internal links stay in `href` (Timeline.svelte adds the base
+  path); inline body links are external only, since {@html} bodies are not base-path rewritten.
 -->
 
 <Hero
   compact
   eyebrow="Chapter 1→2 — Origins &amp; the Revival"
   title="Timeline"
-  lede="The project's evolution end to end: a 2018 master's thesis, revived in mid-2026 by a supervised team of AI agents, and grown into a public, multi-city statistics project. Every date below is cited to a repository artifact — never derived from git history, which is squashed and dated wrong for this purpose."
+  lede="The project's evolution end to end: a 2018 master's thesis, revived in mid-2026 by a supervised team of AI agents, and grown into a public, multi-city statistics project. Every date below is cited to a repository artifact (an ADR or a sign-off document) or to an issue's close date — never derived from commit dates, which are squashed and dated wrong for this purpose."
 />
 
 <ChapterLabel>Chapters 1–2, laid end to end</ChapterLabel>
@@ -41,7 +56,7 @@ the whole story chronologically, rather than the current state (which is what th
     {
       date: '2018-09-09',
       title: 'The original thesis',
-      body: 'Dennis Helweg\'s master\'s thesis analyzes gentrification pressure across Berlin\'s ' +
+      body: 'Dennis Helweg\'s master\'s thesis analyzes gentrification across Berlin\'s ' +
         'neighbourhoods, built on Hadoop + Hive SQL + Java UDFs + R + Weka. Its golden output CSVs ' +
         '(the exact per-area results it published) are the file this revival is checked against.',
       href: '/thesis-recheck',
@@ -154,6 +169,123 @@ the whole story chronologically, rather than the current state (which is what th
         'defect before integration.',
       href: 'https://github.com/dhelweg/gentriduck/issues/310',
       hrefLabel: 'issue #310 (closed 2026-07-30) →'
+    },
+    {
+      // #368: no issue number; dated by the two sign-offs (both 2026-10-27) and their integration.
+      date: '2026-10-27',
+      title: 'Fresh OpenStreetMap history and an evidence-integrity pass',
+      body: 'A new full-history OpenStreetMap extract (October 2026) is ingested for both cities, ' +
+        'and two extractor bugs are fixed: a deleted place is now removed from every later year, ' +
+        'and a place with several mapped tags is again classified by its first match. The same ' +
+        'pass brings the thesis-verdict column in line with the thesis\'s own summary table ' +
+        '(Tabelle 6-16), adds a test that tells the two timing hypotheses (H3a, H3b) apart, and ' +
+        'stops presenting a circular back-test check as validation. Dual geo + domain sign-off.',
+      href: 'https://github.com/dhelweg/gentriduck/blob/main/docs/methodology/2026-10-evidence-integrity-domain-signoff.md',
+      hrefLabel: 'evidence-integrity domain sign-off (2026-10-27) →'
+    },
+    {
+      date: '2026-10-27',
+      title: 'Maps without a map provider',
+      body: 'The free CARTO basemap behind the site\'s maps started answering every tile request ' +
+        'with an "API key required" watermark. Every map moves to a self-contained SVG polygon ' +
+        'map (<code>PolygonMap</code>): no basemap, no tile provider, no new dependency, and ' +
+        'nothing loaded from another server. Area profiles now show the whole city with the ' +
+        'current area highlighted, next to a close-up of its sub-areas.',
+      href: 'https://github.com/dhelweg/gentriduck/issues/351',
+      hrefLabel: 'issue #351 (closed 2026-10-27) →'
+    },
+    {
+      date: '2026-10-27',
+      title: 'Every Hamburg area has a name',
+      body: 'Hamburg\'s finest areas (943 statistische Gebiete) have no official name in the ' +
+        'source data, so the pages showed bare codes. Each now has a readable label built from its ' +
+        'Stadtteil plus an OpenStreetMap neighbourhood name or its code (e.g. "Eimsbüttel · ' +
+        'Gebiet 35001"), with the code as secondary text; Berlin areas that share a name are told ' +
+        'apart the same way.',
+      href: 'https://github.com/dhelweg/gentriduck/issues/352',
+      hrefLabel: 'issue #352 (closed 2026-10-27) →'
+    },
+    {
+      date: '2026-10-28',
+      title: 'Hamburg ↔ Berlin usability parity',
+      body: 'Every page is audited for gaps between the two cities. Hamburg gains a time-series ' +
+        'page, a district browse, map click-through to area profiles, and area profiles laid out ' +
+        'section by section like Berlin\'s; both city hubs link the same routes. Where Hamburg\'s ' +
+        'data does not support a Berlin view, the page says so instead of inventing parity.',
+      href: 'https://github.com/dhelweg/gentriduck/issues/353',
+      hrefLabel: 'issue #353 (closed 2026-10-28) →'
+    },
+    {
+      date: '2026-10-30',
+      title: 'Berlin social-monitoring indicators relabelled',
+      body: 'The domain expert noticed that three of Berlin\'s MSS indicator columns looked ' +
+        'shifted by one slot. Checked edition by edition against the Senate\'s own indicator ' +
+        'definitions, the columns read as transfer receipt, child poverty and single-parent ' +
+        'households were indeed mislabelled. The mapping is corrected per edition, the affected ' +
+        'models are rebuilt, and the documents that repeated the old labels are corrected, with ' +
+        'dual geo + domain sign-off.',
+      href: 'https://github.com/dhelweg/gentriduck/issues/360',
+      hrefLabel: 'issue #360 (closed 2026-10-30) →'
+    },
+    {
+      date: '2026-11-01',
+      title: 'Berlin: all eight thesis hypotheses re-tested, design fixed in advance',
+      body: 'Before any code was written, the geo-data-scientist registered the design, the main ' +
+        'test per hypothesis and the verdict rules; the domain expert reviewed it. Each of the ' +
+        'thesis\'s eight hypotheses is then re-tested in the thesis era (2013–2019) and in ' +
+        '2019–2025, with a correction for testing eight hypotheses at once. The results and their ' +
+        'public wording carry dual geo + domain sign-off, and the thesis re-check page now ' +
+        'reports them.',
+      href: 'https://github.com/dhelweg/gentriduck/issues/354',
+      hrefLabel: 'issue #354 (closed 2026-11-01) →'
+    },
+    {
+      date: '2026-11-02',
+      title: 'The same hypotheses, re-tested on Hamburg',
+      body: 'The same registered design is applied to Hamburg\'s Sozialmonitoring, over the full ' +
+        'chain of editions (2013–2025) and over 2019–2025: an out-of-sample transfer test, not a ' +
+        'replication. It replaces the earlier Hamburg timing analysis (E5), and a new Hamburg ' +
+        'thesis re-check page reports it, again under dual sign-off.',
+      href: 'https://github.com/dhelweg/gentriduck/issues/355',
+      hrefLabel: 'issue #355 (closed 2026-11-02) →'
+    },
+    {
+      date: '2026-11-05',
+      title: 'One-step release deploy',
+      body: 'Once the maintainer merges the weekly <code>develop → main</code> release, the PM ' +
+        'publishes it with one command (<code>poe release-deploy</code>, ' +
+        '<a href="https://github.com/dhelweg/gentriduck/issues/361">#361</a>, closed 2026-11-02). ' +
+        'It reuses an existing build only if that build was made from the same tree as ' +
+        '<code>main</code> with the same inputs; otherwise it rebuilds from <code>main</code>. A ' +
+        'failed smoke check publishes nothing. #369 then ties the build record to the data the ' +
+        'site build actually read. Recorded as ADR-0012 Amendment C: the maintainer\'s merge is ' +
+        'the decision to publish, the deploy only carries it out.',
+      href: 'https://github.com/dhelweg/gentriduck/issues/369',
+      hrefLabel: 'issue #369 (closed 2026-11-05) →'
+    },
+    {
+      date: '2026-11-05',
+      title: 'Berlin vs Hamburg, like for like',
+      body: 'The 2018 thesis\'s hypotheses are tested in both cities on matched areas of similar ' +
+        'size, the same three indicators of poverty and unemployment, and the same years, with ' +
+        'each hypothesis tested for a difference between the cities (' +
+        '<a href="https://github.com/dhelweg/gentriduck/issues/371">#371</a>). The design was ' +
+        'registered before any result existed; two clarifications added afterwards are disclosed ' +
+        'as an amendment. It needed two data additions: Hamburg\'s Sozialmonitoring annex ' +
+        'indicator tables, and Berlin\'s narrow population-register age bands. What it found is ' +
+        'on the comparison page.',
+      href: '/berlin-vs-hamburg',
+      hrefLabel: 'Berlin vs Hamburg, like for like →'
+    },
+    {
+      date: '2026-11-06',
+      title: 'Zero is drawn as zero on the POI maps',
+      body: 'On the POI density view of both cities\' POI maps, an area with no mapped place of ' +
+        'the selected kind was hatched as "No data". It is now drawn as density 0. Hatching stays ' +
+        'on the Offering Advantage view, where the page names its two reasons: nothing of that ' +
+        'kind is mapped, or too few places are mapped to compute a stable ratio.',
+      href: 'https://github.com/dhelweg/gentriduck/issues/357',
+      hrefLabel: 'issue #357 (closed 2026-11-06) →'
     }
   ];
 

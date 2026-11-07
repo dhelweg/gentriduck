@@ -80,10 +80,10 @@ where variant = 'live_data' and area_level = 'plr' and city_code = 'BER'
     ranked list of the neighbourhoods that moved the most.
   </LinkCard>
   <LinkCard href="/berlin/area-detail" icon="🏘️" title="Area detail — start here" cta="Browse by district →">
-    <!-- #353 review: no nested <a> inside the card's own link; spotlight wording follows the
-         #353 domain spot-check R2 (the order is a 3-value reading with ties, not a ranking). -->
-    The primary way in: browse by district (Bezirk), then read a headline spotlight on one
-    neighbourhood with that district's strongest pressure reading, with a link to its full
+    <!-- #353 review: no nested <a> inside the card's own link. #358 (spec §5 hub blurb): the
+         spotlight is the reader's pick, not a "strongest reading" area. -->
+    The primary way in: browse a district (Bezirk) and its neighbourhoods, then read a headline
+    spotlight with a snapshot of any one of them, with a link to its full
     profile. If you already know the neighbourhood's name, the full searchable list (next card) is
     faster.
   </LinkCard>
@@ -102,6 +102,18 @@ where variant = 'live_data' and area_level = 'plr' and city_code = 'BER'
     Berlin's 12 Bezirke, their Prognoseräume and Bezirksregionen, and the 97 Ortsteile: population,
     composition, and how their neighbourhoods are spread across stages — never a re-scored index
     for the larger area.
+  </LinkCard>
+  <!-- #368: the Hamburg hub links its thesis re-check and the #371 comparison; Berlin's hub had
+       neither, so the two hubs no longer linked the same routes (#353 parity). Card copy restates
+       the /thesis-recheck "How the re-test works" paragraph and reuses the Hamburg hub's
+       /berlin-vs-hamburg card verbatim; no result sentence. -->
+  <LinkCard href="/thesis-recheck" icon="🔬" title="The 2018 thesis, re-checked" cta="See the re-check →">
+    The eight hypotheses of the 2018 Berlin thesis, re-tested with a design fixed in advance, in
+    the thesis era (2013–2019) and in 2019–2025, and set side by side with what the thesis found.
+  </LinkCard>
+  <LinkCard href="/berlin-vs-hamburg" icon="⚖️" title="Berlin vs Hamburg, like for like" cta="See the comparison →">
+    The thesis hypotheses in both cities on matched areas of similar size, the same three
+    indicators and the same years, with each hypothesis tested for a difference between the cities.
   </LinkCard>
 </LinkCards>
 

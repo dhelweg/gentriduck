@@ -86,8 +86,11 @@ neighbourhood-to-neighbourhood heterogeneity gentrification tracking depends on 
 caveats" below).
 
 ```sql stage_mix
+-- #358: stage_label/stage_number are the dbt display columns (spec §1); no raw key, NULL
+-- and the old 'uninhabited / no data' bucket read "No stage on record".
 select
-    coalesce(status_class, 'uninhabited / no data') as stage,
+    stage_label as stage,
+    stage_number,
     count(*) as n_areas
 from gentriduck_marts.gentrification_index
 where variant = 'live_data' and area_level = 'plr' and city_code = 'BER'
@@ -97,7 +100,8 @@ where variant = 'live_data' and area_level = 'plr' and city_code = 'BER'
       where variant = 'live_data' and area_level = 'plr'
   )
 group by all
-order by n_areas desc
+-- #358 review (web finding 4): cycle order, rendered unsorted (sort=false).
+order by stage_number nulls last
 ```
 
 ```sql stage_mix_summary
@@ -106,7 +110,8 @@ order by n_areas desc
 with
     mix as (
         select
-            coalesce(status_class, 'uninhabited / no data') as stage,
+            stage_label as stage,
+            stage_number,
             count(*) as n_areas
         from gentriduck_marts.gentrification_index
         where variant = 'live_data' and area_level = 'plr' and city_code = 'BER'
@@ -122,7 +127,7 @@ with
     advanced as (
         select coalesce(sum(n_areas), 0) as n_advanced
         from mix
-        where stage in ('active-gentrification', 'pioneer-signal')
+        where stage_number in (3, 4) -- 3 · Pioneer signal, 4 · Active gentrification
     )
 select
     t.n_total,
@@ -160,7 +165,7 @@ from totals as t cross join top cross join advanced as a
         const majorityClause = (topShare != null && topShare > 0.5)
           ? `<b>${mssMix.top_stage}</b> is the only stage holding a majority (${Math.round(topShare * 100)}%)`
           : 'no single stage holds a majority';
-        return `<b>${nAdvanced}</b> of <b>${nTotal}</b> neighbourhoods (Planungsräume) here are classified <b>active-gentrification</b> or <b>pioneer-signal</b>; ${majorityClause} — a distribution across this Prognoseraum's own neighbourhoods, never a single re-scored gentrification-index value for the Prognoseraum itself.`;
+        return `<b>${nAdvanced}</b> of <b>${nTotal}</b> neighbourhoods (Planungsräume) here are classified <b>4 · Active gentrification</b> or <b>3 · Pioneer signal</b>; ${majorityClause} — a distribution across this Prognoseraum's own neighbourhoods, never a single re-scored gentrification-index value for the Prognoseraum itself.`;
       })();
 </script>
 
@@ -170,7 +175,9 @@ from totals as t cross join top cross join advanced as a
 <Alert status="warning">No neighbourhood-stage data available for this area.</Alert>
 {/if}
 
-<BarChart data={stage_mix} x=stage y=n_areas title="Neighbourhoods by stage" swapXY=true/>
+<BarChart data={stage_mix} x=stage y=n_areas title="Neighbourhoods by stage" swapXY=true sort=false chartAreaHeight=300 echartsOptions={{ yAxis: { axisLabel: { width: 130, overflow: 'break', interval: 0, hideOverlap: false } }, grid: { left: 16, containLabel: true } }}/>
+
+<StageNumberLegend />
 
 ## Commercial mix & Offering Advantage
 

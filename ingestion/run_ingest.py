@@ -271,6 +271,18 @@ def build_steps(repo_root: Path) -> list[IngestStep]:
             source_id="hamburg__sozialmonitoring",
             blocking=False,
         ),
+        # #371 (ADR-0014 Amendment 2026-11-02): report-annex indicator z-scores, ten pinned
+        # XLSX editions. Own directory (the WFS step's dir is globbed by stg_hamburg_sozialmonitoring).
+        IngestStep(
+            "Hamburg Sozialmonitoring annex (indicators)",
+            _py(
+                "ingestion/hamburg/sozialmonitoring/ingest_hamburg_sozialmonitoring_annex.py",
+                "--out-dir",
+                "data/raw/hamburg/sozialmonitoring_annex",
+            ),
+            source_id="hamburg__sozialmonitoring_annex",
+            blocking=False,
+        ),
         IngestStep(
             "Hamburg displacement",
             _py(

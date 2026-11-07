@@ -65,9 +65,10 @@ models:
       - name: dynamism_class_bi
         description: >
           Projected dynamism class (binary English label).
-          positive = high gentrification pressure / above-average POI churn (was 'positiv').
-          negative = low gentrification pressure / below-average POI churn (was 'negativ').
-          See B5-findings-check.md for the label polarity explanation.
+          Thesis 2018 projected POI-dynamism class (not the official MSS Dynamik); polarity
+          as documented in B5-findings-check.md.
+          positive = above-average POI churn (was 'positiv').
+          negative = below-average POI churn (was 'negativ').
         data_tests:
 
           - accepted_values:
@@ -2131,3 +2132,234 @@ models:
           k-NN (k=6) fallback weights instead (ADR-0025 Decision 4 /
           ADR-0010 Sec 5) -- audit column so the neighbour structure this
           area's Gi* value was computed against is never silently opaque.
+
+  - name: stg_hamburg_sozialmonitoring_indicators
+    description: >
+      #371 (ADR-0014 Amendment 2026-11-02): Hamburg Sozialmonitoring report-annex
+      indicators S1-S7 (status) and D1-D6 (3-year Dynamik) per scored statistisches
+      Gebiet, editions 2016-2025, long format (one row per edition_year x gebiet_id x
+      indicator). Source: "Sozialmonitoring Integrierte Stadtteilentwicklung, Bericht
+      <E> - Anhang", sheet II (Freie und Hansestadt Hamburg, Behoerde fuer
+      Stadtentwicklung und Wohnen, dl-de/by-2.0), pinned URLs in
+      ingestion/hamburg/sozialmonitoring/ingest_hamburg_sozialmonitoring_annex.py.
+      share (status rows, %) and change_pp (Dynamik rows, pp) are recovered as
+      100 * (mean + z * SD) from the edition's published mean/SD rows; nothing is
+      imputed. S7 cells with the exclusion code (z = 0 in editions 2016 and
+      2021-2025; in 2017-2020 the zeros are genuine values) are NULL with
+      cell_flag = 's7_zero_exclusion_code'. OUTCOME COMPONENTS ONLY (R-A1): never a
+      predictor. Evidence for every pre-registered check:
+      docs/epic-e/371-data-checks.md. Returns zero rows (typed stub) before ingestion.
+    meta:
+      dbt_meta_owner: data-engineer
+      role: outcome_only
+    data_tests:
+
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns:
+              - edition_year
+              - gebiet_id
+              - indicator
+      - assert_not_empty:
+          config:
+            severity: error
+      - assert_min_rows:
+          arguments:
+            min_rows: 110000
+          config:
+            severity: warn
+    columns:
+      - name: city_code
+        description: Canonical city code 'HH' (ADR-0005).
+        data_tests:
+
+          - accepted_values:
+              arguments:
+                values: ["HH"]
+      - name: edition_year
+        description: Sozialmonitoring report edition (Berichtsjahr), 2016-2025.
+        data_tests:
+
+          - not_null
+          - accepted_values:
+              arguments:
+                values: [2016, 2017, 2018, 2019, 2020, 2021, 2022, 2023, 2024, 2025]
+      - name: reference_date
+        description: Data reference date, 31.12.(edition_year - 1) (phase-A doc §3).
+        data_tests:
+
+          - not_null
+      - name: gebiet_id
+        description: >
+          Statistisches-Gebiet id as published ("Stat. Gebiet"); joins
+          stg_hamburg_sozialmonitoring.area_code (tested per edition by
+          test_371_hh_annex_gebiete_match_wfs).
+        data_tests:
+
+          - not_null
+      - name: stadtteil_name
+        description: Informational Stadtteil name from the annex (not a join key).
+      - name: population
+        description: Annex "Bevoelkerung 31.12.(E-1)"; equals the WFS bevoelkerung (tested).
+        data_tests:
+
+          - not_null
+      - name: indicator
+        description: Annex code S1-S7 or D1-D6 (see indicator_label_de for the edition's text).
+        data_tests:
+
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ["S1", "S2", "S3", "S4", "S5", "S6", "S7", "D1", "D2", "D3", "D4", "D5", "D6"]
+      - name: indicator_kind
+        description: "'status' (S1-S7) or 'dynamik' (D1-D6)."
+        data_tests:
+
+          - accepted_values:
+              arguments:
+                values: ["status", "dynamik"]
+      - name: indicator_label_de
+        description: The edition's own header text for the indicator (e.g. 'S4 Arbeitslose (SGB II)').
+        data_tests:
+
+          - not_null
+      - name: z_published
+        description: z-score exactly as published (S7 exclusion code 0 kept here for traceability).
+        data_tests:
+
+          - not_null
+      - name: z_score
+        description: z_published, NULL for excluded cells (cell_flag != 'scored').
+      - name: edition_mean
+        description: >
+          The edition's published "Mittelwert" row for the indicator (a fraction;
+          the unweighted mean over the scored Gebiete).
+        data_tests:
+
+          - not_null
+      - name: edition_sd
+        description: >
+          The edition's published "SD" row for the indicator (a fraction; population
+          SD over the scored Gebiete).
+        data_tests:
+
+          - not_null
+      - name: share
+        description: Recovered level in % = 100 * (mean + z * SD); status rows only, NULL if excluded.
+      - name: change_pp
+        description: Recovered 3-year change in percentage points = 100 * (mean + z * SD); Dynamik rows only.
+      - name: recovery_error_bound_pp
+        description: Worst-case recovery error from published rounding, in pp (see model header).
+        data_tests:
+
+          - not_null
+      - name: z_precision
+        description: "'two_decimals' or 'full' (derived per edition from the values)."
+        data_tests:
+
+          - accepted_values:
+              arguments:
+                values: ["two_decimals", "full"]
+      - name: moments_precision
+        description: "'three_decimals' or 'full' for the mean/SD rows (derived per edition)."
+        data_tests:
+
+          - accepted_values:
+              arguments:
+                values: ["three_decimals", "full"]
+      - name: cell_flag
+        description: "'scored' or 's7_zero_exclusion_code' (S7 area exclusion in editions 2016 and 2021-2025, NULL value)."
+        data_tests:
+
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ["scored", "s7_zero_exclusion_code"]
+      - name: status_summe
+        description: The Gebiet's published Status-summe (sum of S1-S7 z).
+      - name: dynamik_summe
+        description: The Gebiet's published Dynamik-summe (sum of D1-D6 z).
+      - name: source_file
+        description: Annex workbook file name (pinned per edition).
+      - name: source_attribution
+        description: Mandatory dl-de/by-2.0 attribution string.
+
+  - name: stg_berlin_ewr_age_bands
+    description: >
+      #371 (pre-registration §3.7 DE check 4): the 32 narrow EWR age bands
+      (E_E00_01 ... E_E95_110) per Planungsraum for 31.12.2018, 2020 (lor_pre2021)
+      and 2024, 2025 (lor_2021), staged from the raw EWR matrices in
+      data/raw/berlin/ewr/csv/ (Amt fuer Statistik Berlin-Brandenburg, CC BY 3.0 DE;
+      existing source, no ADR). Long format: one row per reference_year x area_code x
+      band_code. Bands partition the population exactly (tested). Whole-row-blank
+      PLRs (uninhabited) are 0 with is_blank_row; the 2024 publisher code typo
+      06200318 is corrected to 06200418 (Landweg). Zero-row stub when no matrix exists.
+    meta:
+      dbt_meta_owner: data-engineer
+    data_tests:
+
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns:
+              - reference_year
+              - area_code
+              - band_code
+      - assert_not_empty:
+          config:
+            severity: error
+    columns:
+      - name: city_code
+        description: Canonical 'BER' (ADR-0005).
+        data_tests:
+
+          - accepted_values:
+              arguments:
+                values: ["BER"]
+      - name: reference_year
+        description: Calendar year of the 31 December snapshot.
+        data_tests:
+
+          - not_null
+          - accepted_values:
+              arguments:
+                values: [2018, 2020, 2024, 2025]
+      - name: area_code
+        description: 8-digit PLR code of the file's LOR vintage.
+        data_tests:
+
+          - not_null
+      - name: area_vintage
+        description: "'lor_pre2021' (2018, 2020) or 'lor_2021' (2024, 2025)."
+        data_tests:
+
+          - accepted_values:
+              arguments:
+                values: ["lor_pre2021", "lor_2021"]
+      - name: band_code
+        description: Source column name, e.g. 'E_E65_67'.
+        data_tests:
+
+          - not_null
+      - name: age_from
+        description: Lower age bound, inclusive.
+        data_tests:
+
+          - not_null
+      - name: age_to
+        description: Upper age bound, exclusive (110 for the open 95+ band).
+        data_tests:
+
+          - not_null
+      - name: residents
+        description: Residents (Hauptwohnsitz) in the band.
+        data_tests:
+
+          - not_null
+      - name: residents_total
+        description: Published E_E (all residents) of the PLR; equals the sum of the 32 bands.
+        data_tests:
+
+          - not_null
+      - name: is_blank_row
+        description: TRUE for the whole-row-blank (uninhabited) PLRs, counted as 0.

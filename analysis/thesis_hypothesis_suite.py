@@ -40,14 +40,22 @@ Hamburg classes from `int_hamburg_sozialmonitoring_index`.
 Usage:
   uv run python analysis/thesis_hypothesis_suite.py --city BER            # both BER panels
   uv run python analysis/thesis_hypothesis_suite.py --city BER --panel modern
-  uv run python analysis/thesis_hypothesis_suite.py --city HH --results-csv <scratch.csv> \\
-      --metadata-json <scratch.json> --no-findings                       # #355 smoke run
+  uv run python analysis/thesis_hypothesis_suite.py --city HH             # both HH panels (#355)
+  uv run python analysis/thesis_hypothesis_suite.py --panel matched       # #371 E1c, city-less
+
+The matched Berlin-Hamburg panel (#371, docs/methodology/371-matched-comparison-preregistration.md)
+lives in analysis/thesis_matched_panel.py and writes its own files
+(docs/epic-e/matched-comparison-results.csv / -metadata.json / E1c-matched-comparison-findings.md);
+it never touches this script's BER/HH outputs (maintainer call M1).
 
 Outputs (§7): docs/epic-e/thesis-hypothesis-suite-results.csv (one CSV for all panels; a run
 replaces only its own panels' rows), docs/epic-e/thesis-hypothesis-suite-metadata.json
-(fixed feature lists written before any fit, validity check, coverage, coefficients), and
-the generated findings docs/epic-e/E1b-berlin-hypothesis-suite-findings.md (never
-hand-edited). The Hamburg findings file is #355's.
+(fixed feature lists written before any fit, validity check / Hamburg class context,
+coverage, coefficients), and the generated findings (never hand-edited):
+docs/epic-e/E1b-berlin-hypothesis-suite-findings.md (--city BER) and
+docs/epic-h/H-thesis-hypothesis-suite-findings.md (--city HH: HH/full and HH/modern side by
+side, phase shifts, §4.5 comparability and construct text, Hamburg shock timing, pivot-2016
+caveat, phase-A checks, deviations).
 """
 
 from __future__ import annotations
@@ -98,6 +106,7 @@ DUCKDB_PATH = Path(_env_db) if _env_db else REPO / "data" / "gentriduck.duckdb"
 RESULTS_CSV = REPO / "docs" / "epic-e" / "thesis-hypothesis-suite-results.csv"
 METADATA_JSON = REPO / "docs" / "epic-e" / "thesis-hypothesis-suite-metadata.json"
 FINDINGS_BER = REPO / "docs" / "epic-e" / "E1b-berlin-hypothesis-suite-findings.md"
+FINDINGS_HH = REPO / "docs" / "epic-h" / "H-thesis-hypothesis-suite-findings.md"
 
 PRIMARY_ORDER = ("H1", "H1a", "H1b", "H1c", "H2", "H3a", "H3b", "H3c")
 # §5.3: fewer than 20 clusters -> NO DATA (Cameron, Gelbach & Miller 2008).
@@ -195,6 +204,85 @@ W1_NOTE = (
     "bounce-back (§3.4)"
 )
 
+
+HH_REFUGEE_CHANNEL_NOTE = (
+    "Hamburg-specific refugee channel: D1 (3-year change in the share of children with a "
+    "migration background) and, from the 2019 edition, S3 (incl. AsylbLG recipients) move "
+    "directly with refugee arrivals once registered as residents (2015-16; from Ukraine from "
+    "March 2022), not only through SGB II after recognition; closing or moving accommodation "
+    "moves them the other way; local, near accommodation sites (domain sign-off 355 C3)"
+)
+# R2 (domain sign-off 355): Hamburg H2 has no gastronomy feature, so its pandemic note names
+# the local mix instead of gastronomy.
+HH_PANDEMIC_GASTRO = "Dynamik can correlate with gastronomy through hospitality/culture job losses"
+HH_PANDEMIC_MIX = "Dynamik can correlate with the local mix through the labour market (job losses"
+HH_PANDEMIC_MIX_TAIL = " in hospitality/culture)"
+
+
+def hh_h2_note(note: str) -> str:
+    """R2: the H2 wording of the Hamburg pandemic note; other notes unchanged."""
+    if HH_PANDEMIC_GASTRO not in note:
+        return note
+    head, _sep, tail = note.partition(HH_PANDEMIC_GASTRO)
+    return head + HH_PANDEMIC_MIX + HH_PANDEMIC_MIX_TAIL + tail
+
+
+def hh_shock_notes(s: int, e: int) -> list[str]:
+    """§4.3 / D7 Hamburg shock timing, per window. Sozialmonitoring edition E carries data
+    as of 31 Dec (E-1) (phase A §3), so window (s, e) spans Dec(s-1) -> Dec(e-1). Binding
+    for the windows ending 2022 (pandemic) and 2025 (Rechtskreiswechsel, 2023 reforms); the
+    2016-2018 refugee entry into SGB II is the Hamburg counterpart of the #354 thesis-era
+    line (domain sign-off 354 C3)."""
+    d0, d1 = s - 1, e - 1
+    out = []
+    # domain sign-off 355 C3: Hamburg's D1 (children with a migration background) and, from
+    # the 2019 edition, S3 (incl. AsylbLG) move directly with registered refugee arrivals:
+    # 2015-16 arrivals (windows spanning 2015) and arrivals from Ukraine from March 2022.
+    if (d0 <= 2015 and d1 >= 2015) or (d0 <= 2021 and d1 >= 2022):
+        out.append(HH_REFUGEE_CHANNEL_NOTE)
+    if d0 <= 2017 and d1 >= 2016:
+        out.append(
+            "includes recognised 2015-16 refugees entering SGB II, mainly 2016-2018 (local, "
+            "near large accommodation sites; domain sign-off 354 C3)"
+        )
+    if d0 <= 2020 and d1 >= 2020:
+        out.append(
+            "includes the 2020-21 pandemic: Dynamik can correlate with gastronomy through "
+            "hospitality/culture job losses rather than through a change in who lives there "
+            "(§4.3, counterpart of §3.4)"
+        )
+    if d0 <= 2021 and d1 >= 2022:
+        out.append(
+            "includes the 1 June 2022 Rechtskreiswechsel (Ukrainian refugees into SGB II; "
+            "BA-Statistik 2022)"
+        )
+    if d0 <= 2022 and d1 >= 2023:
+        out.append(
+            "includes the 1 Jan 2023 Bürgergeld and Wohngeld-Plus reforms and continuing "
+            "refugee entry into SGB II (§4.3, D7)"
+        )
+    return out
+
+
+def _hh_shock_map(*chains: tuple[tuple[int, int], ...]) -> dict:
+    # tuples of individual notes, so rows spanning several windows can de-duplicate them
+    return {w: tuple(hh_shock_notes(*w)) for ch in chains for w in ch if hh_shock_notes(*w)}
+
+
+# §4.5 / domain review D8e: every Hamburg H1a-c statement names the status construct.
+HH_CONSTRUCT_NOTE = (
+    "status = Hamburg Sozialmonitoring Statusindex class, a composite of seven indicators "
+    "that include the share of children and young people with a migration background and "
+    "school-leaving outcomes; an association with it is an association with that composite, "
+    "not with any one group (§4.5)"
+)
+HH_FULL_WINDOWS = ((2013, 2016), (2016, 2019), (2019, 2022), (2022, 2025))
+HH_PHASE_CHAINS = (
+    ((2011, 2014), (2014, 2017), (2017, 2020), (2020, 2023)),
+    ((2012, 2015), (2015, 2018), (2018, 2021), (2021, 2024)),
+)
+HH_MODERN_WINDOWS = ((2019, 2022), (2022, 2025))
+
 # §3.1 / §4.3: the Dynamik of status edition E covers OSM snapshots [E - span, E].
 DYNAMIK_SPAN = {"BER": 2, "HH": 3}
 # Year of the level each status-level column refers to (for the §5.8(2) control check).
@@ -251,15 +339,13 @@ PANELS: dict[tuple[str, str], Panel] = {
         vintage="current",
         grain="hh_gebiet",
         cluster_unit="stadtteil",
-        windows=((2013, 2016), (2016, 2019), (2019, 2022), (2022, 2025)),
+        windows=HH_FULL_WINDOWS,
         pivots=(2016, 2019, 2022),
         h1_edition=2025,
         h1_snapshot=2025,
         h1_status="classes",
-        phase_chains=(
-            ((2011, 2014), (2014, 2017), (2017, 2020), (2020, 2023)),
-            ((2012, 2015), (2015, 2018), (2018, 2021), (2021, 2024)),
-        ),
+        shock_notes=_hh_shock_map(HH_FULL_WINDOWS, *HH_PHASE_CHAINS),
+        phase_chains=HH_PHASE_CHAINS,
     ),
     ("HH", "modern"): Panel(
         city="HH",
@@ -268,11 +354,12 @@ PANELS: dict[tuple[str, str], Panel] = {
         vintage="current",
         grain="hh_gebiet",
         cluster_unit="stadtteil",
-        windows=((2019, 2022), (2022, 2025)),
+        windows=HH_MODERN_WINDOWS,
         pivots=(2022,),
         h1_edition=2025,
         h1_snapshot=2025,
         h1_status="classes",
+        shock_notes=_hh_shock_map(HH_MODERN_WINDOWS),
     ),
 }
 
@@ -590,6 +677,26 @@ def auc_test(
     }
 
 
+def oof_diagnostics(x: np.ndarray, y: np.ndarray, groups: np.ndarray, windows: pd.Series) -> dict:
+    """#355 review MED 2 (descriptive, no verdict): where an out-of-fold AUC comes from.
+    Same deterministic GroupKFold as the primary row; AUC within each test fold and within
+    each pooled window, on the pooled out-of-fold scores."""
+    y = np.asarray(y).astype(int)
+    res = grouped_oof_auc(x, y, groups, n_splits=N_SPLITS)
+    if res["auc"] is None:
+        return {"pooled_auc": None, "within_fold_auc": [], "per_window_auc": {}}
+    oof = res["oof"]
+    w = np.asarray(windows)
+    return {
+        "pooled_auc": res["auc"],
+        "within_fold_auc": [auc_score(y[te], oof[te]) for _tr, te in res["folds"]],
+        "fold_n_test": [int(len(te)) for _tr, te in res["folds"]],
+        "per_window_auc": {
+            str(int(e)): auc_score(y[w == e], oof[w == e]) for e in sorted(pd.unique(w))
+        },
+    }
+
+
 def delta_auc_test(
     x_base: np.ndarray, x_full: np.ndarray, y: np.ndarray, groups: np.ndarray, n_boot: int
 ) -> dict:
@@ -681,6 +788,11 @@ class PanelData:
     bzr_status: pd.DataFrame | None = None
     # Unweighted city means of meaning-named indicators per edition (findings context, C3).
     edition_means: dict = field(default_factory=dict)
+    # Hamburg: published class counts per edition (phase A §4 reference seed), to verify
+    # in-script that the classes the suite consumes are the published ones (§2.1(4)).
+    published_counts: pd.DataFrame | None = None
+    # Loader facts reported in the findings (e.g. Hamburg Stadtteil name variants).
+    context: dict = field(default_factory=dict)
     _wide_cache: dict = field(default_factory=dict)
 
     def cluster_of(self, codes: pd.Series) -> pd.Series:
@@ -926,6 +1038,14 @@ def load_hamburg(con, panel: Panel) -> PanelData:
     )
     codes = pd.DataFrame({"area_code": sorted(set(oa["area_code"]) | set(status["area_code"]))})
     clusters = codes.merge(cl, on="area_code", how="left")
+    # §2.1(4) / phase A §4: published class counts (annexes 2016-2025, reference seed).
+    pub = con.execute(
+        """
+        SELECT edition, index_name, expected_code, n_gebiete
+        FROM main_seeds.seed_hh_sozialmonitoring_published_class_counts
+        ORDER BY edition, index_name, expected_code
+        """
+    ).df()
     return PanelData(
         panel=panel,
         status=status.reset_index(drop=True),
@@ -937,6 +1057,19 @@ def load_hamburg(con, panel: Panel) -> PanelData:
         d4=ewr,
         clusters=clusters,
         source_attrs={"status": "WFS de.hh.up:sozialmonitoring statusindex / dynamikindex"},
+        published_counts=pub,
+        context={
+            # §4.2: a Gebiet's Stadtteil label varies across editions for this many Gebiete
+            # (spelling variants and renamed Stadtteile); the latest edition decides.
+            "n_gebiete_stadtteil_label_varies": int(
+                (
+                    soz.dropna(subset=["stadtteil_name"])
+                    .groupby("area_code")["stadtteil_name"]
+                    .nunique()
+                    > 1
+                ).sum()
+            ),
+        },
     )
 
 
@@ -1332,7 +1465,15 @@ class SuiteRun:
         return f"{windows[0][0]}-{windows[-1][1]}"
 
     def shock_notes(self, windows) -> list[str]:
-        return [self.p.shock_notes[w] for w in windows if w in self.p.shock_notes]
+        """Shock notes of every window a row spans (§3.4 / §4.3: every row that includes a
+        window names its mechanism), each note once, in window order."""
+        out: list[str] = []
+        for w in windows:
+            v = self.p.shock_notes.get(w)
+            for n in (v,) if isinstance(v, str) else (v or ()):
+                if n not in out:
+                    out.append(n)
+        return out
 
     def break_notes(self, editions) -> list[str]:
         if self.p.city != "BER":
@@ -1642,7 +1783,7 @@ class SuiteRun:
                 res,
                 exp,
                 win,
-                notes=[cov_note],
+                notes=[cov_note, *([HH_CONSTRUCT_NOTE] if p.city == "HH" else [])],
             )
             # N7: one population-weighted row (thesis "einwohnergewichtet", §5.2 = A1.1 (iii)),
             # full frame, no base rule.
@@ -1858,10 +1999,12 @@ class SuiteRun:
         win = self.win_label(p.windows)
         notes = self.shock_notes(p.windows) + self.break_notes([e for _s, e in p.windows])
         if p.city == "HH":
+            notes = [hh_h2_note(n) for n in notes]  # R2 (domain sign-off 355)
             ok = fr["D_cls"].notna()
             fr = fr[ok].reset_index(drop=True)
             y = (fr["D_cls"] == 3).astype(int)
-            ydesc = "Dynamik class negativ (3) vs rest (predicts worsening)"
+            # C2(c) (domain sign-off 355): name the contrast as a target, not a prediction
+            ydesc = "Dynamik class negativ (3) vs rest (target: classed as worsening)"
             out_name = "dynamik_class"
         else:
             fr = fr[fr["D"].notna()].reset_index(drop=True)
@@ -1885,6 +2028,10 @@ class SuiteRun:
             key="H2",
             outcome_name=out_name,
         )
+        if p.city == "HH":
+            self.meta["h2_oof_diagnostics"] = oof_diagnostics(
+                x.to_numpy(float), y.to_numpy(int), fr["cluster"].to_numpy(object), fr["w_end"]
+            )
         doms = fixed_feature_list(fr, "dom")
         self.meta["feature_lists"]["H2_domain"] = doms
         xd = oa_features(fr, doms, "dom")
@@ -2025,7 +2172,7 @@ class SuiteRun:
             self._auc_row(
                 "H2",
                 "secondary",
-                "category OA at window start => Dynamik class positiv (1) vs rest (predicts improvement)",
+                "category OA at window start => Dynamik class positiv (1) vs rest (target: classed as improving)",
                 fr,
                 x,
                 yp,
@@ -2253,7 +2400,8 @@ class SuiteRun:
                     "g_commercial_c5",
                     status_name,
                     [pv],
-                    [*self.shock_notes([w for w in p.windows if w[1] == pv]), *bn],
+                    # #355 review MED 1: the row spans P (ends at pv) and F (starts at pv)
+                    [*self.shock_notes([w for w in p.windows if pv in (w[0], w[1])]), *bn],
                     prim_timing[which],
                 )
             # pivot difference (§3.4)
@@ -2301,7 +2449,8 @@ class SuiteRun:
                     notes=[
                         "heterogeneous across pivots: the pooled estimate depends on the window"
                         if het
-                        else "no detectable pivot heterogeneity (CI includes 0)"
+                        else "no detectable pivot heterogeneity (CI includes 0)",
+                        *self.shock_notes(p.windows),
                     ],
                     descriptive=True,
                 )
@@ -2399,7 +2548,7 @@ class SuiteRun:
                 "g_commercial_c5",
                 status_name,
                 pivots,
-                [cut_note],
+                [cut_note, *self.shock_notes(p.windows)],
                 timing,
             )
 
@@ -2495,11 +2644,27 @@ class SuiteRun:
             if rows.empty:
                 continue
             tag = "/".join(str(e) for _s, e in chain)
+            shock = self.shock_notes(chain)
             cl = self._prep_cl(rows, "D", "g_commercial_c5")
             if not cl.empty:
                 pivots = sorted(int(v) for v in cl["pivot"].unique())
                 for which, timing in (("H3a", "pivot"), ("H3b", "window_start")):
                     spec = self._h3_controls(which, timing, False)
+                    # Report the pivots that actually carry complete rows: the H3b
+                    # start-of-window control at the first pivot needs the status class of
+                    # edition pivot - 3, which predates the warehouse's first edition (2013).
+                    used = self._complete_pivots(cl, which, spec[0])
+                    gap = [pv for pv in pivots if pv not in used]
+                    gap_note = (
+                        [
+                            f"pivot {', '.join(str(v) for v in gap)} has no complete rows: the "
+                            "start-of-window status class (edition "
+                            f"{', '.join(str(v - DYNAMIK_SPAN['HH']) for v in gap)}) predates the "
+                            "first Sozialmonitoring edition in the warehouse (2013)"
+                        ]
+                        if gap and which == "H3b"
+                        else ([f"pivot {gap} has no complete rows"] if gap else [])
+                    )
                     self._h3_row(
                         cl,
                         which,
@@ -2508,9 +2673,11 @@ class SuiteRun:
                         spec,
                         "g_commercial_c5",
                         "dynamik_class",
-                        pivots,
+                        used,
                         [
-                            "phase-shift sensitivity (§4.3); a result holding on one phase only is fragile"
+                            "phase-shift sensitivity (§4.3); a result holding on one phase only is fragile",
+                            *gap_note,
+                            *shock,
                         ],
                         timing,
                     )
@@ -2533,12 +2700,84 @@ class SuiteRun:
                 res,
                 "negative",
                 self.win_label(chain),
-                notes=["phase-shift sensitivity (§4.3)"],
+                notes=["phase-shift sensitivity (§4.3)", *shock],
             )
+
+    @staticmethod
+    def _complete_pivots(cl: pd.DataFrame, which: str, controls: Sequence[str]) -> list[int]:
+        """Pivots with at least one row where predictor, outcome and controls are finite."""
+        x, y = (
+            (cl["d_poi_p"], cl["d_status_f"])
+            if which == "H3a"
+            else (cl["d_status_p"], cl["d_poi_f"])
+        )
+        cols = [cl["D_P_col"] if c == "D_P" else cl[c] for c in controls]
+        ok = _finite_rows(x.to_numpy(float), y.to_numpy(float), *[c.to_numpy(float) for c in cols])
+        return sorted(int(v) for v in pd.unique(cl.loc[ok, "pivot"]))
 
     # -- validity check (§3.2, Berlin) ------------------------------------------
 
+    def run_hh_context(self):
+        """Hamburg findings context (no verdict depends on any of it):
+        - class counts per edition used, checked against the published annex counts
+          (§2.1(4), phase A §4 seed; 2013-2015 have no annex, O3);
+        - tie ceilings of the status and Dynamik classes (domain sign-off 354 R5, C2 method);
+        - OSM city totals per snapshot for the pivot-2016 caveat (§4.3 R6);
+        - Sports-and-Recreation type composition at the H1 snapshot (§1.3)."""
+        p, d = self.p, self.d
+        # window ends (Dynamik editions), window starts (status-level editions) and the H1
+        # edition; starts before the first edition (2011, 2012) have no rows and are skipped.
+        eds = {y for w in p.windows for y in w} | {p.h1_edition}
+        for chain in p.phase_chains:
+            eds |= {y for w in chain for y in w}
+        pub = d.published_counts if d.published_counts is not None else pd.DataFrame()
+        classes = []
+        for e in sorted(eds):
+            st = _status_at(d, e)
+            if st.empty:
+                continue
+            sc = st["S_cls"].dropna().astype(int)
+            dc = st["D_cls"].dropna().astype(int)
+            entry = {
+                "edition": int(e),
+                "n": int(len(st)),
+                "status_counts": {str(k): int((sc == k).sum()) for k in (1, 2, 3, 4)},
+                "dynamik_counts": {str(k): int((dc == k).sum()) for k in (1, 2, 3)},
+                "ceiling_status": tie_ceiling(sc.to_numpy(float)),
+                "ceiling_dynamik": tie_ceiling(dc.to_numpy(float)),
+            }
+            pe = pub[pub["edition"] == e] if not pub.empty else pub
+            if len(pe):
+                exp = {
+                    (str(r.index_name), str(int(r.expected_code))): int(r.n_gebiete)
+                    for r in pe.itertuples()
+                }
+                got = {("status", k): v for k, v in entry["status_counts"].items()}
+                got |= {("dynamik", k): v for k, v in entry["dynamik_counts"].items()}
+                entry["matches_published"] = bool(got == exp)
+            else:
+                entry["matches_published"] = None  # no published annex (2013-2015, O3)
+            classes.append(entry)
+        self.meta["hh_classes"] = classes
+        dom = d.oa[d.oa["oa_level"] == "domain"]
+        self.meta["osm_city_totals"] = {
+            str(int(y)): int(g["parent_stock_city"].max())
+            for y, g in dom.groupby("snapshot_year", sort=True)
+        }
+        t = d.types[
+            (d.types["snapshot_year"] == p.h1_snapshot) & (d.types["poi_domain_h"] == SPORT_DOMAIN)
+        ]
+        comp = t.groupby(["poi_category_h", "poi_type_h"], sort=True)["poi_count"].sum()
+        self.meta["sport_types_h1"] = sorted(
+            ([f"{c}|{ty}", int(v)] for (c, ty), v in comp.items()), key=lambda r: (-r[1], r[0])
+        )
+        self.meta["n_clusters_total"] = int(d.clusters["cluster"].nunique())
+        self.meta.update(d.context)
+
     def run_validity(self):
+        if self.p.city == "HH":
+            self.run_hh_context()
+            return
         if self.p.city != "BER":
             return
         eds = sorted({e for _s, e in self.p.windows} | {self.p.h1_edition})
@@ -2632,7 +2871,8 @@ def _verdict_for(row: dict, primary: bool) -> tuple[str, list[str]]:
     if row["estimator"] == "oof_auc_logit" and v == CONTRADICTED:
         # §5.1: CONTRADICTED is impossible for the non-directional H1/H2 AUC tests.
         notes.append(
-            "AUC significantly below 0.5; CONTRADICTED is undefined for the non-directional H1/H2"
+            "out-of-fold AUC significantly below 0.5 (no transferable prediction); CONTRADICTED "
+            "is undefined for the non-directional H1/H2 (Amendment 3)"
         )
         v = NOT_SIGNIFICANT
     elif row["estimator"] == "delta_auc" and v == CONTRADICTED:
@@ -3082,7 +3322,16 @@ def _deviations(meta_mod: dict, meta_th: dict) -> list[str]:
         "low-B smoke run**, so it is not pre-registered; it can only weaken a claim, and it "
         "binds #355 unchanged.",
         "**Hamburg panels not reported here.** The code supports `--city HH` (`HH/full`, "
-        "`HH/modern`, phase-shift chains); Hamburg results and findings are #355's.",
+        "`HH/modern`, phase-shift chains); Hamburg results and findings are #355's (see "
+        "`docs/epic-h/H-thesis-hypothesis-suite-findings.md`).",
+        "**Shock notes on every row that spans a shock window (#355 review, 2026-11-01; "
+        "notes only).** Per-pivot H3a/H3b rows now name the shock notes of both the P and the "
+        "F window (before: P only), and the pivot-difference and level-stratified H3a/H3b rows "
+        "carry the panel's shock notes (before: none), so the §3.4 sentence 'every pooled row "
+        "that includes W1 names this mechanism' holds for every row. In `BER/modern` this adds "
+        "the W1 note to the two pivot-difference rows and the four level-stratified rows; no "
+        "estimate, CI, p, verdict or Holds? label changes, and `BER/thesis-era` carries no "
+        "shock notes, so it is unchanged.",
     ]
     return devs
 
@@ -3485,11 +3734,1141 @@ def write_berlin_findings(path: Path, records: list[dict], meta: dict) -> None:
         "Dated 2026-10-31/2026-11-01. Items 1-11 were fixed in code before any suite statistic "
         "was computed. Items 12-15 record consequences first seen in a low-B smoke run (an "
         "untestable or thin sensitivity row, a delta-AUC case the mapping does not spell out); "
-        "none changed a rule after results were seen. None changes a hypothesis, variable, "
-        "expected sign, family or verdict rule."
+        "none changed a rule after results were seen. Item 16 is a notes-only correction from "
+        "the #355 review (2026-11-01). None changes a hypothesis, variable, expected sign, "
+        "family or verdict rule."
     )
     a("")
     for i, dv in enumerate(_deviations(mm, mt), start=1):
+        a(f"{i}. {dv}")
+    a("")
+    path.write_bytes(("\n".join(L) + "\n").encode("utf-8"))
+
+
+# ---------------------------------------------------------------------------
+# Findings (generated, §7.2) -- Hamburg (#355)
+# ---------------------------------------------------------------------------
+
+HH_PANELS = (
+    ("full", "Hamburg full chain 2013–2025 (primary)"),
+    ("modern", "Hamburg pivot 2022 (era split)"),
+)
+
+# §4.4 testability table, Hamburg operationalisation per hypothesis (thesis pairing, Tabelle
+# 6-16 / Tabelle 6-1, transferred to Sozialmonitoring classes).
+HH_OPS = {
+    "H1": (
+        "Out-of-fold AUC (5-fold GroupKFold by Stadtteil) of a fixed L2 logit on all category-level "
+        "OA passing the A1.1 feature rule; binary status = class {3, 4} vs {1, 2}; edition 2025 × "
+        "OSM 2025-01-01",
+        "The binary is about 18/82; AUC is threshold-free but has a wider CI",
+    ),
+    "H1a": (
+        "Spearman (mid-ranks) of OA category Cafe vs the four-class status, edition 2025 × OSM "
+        "2025; Gastronomy base ≥ 10",
+        "Ordinal outcome; the statement names the construct (§4.5)",
+    ),
+    "H1b": (
+        "Spearman of OA category Fast Food vs status class; Gastronomy base ≥ 10",
+        "Ordinal outcome; the statement names the construct (§4.5)",
+    ),
+    "H1c": (
+        "Spearman of OA domain Sports and Recreation vs status class; all-domain base ≥ 10",
+        "Ordinal outcome; the statement names the construct (§4.5)",
+    ),
+    "H2": (
+        "Out-of-fold AUC, Dynamik_E 'negativ' vs rest (target: classed as worsening) ~ category OA at "
+        "snapshot E−3, pooled over the panel's windows; secondary 'positiv' vs rest (target: "
+        "classed as improving)",
+        "Low power: positives about 4–10% per edition; CI NA or wider than 0.25 → NOT SIGNIFICANT",
+    ),
+    "H3a": (
+        "Partial Spearman(g(commercial C5)_P, Dynamik class_F | Dynamik class_P, status class at "
+        "the pivot)",
+        "3-year windows (Berlin: 2 years)",
+    ),
+    "H3b": (
+        "Partial Spearman(Dynamik class_P, g(commercial C5)_F | g(commercial C5)_P, status class "
+        "at the start of P = edition E−3)",
+        "3-year windows (Berlin: 2 years)",
+    ),
+    "H3c": (
+        "Spearman(g(commercial C5)_W, Dynamik class_W), same 3-year window, pooled",
+        "Change vs change; read with H3a/H3b (§9)",
+    ),
+}
+
+HH_COMPARABILITY_TEXT = """Hamburg and Berlin verdicts are **not like-for-like** (pre-registration §4.5, binding text):
+
+1. The monitor construction differs: Hamburg's seven indicators include migration background and
+   school leaving.
+2. The change window differs (3 vs 2 years).
+3. The status measure differs (Hamburg classes vs Berlin continuous composites).
+4. The grain differs (Gebiet ≈ 2,200 residents vs PLR ≈ 7,000).
+5. The era differs (`HH/full` 2013–2025 vs Berlin modern 2019–2025; `HH/modern` is the era-matched
+   comparison).
+
+A diverging verdict is not evidence that the cities' processes differ, **and a matching verdict is
+not evidence that they are the same**: with different constructs, agreement can be coincidental.
+Because Hamburg's status index includes *Kinder und Jugendliche mit Migrationshintergrund*, a Hamburg
+H1b result is partly a fast-food ↔ migrant-children association. Every Hamburg H1a–c statement must
+name the construct, so that the result cannot be read as an ethnic rather than a socio-economic
+association (2026-10 domain R8).
+
+**No hypothesis is untestable in Hamburg** (§4.4). What is missing is resolution (classes only) and a
+2018 baseline, so **a Hamburg result is an out-of-sample transfer test, not a replication.** The
+"Holds?" column is therefore named **"Matches Berlin 2018?"** and uses the same labels (§5.6)."""
+
+HH_AUC_TEXT = """The thesis's headline AUCs (Berlin 2018) are not comparable to the suite's (pre-registration §1.2,
+binding text D4c). They come from BZR grain for H1, H2 and H3b (137 areas), random 10-fold CV
+(§6.2.3), the best of about 19 algorithms (§6.2.4) and up to 85 OA features. The Hamburg suite uses
+Gebiet grain, Stadtteil-grouped CV and one pre-specified model, each of which lowers AUC, on a
+different city and status construct (§4.5). **No table may set the thesis AUC against a suite AUC as a
+measure of weakening.** In place of the thesis's "Features sinnvoll?" column, the ten largest
+standardised coefficients (mean over the five training folds) are listed with their signs."""
+
+HH_INDICATOR_SENTENCE = (
+    '*"The open Sozialmonitoring report annexes (2016–2025) publish all seven status indicators and '
+    "six Dynamik indicators per statistisches Gebiet as z-scores; the WFS used by the warehouse "
+    'publishes classes only."* (phase A §5, binding check §2.1(5) / D8g)'
+)
+
+
+# #355 review MED 3: plain names of the domains an OA feature list draws on.
+DOMAIN_PHRASE = {
+    "Public Space": "public facilities",
+    "Mobility": "transport",
+    "Tourism": "tourist facilities",
+    "Public Service": "public services",
+    "Health": "health services",
+    "Education": "education",
+    "Sports and Recreation": "sport and recreation",
+    "Gastronomy": "shops and services",
+    "Retail": "shops and services",
+    "Services": "shops and services",
+    "Entertainment": "shops and services",
+}
+CAMPAIGN_DOMAINS = ("Mobility", "Public Space")
+
+
+def _feature_mix(feats: Sequence[str]) -> tuple[str, bool]:
+    """('public facilities, transport and tourist facilities', has_commercial) for a fixed
+    feature list; the phrase follows the list, so it cannot claim shops it does not hold."""
+    doms = sorted({f.split("|")[0] for f in feats})
+    phrases: list[str] = []
+    for dm in doms:
+        ph = DOMAIN_PHRASE.get(dm, dm.lower())
+        if ph not in phrases:
+            phrases.append(ph)
+    if not phrases:
+        text = "no category"
+    elif len(phrases) == 1:
+        text = phrases[0]
+    else:
+        text = ", ".join(phrases[:-1]) + " and " + phrases[-1]
+    return text, any(dm in COMMERCIAL_DOMAINS for dm in doms)
+
+
+def _hh_construct_sentence(feats: Sequence[str], design: str) -> str:
+    mix, has_comm = _feature_mix(feats)
+    doms = sorted({f.split("|")[0] for f in feats})
+    camp = [dm for dm in doms if dm in CAMPAIGN_DOMAINS]
+    what = f"the mix of {mix}"
+    if not has_comm:
+        what += " (no shop or service category reaches the measurement base at Gebiet grain)"
+    out = f"{design} in Hamburg tests {what}: its fixed feature list draws on {', '.join(doms)}."
+    if camp:
+        out += (
+            f" {' and '.join(camp)} are street-furniture and transit classes whose mapping is "
+            "campaign-driven, where C5's uniform-coverage assumption is least credible (domain "
+            "review D2)."
+        )
+    return out
+
+
+def _h2_diag_text(m: dict, mm: dict | None) -> str:
+    """#355 review MED 2: fold- and window-level AUC behind a below-chance pooled AUC."""
+    dg = m.get("h2_oof_diagnostics") or {}
+    folds = [v for v in dg.get("within_fold_auc") or [] if v is not None]
+    wins = {k: v for k, v in (dg.get("per_window_auc") or {}).items() if v is not None}
+    if not folds:
+        return "It is not read as evidence that the OA mix predicts the opposite change."
+    fb, wb = sum(v < 0.5 for v in folds), sum(v < 0.5 for v in wins.values())
+    consistent = fb == len(folds) and wb == len(wins)
+    mdg = (mm or {}).get("h2_oof_diagnostics") or {}
+    md = [v for v in mdg.get("within_fold_auc") or [] if v is not None]
+    cmp_txt = (
+        f" For comparison, the pivot-2022 panel's within-fold AUCs are {min(md):.2f}–{max(md):.2f}."
+        if md
+        else ""
+    )
+    fold_txt = " / ".join(f"{v:.3f}" for v in folds)
+    win_txt = ", ".join(f"{k} {v:.3f}" for k, v in sorted(wins.items()))
+    return (
+        f"The shortfall is {'consistent' if consistent else 'not uniform'}: within-fold AUC is "
+        f"below 0.5 in {fb} of {len(folds)} Stadtteil folds ({fold_txt}) and per-window AUC in "
+        f"{wb} of {len(wins)} windows ({win_txt}).{cmp_txt} It is read as an OA–Dynamik "
+        "relationship that is unstable across Stadtteile: a model fitted on the other "
+        "Stadtteile ranks the held-out ones slightly the wrong way"
+        + (", in every fold and every window" if consistent else "")
+        + ". It is not read as evidence that the OA mix predicts the opposite change. The "
+        "verdict and label stay as pre-registered; the diagnostics are in the metadata "
+        "(`h2_oof_diagnostics`)."
+    )
+
+
+def _hh_n_expl(hh: list[dict]) -> int:
+    """§5.5 tally: non-primary Hamburg rows that carry a verdict (both panels)."""
+    return sum(
+        1
+        for r in hh
+        if r["role"] != "primary" and r["verdict"] in (SUPPORTED, CONTRADICTED, NOT_SIGNIFICANT)
+    )
+
+
+def _hh_positiv_guard(hh: list[dict], mf: dict) -> str:
+    """C2(b) (domain sign-off 355): the 'positiv vs rest' secondary is not evidence that the
+    mix predicts improvement. Figures computed from the rows and metadata."""
+    n_expl = _hh_n_expl(hh)
+    inc = mf.get("h2_incremental") or {}
+    base, full = inc.get("auc_base"), inc.get("auc_full")
+    if base is not None and full is not None:
+        cmp_txt = (
+            f"the status class alone ({base:.3f}) outperforms status plus mix ({full:.3f})"
+            if base > full
+            else f"status plus mix ({full:.3f}) does not clearly outperform the status class "
+            f"alone ({base:.3f})"
+        )
+    else:
+        cmp_txt = "the status-level comparison is not available"
+    return (
+        "**The 'positiv vs rest' secondary is not evidence that the mix predicts improvement.** It "
+        f"is uncorrected (1 of {n_expl} exploratory rows, about {0.05 * n_expl:.1f} expected "
+        "significant by chance) and has no status-level control. In the primary contrast, "
+        f"{cmp_txt}, and in Berlin the status level fully explained the H2 link (Amendment 2). "
+        "Its features are campaign-mapped transport and street-furniture classes, and falling "
+        "measured disadvantage is not gentrification (§13)."
+    )
+
+
+def _hh_cell(r: dict | None) -> str:
+    if r is None:
+        return "–"
+    if r["verdict"] == NO_DATA:
+        return f"NO DATA (n = {r['n'] or 0}); *{r['holds']}*"
+    name = "AUC" if r["estimator"] == "oof_auc_logit" else "ρ"
+    lp = " — low power (§4.4)" if "low power" in r["notes"] else ""
+    if "significantly below 0.5" in r["notes"]:
+        lp += " — out-of-fold AUC significantly below 0.5 (no transferable prediction; Amendment 3, §4)"
+    return (
+        f"{name} {_f(r['estimate'])} [{_f(r['ci_low'])}, {_f(r['ci_high'])}], n = {r['n']} "
+        f"({r['n_clusters']} Stadtteile), p_BH = {_f(r['p_bh'], 4)}: **{r['verdict']}** "
+        f"({r['effect_label']}){lp}; *{r['holds']}*"
+    )
+
+
+def _ci_sig(r: dict) -> int:
+    """Sign of an unadjusted-CI significance (+1 above 0, -1 below 0, 0 otherwise)."""
+    try:
+        lo, hi = float(r["ci_low"]), float(r["ci_high"])
+    except (TypeError, ValueError):
+        return 0
+    return 1 if lo > 0 else (-1 if hi < 0 else 0)
+
+
+def _hh_phase_reading(sigs: list[int]) -> str:
+    k = sum(1 for s in sigs if s)
+    if k == 0:
+        return "not significant on any phase"
+    if k == 1:
+        return "**fragile**: significant on one phase only (§4.3)"
+    signs = {s for s in sigs if s}
+    return f"significant on {k} of {len(sigs)} phases" + (
+        " with conflicting signs" if len(signs) > 1 else ", same sign"
+    )
+
+
+def _hh_shock_text() -> str:
+    phase_windows = sorted({w for ch in HH_PHASE_CHAINS for w in ch}, key=lambda w: w[1])
+    ref = [
+        e for s, e in phase_windows if any("2015-16 refugees" in n for n in hh_shock_notes(s, e))
+    ]
+    pan = [e for s, e in phase_windows if any("pandemic" in n for n in hh_shock_notes(s, e))]
+    rkw = [
+        e for s, e in phase_windows if any("Rechtskreiswechsel" in n for n in hh_shock_notes(s, e))
+    ]
+    ref23 = [e for s, e in phase_windows if any("2023" in n for n in hh_shock_notes(s, e))]
+
+    def j(xs: list[int]) -> str:
+        return ", ".join(str(x) for x in xs) or "none"
+
+    return f"""No window is shock-free, and the findings must not imply otherwise (pre-registration §4.3, the
+Hamburg counterpart of §3.4; domain review D7). Sozialmonitoring edition E carries data as of
+31 Dec (E−1) (phase A §3), so the Dynamik of edition E spans Dec (E−4) → Dec (E−1).
+
+- **Window ending 2016 (Dec 2012 → Dec 2015).** The 2015 refugee arrivals begin at its end. Asylum
+  seekers are not in SGB II before recognition, so most of their entry into SGB II falls in the next
+  window.
+- **Hamburg-specific channel.** Hamburg's D1 is the 3-year change in the share of children with a
+  migration background, and from the 2019 edition S3 also counts AsylbLG recipients (phase A §5).
+  Refugee arrivals therefore move status and Dynamik directly once they are registered as residents,
+  not only through SGB II after recognition. This affects the windows ending 2016 and 2019 (arrivals
+  2015–16) and 2025 (arrivals from Ukraine from March 2022, including many children). Closing or
+  moving accommodation moves them the other way. The effect is local, near accommodation sites.
+  Rows spanning these windows name this channel in `notes` (domain sign-off 355 C3).
+- **Window ending 2019 (Dec 2015 → Dec 2018).** People who arrived as refugees in 2015–16 moved into
+  SGB II after recognition, mainly 2016–2018 (the Hamburg counterpart of the #354 thesis-era line,
+  domain sign-off 354 C3). The effect is local, near large accommodation sites. The 2019 edition also
+  changes indicator definitions (S3 adds AsylbLG recipients; S7's school-leaving categories are
+  renamed; phase A §5). Whether the 2019 Dynamik is computed on consistent definitions cannot be
+  checked from the class-only WFS.
+- **Window ending 2022 (Dec 2018 → Dec 2021) contains the pandemic** (binding, §4.3). Pandemic job
+  losses hit hospitality, culture and tourism workers, so Dynamik over this window can correlate with
+  gastronomy (the H3 commercial basket, H1a/b) through the labour market rather than through a change
+  in who lives there; for H2, whose features hold no gastronomy, with the local mix through the
+  labour market (domain sign-off 355 R2). Every row that includes this window names the mechanism in
+  `notes`.
+- **Window ending 2025 (Dec 2021 → Dec 2024) contains the 1 June 2022 Rechtskreiswechsel and the
+  1 January 2023 Bürgergeld and Wohngeld-Plus reforms** (binding, §4.3), plus continuing refugee
+  entry into SGB II. The Rechtskreiswechsel moved Ukrainian refugees into SGB II (BA-Statistik 2022).
+  The reforms changed who counts in the benefit-based indicators, with unknown and possibly opposite
+  small-area effects.
+- **`HH/modern` contains both the window ending 2022 and the window ending 2025, so it is the most
+  shock-exposed panel** (binding, §4.3). Its pivot-2022 cross-lag pairs the pandemic window (P) with
+  the Rechtskreiswechsel/reform window (F).
+- **H1 cross-section (edition 2025 = Dec 2024 levels)** includes refugee-related SGB II receipt
+  concentrated near large accommodation sites. Hamburg's status index also counts children and young
+  people with a migration background, so refugee children can move a Gebiet's status class directly.
+  This is a modest effect on a level, and it belongs in the limitation line.
+- **Phase-shift chains** cross the same shocks at other offsets: the shifted windows ending
+  {j(ref)} contain part of the 2016–2018 refugee entry; those ending {j(pan)} contain the pandemic;
+  those ending {j(rkw)} contain the Rechtskreiswechsel, and {j(ref23)} also the 2023 reforms. Their
+  rows carry the same notes.
+
+The warehouse has no open small-area refugee-accommodation source, so this is disclosed as a
+limitation, not corrected."""
+
+
+def _hh_deviations(records: list[dict], meta: dict) -> list[str]:
+    mf = meta.get("HH/full", {})
+    devs = [
+        "**Inherited from #354 (accepted in `docs/epic-e/354-geo-signoff.md` §1, items 1–3 and "
+        "6–10), applied unchanged to Hamburg:** the ADR-0017 min-base rule as a thesis deviation "
+        "(N8); N3 (AUC rows need at least 'poor', AUC ≥ 0.60, for the ✓ rule); N4 (an H3a that is "
+        "NOT SIGNIFICANT after BH with unadjusted p < 0.05 carries 'nominally significant'); N7 "
+        "(one population-weighted row per H1a–c, counted once); fixed feature lists per design "
+        "frame (A1.1 rule on each design's own rows, flags only, written to the metadata before "
+        "any fit); coefficients as the mean of the five training-fold fits (no full-sample fit, "
+        "§5.8(4)); area-windows with DHS growth 0/0 drop; the `form` / `suite_expected_dir` "
+        "fields of `THESIS_HYPOTHESES`. N1 and N2 are Berlin-only. Moran's I is a Berlin-only "
+        "diagnostic in §8, so its absence is not a deviation here.",
+        "**Amendment 2 applies unchanged** (H2 'stronger than thesis' needs ΔAUC ci_low > 0; a CI "
+        "that includes 0 or lies wholly below 0 maps to 'consistent (still unclear): explained by "
+        "current status level'). It was recorded after the Berlin results and ratified by geo-DS "
+        "and domain on 2026-11-01 as binding for #355 and not to be re-opened after the Hamburg "
+        "results. Disclosure: a low-B Hamburg smoke run of this code path existed in #354 phase B "
+        "(its notes, in `docs/handoff/2026-11-01-hypothesis-suite.md`: H2 low power, H1a/H1b "
+        "n ≈ 100, commercial-only H1 row without data). No rule was changed after it.",
+        "**Tie-ceiling context (domain sign-off 354 R5).** §10 reports the highest Spearman any "
+        "continuous measure can reach against each Sozialmonitoring class variable. It was in the "
+        "code before the first Hamburg run on this branch, is context only, and changes no verdict "
+        "and no effect label "
+        "(the Cohen labels are applied as pre-registered).",
+        "**Shock notes on Hamburg rows.** §4.3 requires the Hamburg counterpart of §3.4. Rows that "
+        "include the windows ending 2022 (pandemic) or 2025 (Rechtskreiswechsel, 2023 reforms) "
+        "carry the mechanism in `notes`, and so do the windows covering the 2016–2018 refugee "
+        "entry into SGB II (the counterpart of the #354 thesis-era line, C3). Notes only; no "
+        "estimate is affected.",
+        "**H2 incremental status level in Hamburg** = the status class at the window start "
+        "(edition E−3), the Hamburg analogue of Berlin's S at the window start (§4.3 uses the "
+        "same class as the H3b level control). §5.2 does not spell out the Hamburg level.",
+        "**Low-power rule on all Hamburg H2 AUC rows.** The §4.4 rule (CI NA or wider than 0.25 → "
+        "NOT SIGNIFICANT with a 'low power' note) is applied to the H2 secondary and sensitivity "
+        "AUC rows (positiv vs rest, domain level, base indicators, complete-case) as well as to "
+        "the primary. The same rule; it can only weaken a claim.",
+        "**Stadtteil cluster membership.** A Gebiet's cluster is the Stadtteil named in its "
+        f"latest edition. The label varies across editions for {mf.get('n_gebiete_stadtteil_label_varies', '?')} "
+        "Gebiete (spelling variants such as 'GroßFlottbek' / 'Groß Flottbek', and Stadtteile "
+        "merged or renamed, such as 'Hamm-Nord' / 'Hamm-Mitte' / 'Hamm-Süd' → 'Hamm' (merged)); "
+        "the latest edition gives "
+        f"{mf.get('n_clusters_total', '?')} clusters. §4.2 names the Stadtteil but not which edition decides.",
+        "**Phase-shift chains: first H3b pivot without data.** The H3b window-start control at "
+        "pivot 2014 (chain 2014/17/20/23) and 2015 (chain 2015/18/21/24) is the status class of "
+        "edition 2011 or 2012, which predates the first Sozialmonitoring edition in the warehouse "
+        "(2013). Those H3b phase rows therefore rest on the two later pivots; the row's `pivots` "
+        "field lists the pivots actually used. A consequence of the data, not a design change.",
+        "**E5 retired on this branch.** §6.3 retires `analysis/e5_hamburg_lead_lag.py` 'once the "
+        "suite passes the gate'. This branch removes it from `poe analysis` and puts the pointer "
+        "in the E5 findings header, but integration into `develop` is itself gated (R-C1), so E5 "
+        "leaves the published pipeline only when the gate passes. The script stays in the "
+        "repository, marked superseded, for the audit trail.",
+    ]
+    devs.append(
+        "**Text-only generator additions made after seeing Hamburg results (2026-11-01).** After "
+        "the first Hamburg runs on this branch (a B = 49 crash test and the B = 1999 run), the "
+        "findings generator gained: the below-chance AUC disclosure (§4 and the next item), the "
+        "H1 size sentence (§3), plain reasons for rows without data, and two lookup fixes for "
+        "the D3b/R3 sentences in §3. The statistics code, the rows, the verdicts and the labels "
+        "are unchanged by them."
+    )
+    devs.append(
+        "**#355 review corrections (data-engineer-reviewer, 2026-11-01), notes and text only.** "
+        "(a) Shock notes now reach every row that spans a shock window: per-pivot H3a/H3b rows "
+        "name both the P and the F window (before: P only), and the pivot-difference and "
+        "level-stratified rows carry the panel's notes (before: none); repeated notes on "
+        "phase-shift rows appear once. The same shared-code fix changes `notes` cells of six "
+        "`BER/modern` rows (pivot-difference and level-stratified H3a/H3b; E1b findings §12 "
+        "item 16). No estimate, CI, p, verdict or label changes in either city. (b) The "
+        "below-chance H2 disclosure reports the within-fold and per-window AUCs "
+        "(`h2_oof_diagnostics`, descriptive). (c) The H1/H2 wording follows the fixed feature "
+        "lists, which hold no shop or service category at Gebiet grain."
+    )
+    below = [
+        r
+        for r in records
+        if r["city"] == "HH" and r["hypothesis"] == "H2" and "significantly below 0.5" in r["notes"]
+    ]
+    if below:
+        where = ", ".join(f"{r['panel']} {r['role']}" for r in below)
+        devs.append(
+            f"**H2 out-of-fold AUC significantly below 0.5 ({where}) → NOT SIGNIFICANT.** The "
+            "pre-registration writes 'CONTRADICTED impossible' for H1 (§5.1) and makes H2 "
+            "non-directional (§1.1, §5.1); the #354 code applies the rule to both AUC tests "
+            "(`_verdict_for`, covered for H2 by `test_auc_below_null_is_never_contradicted`). It "
+            "binds here for the first time. **Amendment 3** (post-results clarification, "
+            "2026-11-01, ratified by geo-DS and domain) writes the rule down for all panels: an "
+            "out-of-fold AUC primary is SUPPORTED only if AUC > 0.5 and p_BH < 0.05; one "
+            "significantly below 0.5 is NOT SIGNIFICANT and carries the flag 'out-of-fold AUC "
+            "significantly below 0.5 (no transferable prediction)'; the two-sided bootstrap p "
+            "stands. No verdict changed."
+        )
+    devs.append(
+        "**Gate text changes (domain sign-off 355 C1–C4, R1–R3; Amendment 3 flag), "
+        "2026-11-01, text and notes only.** §13 gains the Hamburg H1/H2 wording line (C1); "
+        "§4 gains the #358 sentence and the 'positiv vs rest' guard (C2 a, b); the H2 "
+        "contrasts are labelled 'target: classed as worsening / improving' in the CSV "
+        "`operationalisation` / `outcome` and in §1, §4 and §12 (C2 c); rows spanning the "
+        "windows ending 2016, 2019 and 2025 (and the shifted windows covering 2015 or "
+        "2022) name the Hamburg-specific refugee channel (D1, S3 with AsylbLG) in `notes` "
+        "and in §7 (C3); the not-comparable line sits under the §1 and §2 tables (C4, as "
+        "edited in the domain Addendum); §4 names the untested campaign-mapping mechanism "
+        "(R1); Hamburg H2 pandemic notes name the local mix instead of gastronomy (R2); "
+        "§1 defines status in one line (R3); the below-0.5 flag uses the Amendment 3 "
+        "wording. No estimate, CI, p, verdict, effect label or holds value changed, and no "
+        "Berlin row or Berlin findings text changed."
+    )
+    nd = [
+        r
+        for r in records
+        if r["city"] == "HH" and r["role"] != "primary" and r["verdict"] == NO_DATA
+    ]
+    seen = set()
+    for r in nd:
+        key = (r["hypothesis"], r["operationalisation"])
+        if key in seen:
+            continue
+        seen.add(key)
+        panels = sorted(
+            {x["panel"] for x in nd if (x["hypothesis"], x["operationalisation"]) == key}
+        )
+        devs.append(
+            f"**{r['hypothesis']} {r['role']} row without data ({', '.join(panels)}):** "
+            f"{r['operationalisation']}. Reason: {_no_data_reason(r)}. A consequence of a rule "
+            "fixed before any fit (§5.2, §5.3, A1.1); it is not relaxed after seeing the row "
+            "(geo sign-off 354 item 12)."
+        )
+    return devs
+
+
+def _row_brief(r: dict) -> str:
+    """One-phrase summary of a non-primary row for the findings prose."""
+    if r["verdict"] == NO_DATA:
+        return f"NO DATA ({_no_data_reason(r)})"
+    name = "AUC" if r["estimator"] == "oof_auc_logit" else "ρ"
+    return (
+        f"{name} {_f(r['estimate'])} [{_f(r['ci_low'])}, {_f(r['ci_high'])}], n = {r['n']}, "
+        f"{r['verdict']} (unadjusted CI, {r['effect_label'] or '–'})"
+    )
+
+
+def _no_data_reason(r: dict) -> str:
+    """Plain reason for a NO DATA row, from its own fields."""
+    notes = r["notes"]
+    for key in ("not testable", "no feature passes"):
+        if key in notes:
+            return next(t for t in notes.split("; ") if key in t)
+    try:
+        n, g = int(r["n"] or 0), int(r["n_clusters"] or 0)
+    except ValueError:
+        n, g = 0, 0
+    if g < MIN_CLUSTERS:
+        return (
+            f"fewer than {MIN_CLUSTERS} clusters (n = {n} Gebiete in {g} Stadtteile); "
+            "§5.3 gives NO DATA"
+        )
+    return f"no estimate (n = {n})"
+
+
+def write_hamburg_findings(path: Path, records: list[dict], meta: dict) -> None:
+    hh = [r for r in records if r["city"] == "HH"]
+    prim = {(r["panel"], r["hypothesis"]): r for r in hh if r["role"] == "primary"}
+    ber_prim = {
+        r["hypothesis"]: r
+        for r in records
+        if r["city"] == "BER" and r["panel"] == "modern" and r["role"] == "primary"
+    }
+    mf = meta.get("HH/full", {})
+    h1_feats = mf.get("feature_lists", {}).get("H1_category", [])
+    h1_mix, h1_comm = _feature_mix(h1_feats)
+    h2_feats = mf.get("feature_lists", {}).get("H2_category", [])
+    h2_mix, h2_comm = _feature_mix(h2_feats)
+    # C4 (domain sign-off 355, as edited in its Addendum), generated from the feature lists
+    c4_line = (
+        "Hamburg H1 and H2 are **not comparable** with the thesis's H1/H2: no business category "
+        "can be measured at Gebiet grain; their features are transport, public facilities (and, "
+        "for H1, tourist facilities) only (§3, §11)."
+        if not (h1_comm or h2_comm)
+        and h1_mix == "transport, public facilities and tourist facilities"
+        and h2_mix == "transport and public facilities"
+        else ""
+    )
+    h1_public = (
+        'only "the local mix of shops, services and public facilities" (§9).'
+        if h1_comm
+        else f'only "the mix of {h1_mix}" (§9; no shop or service category in the feature list).'
+    )
+    sha = next((r["run_sha"] for r in hh), "")
+    nboot = next((r["n_boot"] for r in hh), "")
+    L: list[str] = []
+    a = L.append
+    a(
+        "# H — Hamburg thesis hypothesis suite (#355): full chain 2013–2025 and pivot 2022, side by side"
+    )
+    a("")
+    a(
+        "> **Generated** by `analysis/thesis_hypothesis_suite.py --city HH` — do not hand-edit. "
+        "Re-run the script to regenerate (§7.2)."
+    )
+    a("")
+    a(f"- **Run:** `run_sha` {sha}; seed {SEED}; B = {nboot} cluster-bootstrap draws; α = 0.05.")
+    a(
+        "- **Binding design:** `docs/methodology/354-355-hypothesis-suite-preregistration.md` (rev. 2 + "
+        "Amendments 1 and 2; Hamburg: §4, §5, §7.2, §10.3), the domain review "
+        "(`docs/methodology/354-355-preregistration-domain-review.md`, D8 Hamburg additions) and the "
+        "#354 sign-offs (`docs/epic-e/354-geo-signoff.md`, `354-domain-signoff.md`)."
+    )
+    a(
+        "- **Data:** Sozialmonitoring status and Dynamik **classes** from "
+        "`int_hamburg_sozialmonitoring_index` (WFS `de.hh.up:sozialmonitoring`, `statusindex` / "
+        "`dynamikindex`; status 1 = hoch … 4 = sehr niedrig, Dynamik 1 = positiv / 2 = stabil / "
+        "3 = negativ, so a higher code means more, or growing, disadvantage); OA from "
+        "`int_poi_oa_native_panel` (`HH`, `current`, `standard`, zero-filled, min-base flag); "
+        "commercial C5 shares from `int_poi_c5_share_native`; D4 (sensitivity only) from "
+        "`int_ewr_socioeco_hamburg.ewr_composite`, which excludes `unemployment_share` (#329)."
+    )
+    a(
+        "- **Grain / cluster:** statistisches Gebiet (scored Gebiete, > 300 residents); clusters = "
+        f"Stadtteil ({mf.get('n_clusters_total', '?')}), §4.2. Effective N is reported as clusters."
+    )
+    a(
+        "- **Results table:** `docs/epic-e/thesis-hypothesis-suite-results.csv` (`city = HH`, panels "
+        "`full` and `modern`); feature lists, coverage, class counts and coefficients: "
+        "`docs/epic-e/thesis-hypothesis-suite-metadata.json`."
+    )
+    a(
+        "- **Supersedes** `docs/epic-h/E5-hamburg-lead-lag-findings.md` / `analysis/e5_hamburg_lead_lag.py` "
+        "in full (§1.4, §6.3; see §15)."
+    )
+    a(
+        "- **Gate:** methodology-bearing (R-C1): geo-DS and domain `Verdict: PASS` required before "
+        "integration into `develop`."
+    )
+    a("")
+    a("## 1. Headline: the eight hypotheses, full chain and pivot 2022 side by side")
+    a("")
+    a(
+        "Primary test per hypothesis (§5.1); significance = Benjamini–Hochberg-adjusted bootstrap p < 0.05 "
+        "across the panel's 8 primaries (§5.5). **`HH/full` is the primary family** (maintainer decision "
+        "§10.3). **`HH/modern` (pivot 2022) is the era-split comparison** with its own family of 8: it is "
+        "not a second confirmatory claim. ρ: a higher class = more disadvantage. *Italic* = "
+        '"Matches Berlin 2018?" (§5.6 labels; a transfer test, §4.4).'
+    )
+    a("")
+    a(
+        "| Hyp | Thesis verdict (Berlin 2018, Tabelle 6-16) | Hamburg full chain 2013–2025 (primary) | "
+        "Hamburg pivot 2022 (era split) |"
+    )
+    a("|---|---|---|---|")
+    for h in PRIMARY_ORDER:
+        a(
+            f"| {h} | {THESIS_HYPOTHESES[h]['thesis_verdict']} | {_hh_cell(prim.get(('full', h)))} | "
+            f"{_hh_cell(prim.get(('modern', h)))} |"
+        )
+    a("")
+    a(
+        "**Status** = the Hamburg Sozialmonitoring Statusindex class (1 = hoch … 4 = sehr niedrig): a "
+        "composite of seven indicators that include children and young people with a migration "
+        "background and school-leaving outcomes (§4.5). Dynamik = the class of its 3-year change "
+        "(1 = positiv … 3 = negativ)."
+    )
+    a("")
+    if c4_line:
+        a(c4_line)
+        a("")
+    a(
+        "The H1 family (H1, H1a–c) uses the same 2025 cross-section in both panels, so its estimates "
+        "and CIs are identical; only the BH adjustment differs, because each panel is its own family "
+        "of 8."
+    )
+    a("")
+    for pk, label in HH_PANELS:
+        m = meta.get(f"HH/{pk}", {})
+        if m.get("direction"):
+            a(f"- **{label}, H3a/H3b together:** {m['direction']}.")
+    a("")
+    a(
+        "**What FDR means (§5.5).** Within each panel, Benjamini–Hochberg bounds the expected share of "
+        "false claims among the rows marked significant; it does not protect each row individually. "
+        "`p_holm` (Holm 1979, family-wise) is in the CSV for transparency and does not decide verdicts."
+    )
+    flagged = [
+        f"{r['panel']} {r['hypothesis']}"
+        for r in prim.values()
+        if "not at family-wise" in r["notes"]
+    ]
+    a(
+        f'Primaries significant under BH but not under Holm ("significant at FDR 5%; not at family-wise '
+        f'5%"): {", ".join(flagged) if flagged else "none"}.'
+    )
+    nominal = [
+        f"{r['panel']} {r['hypothesis']}"
+        for r in prim.values()
+        if "nominally significant" in (r["holds"] + r["notes"])
+    ]
+    a(
+        f'Rows labelled "nominally significant" (unadjusted p < 0.05, not significant after BH): '
+        f"{', '.join(nominal) if nominal else 'none'}."
+    )
+    a("")
+    a("### Operationalisation, grain and n per hypothesis (§4.4)")
+    a("")
+    a(
+        "| Hyp | Testable | Hamburg operationalisation | Full chain: window, pivots, n (Stadtteile) | "
+        "Pivot 2022: window, pivots, n (Stadtteile) | Caveat |"
+    )
+    a("|---|---|---|---|---|---|")
+    for h in PRIMARY_ORDER:
+        op, cav = HH_OPS[h]
+        cells = []
+        for pk in ("full", "modern"):
+            r = prim.get((pk, h))
+            if r is None:
+                cells.append("–")
+                continue
+            pv = f", pivots {r['pivots'].replace(';', '/')}" if r["pivots"] else ""
+            cells.append(f"{r['window']}{pv}; n = {r['n']} ({r['n_clusters']})")
+        a(f"| {h} | Yes | {op} | {cells[0]} | {cells[1]} | {cav} |")
+    a("")
+    a(
+        "Grain: statistisches Gebiet for every row; the H3 rows pool area-pivots (H3a/H3b) or "
+        "area-windows (H2, H3c), and the Stadtteil cluster bootstrap resamples whole Stadtteile, so "
+        "repeated Gebiete across windows stay in one cluster (§4.2)."
+    )
+    a("")
+    a("## 2. Comparability and construct (binding text, §4.5)")
+    a("")
+    a(HH_COMPARABILITY_TEXT)
+    a("")
+    a(
+        "**Cross-city reading, labels only** (read with the five caveats above; the page design of "
+        "§7.2). Berlin 2019–2025 = `BER/modern` (`docs/epic-e/E1b-berlin-hypothesis-suite-findings.md`)."
+    )
+    a("")
+    a(
+        "| Hyp | Thesis (Berlin 2018) | Berlin 2019–2025: Holds? | Hamburg full chain: Matches Berlin 2018? | Hamburg pivot 2022: Matches Berlin 2018? |"
+    )
+    a("|---|---|---|---|---|")
+    for h in PRIMARY_ORDER:
+        b = ber_prim.get(h)
+        f_, m_ = prim.get(("full", h)), prim.get(("modern", h))
+        a(
+            f"| {h} | {THESIS_HYPOTHESES[h]['thesis_verdict']} | {b['holds'] if b else '–'} | "
+            f"{f_['holds'] if f_ else '–'} | {m_['holds'] if m_ else '–'} |"
+        )
+    a("")
+    if c4_line:
+        a(c4_line)
+        a("")
+    a("## 3. Notes per hypothesis")
+    a("")
+    a(
+        "Status in every H1a–c sentence below is the **Hamburg Sozialmonitoring Statusindex**: a "
+        "composite of seven indicators that include the share of children and young people with a "
+        "migration background and school-leaving outcomes (§4.5). An association with it is an "
+        "association with that composite, not with any one group."
+    )
+    a("")
+    h1abc_label = {
+        "H1a": "café share of the gastronomy mix",
+        "H1b": "fast-food share of the gastronomy mix",
+        "H1c": "share of sport and recreation facilities among all POIs",
+    }
+    r_full = {h: prim.get(("full", h)) for h in ("H1a", "H1b", "H1c")}
+    for h in ("H1a", "H1b", "H1c"):
+        r = r_full[h]
+        if r is None:
+            continue
+        est = (
+            "no estimate"
+            if r["verdict"] == NO_DATA
+            else (f"ρ {_f(r['estimate'])} [{_f(r['ci_low'])}, {_f(r['ci_high'])}]")
+        )
+        a(
+            f"- **{h}: {h1abc_label[h]} vs the Sozialmonitoring status class (a composite including "
+            f"migration background and school leaving).** {est}, {r['verdict']} ({r['effect_label'] or '–'}); "
+            f"Matches Berlin 2018?: *{r['holds']}*."
+        )
+    a("")
+    for h in ("H1a", "H1b", "H1c"):
+        c = mf.get("coverage", {}).get(h)
+        if c:
+            parent = "gastronomy outlets" if h in ("H1a", "H1b") else "POIs of any domain"
+            a(
+                f"- **{h} coverage (N5).** Among Gebiete with at least ten {parent} (the parent base "
+                f"needed to measure the mix): n retained {c['n_retained']} of {c['n_total']}. "
+                f"Retained: {c['retained']}; dropped: {c['dropped']} (classes 3–4 = more "
+                "disadvantaged). "
+                + (
+                    "The result describes these Gebiete, not the whole city."
+                    if c["n_retained"] < c["n_total"]
+                    else "No Gebiet is dropped, so the result covers the full frame."
+                )
+            )
+    a("")
+    a(
+        "- **H1a (R2).** In the thesis, the only significant café row was population-weighted stock at "
+        "PLR (Pearson −0.14), and the OA rows were null (PLR OA ρ = −0.02). Papachristos et al. (2011) "
+        "concerns the *growth* of coffee shops; the café-growth cross-lag is an exploratory row (R4)."
+    )
+    kebab = [
+        r for r in hh if r["panel"] == "full" and "Fast Food without" in r["operationalisation"]
+    ]
+    a(
+        "- **H1b.** A deprivation hypothesis (Pearce et al. 2007, New Zealand), phrased at area level. "
+        "The anti-stigmatisation check without döner/kebab types (R3): "
+        + (f"{_row_brief(kebab[0])}." if kebab else "not run.")
+        + " The H1b wording therefore stays at the fast-food share of the gastronomy mix, with no "
+        "ethnic or migrant-economy language."
+    )
+    sport = mf.get("sport_types_h1") or []
+    sport_txt = ", ".join(f"{k.split('|')[1]} {v:,}" for k, v in sport[:4])
+    no_tt = [
+        r
+        for r in hh
+        if r["panel"] == "full" and "Sport category without" in r["operationalisation"]
+    ]
+    a(
+        "- **H1c.** The thesis's binding H1c text (§1.3) is in "
+        "`docs/epic-e/E1b-berlin-hypothesis-suite-findings.md`; the 0 verdict refers to Berlin. In "
+        f'Hamburg\'s OSM 2025, "Sports and Recreation" is again mostly public provision ({sport_txt}). '
+        "Playgrounds and outdoor tables are planned public provision, dense in family-heavy estates: a "
+        "plausible reason for an association with lower status, not a tested one. The node-only "
+        "limitation (#337) probably hits this category hardest. The organised-sport row without table "
+        "tennis (D3b): " + (f"{_row_brief(no_tt[0])}." if no_tt else "not run.")
+    )
+    h1 = prim.get(("full", "H1"))
+    if h1 and "nominally significant" in h1["holds"] and h1["effect_label"] == "negligible":
+        a(
+            f"- **H1 (both panels).** AUC {_f(h1['estimate'])} [{_f(h1['ci_low'])}, "
+            f"{_f(h1['ci_high'])}] is significant before but not after BH, so §5.6 labels it 'not "
+            "reproduced at the corrected threshold (nominally significant)'. Its size is "
+            "'negligible' (AUC < 0.60): even a significant result of this size would map to 'weaker "
+            "than thesis'. The label is the pre-registered one; this sentence only gives its size."
+        )
+    for pk, label in HH_PANELS:
+        r = next(
+            (
+                x
+                for x in hh
+                if x["panel"] == pk
+                and x["hypothesis"] == "H1"
+                and x["operationalisation"].startswith("commercial-only")
+            ),
+            None,
+        )
+        if r is None:
+            continue
+        ok = (
+            r["verdict"] == SUPPORTED
+            and r["effect_label"] in ("poor", "acceptable", "excellent")
+            and prim.get((pk, "H1"), {}).get("verdict") == SUPPORTED
+        )
+        a(
+            f"- **H1 public wording ({label}).** Commercial-only H1 row: {_row_brief(r)} → public "
+            "text may say " + ('"businesses".' if ok else h1_public)
+        )
+    a(f"- **What H1 measures in Hamburg.** {_hh_construct_sentence(h1_feats, 'H1')}")
+    a("")
+    a("## 4. H2: two contrasts and the low-power rule (§4.4)")
+    a("")
+    a(
+        "H2 is non-directional, but its binary target names the change (D8f). The primary's target is "
+        "**classed as worsening** (Dynamik 'negativ' vs rest); the pre-registered secondary's target is "
+        "**classed as improving** ('positiv' vs rest). Under #358, 'negativ' (growing measured disadvantage) is filtering, at "
+        "most a rent-gap precondition; 'positiv' (falling measured disadvantage) is consistent with, "
+        "but not evidence of, upgrading (§13). "
+        "**Low-power rule (§4.4):** if the CI is NA or wider than 0.25, the row is NOT SIGNIFICANT with a "
+        "'low power' note."
+    )
+    a("")
+    for pk, label in HH_PANELS:
+        f2 = meta.get(f"HH/{pk}", {}).get("feature_lists", {}).get("H2_category", [])
+        a(f"- **What H2 measures ({label}).** {_hh_construct_sentence(f2, 'H2')}")
+    a("")
+    a("| Edition (Dynamik window) | positiv | stabil | negativ | Gebiete |")
+    a("|---|---|---|---|---|")
+    full_ends = [e for _s, e in HH_FULL_WINDOWS]
+    for c in mf.get("hh_classes", []):
+        if c["edition"] in full_ends:
+            dc = c["dynamik_counts"]
+            a(
+                f"| {c['edition']} (Dec {c['edition'] - 4} → Dec {c['edition'] - 1}) | {dc['1']} | "
+                f"{dc['2']} | {dc['3']} | {c['n']} |"
+            )
+    a("")
+    a("| Panel | Contrast | AUC [95% CI] | n (positives) | Verdict | Notes |")
+    a("|---|---|---|---|---|---|")
+    for pk, label in HH_PANELS:
+        for r in hh:
+            if r["panel"] != pk or r["hypothesis"] != "H2" or r["estimator"] != "oof_auc_logit":
+                continue
+            if not (r["role"] == "primary" or "positiv (1) vs rest" in r["operationalisation"]):
+                continue
+            contrast = (
+                "negativ vs rest (target: classed as worsening), primary"
+                if r["role"] == "primary"
+                else "positiv vs rest (target: classed as improving), secondary"
+            )
+            npos = next(
+                (t.split("=")[1] for t in r["notes"].split("; ") if t.startswith("n_pos=")), "?"
+            )
+            lp = "; ".join(
+                t
+                for t, k in (
+                    ("low power", "low power"),
+                    (
+                        "out-of-fold AUC significantly below 0.5 (no transferable prediction)",
+                        "significantly below 0.5",
+                    ),
+                )
+                if k in r["notes"]
+            )
+            a(
+                f"| {label} | {contrast} | {_f(r['estimate'])} [{_f(r['ci_low'])}, {_f(r['ci_high'])}] | "
+                f"{r['n']} ({npos}) | {r['verdict']} | {lp} |"
+            )
+    a("")
+    a(_hh_positiv_guard(hh, mf))
+    a("")
+    for pk, label in HH_PANELS:
+        m = meta.get(f"HH/{pk}", {})
+        a(
+            f"- **H2 incremental ({label}).** Out-of-fold AUC, status class at the window start alone → "
+            f"plus the category OA mix: {_auc_pair(m)}. Amendment 2 applies unchanged: only ci_low > 0 "
+            "counts as an increment; otherwise H2 reads 'explained by current status level' when SUPPORTED."
+        )
+    a("")
+    for r in hh:
+        if r["hypothesis"] == "H2" and "significantly below 0.5" in r["notes"]:
+            a(
+                f"- **Below-chance out-of-fold AUC ({r['panel']}, {r['role']}: "
+                f"{r['operationalisation'].split(' => ')[-1]}).** AUC {_f(r['estimate'])} "
+                f"[{_f(r['ci_low'])}, {_f(r['ci_high'])}] lies wholly below 0.5. H2 is "
+                "non-directional (§1.1), so CONTRADICTED is undefined (§5.1, as implemented in #354); "
+                "the row is NOT SIGNIFICANT"
+                + (" and maps to 'consistent (still unclear)'" if r["role"] == "primary" else "")
+                + ". "
+                + _h2_diag_text(
+                    meta.get(f"HH/{r['panel']}", {}),
+                    meta.get("HH/modern", {}) if r["panel"] != "modern" else None,
+                )
+                + " Two compatible explanations exist, and neither is tested: under a true null, "
+                "grouped cross-validation is known to give AUCs biased below 0.5 (Parker, Günter & "
+                "Bedo 2007; Amendment 3); and the H2 features follow district mapping campaigns, so "
+                "an association learned on some Stadtteile can encode mapping history and invert on "
+                "held-out Stadtteile (domain sign-off 355 R1). Amendment 3 (ratified by geo-DS and "
+                "domain, 2026-11-01) writes down the verdict rule: an out-of-fold AUC primary is "
+                "SUPPORTED only if AUC > 0.5 and p_BH < 0.05. See §16."
+            )
+    a("")
+    a("## 5. H3a/H3b per pivot and pivot heterogeneity")
+    a("")
+    a("| Panel | Hyp | Pivot | ρ [95% CI] | n | verdict (CI) |")
+    a("|---|---|---|---|---|---|")
+    for r in hh:
+        if r["operationalisation"].startswith(("H3a at pivot", "H3b at pivot")):
+            a(
+                f"| {r['panel']} | {r['hypothesis']} | {r['pivots']} | {_f(r['estimate'])} "
+                f"[{_f(r['ci_low'])}, {_f(r['ci_high'])}] | {r['n']} | {r['verdict']} |"
+            )
+    a("")
+    for h, d in mf.get("pivot_diff", {}).items():
+        a(
+            f"- full {h}: ρ(pivot {d['last']}) − ρ(pivot {d['first']}) = {_f(d['estimate'])} "
+            f"[{_f(d['ci_low'])}, {_f(d['ci_high'])}] → "
+            + (
+                "**heterogeneous: the pooled result depends on the window.**"
+                if d["heterogeneous"]
+                else "no detectable heterogeneity."
+            )
+        )
+    a("- `HH/modern` has one pivot (2022), so no pivot difference exists there.")
+    a("")
+    a("## 6. Phase-shift sensitivity (§4.3)")
+    a("")
+    a(
+        "The main chain (editions 2016/2019/2022/2025) against the two shifted chains, outside every "
+        "family. To compare like with like, significance here is the unadjusted 95% CI excluding 0 on "
+        "every phase (the headline uses BH). A result that holds on one phase only is **fragile**."
+    )
+    a("")
+    tags = ["/".join(str(e) for _s, e in ch) for ch in HH_PHASE_CHAINS]
+    a(f"| Hyp | 2016/2019/2022/2025 (main) | {tags[0]} | {tags[1]} | Reading |")
+    a("|---|---|---|---|---|")
+    for h in ("H3a", "H3b", "H3c"):
+        main = prim.get(("full", h))
+        ph = [
+            next(
+                (
+                    r
+                    for r in hh
+                    if r["panel"] == "full"
+                    and r["hypothesis"] == h
+                    and r["operationalisation"] == f"{h} phase-shift chain {t}"
+                ),
+                None,
+            )
+            for t in tags
+        ]
+        cells, sigs = [], []
+        for r in (main, *ph):
+            if r is None or r["estimate"] in ("", None):
+                cells.append("–")
+                sigs.append(0)
+                continue
+            pv = f"; pivots {r['pivots'].replace(';', '/')}" if r["pivots"] else ""
+            cells.append(f"{_f(r['estimate'])} [{_f(r['ci_low'])}, {_f(r['ci_high'])}]{pv}")
+            sigs.append(_ci_sig(r))
+        a(f"| {h} | {cells[0]} | {cells[1]} | {cells[2]} | {_hh_phase_reading(sigs)} |")
+    a("")
+    a("## 7. Hamburg shock timing (binding, §4.3 / D7)")
+    a("")
+    a(_hh_shock_text())
+    a("")
+    a("## 8. Pivot-2016 caveat (R6) and OSM completeness")
+    a("")
+    tot = mf.get("osm_city_totals", {})
+    t25 = tot.get("2025")
+    shares = ", ".join(
+        f"{y}: {int(tot[y]):,} ({100 * int(tot[y]) / int(t25):.0f}%)"
+        for y in ("2013", "2016", "2019", "2022", "2025")
+        if y in tot and t25
+    )
+    a(
+        "**Pivot 2016 is the pivot most exposed to OSM completeness artefacts** (pre-registration §4.3, "
+        "R6). POIs inside Hamburg's Gebiete in the OA panel, per snapshot, with the share of 2025: "
+        f"{shares}. The pivot-2016 P window starts at the 2013 snapshot, while coverage was still "
+        "diffusing unevenly across the city. C5 shares and OA are ratio measures, robust to city-wide "
+        "growth (index-definition §2.4) but not to spatially uneven mapping diffusion. The full-chain "
+        "H3a/H3b primaries pool pivot 2016 with 2019 and 2022; §5 shows each pivot separately, and "
+        "`HH/modern` shows pivot 2022 without it. The 2013 status class used as the pivot-2016 H3b "
+        "control also rests on an assumed reference date (§9)."
+    )
+    a("")
+    a(
+        "## 9. Data prerequisites carried from phase A (`docs/epic-e/354-phase-a-data-prerequisites.md`)"
+    )
+    a("")
+    a(
+        "- **Reference date (§2.1(3)).** Edition E carries data as of 31 Dec (E−1), confirmed from the "
+        "source metadata for every edition with a published report (2016–2025, phase A §3) and "
+        "**assumed** for 2013–2015, which have no published report (O3). It matters for the 2013 "
+        "status class (pivot-2016 H3b control; H2 incremental level for the window starting 2013) and "
+        "for the 2013–2015 editions in the phase-shift chains."
+    )
+    a(
+        "- **Class ordering (§2.1(4)).** Per-Gebiet agreement with the published report annexes is 100% "
+        "for status, Dynamik and population, 2016–2025; the annex Status-summe and Dynamik-summe "
+        "order the classes exactly as coded (positiv = falling disadvantage = 1; hoch = least "
+        "disadvantage = 1). Guarded by `test_354_hh_sozialmonitoring_published_class_counts` and "
+        "`test_354_hh_sozialmonitoring_label_code_consistency`. The table below recounts the classes "
+        "the suite consumed and compares them with the published counts in "
+        "`seed_hh_sozialmonitoring_published_class_counts`."
+    )
+    a(f"- **Indicator values (§2.1(5), binding).** {HH_INDICATOR_SENTENCE}")
+    a(
+        "  The suite therefore runs on classes only (§4.1); the annex z-scores are not ingested. A "
+        "continuous composite (the domain-preferred labour-market and transfer core S3–S6) needs an "
+        "architect check for the new artefact (phase A O4) and its own sign-off (§4.4). It is a "
+        "follow-up, not part of #355."
+    )
+    a("")
+    a(
+        "| Edition | hoch | mittel | niedrig | sehr niedrig | positiv | stabil | negativ | Gebiete | = published annex? | "
+        "tie ceiling, status | tie ceiling, Dynamik |"
+    )
+    a("|---|---|---|---|---|---|---|---|---|---|---|---|")
+    for c in mf.get("hh_classes", []):
+        sc, dc = c["status_counts"], c["dynamik_counts"]
+        mp = {True: "yes", False: "**NO**", None: "no annex (O3)"}[c["matches_published"]]
+        a(
+            f"| {c['edition']} | {sc['1']} | {sc['2']} | {sc['3']} | {sc['4']} | {dc['1']} | {dc['2']} | "
+            f"{dc['3']} | {c['n']} | {mp} | {_f(c['ceiling_status'])} | {_f(c['ceiling_dynamik'])} |"
+        )
+    a("")
+    a("## 10. Tie-ceiling context (domain sign-off 354 R5)")
+    a("")
+    cs = [c["ceiling_status"] for c in mf.get("hh_classes", []) if c["edition"] == 2025]
+    cd = [c["ceiling_dynamik"] for c in mf.get("hh_classes", []) if c["edition"] in full_ends]
+    a(
+        "Against a tied class variable, no continuous measure can reach |ρ| = 1. The ceiling is the "
+        "Spearman of the class with an ideal measure that orders every Gebiet consistently with its "
+        "class (table above; method of domain sign-off 354 §3). "
+        + (f"For the 2025 status class (H1a–c) it is {cs[0]:.2f}. " if cs else "")
+        + (
+            f"For the Dynamik classes of the main chain (H3a–c outcomes and controls), about 85% "
+            f"'stabil', it is {min(cd):.2f}–{max(cd):.2f}. "
+            if cd
+            else ""
+        )
+        + "**Context only:** the Cohen effect labels and every verdict are applied as pre-registered, "
+        "on the raw ρ. A 'negligible' Hamburg H3 ρ is negligible on an outcome that cannot exceed this "
+        "ceiling; it is not rescaled."
+    )
+    a("")
+    a("## 11. AUC comparability and top coefficients (binding text, §1.2)")
+    a("")
+    a(HH_AUC_TEXT)
+    a("")
+    for pk, label in HH_PANELS:
+        for key in ("H1", "H2"):
+            if pk == "modern" and key == "H1":
+                continue  # identical to the full-chain H1 (shared 2025 cross-section)
+            co = meta.get(f"HH/{pk}", {}).get("coefficients", {}).get(key)
+            if co:
+                a(
+                    f"- **{label} {key}:** "
+                    + ", ".join(f"{n.replace('oa_cat:', '')} ({c:+.3f})" for n, c in co)
+                )
+    a("")
+    a(
+        "**Fixed feature lists (A1.1)**: a category enters if its min-base flag is unset in ≥ 20% of the "
+        "design's included rows; sorted lexicographically. Gebiete are smaller than Berlin PLRs, so "
+        "fewer categories pass."
+    )
+    a("")
+    for pk, label in HH_PANELS:
+        fl = meta.get(f"HH/{pk}", {}).get("feature_lists", {})
+        for k in ("H1_category", "H1_commercial", "H2_category"):
+            if k in fl and not (pk == "modern" and k.startswith("H1")):
+                a(f"- {label} {k} ({len(fl[k])}): {', '.join(fl[k]) or 'none'}")
+    a("")
+    a("## 12. Secondary, sensitivity and exploratory rows")
+    a("")
+    a(
+        "None of these can change a headline verdict. They are uncorrected and use the unadjusted 95% "
+        "cluster-bootstrap CI (§5.4)."
+    )
+    a("")
+    a("| Panel | Hyp | Role | Operationalisation | Estimate [95% CI] | n | Verdict | Notes |")
+    a("|---|---|---|---|---|---|---|---|")
+    n_expl = _hh_n_expl(hh)
+    for r in hh:
+        if r["role"] == "primary":
+            continue
+        note = r["notes"].replace("|", "/")
+        est_cell = f"{_f(r['estimate'])} [{_f(r['ci_low'])}, {_f(r['ci_high'])}]"
+        if r["verdict"] == NO_DATA:
+            est_cell = "– (not reported: NO DATA)"
+        a(
+            f"| {r['panel']} | {r['hypothesis']} | {r['role']} | {r['operationalisation']} | {est_cell} | "
+            f"{r['n']} | {r['verdict'] or 'descriptive'} | {note} |"
+        )
+    a("")
+    a(
+        f"**Exploratory-row tally (§5.5).** {n_expl} non-primary rows carry a verdict across both Hamburg "
+        "panels (descriptive and NO DATA rows excluded; the population-weighted row counts once per "
+        "H1a–c, N7; the H1 family's non-primary rows appear in both panels). At α = 0.05 about "
+        f"{0.05 * n_expl:.1f} would be expected significant by chance alone."
+    )
+    a("")
+    a("## 13. What the suite must not claim (binding text, §9)")
+    a("")
+    must_not = MUST_NOT_TEXT
+    if not (h1_comm or h2_comm):
+        h1_bullet = 'commercial-only H1 row also holds; only then may it say "businesses".'
+        assert h1_bullet in must_not  # noqa: S101 -- keep the §9 bullet verbatim (C1)
+        must_not = must_not.replace(
+            h1_bullet,
+            h1_bullet
+            + "\n  **Hamburg (#355):** no shop, service, gastronomy or entertainment category "
+            "reaches the measurement base at Gebiet grain, so Hamburg H1 is worded "
+            f"'the mix of {h1_mix}' and H2 'the mix of {h2_mix}'. Never 'shops', "
+            "'services', 'businesses' or 'commercial mix' for Hamburg H1/H2 (§3, §4).",
+        )
+    a(must_not)
+    a(
+        "- Hamburg H1a–c sentences name the construct: status is the Sozialmonitoring Statusindex, which "
+        "includes migration background and school leaving (§4.5, §9)."
+    )
+    a("")
+    a("## 14. Limitations")
+    a("")
+    a(
+        "- **Classes only.** The Sozialmonitoring WFS publishes classes, so every Hamburg status variable "
+        "is ordinal (index-definition §3.1–3.2: rank methods, no OLS on class codes, no averaging of "
+        "classes across Gebiete). There is no Hamburg 2018 baseline."
+    )
+    a(
+        "- **#337 node→way:** every row is POI-based; OSM features mapped as ways are not yet counted "
+        "as points. Deferred; disclosed for all rows."
+    )
+    a(
+        "- **OSM completeness:** Hamburg's mapped POIs roughly tripled between 2013 and 2025 (§8). Ratio "
+        "measures absorb city-wide growth, not spatially uneven diffusion."
+    )
+    a(
+        "- **D4** (`ewr_composite`) is Stadtteil-grain disaggregated to Gebiete, so it carries about 99 "
+        "independent values; `foreigners_share` overlaps the migration-background indicator, so D4 is a "
+        "sensitivity only (§4.1)."
+    )
+    a(
+        "- **Indicator definitions** change from the 2019 edition (S3 adds AsylbLG; S4 labelled "
+        "'Arbeitslose (SGB II)' in the 2019 and 2021 annexes; S7 categories renamed; phase A §5). The "
+        "published classes carry these changes; the class-only WFS cannot show their size."
+    )
+    a("- **Refugee accommodation:** no open small-area source; disclosed, not corrected (§7).")
+    a("")
+    a("## 15. E5 superseded")
+    a("")
+    a(
+        "This suite supersedes `docs/epic-h/E5-hamburg-lead-lag-findings.md` and "
+        "`analysis/e5_hamburg_lead_lag.py` in full (pre-registration §1.4, §6.3). E5 differenced annual "
+        "status classes against a 3-year Dynamik concept, so its annual k = 1 cross-lag used "
+        "overlapping Dynamik windows (rejected, §8), and its Section 2 ran OLS on ordinal class codes, "
+        "which index-definition §3.2 forbids. Its numbers must not be cited. The script stays in the "
+        "repository, marked superseded, for the audit trail; it is no longer part of `poe analysis`, "
+        "and the E5 findings header points here."
+    )
+    a("")
+    a("## 16. Deviations from the pre-registration")
+    a("")
+    a(
+        "Dated 2026-11-01. None changes a hypothesis, variable, expected sign, family or verdict rule. "
+        "Items that are consequences of fixed rules are listed with the rule that produced them."
+    )
+    a("")
+    for i, dv in enumerate(_hh_deviations(records, meta), start=1):
         a(f"{i}. {dv}")
     a("")
     path.write_bytes(("\n".join(L) + "\n").encode("utf-8"))
@@ -3513,17 +4892,47 @@ def run_panel(
 
 def main(argv: Sequence[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
-    ap.add_argument("--city", required=True, choices=["BER", "HH"])
-    ap.add_argument("--panel", nargs="*", choices=["modern", "thesis-era", "full"], default=None)
+    # #371 (E1c): `--panel matched` is city-less (it runs both cities and X8) and writes its own
+    # files (pre-registration §9.3, maintainer call M1); the BER/HH panels are unchanged.
+    ap.add_argument("--city", required=False, choices=["BER", "HH"], default=None)
+    ap.add_argument(
+        "--panel", nargs="*", choices=["modern", "thesis-era", "full", "matched"], default=None
+    )
     ap.add_argument("--n-boot", type=int, default=N_BOOT)
     ap.add_argument("--db", type=Path, default=DUCKDB_PATH)
-    ap.add_argument("--results-csv", type=Path, default=RESULTS_CSV)
-    ap.add_argument("--metadata-json", type=Path, default=METADATA_JSON)
-    ap.add_argument("--findings", type=Path, default=FINDINGS_BER)
+    ap.add_argument("--results-csv", type=Path, default=None)
+    ap.add_argument("--metadata-json", type=Path, default=None)
+    ap.add_argument(
+        "--findings",
+        type=Path,
+        default=None,
+        help="findings path (default: the city's generated findings file, §7.2)",
+    )
     ap.add_argument("--no-findings", action="store_true")
     args = ap.parse_args(argv)
     if hasattr(sys.stdout, "reconfigure"):
         sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+    if args.panel and "matched" in args.panel:
+        if args.city is not None or len(args.panel) > 1:
+            ap.error("--panel matched is city-less and runs on its own (pre-registration §9.3)")
+        from thesis_matched_panel import (
+            MATCHED_FINDINGS,
+            MATCHED_METADATA_JSON,
+            MATCHED_RESULTS_CSV,
+            main_matched,
+        )
+
+        return main_matched(
+            args.db,
+            args.n_boot,
+            args.results_csv or MATCHED_RESULTS_CSV,
+            args.metadata_json or MATCHED_METADATA_JSON,
+            None if args.no_findings else (args.findings or MATCHED_FINDINGS),
+        )
+    if args.city is None:
+        ap.error("--city is required for the BER/HH panels")
+    args.results_csv = args.results_csv or RESULTS_CSV
+    args.metadata_json = args.metadata_json or METADATA_JSON
     panels = args.panel or (["modern", "thesis-era"] if args.city == "BER" else ["full", "modern"])
     for pk in panels:
         if (args.city, pk) not in PANELS:
@@ -3557,20 +4966,24 @@ def main(argv: Sequence[str] | None = None) -> int:
     )
     meta_all = write_metadata(args.metadata_json, metas)
     print(f"[suite] wrote {args.results_csv} and {args.metadata_json}")
+    findings = args.findings or (FINDINGS_BER if args.city == "BER" else FINDINGS_HH)
     if args.city == "BER" and not args.no_findings:
         if {"BER/modern", "BER/thesis-era"} <= set(meta_all):
-            write_berlin_findings(
-                args.findings, [r for r in records if r["city"] == "BER"], meta_all
-            )
-            print(f"[suite] wrote {args.findings}")
+            write_berlin_findings(findings, [r for r in records if r["city"] == "BER"], meta_all)
+            print(f"[suite] wrote {findings}")
         else:
             print(
                 "[suite] findings need both BER panels in the metadata; run --city BER without --panel"
             )
-    elif args.city == "HH":
-        print(
-            "[suite] Hamburg findings (docs/epic-h/H-thesis-hypothesis-suite-findings.md) are #355's; not written"
-        )
+    elif args.city == "HH" and not args.no_findings:
+        if {"HH/full", "HH/modern"} <= set(meta_all):
+            # all records: the cross-city label table reads the BER/modern primaries (§7.2)
+            write_hamburg_findings(findings, records, meta_all)
+            print(f"[suite] wrote {findings}")
+        else:
+            print(
+                "[suite] findings need both HH panels in the metadata; run --city HH without --panel"
+            )
     return 0
 
 

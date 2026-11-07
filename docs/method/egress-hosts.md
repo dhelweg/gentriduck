@@ -16,7 +16,7 @@ grepping `ingestion/**/*.py` for literal URLs (2026-07-09); update when a new so
 | `osm-internal.download.geofabrik.de` | `ingestion/osm/*` | Geofabrik OSM history extracts (contributor login-gated) |
 | `www.openstreetmap.org` | `ingestion/osm/*` | OSM API/attribution |
 | `geodienste.hamburg.de` | `ingestion/hamburg/geo/*` | Hamburg WFS geometry (Stadtteile, Bezirke) |
-| `transparenz.hamburg.de`, `suche.transparenz.hamburg.de` | `ingestion/hamburg/*` | Hamburg Transparenzportal (Sozialmonitoring, EWR-equivalent, rent, displacement) |
+| `transparenz.hamburg.de`, `suche.transparenz.hamburg.de`, `daten.transparenz.hamburg.de` (ADR-0014 amendment 2026-11-02, #371) | `ingestion/hamburg/*` | Hamburg Transparenzportal (Sozialmonitoring, EWR-equivalent, rent, displacement) |
 
 `example.com` also appears in the codebase but only as a docstring/test placeholder, not a real
 fetch target.

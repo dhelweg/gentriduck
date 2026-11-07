@@ -1,6 +1,17 @@
 """
 analysis/e5_hamburg_lead_lag.py
 ================================
+SUPERSEDED (#355, 2026-11-01) -- kept for the audit trail only; do not cite its results.
+  Replaced in full by `analysis/thesis_hypothesis_suite.py --city HH` and its generated
+  findings docs/epic-h/H-thesis-hypothesis-suite-findings.md (pre-registration
+  docs/methodology/354-355-hypothesis-suite-preregistration.md §1.4, §6.3, §8). Reasons:
+  (1) its annual k = 1 cross-lag differences annual status classes against Hamburg's 3-year
+  Dynamik concept, so consecutive windows overlap (rejected, pre-registration §8); (2) its
+  Section 2 runs OLS on ordinal class codes, which docs/methodology/index-definition.md
+  §3.2 forbids. Removed from `poe analysis`. A manual run still regenerates
+  docs/epic-h/E5-hamburg-lead-lag-findings.md, and the generated file keeps the
+  supersession notice (SUPERSEDED_NOTICE below) at its top.
+
 H-C3 (#160): independent re-test of the thesis's H3a/H3b temporal-order finding on
 Hamburg's ANNUAL Sozialmonitoring series (int_hamburg_lead_lag), mirroring
 analysis/e1_regressions.py's `test_h3` statistical method (Spearman rank correlation
@@ -127,6 +138,19 @@ DUCKDB_PATH = (
     Path(_env_db) if _env_db else Path(__file__).parent.parent / "data" / "gentriduck.duckdb"
 )
 OUTPUT_MD = Path(__file__).parent.parent / "docs" / "epic-h" / "E5-hamburg-lead-lag-findings.md"
+# #355 (pre-registration §6.3): written right under the title of every regenerated findings
+# file, so a manual re-run cannot erase the pointer (the #330 durability lesson below).
+SUPERSEDED_NOTICE = (
+    "> **SUPERSEDED (#355, 2026-11-01). Do not cite these results.** The thesis hypothesis "
+    "suite replaces this analysis in full: `analysis/thesis_hypothesis_suite.py --city HH`, "
+    "findings in [`H-thesis-hypothesis-suite-findings.md`](H-thesis-hypothesis-suite-findings.md) "
+    "(pre-registration `docs/methodology/354-355-hypothesis-suite-preregistration.md` §1.4, "
+    "§6.3). Reasons: the annual k = 1 cross-lag below differences annual status classes against "
+    "Hamburg's 3-year Dynamik concept, so consecutive windows overlap (rejected, §8), and "
+    "Section 2 runs OLS on ordinal class codes, which `docs/methodology/index-definition.md` "
+    "§3.2 forbids. This file and `analysis/e5_hamburg_lead_lag.py` are kept for the audit "
+    "trail; the script is no longer part of `poe analysis`.\n\n"
+)
 
 # Hamburg re-test of the thesis's H3a/H3b temporal-order hypotheses (thesis p. 91;
 # Dangschat 1988). expected_dir encodes the THEORY-DERIVED prediction (city-agnostic
@@ -760,6 +784,7 @@ def write_findings(
         f.write(
             "# E5 Hamburg Lead-Lag Findings -- Independent H3a/H3b/H3c Re-Test (H-C3, #160)\n\n"
         )
+        f.write(SUPERSEDED_NOTICE)
         f.write(
             "- **Task:** H-C3 (#160) -- annual-cadence Hamburg lead-lag model + independent H3a/H3b re-test\n"
         )
@@ -935,6 +960,10 @@ def write_findings(
 
 
 def main() -> None:
+    print(
+        "WARNING: analysis/e5_hamburg_lead_lag.py is SUPERSEDED by "
+        "analysis/thesis_hypothesis_suite.py --city HH (#355); kept for the audit trail only."
+    )
     if not DUCKDB_PATH.exists():
         print(
             f"INFO: DuckDB not found at {DUCKDB_PATH}. "

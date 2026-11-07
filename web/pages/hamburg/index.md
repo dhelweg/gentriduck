@@ -69,6 +69,11 @@ sidebar_position: 12
   Berlin's hub card for card, plus a District & area profiles card added to BOTH hubs. The OSM-label
   count in the caveats is computed (#352 review follow-up). Full gap list:
   docs/epic-g/353-hamburg-berlin-parity-audit.md.
+
+  #355 (page part, 2026-11): one card added after the #353 grid, linking the new
+  /hamburg/thesis-recheck page, and the "not fully re-tested yet (#355)" caveat replaced by a
+  neutral pointer (no result stated on this hub). Berlin's hub has no matching card because
+  Berlin's re-check is the top-level /thesis-recheck page, linked from the home page.
 -->
 
 <Hero compact eyebrow="Chapter 3 — The Evidence" title="Hamburg" lede="Gentriduck's second city, admitted 2026-07-18 (H3, #237) after a dedicated methodology gate. Hamburg's own official Sozialmonitoring reports its social-status and change classification, at the statistisches-Gebiet (Kiez-equivalent) scale — and OpenStreetMap's commercial-mix data covers Hamburg the same way it covers Berlin. This is a genuinely narrower dataset than Berlin's, and this page says exactly how." />
@@ -150,8 +155,8 @@ where city_code = 'HH' and area_level = 'subarea_l2'
     the Gebiete whose status changed.
   </LinkCard>
   <LinkCard href="/hamburg/area-detail" icon="🏘️" title="Area detail — start here" cta="Browse by district →">
-    The primary way in: browse by district (Bezirk), then read a headline spotlight on one Gebiet
-    with that district's strongest pressure reading, with a link to its full profile. If you
+    The primary way in: browse a district (Bezirk) and its Gebiete, then read a headline spotlight
+    with a snapshot of any one of them, with a link to its full profile. If you
     already know the Gebiet, the full searchable list (next card) is faster.
   </LinkCard>
   <LinkCard href="/hamburg/area" icon="🔍" title="All Gebiete (full list)" cta="Search Gebiete →">
@@ -165,6 +170,14 @@ where city_code = 'HH' and area_level = 'subarea_l2'
   <LinkCard href="/hamburg/area/district" icon="🧭" title="District &amp; area profiles" cta="Browse districts and Stadtteile →">
     Hamburg's 7 districts and 104 Stadtteile: how their Gebiete are spread across stages and
     trajectories, mapped places, and amenities — never a re-scored index for the larger area.
+  </LinkCard>
+  <LinkCard href="/hamburg/thesis-recheck" icon="🔬" title="The 2018 thesis, re-tested on Hamburg" cta="See the re-test →">
+    The eight hypotheses of the 2018 Berlin thesis, re-tested on Hamburg's Sozialmonitoring and set
+    side by side with the thesis and Berlin today: an out-of-sample transfer test, not a replication.
+  </LinkCard>
+  <LinkCard href="/berlin-vs-hamburg" icon="⚖️" title="Berlin vs Hamburg, like for like" cta="See the comparison →">
+    The thesis hypotheses in both cities on matched areas of similar size, the same three
+    indicators and the same years, with each hypothesis tested for a difference between the cities.
   </LinkCard>
 </LinkCards>
 
@@ -185,9 +198,10 @@ where city_code = 'HH' and area_level = 'subarea_l2'
   Offering Advantage (Gebiet pages), and everyday amenities. Demographics, within-group dominance,
   land value and rent, and a status-over-time chart are not shown for Hamburg yet; each of those
   sections says why, instead of showing a figure.
-- **The 2018 thesis's hypotheses have not been fully re-tested on Hamburg yet.** That work is
-  planned in [#355](https://github.com/dhelweg/gentriduck/issues/355); the
-  [thesis re-check](/thesis-recheck) covers Berlin.
+- **The 2018 thesis's hypotheses are re-tested on Hamburg as a transfer test, not a replication.**
+  Hamburg's monitor, grain and windows differ from Berlin's, so its results are not like-for-like;
+  see the [Hamburg thesis re-check](/hamburg/thesis-recheck), and the
+  [thesis re-check](/thesis-recheck) for Berlin.
 - **Every other caveat on this page is a pointer, not a repeat.** The specific, load-bearing
   differences from Berlin — the Dynamik window's qualitative meaning, the missing D4 indicators,
   the Stadtteil grain ceiling, and the same-named-stage disclosure rule — are stated once, in full,

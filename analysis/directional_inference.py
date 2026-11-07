@@ -2,7 +2,8 @@
 analysis/directional_inference.py
 =================================
 Shared inference helpers for the thesis's directional hypotheses (H3a / H3b) and
-for honest verdict scoring. Used by e1_regressions.py and e5_hamburg_lead_lag.py.
+for honest verdict scoring. Used by e1_regressions.py, thesis_hypothesis_suite.py (#354/#355)
+and the superseded e5_hamburg_lead_lag.py.
 
 Why this module exists (2026-10-26 methodology review)
 ------------------------------------------------------
