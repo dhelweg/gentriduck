@@ -37,8 +37,8 @@
 -- MSS layers and the 2025 matrix use '06200418' (Landweg), and the 2024 file
 -- has no other '06200418' row. The code is corrected to '06200418' here;
 -- test_371_ewr_age_bands_codes_in_lor checks every lor_2021 code against
--- stg_berlin_lor. (int_berlin_ewr_plr2021 still carries '06200318' for 2024;
--- not changed here. Both are blank rows, so no resident count is affected.)
+-- stg_berlin_lor. (int_berlin_ewr_plr2021 applies the same correction since
+-- #381. Both are blank rows, so no resident count is affected.)
 --
 -- dbt_meta_owner: data-engineer
 {{

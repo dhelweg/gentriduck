@@ -483,23 +483,28 @@ models:
       Aligns the EWR socio-economic time series to the unified LOR 2021 PLR scheme.
       Rows with area_vintage='lor_2021' (reference_year >= 2021) are passed through
       directly. Rows with area_vintage='lor_pre2021' (reference_year <= 2020) are
-      joined to seed_lor_crosswalk_2006_to_2021 and indicator_value is weighted by
-      the crosswalk weight (1.0 for 1:1 maps, fractional for splits).
+      joined to seed_lor_crosswalk_2006_to_2021 (area-only forward weight
+      w = intersection / pre-2021 PLR area) and re-aggregated per 2021 PLR by
+      indicator class (#381, C3-crosswalk-geo-signoff.md §3), the class being
+      seed_ewr_indicator_meta.unit:
+        - extensive (unit 'count', residents_total): SUM(count * w) -- areal
+          interpolation (Goodchild & Lam 1980), mass-preserving per source.
+        - intensive (unit 'share' / 'years', all *_share and mean_age_years):
+          SUM(value * P * w) / SUM(P * w), P = the source PLR's residents_total
+          in the same year -- the population-weighted mean. Before #381 these were
+          SUM(value * w), which scales them by the per-target weight sum
+          (0.033-2.031; 243 of 542 2021 PLRs more than 2 % from 1).
 
-      When multiple pre-2021 PLRs contribute to the same 2021 PLR, indicator values
-      are aggregated as SUM(value * weight) per (reference_year, plr_id_2021, indicator).
-      For extensive indicators (counts): exact. For intensive indicators (rates/shares):
-      approximates a population-weighted average under uniform-population-within-PLR
-      assumption (standard practice at the Berlin PLR spatial scale).
+      Limitation (#372): weights are area-only, so pre-2021 COUNTS at PLR /
+      Ortsteil grain are distorted where population is concentrated (e.g.
+      Pankower Tor 2020). Do not publish pre-2021 PLR counts from this model.
 
-      Status (as of 2026-06-19): seed_lor_crosswalk_2006_to_2021 is POPULATED with
-      3055 areal_pop_weighted rows from GDI Berlin WFS geometries (EPSG:25833) via
-      ingestion/berlin/lor/ingest_lor_crosswalk.py. Geo-DS approved 2026-06-19
-      (docs/epic-c/C3-crosswalk-geo-signoff.md, verdict PASS). Both pre-2021 and
-      2021 rows now produce output; the 2020->2021 vintage boundary is bridged.
+      The 2024 publisher code typo 06200318 is corrected to 06200418 (Landweg).
 
-      All output rows use area_vintage='lor_2021' (they are all in the 2021 PLR scheme).
-      crosswalk_weight and crosswalk_type are NULL post-aggregation (not meaningful).
+      All output rows use area_vintage='lor_2021' (the boundary scheme of the row);
+      source_area_vintage says whether the value is crosswalked ('lor_pre2021') or
+      native ('lor_2021'). crosswalk_weight and crosswalk_type are NULL
+      post-aggregation (not meaningful).
 
       Known breaks (inherited):
         - LOR 2021 reform: resolved by this model for aligned analysis.
@@ -548,6 +553,21 @@ models:
                 values: ["lor_2021"]
               config:
                 where: "plr_id_2021 is not null"
+      - name: source_area_vintage
+        description: >
+          LOR vintage the value came from (#381): 'lor_pre2021' = crosswalked from
+          the pre-2021 scheme (reference_year <= 2020), 'lor_2021' = native
+          passthrough (reference_year >= 2021).
+        data_tests:
+
+          - not_null:
+              config:
+                where: "plr_id_2021 is not null"
+          - accepted_values:
+              arguments:
+                values: ["lor_pre2021", "lor_2021"]
+              config:
+                where: "plr_id_2021 is not null"
       - name: reference_year
         description: Calendar year of the 31-Dec snapshot.
         data_tests:
@@ -589,10 +609,12 @@ models:
                 where: "plr_id_2021 is not null"
       - name: indicator_value
         description: >
-          Aggregated weighted indicator value: SUM(source_value * crosswalk_weight)
-          per (reference_year, plr_id_2021, indicator). For lor_2021 passthrough rows
-          weight=1.0 so value is unchanged. For lor_pre2021 mapped rows, multiple
-          contributing PLRs are summed. NULL if all contributing source values were NULL.
+          Indicator value in the LOR 2021 scheme. Native for lor_2021 passthrough
+          rows. For crosswalked rows (source_area_vintage='lor_pre2021'): counts =
+          SUM(count * w); shares and mean_age_years = SUM(value * P * w) / SUM(P * w)
+          over sources with a value and a population (#381). NULL if no
+          contributing source has a value (or, for intensive indicators, if the
+          apportioned population is 0).
       - name: is_suppressed_any
         description: >
           True if any contributing source PLR was statistically suppressed. MAX over
@@ -5525,6 +5547,17 @@ models:
         data_tests:
 
           - not_null
+      - name: source_area_vintage
+        description: >
+          #381/#372: 'lor_pre2021' = crosswalked from the pre-2021 LOR scheme
+          (reference_year <= 2020), 'lor_2021' = native. Passed through from
+          int_berlin_ewr_plr2021.
+        data_tests:
+
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ["lor_pre2021", "lor_2021"]
       - name: reference_year
         description: Calendar year of the 31-Dec EWR snapshot.
         data_tests:

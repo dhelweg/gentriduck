@@ -54,13 +54,30 @@
 -- (is_dominant_ortsteil = true) -- each PLR rolls into exactly the one
 -- Ortsteil containing the largest share of its own area (see that model's
 -- header for the full method + straddling-PLR count: 82 of 542 lor_2021 PLRs,
--- 15.1%, straddle a non-trivial Ortsteil boundary). Restricted to
--- area_vintage = 'lor_2021' (the crosswalk's own scope) -- lor_pre2021 rows
--- are excluded from the ortsteil_agg CTE below (they simply do not join and
--- are dropped, same graceful-degradation style as everywhere else in this
--- model). SAME rollup rule as bzr/pgr/bezirk (extensive=sum, intensive=
--- summed-numerator recompute) -- no new aggregation formula, just a
+-- 15.1%, straddle a non-trivial Ortsteil boundary). Restricted to NATIVE
+-- (source_area_vintage = 'lor_2021') rows, see the #372 section below. (Before
+-- #372 this filter was on area_vintage = 'lor_2021', which excluded nothing:
+-- int_berlin_ewr_plr2021 labels every row, crosswalked or not, with the 2021
+-- boundary scheme.) SAME rollup rule as bzr/pgr/bezirk (extensive=sum,
+-- intensive=summed-numerator recompute) -- no new aggregation formula, just a
 -- different constituent-PLR lookup mechanism.
+--
+-- PRE-2021 ROWS (#372 option (b), #381; docs/epic-c/372-investigation.md §5-6):
+-- Berlin 2008-2020 values reach this mart only through the LOR 2019->2021
+-- areal crosswalk (int_berlin_ewr_plr2021, source_area_vintage =
+-- 'lor_pre2021'). Its weights are area-only, so crosswalked COUNTS are
+-- distorted at PLR grain (102 of 540 PLRs more than 25 % off their 2024 value;
+-- e.g. Pankower Tor 6,295 residents in 2020, 0 in 2024) and at Ortsteil grain
+-- (not LOR-nested; Heiligensee +39 %), but cancel at BZR / PGR / Bezirk grain
+-- (Bezirk totals within 20 residents of the native sums; BZR/PGR 2020/2024
+-- ratios 0.82-1.12). Therefore crosswalked rows are SUPPRESSED at 'plr' and
+-- 'ortsteil' level (plr_out / with_ortsteil filters) and KEPT at 'bzr', 'pgr'
+-- and 'bezirk' level, which still roll up ALL PLRs (including the suppressed
+-- ones) in the with_parents CTE. The kept rows' shares and mean age are the
+-- population-weighted crosswalk of #381 (C3-crosswalk-geo-signoff.md §3). No
+-- page renders a pre-2021 value (all pin the latest reference_year); the rows
+-- matter for the downloadable parquet. Guarded by
+-- test_372_mart_area_demographics_no_crosswalked_plr_ortsteil.
 --
 -- HAMBURG (#313): widened to include Hamburg's individual EWR-equivalent
 -- indicators, at Stadtteil grain (area_level='subarea_l1') and rolled up to
@@ -152,6 +169,7 @@ with
             'plr' as area_level,
             lpad(area_code, 8, '0') as area_code,
             area_vintage,
+            source_area_vintage,
             reference_year,
             reference_date,
             residents_total,
@@ -208,6 +226,8 @@ with
             any_indicator_suppressed,
             1 as n_plr
         from with_parents
+        -- #372: crosswalked (pre-2021) PLR rows suppressed, see header
+        where source_area_vintage = 'lor_2021'
     ),
 
     -- Reusable rollup macro-in-SQL: group by the given parent code, sum
@@ -345,7 +365,8 @@ with
             {{ ref("int_berlin_plr_ortsteil_overlap") }} as xw
             on wp.area_code = xw.plr_area_code
             and xw.is_dominant_ortsteil
-        where wp.area_vintage = 'lor_2021'
+        -- #372: crosswalked (pre-2021) rows suppressed at Ortsteil grain
+        where wp.source_area_vintage = 'lor_2021'
     ),
 
     ortsteil_agg as (
