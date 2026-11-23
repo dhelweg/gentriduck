@@ -196,13 +196,17 @@
 with
     -- Leaf-grain rows from int_poi_offering_advantage, tagged with each
     -- city's OWN leaf area_level (OA-D8 seam: dim_city.oa_leaf_area_level,
-    -- not a `city_code = 'BER'` literal). The INNER JOIN to dim_city also
-    -- defensively excludes int_poi_offering_advantage's legacy lowercase
-    -- 'berlin' city_code rows (a pre-ADR-0005-canonicalization artifact,
-    -- see fct_poi_development.sql's canonical_city_code() note) exactly as
-    -- the original `where city_code = 'BER'` filter did, generically rather
-    -- than by literal string match. City-wide totals are carried through
-    -- unchanged (C2).
+    -- not a `city_code = 'BER'` literal). City-wide totals are carried
+    -- through unchanged (C2).
+    -- #363: until #363 the INNER JOIN to dim_city also dropped the gaussian
+    -- rows of int_poi_offering_advantage, because they carried the legacy
+    -- lowercase 'berlin' code. The kernel macro now emits 'BER' (ADR-0005),
+    -- so that implicit exclusion is gone; the explicit
+    -- `weight_variant = 'standard'` filter below keeps this model's (and
+    -- mart_poi_oa_arealevel's) published scope byte-for-byte what it was --
+    -- the hard-count variant only. Rolling the gaussian variant up to
+    -- bzr/pgr/bezirk would be a new published series and is out of #363's
+    -- scope.
     leaf as (
         select
             oa.city_code,
@@ -237,6 +241,7 @@ with
             oa.all_domains_stock_city
         from {{ ref("int_poi_offering_advantage") }} as oa
         inner join {{ ref("dim_city") }} as city on oa.city_code = city.city_code
+        where oa.weight_variant = 'standard'
     ),
 
     -- Walk up to 3 ancestor levels generically via dim_area_hierarchy's

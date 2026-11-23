@@ -22,6 +22,9 @@
   docs/epic-e/354-phase-a-data-prerequisites.md §7).
   Lint scope: sqlfluff sees only the stub in .sqlfluff, so this macro body is
   NOT covered by sqlfluff (sqlfmt still formats it).
+  #363 (the one deliberate change since the extraction): city_code is
+  canonicalised to the dim_city code ('berlin' -> 'BER', ADR-0005) in the
+  poi_points CTE; weights, keys and counts are otherwise unchanged.
   Grounding (R-C2) stays in int_osm_poi_plr_weighted.sql's header:
   docs/methodology/spatial-methods.md §1-§5, §9.3, §11.3; ADR-0010 D1/D4;
   ADR-0017 D5 C-1.
@@ -47,7 +50,13 @@
         -- spatial-methods.md §3: transform once, always_xy=true.
         poi_points as (
             select
-                city_code,
+                -- #363 (ADR-0005; docs/epic-c/363-geo-tolerance-note.md §3):
+                -- canonicalise the legacy lowercase 'berlin' at the kernel's
+                -- entry, so every downstream CTE groups by, and the output
+                -- carries, the dim_city code 'BER' -- the same code as the
+                -- standard (hard) variant in int_poi_offering_advantage. The
+                -- mismatch made the C-1 test's join vacuous (#363 O1).
+                {{ canonical_city_code("city_code") }} as city_code,
                 snapshot_year,
                 osm_id,
                 poi_domain_h,

@@ -21,7 +21,8 @@
 -- contemporaneous rows, and the C-1 test does not catch it because it joins
 -- the variants on city_code ('BER' vs 'berlin') and so compares zero rows
 -- (docs/epic-e/354-phase-a-data-prerequisites.md §7, open issue). This test
--- canonicalises city_code and checks the exact identity instead.
+-- canonicalises city_code and checks the exact identity instead. (#363 has
+-- since restated C-1 and fixed the city_code mismatch at the source.)
 -- Severity error, tolerance 0.01 (floating point).
 {{ config(severity="error") }}
 

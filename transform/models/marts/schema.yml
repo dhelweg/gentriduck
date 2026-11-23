@@ -2573,7 +2573,9 @@ models:
           OA-D8, #240). #281: already canonical-only -- upstream
           int_poi_offering_advantage_arealevel INNER JOINs dim_city, which
           defensively excludes any legacy lowercase 'berlin' rows as a side
-          effect (verified by query during the #281 fix).
+          effect (verified by query during the #281 fix). Since #363 the
+          gaussian rows upstream carry 'BER', and the arealevel model keeps
+          its standard-only scope with an explicit weight_variant filter.
         data_tests:
 
           - not_null
@@ -2633,10 +2635,16 @@ models:
 
           - not_null
       - name: weight_variant
-        description: "'standard' or a Gaussian-weighted kernel variant."
+        description: >
+          'standard' only (hard point-in-polygon). The upstream arealevel model
+          filters to it explicitly since #363; before, the gaussian rows were
+          dropped implicitly by their legacy 'berlin' city_code.
         data_tests:
 
           - not_null
+          - accepted_values:
+              arguments:
+                values: ["standard"]
       - name: methodology_variant
         description: ADR-0017 D4 structural invariant.
         data_tests:
