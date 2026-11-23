@@ -116,4 +116,8 @@ Verdict (first round): CONCERNS (superseded below)
 - **R1: met.** The C1 change note records the unrounded current-warehouse reference. Rounding moves Run 2 by |Δp| ≤ 0.0001 (p 0.0609 vs 0.0610) and Run B by |Δp| ≤ 0.0005, so the July → November shifts are due to the warehouse. The note also carries the "not a clear null" caution for Run 2 (p = 0.061).
 - **R2: met.** `methodology.md` §7 reads "re-run in November 2026", n = 433, rho +0.15 (faithful), and "rho ≈ 0.02, n=436, not statistically significant" (improved). This is consistent with C1.
 
+Verdict (R1/R2 re-check): PASS (superseded below)
+
+**Re-check (e5b1ec414, ADR-0017 Trigger sentence):** Accurate. `45_osm_poi_features_domain_piv_distcalc.sql` spreads `sum(anz * dist_weighted)` over the centroid-to-centroid matrix with no per-POI normalisation, so total mass is not conserved, as stated in ADR-0010-geo-signoff §1. The current gaussian variant normalises each POI's weights to 1.
+
 Verdict: PASS
