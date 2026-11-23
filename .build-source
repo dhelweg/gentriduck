@@ -1,0 +1,55 @@
+{
+  "tree": "7b13c69f4ff81ea499fbcbf04fa8aa8e2c13894e",
+  "commit": "2256beedd1bc80b9062949112bff5d266ccd1fcd",
+  "built_at": "2026-11-23T21:13:36Z",
+  "dirty": false,
+  "dirty_count": 0,
+  "inputs": "f89520d1d2b59b6d4c711b5163a9019d7f7929df302a1a3e4f2a5669067fa076",
+  "exports": {
+    "serving": {
+      "warehouse": {
+        "tree": "7b13c69f4ff81ea499fbcbf04fa8aa8e2c13894e",
+        "commit": "2256beedd1bc80b9062949112bff5d266ccd1fcd",
+        "clean": true,
+        "recorded_at": "2026-11-23T20:41:56Z",
+        "complete": true
+      },
+      "source": "data/.warehouse-source",
+      "exported_at": "2026-11-23T20:42:17Z"
+    },
+    "geo": {
+      "warehouse": {
+        "tree": "7b13c69f4ff81ea499fbcbf04fa8aa8e2c13894e",
+        "commit": "2256beedd1bc80b9062949112bff5d266ccd1fcd",
+        "clean": true,
+        "recorded_at": "2026-11-23T20:41:56Z",
+        "complete": true
+      },
+      "source": "data/serving/.export-source",
+      "exported_at": "2026-11-23T20:42:24Z"
+    }
+  },
+  "sources": {
+    "complete": true,
+    "started_at": "2026-11-23T20:42:25Z",
+    "recorded_at": "2026-11-23T20:42:54Z",
+    "tree": "7b13c69f4ff81ea499fbcbf04fa8aa8e2c13894e",
+    "commit": "2256beedd1bc80b9062949112bff5d266ccd1fcd",
+    "dirty": false,
+    "dirty_count": 0,
+    "serving": "925958f4690949f85c3b7cebf31003a686e1874e2ee1a99fb82f6f5c021346e6",
+    "serving_export": {
+      "warehouse": {
+        "tree": "7b13c69f4ff81ea499fbcbf04fa8aa8e2c13894e",
+        "commit": "2256beedd1bc80b9062949112bff5d266ccd1fcd",
+        "clean": true,
+        "recorded_at": "2026-11-23T20:41:56Z",
+        "complete": true
+      },
+      "source": "data/.warehouse-source",
+      "exported_at": "2026-11-23T20:42:17Z"
+    },
+    "extracted": "46716324db6526ef4ef3a99d1370dbd97c79ab76fd4a17af0d8b66f5c29fbd63"
+  },
+  "sources_problem": null
+}

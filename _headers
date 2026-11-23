@@ -1,0 +1,6 @@
+# NOTE (QA-9, #184): this file is a Cloudflare/Netlify convention and is inert on the current
+# host, GitHub Pages (ADR-0012 Amendment A) — Pages does not read `_headers`. Kept in place for
+# the Cloudflare Pages re-assessment tracked in #146; noindex on GitHub Pages is instead covered
+# by the per-page <meta> tag injected by scripts/postbuild-noindex.mjs plus static robots.txt.
+/*
+  X-Robots-Tag: noindex, nofollow, noarchive
