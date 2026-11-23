@@ -257,7 +257,7 @@ beyond the R-C1 gate). The system-architect authored this ADR and did not sign i
 
 ## Amendment 2026-11-07 — D5 C-1 restated: one-sided, integer-excess mass invariant (#363)
 
-- **Status:** Proposed (maintainer decision B 2026-11-02; amendment text pending maintainer OK)
+- **Status:** Accepted (maintainer decision B 2026-11-02; amendment text approved by the maintainer 2026-11-23)
 - **Issue:** #363. **Decision basis:** maintainer decision B (2026-11-02).
 - **Evidence:** `docs/epic-c/363-geo-tolerance-note.md` (geo-DS, 2026-11-07).
 - **Amends:** D5 row C-1 only. D1–D4 and C-2…C-5 are unchanged.
@@ -274,7 +274,9 @@ POI extract reaches: the Berlin extract is clipped to a bounding box around the 
 across the city line are included where that box extends beyond it and missing at the city's
 extreme edges. Outside-polygon POIs also include in-city gaps such as water bodies and the airport
 perimeter. Any future city's extract bounds must be stated the same way. The model stays as it is.
-The invariant is restated.
+The invariant is restated. Unlike the thesis's un-normalized PLR-to-PLR spread
+(`reference/system/45_osm_poi_features_domain_piv_distcalc.sql`), which did not conserve total
+mass, this variant normalizes each POI's weights to 1 (`docs/methodology/ADR-0010-geo-signoff.md`).
 
 **Restated C-1 (replaces the D5 C-1 invariant wording):**
 
