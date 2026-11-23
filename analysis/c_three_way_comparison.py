@@ -600,6 +600,34 @@ def render_part2(
     return "\n".join(lines)
 
 
+# Change notes: dated, hand-written provenance for regenerations of the findings doc. They live
+# HERE, in the generator, not in the generated Markdown, so that every regeneration (which rewrites
+# the whole doc) carries them forward unchanged. Append a new entry; never edit an old one.
+CHANGE_NOTES: tuple[str, ...] = (
+    "**2026-11-23 (#363, determinism).** Regenerated on the current warehouse after "
+    "`status_score_improved` was rounded to 9 decimals in `int_poi_status_dynamism_improved` and "
+    "`int_poi_status_dynamism_improved_pre2021` (`docs/epic-c/363-geo-tolerance-note.md` §7; "
+    "rebuild float noise of up to 2.7e-15 had split equal values and moved the Spearman p "
+    "between builds). Two builds now give byte-identical results, apart from the `Generated` "
+    "timestamp line. Against the July 2026 version, the faithful n fell 435 -> 433 and the "
+    "figures moved because the warehouse changed (October 2026 OSM deletion fix), not because of "
+    "the rounding. Unrounded current-warehouse reference (a scratch run with the rounding "
+    "switched off, geo-DS sign-off R1, `docs/epic-c/363-geo-signoff.md`): Run 2 rho = 0.0468, "
+    "p = 0.0609 (rounded: rho = 0.0467, p = 0.0610; rounding effect |delta p| <= 0.0001); Run B "
+    "rho = 0.0157, p = 0.7432 (rounded: rho = 0.0158, p = 0.7428; |delta p| <= 0.0005); "
+    "common-sample improved p = 0.6857 (rounded 0.6852). Run 1 is unaffected (rho = 0.148, "
+    "p = 0.0020, n = 433). No reading changes: Run 1 significant and wrong-signed; Run 2 and "
+    "Run B not significant. Run 2's p = 0.061 is close to alpha = 0.05, so it must not be "
+    "described as a clear null.",
+)
+
+
+def render_change_notes() -> str:
+    lines = ["\n## Change notes\n"]
+    lines.extend(f"- {note}" for note in CHANGE_NOTES)
+    return "\n".join(lines) + "\n"
+
+
 def main() -> int:
     if not DUCKDB_PATH.exists():
         print(f"WARN: {DUCKDB_PATH} does not exist. Skipping (data-presence guard).")
@@ -619,6 +647,7 @@ def main() -> int:
 
     report = render_report(faithful, improved)
     report += render_part2(faithful, improved_same_anchor, common_sample)
+    report += render_change_notes()
     OUTPUT_MD.parent.mkdir(parents=True, exist_ok=True)
     OUTPUT_MD.write_text(report, encoding="utf-8")
     print(f"Wrote {OUTPUT_MD}")

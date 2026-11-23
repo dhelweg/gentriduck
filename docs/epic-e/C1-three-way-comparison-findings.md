@@ -1,6 +1,6 @@
 # OA-C.1 Three-Way Comparison (#174): Faithful vs Improved vs 2018 Golden
 
-Generated 2026-11-23 07:41 UTC by `analysis/c_three_way_comparison.py`. Anchor rule: ADR-0017 D3 (faithful/improved never blended into one score); Epic B directional framing (CLAUDE.md — document divergences, not forced exact reproduction).
+Generated 2026-11-23 08:12 UTC by `analysis/c_three_way_comparison.py`. Anchor rule: ADR-0017 D3 (faithful/improved never blended into one score); Epic B directional framing (CLAUDE.md — document divergences, not forced exact reproduction).
 
 ## Structural scope limitation (read first)
 
@@ -76,3 +76,7 @@ The improved-variant predictor (`status_score_improved`, OA-B.1–B.3 #170–#17
 - **Descriptive, not causal (ADR-0017 D-1):** the same-anchor ablation above is a correlational comparison of two descriptive predictors against a contemporaneous outcome; neither Run A nor Run B is a causal claim about what makes an area gentrify.
 - **Minimum-POI-base (ADR-0017 D-3):** `int_poi_status_dynamism_improved_pre2021` computes `status_score_improved` from `amenity_weighted_count`, the same tier-weighted stock the existing lor_2021 improved variant uses — any future per-PLR public display of this pre-2021 improved score must apply the same minimum-POI-base flag/suppression convention already applied to the faithful OA map (`mart_poi_offering_advantage_map`, #274).
 - **Bandwidth-fragility (ADR-0017 C-4):** does not apply to this extension — `status_score_improved`/`int_poi_amenity_weighted_base` has no distance-kernel/bandwidth parameter (it is a tier-weighted raw-stock composite, not a Gaussian-weighted OA location quotient); the C-4 gate binds on the LQ-based `int_poi_offering_advantage` variant only (see `docs/epic-g/G2-oa-bandwidth-sweep-findings.md`), which this ticket does not touch.
+
+## Change notes
+
+- **2026-11-23 (#363, determinism).** Regenerated on the current warehouse after `status_score_improved` was rounded to 9 decimals in `int_poi_status_dynamism_improved` and `int_poi_status_dynamism_improved_pre2021` (`docs/epic-c/363-geo-tolerance-note.md` §7; rebuild float noise of up to 2.7e-15 had split equal values and moved the Spearman p between builds). Two builds now give byte-identical results, apart from the `Generated` timestamp line. Against the July 2026 version, the faithful n fell 435 -> 433 and the figures moved because the warehouse changed (October 2026 OSM deletion fix), not because of the rounding. Unrounded current-warehouse reference (a scratch run with the rounding switched off, geo-DS sign-off R1, `docs/epic-c/363-geo-signoff.md`): Run 2 rho = 0.0468, p = 0.0609 (rounded: rho = 0.0467, p = 0.0610; rounding effect |delta p| <= 0.0001); Run B rho = 0.0157, p = 0.7432 (rounded: rho = 0.0158, p = 0.7428; |delta p| <= 0.0005); common-sample improved p = 0.6857 (rounded 0.6852). Run 1 is unaffected (rho = 0.148, p = 0.0020, n = 433). No reading changes: Run 1 significant and wrong-signed; Run 2 and Run B not significant. Run 2's p = 0.061 is close to alpha = 0.05, so it must not be described as a clear null.
