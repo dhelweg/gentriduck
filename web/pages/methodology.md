@@ -568,7 +568,9 @@ Neither result, on its own, is the headline. What *is* worth reporting:
   ([OA-C.1, #174](https://github.com/dhelweg/gentriduck/issues/174)) of whether the published
   headline should ever switch from the hard-count variant to a Gaussian-weighted one — if that
   ever happens, the sweep's finding (stable near 1000 m, fragile at the sweep's full span)
-  becomes directly relevant to that variant's publish-readiness.
+  becomes directly relevant to that variant's publish-readiness. In the distance-weighted
+  variant, places just outside the city boundary but within the 500 m kernel also contribute
+  to nearby areas, so its city totals can exceed the hard counts by up to 0.1 %.
 
 This section's own further reading: [the 2018 thesis, re-checked](/thesis-recheck) (the faithful
 revival, hypothesis by hypothesis), [three-way comparison findings (OA-C.1)](https://github.com/dhelweg/gentriduck/blob/main/docs/epic-e/C1-three-way-comparison-findings.md)
