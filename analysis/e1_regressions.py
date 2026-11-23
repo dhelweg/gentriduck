@@ -1309,26 +1309,31 @@ def test_h3_ewr(df_ewr: object) -> list[dict]:
 # Correction notes (#381): dated, hand-written notices for the findings doc. They live HERE, in
 # the generator, not in the generated Markdown, so that every regeneration (which rewrites the
 # whole doc) carries them forward unchanged (same pattern as CHANGE_NOTES in
-# analysis/c_three_way_comparison.py). Wording is domain-ratified, verbatim
-# (docs/epic-c/381-correction-domain-review.md §2 B, with the two geo-DS precision fixes in
-# docs/epic-c/381-correction-geo-signoff.md): do not edit it here. When the #381 fix
-# lands, replace both with a resolved statement under the R-C1 dual gate (review §3).
+# analysis/c_three_way_comparison.py). History: the interim (pre-fix) wording was
+# domain-ratified (docs/epic-c/381-correction-domain-review.md §2 B). This RESOLVED wording
+# replaces it now that int_berlin_ewr_plr2021 implements the C3-approved population-weighted
+# crosswalk (review §3). DRAFT: pending the R-C1 dual-gate wording check (geo-DS + domain) on
+# the #381 fix branch; the verdict counts below are taken from the regenerated Section 4.
 CORRECTION_NOTES_TOP: tuple[str, ...] = (
     "**Correction (November 2026, #381):** Section 4 (EWR resident-register composite, "
-    "2014–2020) and the EWR lines of the Overall Scorecard and of 'Which series leads?' are "
-    "affected by a known error and will be regenerated; see the note at the top of Section 4. "
-    "All other sections, including the H1 cross-section in Section 1, are not affected.",
+    "2014–2020) and the EWR lines of the Overall Scorecard and of 'Which series leads?' were "
+    "regenerated on corrected data; see the note at the top of Section 4. All other sections, "
+    "including the H1 cross-section in Section 1, are not affected by that error. Their "
+    "bootstrap confidence intervals were recomputed in the same run and can differ from the "
+    "previous version in the third decimal (#364); one borderline verdict outside Section 4 "
+    "(Section 2, H3a cross-lagged k = 1) moved between CONTRADICTED (borderline) and NOT "
+    "SIGNIFICANT for that reason alone, with an unchanged estimate and p-value.",
 )
 CORRECTION_NOTES_SECTION4: tuple[str, ...] = (
-    "**Correction (November 2026, #381).** The results in this section were computed with an "
-    "error: pre-2021 resident-register shares and averages were carried over to the 2021 area "
-    "boundaries by area instead of by population. In a corrected re-run "
-    "(`docs/epic-c/381-geo-triage.md` §2), 6 of the 13 verdicts below change from SUPPORTED to "
-    "NOT SIGNIFICANT, and the correlations are two to five times weaker; of the remaining seven, "
-    "six rely on analytic p-values over pooled, non-independent rows, and the one cross-lagged "
-    "result that holds (H3a, k = 2) is about half as strong. "
-    "This section will be regenerated once the fix has passed review. Until then, please do not "
-    "cite these results.",
+    "**Correction (November 2026, #381).** This section was regenerated on corrected data. Its "
+    "first version carried pre-2021 resident-register shares and averages over to the 2021 area "
+    "boundaries by area instead of by population. With the correction, 6 of the 13 verdicts "
+    "change from SUPPORTED to NOT SIGNIFICANT: H2 OLS at k = 1, 2 and 4, H3a cross-lagged at "
+    "k = 1, and H3b cross-lagged at k = 1 and 2. The 7 that remain SUPPORTED are two to five "
+    "times weaker than before; six of them (the H2 and H3c Spearman rows) rely on analytic "
+    "p-values over pooled, non-independent rows, and the one cross-lagged result that holds "
+    "(H3a, k = 2) is about half as strong. The earlier reading that this panel supports H2 and "
+    "H3, with both series leading each other, no longer holds.",
 )
 
 
