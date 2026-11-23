@@ -151,8 +151,11 @@ order by sort_order
 ```
 
 ```sql stage_mix
+-- #358: stage_label/stage_number are the dbt display columns (spec §1); no raw key, NULL
+-- and the old 'uninhabited / no data' bucket read "No stage on record".
 select
-    typology_stage as stage,
+    stage_label as stage,
+    stage_number,
     n_plr as n_areas
 from gentriduck_marts.mart_ortsteil_plr_stage_mix
 where city_code = 'BER' and ortsteil_area_code = '${params.code}'
@@ -160,7 +163,8 @@ where city_code = 'BER' and ortsteil_area_code = '${params.code}'
       select max(period_yyyymm) from gentriduck_marts.mart_ortsteil_plr_stage_mix
       where city_code = 'BER'
   )
-order by n_areas desc
+-- #358 review (web finding 4): cycle order, rendered unsorted (sort=false).
+order by stage_number nulls last
 ```
 
 ```sql poi_mix
@@ -185,8 +189,8 @@ order by poi_count desc
 select
     xw.plr_area_code as area_code,
     coalesce(gi.area_name, xw.plr_area_code) as area_name,
-    gi.status_class as stage,
-    gi.dynamism_class as pressure_trend,
+    coalesce(gi.stage_label, 'No stage on record') as stage,
+    coalesce(gi.status_trend, 'No trend on record') as status_trend,
     xw.overlap_frac_of_plr,
     '/berlin/area/' || xw.plr_area_code as area_link
 from gentriduck_marts.mart_ortsteil_plr_crosswalk as xw
@@ -200,7 +204,8 @@ left join
             where variant = 'live_data' and area_level = 'plr'
         )
 where xw.ortsteil_area_code = '${params.code}' and xw.is_dominant_ortsteil
-order by (gi.dynamism_class_bi = 'negative') desc, gi.dynamism_index desc
+-- #358 (spec §3): cycle order, then name, then code; user-sortable.
+order by gi.stage_number nulls last, area_name, area_code
 ```
 
 ```sql dom_suppressed_count
@@ -302,7 +307,7 @@ limit 15
         const majorityClause = (topShare != null && topShare > 0.5)
           ? `<b>${mssMix.top_stage}</b> is the only stage holding a majority (${Math.round(topShare * 100)}%)`
           : 'no single stage holds a majority';
-        return `<b>${nAdvanced}</b> of <b>${nTotal}</b> neighbourhoods (Planungsräume) here are classified <b>active-gentrification</b> or <b>pioneer-signal</b>; ${majorityClause} — a distribution across this Ortsteil's own (dominantly-assigned) neighbourhoods, never a single re-scored gentrification-index value for the Ortsteil itself.`;
+        return `<b>${nAdvanced}</b> of <b>${nTotal}</b> neighbourhoods (Planungsräume) here are classified <b>4 · Active gentrification</b> or <b>3 · Pioneer signal</b>; ${majorityClause} — a distribution across this Ortsteil's own (dominantly-assigned) neighbourhoods, never a single re-scored gentrification-index value for the Ortsteil itself.`;
       })();
 </script>
 
@@ -366,7 +371,8 @@ coarser than a single Planungsraum.
 with
     mix as (
         select
-            typology_stage as stage,
+            stage_label as stage,
+            stage_number,
             n_plr as n_areas
         from gentriduck_marts.mart_ortsteil_plr_stage_mix
         where city_code = 'BER' and ortsteil_area_code = '${params.code}'
@@ -380,7 +386,7 @@ with
     advanced as (
         select coalesce(sum(n_areas), 0) as n_advanced
         from mix
-        where stage in ('active-gentrification', 'pioneer-signal')
+        where stage_number in (3, 4) -- 3 · Pioneer signal, 4 · Active gentrification
     )
 select
     t.n_total,
@@ -396,7 +402,9 @@ from totals as t cross join top cross join advanced as a
 {#if mssTakeaway}
 <p>{@html mssTakeaway}</p>
 {/if}
-<BarChart data={stage_mix} x=stage y=n_areas title="Neighbourhoods by stage, {ortsteil_name[0] ? ortsteil_name[0].area_name : 'this Ortsteil'}" swapXY=true/>
+<BarChart data={stage_mix} x=stage y=n_areas title="Neighbourhoods by stage, {ortsteil_name[0] ? ortsteil_name[0].area_name : 'this Ortsteil'}" swapXY=true sort=false chartAreaHeight=300 echartsOptions={{ yAxis: { axisLabel: { width: 130, overflow: 'break', interval: 0, hideOverlap: false } }, grid: { left: 16, containLabel: true } }}/>
+
+<StageNumberLegend />
 {:else}
 <Alert status="info">No neighbourhood-stage mix for this enclave — see the note above.</Alert>
 {/if}
@@ -521,10 +529,12 @@ where city_code = 'BER' and area_level = 'ortsteil' and area_code = '${params.co
 {#if hasChildren}
 <DataTable data={children} rows=20 link=area_link>
     <Column id=area_name title="Neighbourhood (PLR)"/>
-    <Column id=stage title="Stage"/>
-    <Column id=pressure_trend title="Pressure trend"/>
+    <Column id=stage title="Stage" wrap=true/>
+    <Column id=status_trend title="Status trend"/>
     <Column id=overlap_frac_of_plr title="% of PLR within this Ortsteil" fmt="pct0"/>
 </DataTable>
+
+<StatusTrendLegend />
 
 {#if anyLowConfidence}
 <Alert status="warning">

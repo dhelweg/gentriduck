@@ -81,12 +81,17 @@ hide_breadcrumbs: true
   The rule applied: show a Hamburg figure here only if the same figure for the same Gebiet is
   already public elsewhere on the site under a sign-off; add no new Hamburg aggregate beyond
   counts and sums of such figures (no averages of indices, no new comparisons).
-  - Current stage + pressure trend (`gentrification_index`, latest live_data period): the same row
+  - Current stage + status trend (`gentrification_index`, latest live_data period): the same row
     /hamburg/maps already shows for this Gebiet (H3/#237, docs/epic-h/H3-geo-signoff.md,
     H3-domain-signoff.md). H3 domain condition 1(iv) is honoured: the stage is labelled "not
     directly equivalent" to a same-named Berlin stage, linking to methodology §6. The I21-g
     "reserved for I21-i" note above is superseded here: #303 (I21-i) closed after admitting only
     price/rent rows to the mart, and the stage figure itself was already public on the map.
+  - #358 (docs/epic-g/358-spec.md §1, §5): the stage label and status trend are the dbt display
+    columns gentrification_index.stage_label / status_trend and
+    fct_gentrification_trajectory.dominant_stage_label (no page-side CASE, no raw key shown). The
+    "How to read" Alert's former trend sentence is replaced by <StatusTrendLegend>, shown next to
+    a "Status trend" BigValue; <StageNumberLegend> sits under the stage BigValues.
   - Commercial mix over time (`fct_poi_development`, HH/current) and the Offering Advantage radar
     (`mart_poi_offering_advantage_map`, HH, standard/faithful, the same rows /hamburg/poi-map
     colours its map by; #312/#318 dual sign-offs): same charts and I14/I15 framing conditions as
@@ -164,22 +169,15 @@ limit 1
 ```
 
 ```sql current_stage
--- #353: this Gebiet's current stage and pressure trend -- the exact row /hamburg/maps' `areas_leaf`
+-- #353: this Gebiet's current stage and status trend -- the exact row /hamburg/maps' `areas_leaf`
 -- query colours this Gebiet by (live_data, subarea_l2, latest Hamburg period; H3/#237). Re-shown
--- here, not re-derived.
+-- here, not re-derived. #358: stage_label / status_trend are the dbt display columns.
 select
     period_yyyymm,
     status_class as stage,
-    dynamism_class as pressure_trend,
+    status_trend,
     status_index,
-    case status_class
-        when 'active-gentrification' then 'Active gentrification'
-        when 'pioneer-signal' then 'Early pioneer signal'
-        when 'improving-vulnerable' then 'Improving, vulnerable area'
-        when 'pre-gentrification' then 'Pre-gentrification watch'
-        when 'consolidation-pressure' then 'Consolidated, still intensifying'
-        when 'stable-established' then 'Stable, established'
-    end as stage_label
+    stage_label
 from gentriduck_marts.gentrification_index
 where variant = 'live_data' and area_level = 'subarea_l2' and city_code = 'HH'
   and area_code = '${params.code}'
@@ -203,7 +201,8 @@ select
     status_index_last,
     status_delta,
     trajectory_type,
-    dominant_stage,
+    -- #358: display label, not the raw key (spec §1).
+    dominant_stage_label,
     trajectory_confidence
 from gentriduck_marts.fct_gentrification_trajectory
 where city_code = 'HH' and area_vintage = 'current' and area_code = '${params.code}'
@@ -278,10 +277,10 @@ where city_code = 'HH' and area_level = 'subarea_l2'
   // #353: plain-language stage line for "at a glance" -- the stage label is the same plain label
   // /hamburg/maps shows for this Gebiet; the "not directly equivalent" clause is H3 domain
   // condition 1(iv). No portrait wording beyond that (see this page's header comment).
-  // #353 domain spot-check R1 (docs/epic-g/353-domain-spotcheck.md): no pressure-trend clause here.
-  // Every gentrification-signal stage has Dynamik = positive by the typology's definition, which
-  // the site's legend reads as LOWER pressure, so "Active gentrification, with a positive pressure
-  // trend" contradicted itself.
+  // #353 domain spot-check R1 (docs/epic-g/353-domain-spotcheck.md): no trend clause here. Every
+  // gentrification-signal stage has Dynamik = positive by the typology's definition, which the
+  // pre-#358 trend legend read as the "lower" end, so the clause contradicted itself. #358 replaced
+  // that legend with the neutral status trend, shown as its own BigValue + legend below.
   // The link is a literal `href="/methodology"`: Evidence's base-path preprocessor rewrites literal
   // hrefs in +page.md files (script included), so it must not carry `${base}` itself.
   $: cur = current_stage?.[0];
@@ -407,8 +406,7 @@ where city_code = 'HH' and area_level = 'subarea_l2'
   <b>How to read this section:</b> Hamburg's official status runs <b>1 = least deprived</b> to
   <b>4 = most deprived</b>, so a status that <b>falls</b> means the Gebiet became <b>less</b>
   deprived (its status rose) — which is also the signature of gentrification, not automatically good
-  news for existing residents. A <b>negative</b> pressure trend is the reading this project treats as
-  <b>higher</b> gentrification pressure. Figures come from Hamburg's own annual Sozialmonitoring —
+  news for existing residents. Figures come from Hamburg's own annual Sozialmonitoring —
   see the <a href="/methodology">methodology & data sources</a> page, §6 for how it differs from
   Berlin's.
 </Alert>
@@ -418,6 +416,7 @@ where city_code = 'HH' and area_level = 'subarea_l2'
 {#if cur && cur.stage}
 <!-- #353 review: the plain stage label, same wording as the sentence above and /hamburg/maps. -->
 <BigValue data={current_stage} value=stage_label title="Current stage"/>
+<BigValue data={current_stage} value=status_trend title="Status trend"/>
 {:else}
 <Alert status="info">
   No current Sozialmonitoring stage is on record for this Gebiet in the latest Hamburg edition on
@@ -425,8 +424,12 @@ where city_code = 'HH' and area_level = 'subarea_l2'
 </Alert>
 {/if}
 <BigValue data={trajectory_summary} value=trajectory_type title="Overall trajectory" emptySet="warn"/>
-<BigValue data={trajectory_summary} value=dominant_stage title="Most common stage" emptySet="warn"/>
+<BigValue data={trajectory_summary} value=dominant_stage_label title="Most common stage" emptySet="warn"/>
 <BigValue data={trajectory_summary} value=trajectory_confidence title="Confidence" emptySet="warn"/>
+
+<StageNumberLegend />
+
+<StatusTrendLegend />
 
 <!-- #353: the pace sentence now leads the "at a glance" section (as Berlin's speedSentence does)
      and is not repeated here; only the empty state remains. -->
@@ -564,7 +567,9 @@ this across all of Hamburg.
 -- #353: the same mart rows /hamburg/poi-map colours its map by (HH, standard/faithful), this
 -- Gebiet, latest snapshot_year with a value. Rows carrying the mart's minimum-base flag are
 -- dropped here -- /hamburg/poi-map shows the same Gebiet-years as hatched "No data" -- and their
--- count is disclosed below via poi_oa_suppressed.
+-- count is disclosed below via poi_oa_suppressed. #357: the mart's zero-filled rows (no POI of
+-- the domain, oa_domain NULL) are excluded here and in poi_oa_suppressed, so both read the same
+-- rows as before the zero-fill.
 select
     poi_domain_h,
     oa_domain,
@@ -575,6 +580,7 @@ where
     and weight_variant = 'standard'
     and methodology_variant = 'faithful'
     and area_code = '${params.code}'
+    and not is_zero_filled
     and not oa_domain_min_base_flag
     and snapshot_year = (
         select max(snapshot_year)
@@ -597,6 +603,7 @@ where
     and weight_variant = 'standard'
     and methodology_variant = 'faithful'
     and area_code = '${params.code}'
+    and not is_zero_filled
     and oa_domain_min_base_flag
     and snapshot_year = (
         select max(snapshot_year)
@@ -606,6 +613,7 @@ where
             and weight_variant = 'standard'
             and methodology_variant = 'faithful'
             and area_code = '${params.code}'
+            and not is_zero_filled
     )
 ```
 

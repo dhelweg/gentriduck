@@ -128,6 +128,9 @@
 -- published mart's `accepted_values` beyond `["BER"]` (#158/#159 precedent) --
 -- this model feeds only analysis/e5_hamburg_lead_lag.py (groundwork/analysis
 -- layer), not any published mart.
+-- #355: analysis/e5_hamburg_lead_lag.py is superseded by
+-- analysis/thesis_hypothesis_suite.py --city HH (pre-registration 354-355 §6.3)
+-- and no longer runs in `poe analysis`; the suite does not read this model.
 --
 -- dbt_meta_owner: data-engineer
 -- depends_on: {{ ref('int_gentrification_ts') }}

@@ -15,6 +15,11 @@ __pycache__/
 data/raw/
 data/cache/
 data/analysis/
+# local build provenance records (#361, #369): machine-specific, never committed
+data/.warehouse-source
+data/.geo-export-source
+data/serving/.export-source
+web/.sources-source
 *.osm.pbf
 *.osh.pbf
 *.parquet

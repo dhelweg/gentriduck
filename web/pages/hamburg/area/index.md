@@ -49,7 +49,7 @@ sidebar_position: 4
   detail 3, full list 4, POI map 5). The stale "Scaffold only -- no real figures" Alert is
   removed: the Gebiet pages have published real figures since #317/I20, and since #353 show the
   Gebiet's stage, commercial mix and Offering Advantage too. Columns now mirror Berlin's list:
-  stage and pressure trend (the same per-Gebiet values /hamburg/maps shows, H3/#237) plus the
+  stage and status trend (#358 wording; the same per-Gebiet values /hamburg/maps shows, H3/#237) plus the
   district. The code column is kept only where the label doesn't already contain the code (#352
   review follow-up, same strpos test as everywhere else), and the OSM-label count is computed.
 -->
@@ -83,8 +83,9 @@ where city_code = 'HH' and area_level = 'subarea_l2'
 select
     g.area_name,
     d.area_name as district,
-    gi.status_class as stage,
-    gi.dynamism_class as pressure_trend,
+    -- #358: dbt display columns (spec §1-§2), never the raw key.
+    coalesce(gi.stage_label, 'No stage on record') as stage,
+    coalesce(gi.status_trend, 'No trend on record') as status_trend,
     case when strpos(g.area_name, 'Gebiet ' || g.area_code) > 0 then null else g.area_code end
         as code_note,
     '/hamburg/area/' || g.area_code as area_link
@@ -115,13 +116,17 @@ order by g.area_name
     <Column id=area_name title="Statistisches Gebiet"/>
     <Column id=district title="District"/>
     <Column id=stage title="Stage"/>
-    <Column id=pressure_trend title="Pressure trend"/>
+    <Column id=status_trend title="Status trend"/>
     <Column id=code_note title="Code (if not in the name)"/>
 </DataTable>
 
 Hamburg's stages are not directly equivalent to same-named Berlin stages (Hamburg's Dynamik window
 is 3 years, Berlin's 2; see [methodology §6](/methodology)). Gebiete without a stage have no
 Sozialmonitoring classification in the latest Hamburg edition on this site.
+
+<StageNumberLegend />
+
+<StatusTrendLegend />
 
 ---
 

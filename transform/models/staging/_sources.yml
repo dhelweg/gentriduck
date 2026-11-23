@@ -219,6 +219,17 @@ sources:
         meta:
           external_location: "{{ env_var('PWD', '.') }}/data/raw/hamburg/sozialmonitoring/*.parquet"
 
+      - name: sozialmonitoring_annex
+        description: >
+          #371 (ADR-0014 Amendment 2026-11-02): Sozialmonitoring report-annex
+          indicator z-scores S1-S7 / D1-D6 per scored statistisches Gebiet,
+          editions 2016-2025, values as published. dl-de/by-2.0. Produced by
+          ingestion/hamburg/sozialmonitoring/ingest_hamburg_sozialmonitoring_annex.py;
+          read by stg_hamburg_sozialmonitoring_indicators. Kept in its own
+          directory so the sozialmonitoring/*.parquet glob above never unions it.
+        meta:
+          external_location: "{{ env_var('PWD', '.') }}/data/raw/hamburg/sozialmonitoring_annex/*.parquet"
+
   - name: raw_osm
     description: >
       QA-5 (#180): OSM POI history snapshots (GeoParquet), gitignored per

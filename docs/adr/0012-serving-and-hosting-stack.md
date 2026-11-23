@@ -274,3 +274,49 @@ opt-in production concern, not a build dependency.
 **Gate:** hosting/tooling addition (a new free, open-source analytics beacon), **not
 methodology-bearing** (no R-C1 path touched) — consistent with this ADR's own Status/Process note, so
 no geo-DS/domain sign-off is required.
+
+## Amendment C — PM deploys after the maintainer's release merge (2026-11-02, #361/#369)
+
+**Status:** Accepted (maintainer approved the text 2026-11-02). Partly supersedes Amendment A's
+"redeployed by the maintainer … from a fresh local build"; everything else in Amendment A stands.
+
+**What changed (maintainer decision, option A, 2026-11-02):** once the maintainer merges the
+weekly `develop → main` release PR, the **PM deploys without asking**, using
+`uv run poe release-deploy` (#361). The PM deploys **only after it has detected that merge**.
+`main` stays human-gated (ADR-0011): the PM never merges to `main` and never runs `gh pr merge`.
+**The maintainer's merge is the decision to publish.** The deploy only carries it out.
+
+**Build reuse.** The PM may reuse an existing build instead of rebuilding **only if** its
+`.build-source` shows all three of these:
+- it was built from a tree equal to `origin/main^{tree}`;
+- its inputs fingerprint matches;
+- its export stamps are certified for `main`.
+
+If any of these fails, the PM rebuilds from `main`. `release-deploy` enforces this, along with the
+warehouse-provenance check, the smoke check, and the push that touches `gh-pages` only
+(`ops/README.md`, Deploy).
+
+**Release window.** The deploy starts at the **next break**: when the current agent step finishes,
+never in the middle of an agent's work. Development **pauses** for the window, because the checkout
+and DuckDB file are shared. That takes a few minutes when the build is reused, or about 25–35 min
+when it needs a rebuild. Development then resumes.
+
+**Permission.** The exact-match allow rule `Bash(uv run poe release-deploy)` is added to
+`.claude/settings.json` **only after #369 lands** (which binds the build marker to the
+`npm run sources` data). Until then, every run prompts for approval. Any variant with flags (e.g.
+`--force-rebuild`) still prompts, because it doesn't match the rule.
+
+**Failure handling.**
+- **Smoke check fails:** nothing is published, the old site stays live, and the PM notifies the
+  maintainer.
+- **A pre-flight check refuses** (tree, fingerprint, stamps, provenance): the PM fixes the cause by
+  rebuilding from `main` and retries **once**. If it still fails, the PM escalates to the
+  maintainer. It never works around a check.
+
+**Notification.** After a successful deploy, the PM checks the live site and sends a short
+"release live" message with the link, the tickets included, and the deploy path (reused or rebuilt).
+
+**Follow-up option (not decided):** a separate release worktree with its own copy of the DB, so
+deploys don't pause development. If pursued, it needs its own amendment.
+
+**Gate:** ops/hosting process change. The file sits under `docs/adr/**`, so per CLAUDE.md R-C1 it gets a brief geo-DS + domain pass before integration. The maintainer approved this amendment's text on 2026-11-02.

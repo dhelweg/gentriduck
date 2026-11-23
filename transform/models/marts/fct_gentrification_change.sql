@@ -177,5 +177,11 @@ select
     -- Note: rank numbers run from 1 (highest score) to N (lowest); a lower
     -- rank_current means the area improved. rank_change = rank_prev - rank_current
     -- so positive = improved rank (less negative = better).
-    (rank_prev - rank_current) as rank_change
+    (rank_prev - rank_current) as rank_change,
+    -- #358 (docs/epic-g/358-spec.md Rev. 1 §1, geo C1): cycle position + exact public
+    -- label for typology_stage from the shared typology_stage_display() macro
+    -- (Dangschat 1988 double invasion-succession cycle; Clay 1979; Smith 1979 -- see
+    -- the macro header). NULL stage (uninhabited PLR) -> 'No stage on record'.
+    -- Display-only, appended after the pre-#358 columns.
+    {{ typology_stage_display('typology_stage') }}
 from with_lag

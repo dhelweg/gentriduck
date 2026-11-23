@@ -5,7 +5,8 @@ sidebar_position: 3
 
 <!--
   No blind ~540-item PLR picker (maintainer feedback). Navigation is coarse Bezirk (district) +
-  a ranked comparison table; the single-area "spotlight" is the district's highest-pressure area.
+  a comparison table; the single-area "spotlight" is the reader's own pick from that district
+  (#358: formerly the district's first row under a Dynamik-reading order).
   Kept prerender-clean: no $page/?area machinery (that forced client-only rendering and left every
   query empty at build). Exact per-area deep-link from a map/table click is a follow-up — it needs
   an Evidence templated route (/berlin/area/[code]) so ${params.code} can drive the queries
@@ -15,12 +16,20 @@ sidebar_position: 3
   see docs/epic-i/I2-route-map.md). sidebar_position renumbered 13 -> 3 (scoped to this page's
   siblings under pages/berlin/, not the whole site).
 
-  #353 (domain spot-check R2, docs/epic-g/353-domain-spotcheck.md): the sort key has only three
-  values (negative/neutral/positive Dynamik) with many ties, and gentrification-stage areas all
-  read `positive`, so the copy no longer calls the first row "the highest gentrification-pressure
-  neighbourhood"; it says what the order is. A deterministic tie-break (area_name, area_code) is
-  added -- the spotlight previously depended on DuckDB row order within the tie. The ordering
-  rule itself is unchanged (#358 decides it).
+  #353 (domain spot-check R2, docs/epic-g/353-domain-spotcheck.md): the then sort key had only
+  three values (negative/neutral/positive Dynamik) with many ties, so the copy stopped calling the
+  first row the top of a ranking and added a deterministic tie-break (area_name, area_code).
+
+  #358 (docs/epic-g/358-spec.md §3-§5, Revision 1): the Dynamik-reading order is gone. Stage and
+  trend now read the dbt columns gentrification_index.stage_label / status_trend (live_data only;
+  the "Stage" column previously showed the raw status_class key). Default order: stage_number
+  ascending (NULLs last), then area_name, then area_code; the DataTable stays user-sortable on
+  every column. The spotlight is a reader choice (a per-district Dropdown, defaulting to the
+  table's first row), never a "first = matters most" pick. Stage-number and status-trend legends
+  come from the shared <StageNumberLegend>/<StatusTrendLegend> components (exact §5 wording).
+  Areas with no stage on record are not listed in the browse table (spec §5's ordering paragraph
+  says "with a current stage", as Hamburg's page already did); they keep their own pages in the
+  full list.
 
   I3 (#220) rationalization decision, area-detail vs. area/index (ticket's "reconcile ... or
   document why not merging them"): this page (coarse Bezirk browse + spotlight) is the primary
@@ -56,7 +65,7 @@ sidebar_position: 3
   unchanged -- it is not duplicated elsewhere (I21-ia scoping §3).
 -->
 
-<Hero compact eyebrow="Chapter 3 — The Evidence" title="Area detail — one neighbourhood, full picture" lede="Pick a district to compare its neighbourhoods, then see a headline snapshot of one neighbourhood with the district's strongest pressure reading, with a link to its full profile." />
+<Hero compact eyebrow="Chapter 3 — The Evidence" title="Area detail — one neighbourhood, full picture" lede="Pick a district to compare its neighbourhoods, then see a headline snapshot of any one of them, with a link to its full profile." />
 
 For the citywide picture, see the [maps page](/berlin/maps) or the
 [time-series view](/berlin/time-series). If you already know which neighbourhood you want, the
@@ -90,60 +99,67 @@ own [district browse](/hamburg/area-detail).
 </Dropdown>
 
 ```sql browse
+-- #358: stage_label / status_trend come from gentrification_index (live_data only, spec §1-§2);
+-- default order is the cycle position (stage_number, NULLs last), then name, then code as a
+-- deterministic tie-break (spec §3). Only areas with a current stage are listed (spec §5 wording).
 select
+    area_code,
     area_name,
-    status_class as stage,
-    dynamism_class as pressure_trend,
+    -- which district this result belongs to, so the spotlight picker below only mounts once the
+    -- result for the CURRENT district has loaded (its default is this result's first row).
+    '${inputs.bezirk.value}' as district_code,
+    stage_number,
+    stage_label as stage,
+    status_trend,
     -- Exact-code drill-down (#150): every area is one click from its full page, not just the
-    -- district's top-ranked spotlight below. I2 (#219): area moved under /berlin/area.
+    -- spotlight below. I2 (#219): area moved under /berlin/area.
     '/berlin/area/' || area_code as area_link
 from gentriduck_marts.gentrification_index
 where variant = 'live_data' and area_level = 'plr' and city_code = 'BER'
   and period_yyyymm = (
       select max(period_yyyymm) from gentriduck_marts.gentrification_index
-      where variant = 'live_data' and area_level = 'plr'
+      where variant = 'live_data' and area_level = 'plr' and city_code = 'BER'
   )
   and substr(area_code, 1, 2) = '${inputs.bezirk.value}'
-order by (dynamism_class_bi = 'negative') desc, dynamism_index desc, area_name, area_code
+  and stage_number is not null
+order by stage_number nulls last, area_name, area_code
 ```
 
-Every neighbourhood in the selected district, ordered by its MSS Dynamik reading: negative first
-(the reading this site treats as higher pressure), then neutral, then positive. Neighbourhoods
-with the same reading are listed alphabetically, so order within a group means nothing. This
-order uses the Dynamik reading alone, not the stage: neighbourhoods in a gentrification stage
-(active-gentrification, pioneer-signal, improving-vulnerable, consolidation-pressure) all have a
-positive reading by definition, so they appear further down. Click any row to open its exact page;
-the first-listed one is also profiled in the spotlight below.
+Every neighbourhood with a current stage in the selected district, ordered by stage number (1 to
+6), then alphabetically. The order shows where each area sits in the cycle, not how urgent it is.
+Click a column header to sort differently.
 
 <DataTable data={browse} rows=10 rowShading=true link=area_link>
     <Column id=area_name title="Neighbourhood (PLR)"/>
-    <Column id=stage title="Stage"/>
-    <Column id=pressure_trend title="Pressure trend"/>
+    <Column id=stage title="Stage" wrap=true/>
+    <Column id=status_trend title="Status trend"/>
 </DataTable>
 
-```sql chosen
-select area_code, area_name
-from gentriduck_marts.gentrification_index
-where variant = 'live_data' and area_level = 'plr' and city_code = 'BER'
-  and period_yyyymm = (
-      select max(period_yyyymm)
-      from gentriduck_marts.gentrification_index
-      where variant = 'live_data' and area_level = 'plr'
-  )
-  and substr(area_code, 1, 2) = '${inputs.bezirk.value}'
-order by (dynamism_class_bi = 'negative') desc, dynamism_index desc, area_name, area_code
-limit 1
-```
+<StageNumberLegend />
+
+<StatusTrendLegend />
+
+<script>
+  // #358: the spotlight is the reader's choice. The Dropdown's input name is per district
+  // (`spot_<bezirk>`), so a previous pick is remembered for its own district only, and its
+  // explicit default is the browse table's first row (stage order). It is mounted only once
+  // `browse` holds the CURRENT district's rows (`spotReady`), so the default is never a stale
+  // row from the previous district. The SQL below falls back to the first table row whenever the
+  // pick is empty or not in the district.
+  $: spotInputName = 'spot_' + (inputs.bezirk?.value ?? '');
+  $: spotCode = String(inputs[spotInputName]?.value ?? '').replaceAll("'", '');
+  $: spotDefault = browse?.[0]?.area_code;
+  $: spotReady = Boolean(spotDefault) && browse?.[0]?.district_code === inputs.bezirk?.value;
+</script>
 
 ---
-
-## Spotlight — {chosen[0]?.area_name ?? 'this district'}
 
 ```sql spotlight
 select
     g.area_code,
-    g.status_class as stage,
-    g.dynamism_class as pressure_trend,
+    g.area_name,
+    g.stage_label as stage,
+    g.status_trend,
     t.trajectory_type,
     t.trajectory_confidence
 from gentriduck_marts.gentrification_index as g
@@ -152,45 +168,51 @@ left join gentriduck_marts.fct_gentrification_trajectory as t
 where g.variant = 'live_data' and g.area_level = 'plr' and g.city_code = 'BER'
   and g.period_yyyymm = (
       select max(period_yyyymm) from gentriduck_marts.gentrification_index
-      where variant = 'live_data' and area_level = 'plr'
-  )
-  and g.area_code = (
-      select area_code
-      from gentriduck_marts.gentrification_index
       where variant = 'live_data' and area_level = 'plr' and city_code = 'BER'
-        and period_yyyymm = (
-            select max(period_yyyymm) from gentriduck_marts.gentrification_index
-            where variant = 'live_data' and area_level = 'plr'
-        )
-        and substr(area_code, 1, 2) = '${inputs.bezirk.value}'
-      order by (dynamism_class_bi = 'negative') desc, dynamism_index desc, area_name, area_code
-      limit 1
   )
+  and substr(g.area_code, 1, 2) = '${inputs.bezirk.value}'
+  and g.stage_number is not null
+-- #358: the reader's pick if it is in this district, otherwise the table's first row.
+order by (g.area_code = '${spotCode}') desc, g.stage_number nulls last, g.area_name, g.area_code
+limit 1
 ```
 
+## Spotlight — {spotlight[0]?.area_name ?? 'this district'}
+
+{#if spotReady}
+{#key spotInputName}
+<Dropdown
+    data={browse}
+    name={spotInputName}
+    value=area_code
+    label=area_name
+    order="stage_number nulls last, area_name, area_code"
+    defaultValue={spotDefault}
+    title="Neighbourhood to show"
+/>
+{/key}
+{/if}
+
 <BigValue data={spotlight} value=stage title="Current stage" emptySet="warn"/>
-<BigValue data={spotlight} value=pressure_trend title="Pressure trend" emptySet="warn"/>
+<BigValue data={spotlight} value=status_trend title="Status trend" emptySet="warn"/>
 <BigValue data={spotlight} value=trajectory_type title="Overall trajectory" emptySet="warn"/>
 <BigValue data={spotlight} value=trajectory_confidence title="Confidence" emptySet="warn"/>
 
-<!-- #323: guard on the VALUE (`chosen[0]?.area_code`), not just the row -- same #255 precedent as
-     every /berlin/area/[code]-style Up-link (see e.g. pages/berlin/area/[code].md's Up-link
+<!-- #323: guard on the VALUE (`spotlight[0]?.area_code`), not just the row -- same #255 precedent
+     as every /berlin/area/[code]-style Up-link (see e.g. pages/berlin/area/[code].md's Up-link
      comment for the full "undefined"-cascade rationale). This page isn't itself a `[code].md`
-     template, but its `chosen`/`spotlight` queries are driven by a Dropdown input rather than a
-     route param, and can be legitimately empty (build-time/shell rendering before the input's
-     default value is bound); `chosen[0].area_code` was previously read directly, so an
-     empty/placeholder result rendered the literal text "undefined" into this static `<a href>` --
-     a real, crawlable `/berlin/area/undefined` route that Evidence then tried to prerender as the
+     template, but its spotlight query is driven by Dropdown inputs rather than a route param, and
+     can be legitimately empty (build-time/shell rendering before the inputs are bound); an
+     unguarded read rendered the literal text "undefined" into this static `<a href>` -- a real,
+     crawlable `/berlin/area/undefined` route that Evidence then tried to prerender as the
      `/berlin/area/[code]` template and failed on (#323). -->
 <p>
-{#if chosen[0]?.area_code}
-{chosen[0].area_name} is listed first: it is one of the neighbourhoods in this district with a
-negative Dynamik reading (this site's higher-pressure reading) and comes first alphabetically among
-them, which does not mean it is under more pressure than the others in that group. Its full profile — social-status trajectory, commercial-mix development,
+{#if spotlight[0]?.area_code}
+{spotlight[0].area_name} is shown because you selected it (or because it is first in the list). Its full profile — social-status trajectory, commercial-mix development,
 Offering Advantage, demographics, amenities, and land value/rent — is on its
-<a href="/berlin/area/{chosen[0].area_code}">canonical area page</a>.
+<a href="/berlin/area/{spotlight[0].area_code}">canonical area page</a>.
 {:else}
-Pick a district above to see a snapshot of its first-listed neighbourhood — each one also has a full profile in the <a href="/berlin/area">neighbourhood list</a>.
+Pick a district above to see a snapshot of one of its neighbourhoods — each one also has a full profile in the <a href="/berlin/area">neighbourhood list</a>.
 {/if}
 </p>
 
@@ -206,6 +228,9 @@ displacement as easily as incumbent social mobility.
   values, not observed transaction prices) live there, not duplicated here.
 - Figures are on Berlin's **current (2021+) boundaries** and the live social-monitoring editions
   (2021–2025) only — this page does not show the pre-2021 `standard` variant.
+- **Neighbourhoods with no stage on record** (no MSS classification in the latest edition, e.g.
+  uninhabited planning areas) are not listed in the browse table; they still have their own page
+  in the [full neighbourhood list](/berlin/area).
 - See [methodology & data sources §6](/methodology) for the full list of project-wide limitations
   (ecological fallacy, no displacement measurement, OSM completeness bias, and more).
 

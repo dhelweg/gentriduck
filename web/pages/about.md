@@ -18,6 +18,13 @@ sidebar_position: 30
   labelled "Where next," per the I1 template (docs/epic-i/storytelling-guide.md §4). No fact is
   removed: the full agent-role table remains, just on `/how-its-organised` where the guide says it
   belongs; every claim on this page keeps its "who made this and can I trust it" purpose.
+
+  #368 (2026-11): brought in line with the current stack and process -- multi-city status (both
+  city hubs, both thesis re-checks, the #371 matched comparison), analyses pre-registered with dual
+  sign-off (see /how-its-organised "How an analysis gets onto the site" for sources), the release
+  routine (ADR-0011; ADR-0012 Amendment C: the PM deploys from `main` after the maintainer's
+  merge), and maps without a map provider (#351, PolygonMap). Process description only: no result
+  sentence is added; the pages linked carry their own signed-off wording.
 -->
 
 <Hero compact eyebrow="Chapter 1 — The Question" title="About this project" lede="If you found this site and are wondering &quot;who or what made this, and can I trust it?&quot; — this page is for you." />
@@ -43,8 +50,10 @@ from-scratch rebuild of the same idea on a modern, free, and open stack (dbt + D
 with a full time-series of OpenStreetMap data back to 2008, open price/rent data, and — the part the
 thesis never had — a public website. What started as "reproduce a thesis" has grown into an ongoing
 public statistics project, Berlin first, Hamburg since (2026-07), with further cities addable as the
-data model allows, without a rewrite. See the [methodology page](/methodology) for how the current index
-differs from, and stays honest about, the 2018 original.
+data model allows, without a rewrite. Both cities have their own data pages ([Berlin](/berlin),
+[Hamburg](/hamburg)) and their own re-test of the thesis's eight hypotheses, and a separate page
+compares the two cities [like for like](/berlin-vs-hamburg). See the [methodology page](/methodology) for how the
+current index differs from, and stays honest about, the 2018 original.
 
 ## How it's built: a supervised, multi-agent workflow
 
@@ -58,7 +67,9 @@ backlog on a GitHub Project board. A **project manager** agent orchestrates the 
 **geo-data-scientist** and a **gentrification-domain-expert** act as a dual methodology gate on
 anything touching the index's definition, weights, spatial method, or normalization; and a
 **data analyst** agent (the one that helped write this page) turns the data into charts and
-narrative. The work flows through the same pipeline every time:
+narrative. Statistical analyses go one step further: their design is written down and reviewed
+before any result is computed, and any later change is disclosed. The work flows through the same
+pipeline every time:
 
 <AgentPipeline />
 
@@ -67,7 +78,9 @@ they approve every new tool, data source, or architectural decision; they are th
 whenever a methodology gate comes back with "concerns" instead of a clean pass; and — critically —
 the agents' day-to-day work lands on an internal integration branch, but it only ever reaches the
 live, published version of this site through a **weekly pull request that the human maintainer
-reviews and merges by hand**. Nothing reaches the public site without a person looking at it first.
+reviews and merges by hand**. Only after that merge does the project manager publish the site,
+built from exactly what was merged. Nothing reaches the public site without a person looking at it
+first.
 
 The full agent-role table, the pipeline diagram above in more detail, and what the human maintainer
 actually does day to day all live on **[how it's organised](/how-its-organised)** — this section is
@@ -78,11 +91,15 @@ the short version; that page is the full one.
 A few rules constrain everything built here, and they're enforced, not aspirational:
 
 - **Free and open only.** No paid tools, no proprietary or internal data sources — ever. Every data
-  source behind this site is public and requires no signup: Berlin and Hamburg's official
+  source behind this site is openly licensed and free: Berlin and Hamburg's official
   social-monitoring reports, the population register, OpenStreetMap, and official land-value/rent
-  references. See [methodology & data sources](/methodology) for the full list.
+  references. Only the OpenStreetMap full-history download needs a free OSM contributor login (see
+  [open data](/open-data)). See [methodology & data sources](/methodology) for the full list.
 - **Local-first.** The data warehouse is [DuckDB](https://duckdb.org/), a free, open-source, local
   analytical database — no cloud data platform required to build or run this project.
+- **Self-contained site.** This website is static files: the data is bundled in and queried in
+  your browser, and the maps are drawn by the site itself, with no live database, no map or tile
+  provider, and no account needed to use it.
 - **Every decision is written down.** New tools, data sources, or methodology changes require an
   **Architecture Decision Record (ADR)** — a short, public document explaining what was decided and
   why — before they're adopted. These ADRs live in the open in the project's repository, alongside
@@ -99,7 +116,8 @@ Two things worth stating plainly here too:
   thesis-revival phase) is explicitly a *directional* revival — does the 2018 thesis's finding still
   hold, broadly? — not an exercise in reproducing the original numbers exactly. See the
   [2018 thesis, re-checked](/thesis-recheck) for what that looks like in practice, hypothesis by
-  hypothesis.
+  hypothesis, and its [Hamburg counterpart](/hamburg/thesis-recheck), which is a transfer test on
+  a different city, not a replication.
 - **"Supervised" describes an enforced process, not a guarantee against every error.** The methodology
   gate and human-maintainer sign-off are enforced, not aspirational — but they reduce the rate of
   error, they do not eliminate it. See [how it's organised](/how-its-organised)'s own honest caveat
@@ -118,7 +136,10 @@ above, and the complete history of architecture decisions are all public:
 - **[How it's built](/how-its-built)** and **[how it's organised](/how-its-organised)** — the two
   "how" deep dives this page summarizes: the data pipeline, and the multi-agent workflow.
 - **[The 2018 thesis, re-checked](/thesis-recheck)** — does the original finding still hold? The
-  full hypothesis-by-hypothesis comparison.
+  full hypothesis-by-hypothesis comparison, with its
+  [Hamburg counterpart](/hamburg/thesis-recheck) and
+  [Berlin vs Hamburg, like for like](/berlin-vs-hamburg).
+- **[Timeline](/timeline)** — every milestone from the 2018 thesis to today, dated and sourced.
 - **[`docs/adr/`](https://github.com/dhelweg/gentriduck/tree/main/docs/adr)** and
   **[`.claude/agents/`](https://github.com/dhelweg/gentriduck/tree/main/.claude/agents)** — the
   project's architecture decisions and agent definitions, in the repository.

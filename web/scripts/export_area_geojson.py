@@ -102,16 +102,28 @@ from __future__ import annotations
 
 import json
 import logging
+import sys
 from pathlib import Path
 
 import duckdb
 import shapely
 from shapely.geometry import mapping, shape
 
+REPO_ROOT = Path(__file__).resolve().parent.parent.parent
+if str(REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(REPO_ROOT))
+
+from ops.build_provenance import (  # noqa: E402 -- after the sys.path insert above
+    GEO_STAMP_REL,
+    SERVING_STAMP_REL,
+    clear_export_stamp,
+    read_json,
+    write_export_stamp,
+)
+
 logging.basicConfig(level=logging.INFO, format="%(message)s")
 logger = logging.getLogger(__name__)
 
-REPO_ROOT = Path(__file__).resolve().parent.parent.parent
 SERVING_DIR = REPO_ROOT / "data" / "serving"
 OUT_DIR = REPO_ROOT / "web" / "static" / "geo"
 
@@ -724,6 +736,11 @@ def main() -> None:
             raise SystemExit(f"{p} not found -- run `uv run poe export-serving` first.")
 
     OUT_DIR.mkdir(parents=True, exist_ok=True)
+    # #361: export stamp. The GeoJSON is built from the serving parquet, so its provenance is the
+    # serving export's warehouse record. Remove the stamp first (an interrupted export leaves
+    # none); it lives in data/, not web/static/geo/, so it isn't published with the site.
+    clear_export_stamp(REPO_ROOT, GEO_STAMP_REL)
+    serving_stamp = read_json(REPO_ROOT / SERVING_STAMP_REL)
     con = duckdb.connect(":memory:")
     # gentrification_index first: the display-geometry step's orphan rule reads it.
     con.execute(f"create view gentrification_index as select * from read_parquet('{index_path}')")
@@ -737,6 +754,13 @@ def main() -> None:
     export_ortsteil_self_geometry(con)
 
     con.close()
+    warehouse = (serving_stamp or {}).get("warehouse")
+    write_export_stamp(REPO_ROOT, GEO_STAMP_REL, warehouse, source=SERVING_STAMP_REL)
+    logger.info(
+        "export stamp -> %s (warehouse tree %s)",
+        GEO_STAMP_REL,
+        str((warehouse or {}).get("tree"))[:12],
+    )
 
 
 if __name__ == "__main__":

@@ -31,12 +31,22 @@ title: Gentriduck — Gentrification Index for Berlin & Hamburg
   bound by docs/epic-e/354-domain-signoff.md §4-§5): H3b "status first" is not reproduced in either
   era, H1/H1b hold, fast food is a *share* of the gastronomy mix (never outlet counts/density). Copy
   only; no SQL changed.
+  #358 (docs/epic-g/358-spec.md §3, §5; Revision 1 incl. geo-DS C4): the "Highest-pressure
+  neighbourhoods" top-10 (`top_pressure`, ordered by dynamism_index) is deleted, not replaced by
+  another named-area ranking. The two Dynamik-based BigValues are replaced by three status-trend
+  counts ("Status improving / stable / worsening") from gentrification_index.status_trend,
+  variant = 'live_data' only, at each city's own latest edition, shown PER CITY (Berlin in the
+  Berlin section, Hamburg in the Hamburg paragraph) and never summed across cities (2- vs 3-year
+  windows, different indicators). They ignore the Data selector: status_trend is NULL for the
+  thesis variants by design (spec §2, C3). The stage chart reads the dbt stage_label (falls back
+  to status_class only for the thesis variant, which carries no stage) in cycle order; the trend
+  legend is <StatusTrendLegend>.
 -->
 
 <Hero
   eyebrow="A 2018 Berlin master's thesis, revived — built by a supervised team of AI agents"
   title="Gentriduck"
-  lede="A live, public statistics project tracking gentrification pressure across neighbourhoods in Berlin — and, since 2026, Hamburg — on a free, open, local-first data stack. Everything here runs on open, official data — each city's own social-monitoring reports, population register, OpenStreetMap, and official land-value/rent references — and every figure describes a small area of a few thousand residents, never a person, household, or building."
+  lede="A live, public statistics project tracking signs of gentrification across neighbourhoods in Berlin — and, since 2026, Hamburg — on a free, open, local-first data stack. Everything here runs on open, official data — each city's own social-monitoring reports, population register, OpenStreetMap, and official land-value/rent references — and every figure describes a small area of a few thousand residents, never a person, household, or building."
 >
   <a href="/how-its-organised" class="primary">How it's organised →</a>
   <a href="#the-finding" class="secondary">What we found →</a>
@@ -122,9 +132,7 @@ where variant = '${inputs.variant.value}' and city_code = 'BER'
 
 ```sql headline
 select
-    count(*) as areas_monitored,
-    count(*) filter (where dynamism_class_bi = 'negative') as high_pressure_areas,
-    count(*) filter (where dynamism_class_bi = 'positive') as low_pressure_areas
+    count(*) as areas_monitored
 from gentriduck_marts.gentrification_index
 where variant = '${inputs.variant.value}'
   and city_code = 'BER'
@@ -132,13 +140,36 @@ where variant = '${inputs.variant.value}'
   and period_yyyymm = '${latest_period[0].period}'
 ```
 
-<BigValue data={headline} value=areas_monitored title="Areas monitored"/>
-<BigValue data={headline} value=high_pressure_areas title="High gentrification pressure" fmt="0"/>
-<BigValue data={headline} value=low_pressure_areas title="Low gentrification pressure" fmt="0"/>
+```sql trend_ber
+-- #358 (spec §3, C4): Berlin's official status-trend counts -- live_data only (status_trend is
+-- NULL for the thesis variants), Berlin's own latest MSS edition, never pooled with Hamburg.
+select
+    max(period_yyyymm) as period,
+    count(*) filter (where status_trend = 'Improving') as n_improving,
+    count(*) filter (where status_trend = 'Stable') as n_stable,
+    count(*) filter (where status_trend = 'Worsening') as n_worsening
+from gentriduck_marts.gentrification_index
+where variant = 'live_data' and city_code = 'BER' and area_level = 'plr'
+  and period_yyyymm = (
+      select max(period_yyyymm) from gentriduck_marts.gentrification_index
+      where variant = 'live_data' and city_code = 'BER' and area_level = 'plr'
+  )
+```
 
-Figures reflect the most recent available reporting period: **{latest_period[0].period}**. A
-*negative* trend is the one this project reads as **higher** gentrification pressure — full
-plain-language decoder on the [methodology page](/methodology). For the full Berlin deep-dive —
+<BigValue data={headline} value=areas_monitored title="Areas monitored"/>
+
+Figures reflect the most recent available reporting period: **{latest_period[0].period}**.
+
+**Official status trend, Berlin** (live data, MSS edition {trend_ber[0]?.period ?? '—'}; shown
+whichever data option is selected above, since only the live data carries it):
+
+<BigValue data={trend_ber} value=n_improving title="Status improving" fmt="0"/>
+<BigValue data={trend_ber} value=n_stable title="Status stable" fmt="0"/>
+<BigValue data={trend_ber} value=n_worsening title="Status worsening" fmt="0"/>
+
+<StatusTrendLegend />
+
+Full plain-language decoder on the [methodology page](/methodology). For the full Berlin deep-dive —
 maps, per-neighbourhood profiles, time series, and the commercial-mix data — start at the
 **[Berlin data hub](/berlin)**.
 
@@ -149,20 +180,49 @@ maps, per-neighbourhood profiles, time series, and the commercial-mix data — s
 Gentriduck now also tracks **Hamburg** — admitted 2026-07-18 after its own methodology gate, and
 live since with the same kinds of views as Berlin: maps, a time series, a district browse,
 per-area profiles, and a POI map. It is a narrower dataset than Berlin's, honestly scoped on its
-own page: the **[Hamburg data hub](/hamburg)**.
+own page: the **[Hamburg data hub](/hamburg)**. To see the 2018 thesis's hypotheses tested in both
+cities on matched areas and shared indicators, see
+**[Berlin vs Hamburg, like for like](/berlin-vs-hamburg)**.
+
+```sql trend_hh
+-- #358 (spec §3, C4): Hamburg's official status-trend counts -- live_data only, Hamburg's own
+-- latest Sozialmonitoring edition, kept separate from Berlin's (3-year window, other indicators).
+select
+    max(period_yyyymm) as period,
+    count(*) filter (where status_trend = 'Improving') as n_improving,
+    count(*) filter (where status_trend = 'Stable') as n_stable,
+    count(*) filter (where status_trend = 'Worsening') as n_worsening
+from gentriduck_marts.gentrification_index
+where variant = 'live_data' and city_code = 'HH' and area_level = 'subarea_l2'
+  and period_yyyymm = (
+      select max(period_yyyymm) from gentriduck_marts.gentrification_index
+      where variant = 'live_data' and city_code = 'HH' and area_level = 'subarea_l2'
+  )
+```
+
+**Official status trend, Hamburg** (statistische Gebiete, Sozialmonitoring edition
+{trend_hh[0]?.period ?? '—'}). Hamburg's trend covers 3 years and a different indicator set, so
+these counts are not comparable with Berlin's and are never added to them:
+
+<BigValue data={trend_hh} value=n_improving title="Status improving" fmt="0"/>
+<BigValue data={trend_hh} value=n_stable title="Status stable" fmt="0"/>
+<BigValue data={trend_hh} value=n_worsening title="Status worsening" fmt="0"/>
 
 ### Where each neighbourhood sits in the gentrification cycle
 
 Instead of a single blended score, the live index places every neighbourhood into one **stage** of
-the invasion–succession process — from `pre-gentrification`, through the `pioneer-signal` and
-`active-gentrification` phases, to `consolidation-pressure`, plus `stable-established` for areas
-outside the process and the deliberately ambiguous `improving-vulnerable` case. This staged
+the invasion–succession process — from 1 · Pre-gentrification through 3 · Pioneer signal and
+4 · Active gentrification to 5 · Consolidation, plus 6 · Stable / established and the deliberately
+ambiguous 2 · Improving from very low status. This staged
 typology is the project's headline product; here is how Berlin's neighbourhoods distribute across
 it today.
 
 ```sql stage_distribution
+-- #358: live_data reads the dbt stage_label in cycle order (spec §1). The thesis variant carries
+-- no stage (stage_label NULL), so it keeps showing its own status_class as before.
 select
-    status_class as stage,
+    coalesce(stage_label, status_class) as stage,
+    min(stage_number) as stage_number,
     count(*) as area_count
 from gentriduck_marts.gentrification_index
 where variant = '${inputs.variant.value}'
@@ -170,8 +230,8 @@ where variant = '${inputs.variant.value}'
   and area_level = case when '${inputs.variant.value}' = 'live_data' then 'plr' else 'bzr' end
   and period_yyyymm = '${latest_period[0].period}'
   and status_class is not null
-group by all
-order by area_count desc
+group by 1
+order by stage_number nulls last, stage
 ```
 
 <BarChart
@@ -180,54 +240,26 @@ order by area_count desc
     x=stage
     y=area_count
     swapXY=true
+    sort=false
+    chartAreaHeight=300 echartsOptions={{ yAxis: { axisLabel: { width: 130, overflow: 'break', interval: 0, hideOverlap: false } }, grid: { left: 16, containLabel: true } }}
     xAxisTitle="Number of areas"
     yAxisTitle="Stage"
 />
 
-**What to notice:** most of the city sits in `stable-established` — Berlin is not one giant
-gentrification wave. The neighbourhoods to watch are the smaller `pioneer-signal` and
-`active-gentrification` bars: those are areas where status is currently deprived *and* the
-official trend is moving fast, the two-part signature this project's typology is built to catch.
-`improving-vulnerable` is deliberately ambiguous (see the [methodology page](/methodology)) —
+<StageNumberLegend />
+
+**What to notice:** most of the city sits in 6 · Stable / established — Berlin is not one giant
+gentrification wave. The smaller 3 · Pioneer signal and 4 · Active gentrification bars are areas
+whose status is low or middle *and* whose official trend is improving relative to the city, the two-part signature
+this project's typology is built to pick up.
+2 · Improving from very low status is deliberately ambiguous (see the [methodology page](/methodology)) —
 rising status in an area that started out deprived reads as good news and displacement risk at
 once.
-
-### Highest-pressure neighbourhoods
-
-The ten planning areas currently showing the strongest gentrification-pressure signal (a
-"negative" trend) for the latest period.
-
-```sql top_pressure
-select
-    area_name,
-    status_class,
-    dynamism_class
-from gentriduck_marts.gentrification_index
-where variant = '${inputs.variant.value}'
-  and city_code = 'BER'
-  and area_level = case when '${inputs.variant.value}' = 'live_data' then 'plr' else 'bzr' end
-  and period_yyyymm = '${latest_period[0].period}'
-  and dynamism_class_bi = 'negative'
-order by dynamism_index desc
-limit 10
-```
-
-<DataTable data={top_pressure} rows=10>
-    <Column id=area_name title="Area"/>
-    <Column id=status_class title="Stage / classification"/>
-    <Column id=dynamism_class title="Pressure trend"/>
-</DataTable>
-
-**What to notice:** this table re-sorts itself every time the underlying MSS/EWR editions update —
-it is not a fixed watch-list, it is whatever the latest official data currently flags. Areas that
-combine a deprived `status_class` with a fast `dynamism_class` trend are the ones under the most
-pressure right now; areas already `stable-established` rarely appear here even with a strong trend,
-because they started from a position with less room to fall.
 
 ### Does this agree with what we already know?
 
 Before trusting a headline like the one above, it is worth asking: does this index recognise
-the Berlin neighbourhoods that housing researchers describe as under gentrification pressure — or as
+the Berlin neighbourhoods that housing researchers describe as gentrifying — or as
 stable, affluent areas? The project runs a back-test whenever the index changes
 (`docs/methodology/backtest.md`). It is worth reading for what it is, and what it is not:
 
@@ -245,7 +277,7 @@ stable, affluent areas? The project runs a back-test whenever the index changes
   against actually covers 17% of PLRs. These recalls are far easier than they look.
 - **The one partially independent check.** Areas the index places in an upgrading stage are more
   often under Milieuschutz (social preservation) designation, which the districts decide from their
-  own studies of upgrading and displacement pressure: 57% against 42% for other areas (odds ratio
+  own studies of upgrading and displacement risk: 57% against 42% for other areas (odds ratio
   1.84, interval 1.02–3.41). The exact test just misses significance (p = 0.0525), so this is weak
   support. It is only partly independent: the designation studies use some of the same social
   indicators, and district policy varies a lot.
@@ -259,19 +291,21 @@ gentrification. The full methodology, thresholds, and PLR-by-PLR detail are in
 
 ## Honest caveats
 
-- A **negative** trend is the one this project reads as **higher** gentrification pressure; a
-  **positive** trend means **lower** pressure. A **low** status class means **lower** deprivation
+- **Status trend** is the city's own official change class (Berlin: MSS Dynamik over 2 years;
+  Hamburg: Sozialmonitoring Dynamik over 3 years). It says whether an area's social-status
+  indicators **improved**, stayed **stable** or **worsened** relative to the city as a whole. A
+  **low** status class means **lower** deprivation
   (a wealthier area) — so "low" is not the same as "bad." The
   [methodology & data sources](/methodology) page is the full decoder;
   [ADR-0004](https://github.com/dhelweg/gentriduck/blob/main/docs/adr/0004-data-governance-and-index-definition.md)
   is the technical spec.
 - **"Improving" is not automatically good news.** Rising status is also the signature of
-  gentrification — that is exactly why the `improving-vulnerable` stage above is deliberately
+  gentrification — that is exactly why the 2 · Improving from very low status stage above is deliberately
   ambiguous rather than a straightforward "good" result (see [methodology](/methodology) §3).
 - Open data can observe socio-economic upgrading and demographic recomposition; **it cannot
   observe that a specific household was involuntarily displaced.** Every figure on this page
   describes an aggregate area of a few thousand residents, never a person, household, or building,
-  and the project uses risk/pressure language throughout rather than a claim that displacement has
+  and the project uses risk and signal language throughout rather than a claim that displacement has
   occurred (full statement: [methodology](/methodology) §6).
 - The commerce ↔ social-status relationship above is an association, and a modest one: the local
   business mix goes with an area's social status, but we find no detectable ordering between
@@ -304,12 +338,12 @@ Gentriduck speaks to five audiences. Start wherever you fit:
 -->
 <LinkCards>
   <LinkCard href="/takeaways" icon="🏛️" title="You work in housing policy or a local initiative" cta="Start with takeaways →">
-    Plain-language, honestly caveated takeaways on gentrification pressure — each with a
+    Plain-language, honestly caveated takeaways on gentrification signals — each with a
     "what the data shows" link and an explicit "what this can NOT tell you" boundary — plus the
     <a href="/berlin/maps">maps</a> and per-neighbourhood profiles behind them.
   </LinkCard>
   <LinkCard href="/methodology" icon="🏙️" title="You study cities &amp; gentrification" cta="Start with methodology →">
-    What "gentrification pressure" means here and the theory behind the six-stage typology, the
+    What the gentrification stages mean here and the theory behind the six-stage typology, the
     <a href="/thesis-recheck">2018 thesis re-checked</a> hypothesis by hypothesis, then the
     <a href="/berlin/maps">maps</a>, <a href="/berlin/area-detail">area detail</a>, and
     <a href="/berlin/time-series">time series</a>.

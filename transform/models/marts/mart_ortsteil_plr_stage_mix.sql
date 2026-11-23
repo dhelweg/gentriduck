@@ -60,6 +60,23 @@ with
             coalesce(ps.status_class, 'uninhabited / no data') as typology_stage
         from plr_stage as ps
         inner join dominant_xw as xw on ps.plr_area_code = xw.plr_area_code
+    ),
+
+    stage_counts as (
+        select
+            city_code,
+            ortsteil_area_code,
+            ortsteil_area_name,
+            period_yyyymm,
+            typology_stage,
+            count(*) as n_plr
+        from joined
+        group by
+            city_code,
+            ortsteil_area_code,
+            ortsteil_area_name,
+            period_yyyymm,
+            typology_stage
     )
 
 select
@@ -68,7 +85,10 @@ select
     ortsteil_area_name,
     period_yyyymm,
     typology_stage,
-    count(*) as n_plr
-from joined
-group by
-    city_code, ortsteil_area_code, ortsteil_area_name, period_yyyymm, typology_stage
+    n_plr,
+    -- #358 (docs/epic-g/358-spec.md Rev. 1 §1, geo C1/C2): cycle position + exact
+    -- public label from the shared typology_stage_display() macro (Dangschat 1988;
+    -- Clay 1979; Smith 1979 -- see the macro header). The 'uninhabited / no data'
+    -- bucket -> 'No stage on record' with a NULL number. Display-only, appended.
+    {{ typology_stage_display('typology_stage') }}
+from stage_counts

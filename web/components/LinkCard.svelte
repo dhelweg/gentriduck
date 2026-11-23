@@ -14,7 +14,7 @@
 
   Usage (linked):
     <LinkCard href="/methodology" icon="🏙️" title="You study cities & gentrification" cta="Start with methodology →">
-      What "gentrification pressure" means here...
+      What the gentrification stages mean here...
     </LinkCard>
 
   Usage (planned / not yet built):

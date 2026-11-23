@@ -53,6 +53,11 @@ winsorize = "{% macro winsorize(expr, lower=-3, upper=3) %}least(greatest({{ exp
 # time; sqlfluff only needs valid SQL shape here, same convention as every other stub
 # above).
 typology_stage = "{% macro typology_stage(status_index_col, dynamik_index_col) %}case when {{ status_index_col }} = {{ dynamik_index_col }} then 'stable-established' else 'mixed' end{% endmacro %}"
+# #358: stub for the project's typology_stage_display() macro
+# (transform/macros/typology_stage_display.sql). Emits the same two aliased columns
+# (<prefix>stage_number, <prefix>stage_label) with dummy expressions, so call sites
+# parse as a select-list fragment; the real mapping only matters at dbt-execute time.
+typology_stage_display = "{% macro typology_stage_display(stage_col, prefix='') %}cast({{ stage_col }} is null as integer) as {{ prefix }}stage_number, coalesce({{ stage_col }}, 'none') as {{ prefix }}stage_label{% endmacro %}"
 # #354/#355 phase A: stubs for the two macros extracted verbatim from
 # int_poi_offering_advantage / int_osm_poi_plr_weighted
 # (transform/macros/offering_advantage_lq.sql, berlin_poi_kernel_weighted_counts.sql)
