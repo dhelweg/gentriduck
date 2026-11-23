@@ -122,11 +122,11 @@
 -- #240/#280. z is centred at 0 (0 = local count exactly matches the
 -- binomial expectation), a DIFFERENT unit from every other column here (a
 -- standardized score, not a ratio/pp/proportion -- C7 never-blend). NULL
--- where variance <= 0 (city_share is exactly 0 or 1, a degenerate null
--- model, INCLUDING a float-rounding near-1/near-0 share that can otherwise
--- compute a tiny NEGATIVE variance -- guarded with greatest(variance, 0)
--- before the nullif/sqrt, so a rounding artifact NULLs the cell instead of
--- erroring the build) or local_base is 0. No new join, no new tool -- pure
+-- where the null model is degenerate: city_share p <= 1e-9 or its
+-- complement q <= 1e-9, with q taken as a difference of stocks, not 1 - p
+-- (#363 O6, docs/epic-c/363-geo-tolerance-note.md §6: a share of 1 within
+-- a few ulp used to flip between NULL and a meaningless z across builds),
+-- or local_base is 0. No new join, no new tool -- pure
 -- function of the existing stock pair, so (unlike Getis-Ord/density/
 -- per-capita) it does NOT need ADR-0025 or an EWR/geometry join and is not
 -- blocked by either. TEMPORAL-UNSAFE: seed_oa_calculation_methods.csv flags
@@ -285,7 +285,8 @@ with
             -- non-canonical lowercase 'berlin' rows leak into
             -- mart_poi_oa_methods; #281 closes that gap the same way
             -- mart_poi_offering_advantage.sql already does at its own output
-            -- boundary.
+            -- boundary. #363: the gaussian rows now arrive as 'BER' (the kernel
+            -- macro canonicalises); this call is kept as an idempotent guard.
             {{ canonical_city_code("city_code") }} as join_city_code
         from {{ ref("int_poi_offering_advantage") }}
     ),
@@ -432,58 +433,82 @@ select
 
     -- 7. zscore_slq -- binomial-significance z-score of the SAME local/city
     -- share pair as nested_lq (header note 7; Isserman 1977; Wilson 1927
-    -- normal approximation). expected = local_base * city_share; variance =
-    -- local_base * city_share * (1 - city_share); z = (observed -
-    -- expected) / sqrt(variance). NULL where variance <= 0 or local_base
-    -- is 0 (nullif guards both).
-    (
-        base.domain_stock_local
-        - base.all_domains_stock_local
-        * (base.domain_stock_city / nullif(base.all_domains_stock_city, 0))
-    ) / sqrt(
-        nullif(
-            greatest(
+    -- normal approximation). p = city_share = child_city / parent_city;
+    -- expected = local_base * p; variance = local_base * p * q; z =
+    -- (observed - expected) / sqrt(variance).
+    -- #363 O6 (docs/epic-c/363-geo-tolerance-note.md §6): the complement q is
+    -- computed as a difference of stocks, (parent_city - child_city) /
+    -- parent_city, not as 1 - p, and z is NULL when p <= 1e-9 or q <= 1e-9
+    -- or local_base = 0 (a relative epsilon of 1e-9 on the share). Before,
+    -- a child holding the whole parent stock (p = 1 within a few ulp; 17
+    -- such cells next to 91 with p exactly 1) flipped between NULL and a
+    -- meaningless huge z from build to build, and mart_poi_oa_methods
+    -- (UNPIVOT drops NULLs) changed row count with it. The smallest genuine
+    -- complement observed is q = 0.0053, six orders of magnitude above the
+    -- cutoff. Same rule at all three levels.
+    case
+        when
+            base.domain_stock_city / nullif(base.all_domains_stock_city, 0) > 1e-9
+            and (base.all_domains_stock_city - base.domain_stock_city)
+            / nullif(base.all_domains_stock_city, 0)
+            > 1e-9
+            and base.all_domains_stock_local > 0
+        then
+            (
+                base.domain_stock_local
+                - base.all_domains_stock_local
+                * (base.domain_stock_city / base.all_domains_stock_city)
+            ) / sqrt(
                 base.all_domains_stock_local
-                * (base.domain_stock_city / nullif(base.all_domains_stock_city, 0))
+                * (base.domain_stock_city / base.all_domains_stock_city)
                 * (
-                    1
-                    - (base.domain_stock_city / nullif(base.all_domains_stock_city, 0))
-                ),
-                0
-            ),
-            0
-        )
-    ) as oa_domain_zscore_slq,
-    (
-        base.category_stock_local
-        - base.domain_stock_local
-        * (base.category_stock_city / nullif(base.domain_stock_city, 0))
-    ) / sqrt(
-        nullif(
-            greatest(
+                    (base.all_domains_stock_city - base.domain_stock_city)
+                    / base.all_domains_stock_city
+                )
+            )
+    end as oa_domain_zscore_slq,
+    case
+        when
+            base.category_stock_city / nullif(base.domain_stock_city, 0) > 1e-9
+            and (base.domain_stock_city - base.category_stock_city)
+            / nullif(base.domain_stock_city, 0)
+            > 1e-9
+            and base.domain_stock_local > 0
+        then
+            (
+                base.category_stock_local
+                - base.domain_stock_local
+                * (base.category_stock_city / base.domain_stock_city)
+            ) / sqrt(
                 base.domain_stock_local
-                * (base.category_stock_city / nullif(base.domain_stock_city, 0))
-                * (1 - (base.category_stock_city / nullif(base.domain_stock_city, 0))),
-                0
-            ),
-            0
-        )
-    ) as oa_category_zscore_slq,
-    (
-        base.type_stock_local
-        - base.domain_stock_local
-        * (base.type_stock_city / nullif(base.domain_stock_city, 0))
-    ) / sqrt(
-        nullif(
-            greatest(
+                * (base.category_stock_city / base.domain_stock_city)
+                * (
+                    (base.domain_stock_city - base.category_stock_city)
+                    / base.domain_stock_city
+                )
+            )
+    end as oa_category_zscore_slq,
+    case
+        when
+            base.type_stock_city / nullif(base.domain_stock_city, 0) > 1e-9
+            and (base.domain_stock_city - base.type_stock_city)
+            / nullif(base.domain_stock_city, 0)
+            > 1e-9
+            and base.domain_stock_local > 0
+        then
+            (
+                base.type_stock_local
+                - base.domain_stock_local
+                * (base.type_stock_city / base.domain_stock_city)
+            ) / sqrt(
                 base.domain_stock_local
-                * (base.type_stock_city / nullif(base.domain_stock_city, 0))
-                * (1 - (base.type_stock_city / nullif(base.domain_stock_city, 0))),
-                0
-            ),
-            0
-        )
-    ) as oa_type_zscore_slq,
+                * (base.type_stock_city / base.domain_stock_city)
+                * (
+                    (base.domain_stock_city - base.type_stock_city)
+                    / base.domain_stock_city
+                )
+            )
+    end as oa_type_zscore_slq,
 
     -- 8. density (OA-D3b remainder, #280) -- local stock / area_km2, PLR
     -- grain only (header note 8). NULL where area_km2 has no join match or
