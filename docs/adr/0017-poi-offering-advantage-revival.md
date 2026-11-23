@@ -269,8 +269,12 @@ so the join matched no rows. With the codes canonicalised, the original claim
 hard totals by a whole number of POIs: the POIs outside every area polygon whose 500 m kernel reaches
 an area. The largest excess is +0.078 % at city level (Berlin, `lor_2021`, 2022). Maintainer decision
 B: this cross-boundary kernel mass is **intended**. For an edge area, what counts is the offering
-around the corner, whichever side of the city boundary it sits on. The model stays as it is. The
-invariant is restated.
+around the corner, whichever side of the city boundary it sits on. This holds only as far as the
+POI extract reaches: the Berlin extract is clipped to a bounding box around the city, so places
+across the city line are included where that box extends beyond it and missing at the city's
+extreme edges. Outside-polygon POIs also include in-city gaps such as water bodies and the airport
+perimeter. Any future city's extract bounds must be stated the same way. The model stays as it is.
+The invariant is restated.
 
 **Restated C-1 (replaces the D5 C-1 invariant wording):**
 
