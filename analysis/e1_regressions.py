@@ -1318,11 +1318,10 @@ CORRECTION_NOTES_TOP: tuple[str, ...] = (
     "**Correction (November 2026, #381):** Section 4 (EWR resident-register composite, "
     "2014–2020) and the EWR lines of the Overall Scorecard and of 'Which series leads?' were "
     "regenerated on corrected data; see the note at the top of Section 4. All other sections, "
-    "including the H1 cross-section in Section 1, are not affected by that error. Their "
-    "bootstrap confidence intervals were recomputed in the same run and can differ from the "
-    "previous version in the third decimal (#364); one borderline verdict outside Section 4 "
-    "(Section 2, H3a cross-lagged k = 1) moved between CONTRADICTED (borderline) and NOT "
-    "SIGNIFICANT for that reason alone, with an unchanged estimate and p-value.",
+    "including the H1 cross-section in Section 1, are not affected by that error: their "
+    "estimates, p-values and verdicts are unchanged. Their bootstrap confidence intervals were "
+    "recomputed in the same run and can differ from the previous version in the third decimal "
+    "(#364).",
 )
 CORRECTION_NOTES_SECTION4: tuple[str, ...] = (
     "**Correction (November 2026, #381).** This section was regenerated on corrected data. Its "
