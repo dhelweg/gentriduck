@@ -4,8 +4,8 @@
 -- pre-registration §3.4). Native years (2024, 2025) must agree exactly; the
 -- crosswalked years (2018, 2020) differ only by the per-old-PLR weight
 -- renormalisation (seed weights sum to 0.9993-1.0000), so within 0.1 %.
--- The blank Landweg row (2024 publisher code 06200318 -> 06200418) is compared
--- as 0 residents.
+-- The blank Landweg row (2024 publisher code 06200318, corrected to 06200418 in
+-- both models since #381) is compared as 0 residents.
 -- Severity warn: a drift here is a consistency signal for the analysis, not a
 -- data error in either model.
 {{ config(severity="warn") }}
@@ -19,14 +19,7 @@ with
     ),
 
     ewr as (
-        select
-            reference_year,
-            case
-                when reference_year = 2024 and plr_id_2021 = '06200318'
-                then '06200418'
-                else plr_id_2021
-            end as plr_id_2021,
-            coalesce(indicator_value, 0) as total_ewr
+        select reference_year, plr_id_2021, coalesce(indicator_value, 0) as total_ewr
         from {{ ref("int_berlin_ewr_plr2021") }}
         where
             indicator = 'residents_total' and reference_year in (2018, 2020, 2024, 2025)

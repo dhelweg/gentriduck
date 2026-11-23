@@ -1585,8 +1585,15 @@ models:
       constituent-PLR membership comes from the DOMINANT PLR->Ortsteil
       area-overlap crosswalk (int_berlin_plr_ortsteil_overlap.sql,
       is_dominant_ortsteil), not a code-prefix substr() -- Ortsteil does not
-      nest into PLR (see dim_area_hierarchy.sql). 'ortsteil' rows are always
-      area_vintage='lor_2021' (the crosswalk's scope).
+      nest into PLR (see dim_area_hierarchy.sql).
+
+      #372 / #381: Berlin area_vintage is the boundary scheme and is always
+      'lor_2021'; values for 2008-2020 are crosswalked from the pre-2021 LOR
+      scheme (int_berlin_ewr_plr2021). Those crosswalked years are published
+      only at 'bzr', 'pgr' and 'bezirk' level, where the area-only crosswalk's
+      count errors cancel; 'plr' and 'ortsteil' rows exist only for the native
+      years (2024+). Pre-2021 shares and mean age are population-weighted
+      (#381, C3-crosswalk-geo-signoff.md §3).
 
       #313: widened to Hamburg (city_code='HH') -- INDIVIDUAL indicators
       only, no blended composite column (the Hamburg EWR-equivalent composite
