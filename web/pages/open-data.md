@@ -70,10 +70,6 @@ for the full per-source table and exact attribution strings).
 | Hamburg Stadtteil statistics (Regionalstatistische Daten) | Hamburg's demographic baseline | `dl-de/by-2.0` |
 | Hamburg soziale Erhaltungs&shy;verordnungen, Wohnlagen / Mietenspiegel | Displacement-protection context and the price/rent dimension | `dl-de/by-2.0` |
 
-<!--
-  #381/#372 fix: DRAFT replacement for the interim "Known error" note (domain review §2 C).
-  Wording pending the R-C1 dual-gate check (geo-DS + domain) before integration.
--->
 **Correction (November 2026, [#381](https://github.com/dhelweg/gentriduck/issues/381)):** in the
 site's bundled Berlin demographics data, the shares and averages for 2008–2020 (for example
 age-structure or nationality shares) were wrong because of how they were carried over to the 2021

@@ -123,7 +123,7 @@ Each controls for the outcome's own prior change. **Before 2026-10-26 the two we
 
 ## Results — Section 4: H2/H3 EWR Resident-Register Composite (2014–2020)
 
-> **Correction (November 2026, #381).** This section was regenerated on corrected data. Its first version carried pre-2021 resident-register shares and averages over to the 2021 area boundaries by area instead of by population. With the correction, 6 of the 13 verdicts change from SUPPORTED to NOT SIGNIFICANT: H2 OLS at k = 1, 2 and 4, H3a cross-lagged at k = 1, and H3b cross-lagged at k = 1 and 2. The 7 that remain SUPPORTED are two to five times weaker than before; six of them (the H2 and H3c Spearman rows) rely on analytic p-values over pooled, non-independent rows, and the one cross-lagged result that holds (H3a, k = 2) is about half as strong. The earlier reading that this panel supports H2 and H3, with both series leading each other, no longer holds.
+> **Correction (November 2026, #381).** This section was regenerated on corrected data. Its first version carried pre-2021 resident-register shares and averages over to the 2021 area boundaries by area instead of by population. With the correction, 6 of the 13 verdicts change from SUPPORTED to NOT SIGNIFICANT: H2 OLS at k = 1, 2 and 4, H3a cross-lagged at k = 1, and H3b cross-lagged at k = 1 and 2. The 7 that remain SUPPORTED are two to five times weaker than before; six of them (the H2 and H3c Spearman rows) rely on analytic p-values over pooled, non-independent rows, and the one cross-lagged result that holds (H3a, k = 2) is about half as strong. The earlier reading that this panel supports H2 and H3, with both series leading each other, no longer holds. The one directional result left (commercial change before change in the population composite, at k = 2 only; none at k = 1) is not robust across lags and is not a statement about social status.
 
 > EWR is Berlin's resident register (Einwohnerregister); its composite measures population composition (residence duration, age, nationality, migration background), NOT social status, and it was not the thesis's outcome measure -- the thesis used MSS Status/Dynamik (editions 2013-2017; thesis §6.2.3, Tabelle 6-1). H3c here correlates same-year LEVELS, not co-occurring changes -- not a like-for-like test of H3c. The POI side is the raw OSM count without the C5 completeness correction, so mapping growth can feed both directions. Annual panel: many cross-lagged pivots per area, all absorbed by the cluster bootstrap. POI side is the raw count via the dominant pre-2021 crosswalk (~35% of lor_2021 PLRs share a count with a neighbour -- pseudo-replication, see load_ewr_lead_lag_data). **Only the cross-lagged H3a/H3b rows use cluster-bootstrap CIs; the H2 and H3c rows here use analytic p-values on pooled area-year rows that are not independent, so their significance is overstated** -- read them as directional. The "D4 control" in this panel is the EWR composite's own level at the pivot (status IS the composite here), not an independent covariate.
 
@@ -148,7 +148,7 @@ Each controls for the outcome's own prior change. **Before 2026-10-26 the two we
 **Direction (cross-lagged H3a vs H3b):**
 
 - **Cross-lagged (EWR) k=1:** no directional evidence either way (H3a NOT SIGNIFICANT, H3b NOT SIGNIFICANT)
-- **Cross-lagged (EWR) k=2:** commercial change leads status change (H3a; against the thesis) (H3a SUPPORTED, H3b NOT SIGNIFICANT)
+- **Cross-lagged (EWR) k=2:** commercial change leads composite change (H3a; against the thesis) (H3a SUPPORTED, H3b NOT SIGNIFICANT)
 
 ## Results — Section 5: H1/H2/H3 at BZR Scale (Bezirksregion, ~137 units, B10 #120)
 
@@ -219,7 +219,7 @@ Each controls for the outcome's own prior change. **Before 2026-10-26 the two we
 **EWR resident-register composite (2014–2020)**
 
 - **Cross-lagged (EWR) k=1:** no directional evidence either way (H3a NOT SIGNIFICANT, H3b NOT SIGNIFICANT)
-- **Cross-lagged (EWR) k=2:** commercial change leads status change (H3a; against the thesis) (H3a SUPPORTED, H3b NOT SIGNIFICANT)
+- **Cross-lagged (EWR) k=2:** commercial change leads composite change (H3a; against the thesis) (H3a SUPPORTED, H3b NOT SIGNIFICANT)
 
 **BZR scale**
 

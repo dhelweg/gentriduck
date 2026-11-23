@@ -1337,8 +1337,8 @@ def test_h3_ewr(df_ewr: object) -> list[dict]:
 # analysis/c_three_way_comparison.py). History: the interim (pre-fix) wording was
 # domain-ratified (docs/epic-c/381-correction-domain-review.md §2 B). This RESOLVED wording
 # replaces it now that int_berlin_ewr_plr2021 implements the C3-approved population-weighted
-# crosswalk (review §3). DRAFT: pending the R-C1 dual-gate wording check (geo-DS + domain) on
-# the #381 fix branch; the verdict counts below are taken from the regenerated Section 4.
+# crosswalk; final texts per docs/epic-c/381-fix-domain-signoff.md §3 (Section 4 banner with
+# the geo-DS R1 sentence). The verdict counts are taken from the regenerated Section 4.
 CORRECTION_NOTES_TOP: tuple[str, ...] = (
     "**Correction (November 2026, #381):** Section 4 (EWR resident-register composite, "
     "2014–2020) and the EWR lines of the Overall Scorecard and of 'Which series leads?' were "
@@ -1357,7 +1357,9 @@ CORRECTION_NOTES_SECTION4: tuple[str, ...] = (
     "times weaker than before; six of them (the H2 and H3c Spearman rows) rely on analytic "
     "p-values over pooled, non-independent rows, and the one cross-lagged result that holds "
     "(H3a, k = 2) is about half as strong. The earlier reading that this panel supports H2 and "
-    "H3, with both series leading each other, no longer holds.",
+    "H3, with both series leading each other, no longer holds. The one directional result left "
+    "(commercial change before change in the population composite, at k = 2 only; none at "
+    "k = 1) is not robust across lags and is not a statement about social status.",
 )
 
 
@@ -1403,7 +1405,12 @@ def _verdict_label(r: dict) -> str:
 
 
 def h3_direction_lines(results: list[dict]) -> list[str]:
-    """One line per cross-lagged (test, k) pair: which series leads, if any."""
+    """One line per cross-lagged (test, k) pair: which series leads, if any.
+
+    EWR panel (#381, domain sign-off §4 O1): its status side is the resident-register
+    composite (population composition), not social status, so its lines say "composite
+    change" instead of "status change". Wording only; the verdicts are unchanged.
+    """
     lines = []
     seen = []
     for r in results:
@@ -1414,9 +1421,11 @@ def h3_direction_lines(results: list[dict]) -> list[str]:
         b = next((r for r in results if r["hyp"] == "H3b" and r["test"] == test), None)
         if b is None:
             continue
+        conclusion = direction_conclusion(a["verdict"], b["verdict"])
+        if "(EWR)" in test:
+            conclusion = conclusion.replace("status change", "composite change")
         lines.append(
-            f"- **{test}:** {direction_conclusion(a['verdict'], b['verdict'])} "
-            f"(H3a {_verdict_label(a)}, H3b {_verdict_label(b)})"
+            f"- **{test}:** {conclusion} (H3a {_verdict_label(a)}, H3b {_verdict_label(b)})"
         )
     return lines
 
