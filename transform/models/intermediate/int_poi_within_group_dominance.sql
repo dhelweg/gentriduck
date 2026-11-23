@@ -82,7 +82,8 @@
 -- within an included group, e.g. a PLR-year where only one
 -- Retail category has any stock, so it is NULLed per-cell,
 -- not excluded model-wide).
--- top_child      = the child_label with the largest share (arg_max) -- the
+-- top_child      = the child_label with the largest share (ties broken by
+-- label, then level, #363 O7 -- see top_children below) -- the
 -- SIGNED read that makes an unsigned HHI interpretable
 -- (Condition B.2 sign-blindness clause -- HHI alone cannot
 -- distinguish up-market boutique-ification from down-market
@@ -146,7 +147,9 @@ with
     -- canonicalization). This model read city_code straight through
     -- un-normalised, leaking non-canonical values into mart_poi_dominance;
     -- fixed the same way mart_poi_offering_advantage.sql already normalises
-    -- at its own output boundary.
+    -- at its own output boundary. #363: the gaussian rows now arrive as 'BER'
+    -- (the kernel macro canonicalises); this call is kept as an idempotent
+    -- guard.
     base as (
         select
             {{ canonical_city_code("city_code") }} as city_code,
@@ -252,6 +255,45 @@ with
         from with_group_totals
     ),
 
+    -- #363 O7: deterministic top_child. The former two independent
+    -- arg_max(child_label, child_share) / arg_max(child_level, child_share)
+    -- calls picked an arbitrary row when two children tie on the maximum share
+    -- (equal stocks are common at small PLR bases), so top_child, and with it
+    -- the signed tier pairing (OA-D0 domain sign-off Condition B.2), could
+    -- flip between builds -- and label and level could even come from two
+    -- different tied rows. One ranked row per group now supplies both. Order:
+    -- share descending, then child_label, then child_level ascending (a
+    -- documented, reproducible tie-break, not a methodology choice: tied
+    -- children are equally dominant, and top_share is unchanged). The share
+    -- is compared at 9 decimals so that float noise in the gaussian variant's
+    -- fractional stocks (up to ~1e-15, docs/epic-c/363-geo-tolerance-note.md
+    -- §7) cannot split an exact tie; a genuine share difference below 1e-9
+    -- would need a group stock above 1e9 POIs.
+    top_children as (
+        select
+            city_code,
+            snapshot_year,
+            area_code,
+            area_vintage,
+            weight_variant,
+            dominance_group,
+            child_label as top_child,
+            child_level as top_child_level
+        from with_shares
+        qualify
+            row_number() over (
+                partition by
+                    city_code,
+                    snapshot_year,
+                    area_code,
+                    area_vintage,
+                    weight_variant,
+                    dominance_group
+                order by round(child_share, 9) desc, child_label asc, child_level asc
+            )
+            = 1
+    ),
+
     agg as (
         select
             city_code,
@@ -271,9 +313,7 @@ with
             max(child_share) as top_share,
             - sum(
                 case when child_share > 0 then child_share * ln(child_share) else 0 end
-            ) as entropy,
-            arg_max(child_label, child_share) as top_child,
-            arg_max(child_level, child_share) as top_child_level
+            ) as entropy
         from with_shares
         group by
             city_code,
@@ -316,8 +356,8 @@ select
     -- makes the ratio undefined, and "evenness" has no meaning for a
     -- single-child cell (header note above).
     case when a.n_children > 1 then a.entropy / ln(a.n_children) end as evenness,
-    a.top_child,
-    a.top_child_level,
+    tc.top_child,
+    tc.top_child_level,
     -- Signed pairing (Condition B.2, mandatory): the top_child's own
     -- offering_tier/offering_weight from the causal-tier seed, joined via
     -- group_child_key at the matching (level, domain, category, type) key.
@@ -328,13 +368,24 @@ select
     -- max(10, 5 * n_children).
     a.group_stock_local < greatest(10, 5 * a.n_children) as is_thin_base
 from agg as a
+-- One top_children row per agg group by construction (same partition keys,
+-- qualify row_number() = 1); `is not distinct from` keeps the 1:1 match even
+-- if a key were NULL.
+left join
+    top_children as tc
+    on a.city_code is not distinct from tc.city_code
+    and a.snapshot_year is not distinct from tc.snapshot_year
+    and a.area_code is not distinct from tc.area_code
+    and a.area_vintage is not distinct from tc.area_vintage
+    and a.weight_variant is not distinct from tc.weight_variant
+    and a.dominance_group is not distinct from tc.dominance_group
 left join
     group_child_key as k
     on a.dominance_group = k.dominance_group
-    and a.top_child = k.child_label
+    and tc.top_child = k.child_label
 left join
     {{ ref("seed_poi_offering_relevance") }} as rel
     on k.poi_domain_h = rel.poi_domain_h
     and coalesce(k.poi_category_h, '') = coalesce(rel.poi_category_h, '')
     and coalesce(k.poi_type_h, '') = coalesce(rel.poi_type_h, '')
-    and a.top_child_level = rel.level
+    and tc.top_child_level = rel.level
