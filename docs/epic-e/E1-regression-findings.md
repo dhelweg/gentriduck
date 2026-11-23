@@ -1,8 +1,10 @@
 # E1 Regression Findings -- Thesis H1-H3c Validation
 
+> **Correction (November 2026, #381):** Section 4 (EWR resident-register composite, 2014–2020) and the EWR lines of the Overall Scorecard and of 'Which series leads?' were regenerated on corrected data; see the note at the top of Section 4. All other sections, including the H1 cross-section in Section 1, are not affected by that error: their estimates, p-values and verdicts are unchanged. Their bootstrap confidence intervals differ from the previous version in the third decimal because the bootstrap now runs on a fixed row order (#364); from this version on they are reproducible from run to run.
+
 - **Task:** H1-H3c regression and lead-lag analysis, real thesis hypotheses
 - **Issue:** #65 / #115
-- **Date:** 2026-11-01
+- **Date:** 2026-11-23
 - **Data (H1/H1b):** stg_thesis_2018_result_plr + int_poi_features_pivot (2018), n=436
 - **Data (H2/H3 MSS 2021–2025):** int_mss_lead_lag (lor_2021) + int_poi_features_pivot
 - **Data (H2/H3 MSS 2013–2019, B7):** int_mss_lead_lag (lor_pre2021) + int_poi_features_pivot
@@ -75,10 +77,10 @@ Each controls for the outcome's own prior change. **Before 2026-10-26 the two we
 | H2 | Spearman (OA) k=1 | 1060 | rho | -0.0988 | 0.0013 | negative | SUPPORTED | Current-edition OA-quotient basket ~ future status change [k=1 MSS editions, 2021+ panel] |
 | H2 | Spearman k=2 | 535 | rho | -0.1856 | 0.0000 | negative | SUPPORTED | Current-edition POI stock ~ future status change [k=2 MSS editions, 2021+ panel] |
 | H2 | Spearman (OA) k=2 | 528 | rho | -0.1473 | 0.0007 | negative | SUPPORTED | Current-edition OA-quotient basket ~ future status change [k=2 MSS editions, 2021+ panel] |
-| H3a | Cross-lagged k=1 | 535 | partial rho | 0.0799 [0.001, 0.151] | 0.0649 | negative | CONTRADICTED (borderline) | Prior POI change [e0→e1] predicts later status change [e1→e2], given prior status change + D4 (POI leads status) [C5-corrected dynamism; k=1; pivot edition(s) [2023]; no D4 control -- unavailable at the pivot] |
-| H3b | Cross-lagged k=1 | 535 | partial rho | -0.1277 [-0.220, -0.038] | 0.0031 | negative | SUPPORTED | Prior status change [e0→e1] predicts later POI change [e1→e2], given prior POI change + D4 (status leads POI) [C5-corrected dynamism; k=1; pivot edition(s) [2023]; no D4 control -- unavailable at the pivot] |
-| H3a | Cross-lagged (OA) k=1 | 528 | partial rho | -0.0537 [-0.141, 0.037] | 0.2184 | negative | NOT SIGNIFICANT | Prior POI change [e0→e1] predicts later status change [e1→e2], given prior status change + D4 (POI leads status) [OA-quotient basket; k=1; pivot edition(s) [2023]; no D4 control -- unavailable at the pivot] |
-| H3b | Cross-lagged (OA) k=1 | 528 | partial rho | -0.1557 [-0.253, -0.051] | 0.0003 | negative | SUPPORTED | Prior status change [e0→e1] predicts later POI change [e1→e2], given prior POI change + D4 (status leads POI) [OA-quotient basket; k=1; pivot edition(s) [2023]; no D4 control -- unavailable at the pivot] |
+| H3a | Cross-lagged k=1 | 535 | partial rho | 0.0799 [0.001, 0.150] | 0.0649 | negative | CONTRADICTED (borderline) | Prior POI change [e0→e1] predicts later status change [e1→e2], given prior status change + D4 (POI leads status) [C5-corrected dynamism; k=1; pivot edition(s) [2023]; no D4 control -- unavailable at the pivot] |
+| H3b | Cross-lagged k=1 | 535 | partial rho | -0.1277 [-0.214, -0.042] | 0.0031 | negative | SUPPORTED | Prior status change [e0→e1] predicts later POI change [e1→e2], given prior POI change + D4 (status leads POI) [C5-corrected dynamism; k=1; pivot edition(s) [2023]; no D4 control -- unavailable at the pivot] |
+| H3a | Cross-lagged (OA) k=1 | 528 | partial rho | -0.0537 [-0.148, 0.040] | 0.2184 | negative | NOT SIGNIFICANT | Prior POI change [e0→e1] predicts later status change [e1→e2], given prior status change + D4 (POI leads status) [OA-quotient basket; k=1; pivot edition(s) [2023]; no D4 control -- unavailable at the pivot] |
+| H3b | Cross-lagged (OA) k=1 | 528 | partial rho | -0.1557 [-0.260, -0.055] | 0.0003 | negative | SUPPORTED | Prior status change [e0→e1] predicts later POI change [e1→e2], given prior POI change + D4 (status leads POI) [OA-quotient basket; k=1; pivot edition(s) [2023]; no D4 control -- unavailable at the pivot] |
 | H3c | Spearman k=1 | 1071 | rho | 0.0555 | 0.0696 | negative | NOT SIGNIFICANT | Simultaneous dynamism ~ status_index co-movement (same edition) [k=1] |
 | H3c | Spearman (OA) k=1 | 1060 | rho | 0.1250 | 0.0000 | negative | CONTRADICTED | Simultaneous OA-quotient ~ status_index co-movement (same edition) [k=1] |
 | H3c | Spearman k=2 | 535 | rho | 0.0558 | 0.1977 | negative | NOT SIGNIFICANT | Simultaneous dynamism ~ status_index co-movement (same edition) [k=2] |
@@ -101,10 +103,10 @@ Each controls for the outcome's own prior change. **Before 2026-10-26 the two we
 | H2 | Spearman (OA) k=1 | 1287 | rho | -0.0436 | 0.1182 | negative | NOT SIGNIFICANT | Current-edition OA-quotient basket ~ future status change [k=1 MSS editions, 2013–2019 panel] |
 | H2 | Spearman k=2 | 869 | rho | -0.0411 | 0.2266 | negative | NOT SIGNIFICANT | Current-edition POI stock ~ future status change [k=2 MSS editions, 2013–2019 panel] |
 | H2 | Spearman (OA) k=2 | 853 | rho | -0.0017 | 0.9601 | negative | NOT SIGNIFICANT | Current-edition OA-quotient basket ~ future status change [k=2 MSS editions, 2013–2019 panel] |
-| H3a | Cross-lagged k=1 | 869 | partial rho | 0.0367 [-0.026, 0.099] | 0.2809 | negative | NOT SIGNIFICANT | Prior POI change [e0→e1] predicts later status change [e1→e2], given prior status change + D4 (POI leads status) [C5-corrected dynamism; k=1; pivot edition(s) [2015, 2017]; D4 control] |
-| H3b | Cross-lagged k=1 | 869 | partial rho | -0.0112 [-0.084, 0.061] | 0.7417 | negative | NOT SIGNIFICANT | Prior status change [e0→e1] predicts later POI change [e1→e2], given prior POI change + D4 (status leads POI) [C5-corrected dynamism; k=1; pivot edition(s) [2015, 2017]; D4 control] |
-| H3a | Cross-lagged (OA) k=1 | 851 | partial rho | -0.0660 [-0.134, 0.005] | 0.0544 | negative | NOT SIGNIFICANT | Prior POI change [e0→e1] predicts later status change [e1→e2], given prior status change + D4 (POI leads status) [OA-quotient basket; k=1; pivot edition(s) [2015, 2017]; D4 control] |
-| H3b | Cross-lagged (OA) k=1 | 848 | partial rho | 0.0342 [-0.019, 0.088] | 0.3211 | negative | NOT SIGNIFICANT | Prior status change [e0→e1] predicts later POI change [e1→e2], given prior POI change + D4 (status leads POI) [OA-quotient basket; k=1; pivot edition(s) [2015, 2017]; D4 control] |
+| H3a | Cross-lagged k=1 | 869 | partial rho | 0.0367 [-0.023, 0.101] | 0.2809 | negative | NOT SIGNIFICANT | Prior POI change [e0→e1] predicts later status change [e1→e2], given prior status change + D4 (POI leads status) [C5-corrected dynamism; k=1; pivot edition(s) [2015, 2017]; D4 control] |
+| H3b | Cross-lagged k=1 | 869 | partial rho | -0.0112 [-0.082, 0.062] | 0.7417 | negative | NOT SIGNIFICANT | Prior status change [e0→e1] predicts later POI change [e1→e2], given prior POI change + D4 (status leads POI) [C5-corrected dynamism; k=1; pivot edition(s) [2015, 2017]; D4 control] |
+| H3a | Cross-lagged (OA) k=1 | 851 | partial rho | -0.0660 [-0.135, 0.014] | 0.0544 | negative | NOT SIGNIFICANT | Prior POI change [e0→e1] predicts later status change [e1→e2], given prior status change + D4 (POI leads status) [OA-quotient basket; k=1; pivot edition(s) [2015, 2017]; D4 control] |
+| H3b | Cross-lagged (OA) k=1 | 848 | partial rho | 0.0342 [-0.020, 0.088] | 0.3211 | negative | NOT SIGNIFICANT | Prior status change [e0→e1] predicts later POI change [e1→e2], given prior POI change + D4 (status leads POI) [OA-quotient basket; k=1; pivot edition(s) [2015, 2017]; D4 control] |
 | H3c | Spearman k=1 | 1305 | rho | -0.0034 | 0.9020 | negative | NOT SIGNIFICANT | Simultaneous dynamism ~ status_index co-movement (same edition) [k=1] |
 | H3c | Spearman (OA) k=1 | 1287 | rho | 0.1755 | 0.0000 | negative | CONTRADICTED | Simultaneous OA-quotient ~ status_index co-movement (same edition) [k=1] |
 | H3c | Spearman k=2 | 869 | rho | 0.0236 | 0.4876 | negative | NOT SIGNIFICANT | Simultaneous dynamism ~ status_index co-movement (same edition) [k=2] |
@@ -121,30 +123,32 @@ Each controls for the outcome's own prior change. **Before 2026-10-26 the two we
 
 ## Results — Section 4: H2/H3 EWR Resident-Register Composite (2014–2020)
 
+> **Correction (November 2026, #381).** This section was regenerated on corrected data. Its first version carried pre-2021 resident-register shares and averages over to the 2021 area boundaries by area instead of by population. With the correction, 6 of the 13 verdicts change from SUPPORTED to NOT SIGNIFICANT: H2 OLS at k = 1, 2 and 4, H3a cross-lagged at k = 1, and H3b cross-lagged at k = 1 and 2. The 7 that remain SUPPORTED are two to five times weaker than before; six of them (the H2 and H3c Spearman rows) rely on analytic p-values over pooled, non-independent rows, and the one cross-lagged result that holds (H3a, k = 2) is about half as strong. The earlier reading that this panel supports H2 and H3, with both series leading each other, no longer holds. The one directional result left (commercial change before change in the population composite, at k = 2 only; none at k = 1) is not robust across lags and is not a statement about social status.
+
 > EWR is Berlin's resident register (Einwohnerregister); its composite measures population composition (residence duration, age, nationality, migration background), NOT social status, and it was not the thesis's outcome measure -- the thesis used MSS Status/Dynamik (editions 2013-2017; thesis §6.2.3, Tabelle 6-1). H3c here correlates same-year LEVELS, not co-occurring changes -- not a like-for-like test of H3c. The POI side is the raw OSM count without the C5 completeness correction, so mapping growth can feed both directions. Annual panel: many cross-lagged pivots per area, all absorbed by the cluster bootstrap. POI side is the raw count via the dominant pre-2021 crosswalk (~35% of lor_2021 PLRs share a count with a neighbour -- pseudo-replication, see load_ewr_lead_lag_data). **Only the cross-lagged H3a/H3b rows use cluster-bootstrap CIs; the H2 and H3c rows here use analytic p-values on pooled area-year rows that are not independent, so their significance is overstated** -- read them as directional. The "D4 control" in this panel is the EWR composite's own level at the pivot (status IS the composite here), not an independent covariate.
 
 | Hyp | Test | N | Statistic | Value [95% CI] | p-value | Expected dir | Verdict | Description |
 |---|---|---|---|---|---|---|---|---|
-| H2 | Spearman k=1 | 3252 | rho | -0.2609 | 0.0000 | negative | SUPPORTED | POI stock at year_t ~ delta_ewr over k=1 annual years [EWR 2014–2020, same-era] |
-| H2 | OLS k=1 | 3252 | beta | -4.94e-05 R2=0.0099 | 0.0000 | negative | SUPPORTED | POI stock at year_t ~ delta_ewr over k=1 annual years [EWR 2014–2020, same-era] |
-| H2 | Spearman k=2 | 2710 | rho | -0.3129 | 0.0000 | negative | SUPPORTED | POI stock at year_t ~ delta_ewr over k=2 annual years [EWR 2014–2020, same-era] |
-| H2 | OLS k=2 | 2710 | beta | -1.12e-04 R2=0.0212 | 0.0000 | negative | SUPPORTED | POI stock at year_t ~ delta_ewr over k=2 annual years [EWR 2014–2020, same-era] |
-| H2 | Spearman k=4 | 1626 | rho | -0.3911 | 0.0000 | negative | SUPPORTED | POI stock at year_t ~ delta_ewr over k=4 annual years [EWR 2014–2020, same-era] |
-| H2 | OLS k=4 | 1626 | beta | -2.64e-04 R2=0.0443 | 0.0000 | negative | SUPPORTED | POI stock at year_t ~ delta_ewr over k=4 annual years [EWR 2014–2020, same-era] |
-| H3a | Cross-lagged (EWR) k=1 | 2710 | partial rho | -0.0744 [-0.120, -0.026] | 0.0001 | negative | SUPPORTED | Prior POI change [e0→e1] predicts later status change [e1→e2], given prior status change + D4 (POI leads status) [raw POI count; k=1; pivot edition(s) [2015, 2016, 2017, 2018, 2019]; D4 control] |
-| H3b | Cross-lagged (EWR) k=1 | 2710 | partial rho | -0.0732 [-0.120, -0.023] | 0.0001 | negative | SUPPORTED | Prior status change [e0→e1] predicts later POI change [e1→e2], given prior POI change + D4 (status leads POI) [raw POI count; k=1; pivot edition(s) [2015, 2016, 2017, 2018, 2019]; D4 control] |
-| H3c | Spearman k=1 | 3252 | rho | -0.4157 | 0.0000 | negative | SUPPORTED | poi_count_t ~ ewr_composite_t (contemporaneous) [k=1, EWR 2014–2020, same-era] |
-| H3a | Cross-lagged (EWR) k=2 | 1626 | partial rho | -0.1845 [-0.253, -0.117] | 0.0000 | negative | SUPPORTED | Prior POI change [e0→e1] predicts later status change [e1→e2], given prior status change + D4 (POI leads status) [raw POI count; k=2; pivot edition(s) [2016, 2017, 2018]; D4 control] |
-| H3b | Cross-lagged (EWR) k=2 | 1626 | partial rho | -0.1042 [-0.174, -0.038] | 0.0000 | negative | SUPPORTED | Prior status change [e0→e1] predicts later POI change [e1→e2], given prior POI change + D4 (status leads POI) [raw POI count; k=2; pivot edition(s) [2016, 2017, 2018]; D4 control] |
-| H3c | Spearman k=2 | 2710 | rho | -0.4138 | 0.0000 | negative | SUPPORTED | poi_count_t ~ ewr_composite_t (contemporaneous) [k=2, EWR 2014–2020, same-era] |
-| H3c | Spearman k=4 | 1626 | rho | -0.4132 | 0.0000 | negative | SUPPORTED | poi_count_t ~ ewr_composite_t (contemporaneous) [k=4, EWR 2014–2020, same-era] |
+| H2 | Spearman k=1 | 3252 | rho | -0.0526 | 0.0027 | negative | SUPPORTED | POI stock at year_t ~ delta_ewr over k=1 annual years [EWR 2014–2020, same-era] |
+| H2 | OLS k=1 | 3252 | beta | -8.78e-06 R2=0.0003 | 0.2873 | negative | NOT SIGNIFICANT | POI stock at year_t ~ delta_ewr over k=1 annual years [EWR 2014–2020, same-era] |
+| H2 | Spearman k=2 | 2710 | rho | -0.0644 | 0.0008 | negative | SUPPORTED | POI stock at year_t ~ delta_ewr over k=2 annual years [EWR 2014–2020, same-era] |
+| H2 | OLS k=2 | 2710 | beta | -1.62e-05 R2=0.0004 | 0.2787 | negative | NOT SIGNIFICANT | POI stock at year_t ~ delta_ewr over k=2 annual years [EWR 2014–2020, same-era] |
+| H2 | Spearman k=4 | 1626 | rho | -0.0860 | 0.0005 | negative | SUPPORTED | POI stock at year_t ~ delta_ewr over k=4 annual years [EWR 2014–2020, same-era] |
+| H2 | OLS k=4 | 1626 | beta | -4.44e-05 R2=0.0010 | 0.2081 | negative | NOT SIGNIFICANT | POI stock at year_t ~ delta_ewr over k=4 annual years [EWR 2014–2020, same-era] |
+| H3a | Cross-lagged (EWR) k=1 | 2710 | partial rho | -0.0284 [-0.079, 0.020] | 0.1392 | negative | NOT SIGNIFICANT | Prior POI change [e0→e1] predicts later status change [e1→e2], given prior status change + D4 (POI leads status) [raw POI count; k=1; pivot edition(s) [2015, 2016, 2017, 2018, 2019]; D4 control] |
+| H3b | Cross-lagged (EWR) k=1 | 2710 | partial rho | -0.0052 [-0.048, 0.039] | 0.7850 | negative | NOT SIGNIFICANT | Prior status change [e0→e1] predicts later POI change [e1→e2], given prior POI change + D4 (status leads POI) [raw POI count; k=1; pivot edition(s) [2015, 2016, 2017, 2018, 2019]; D4 control] |
+| H3c | Spearman k=1 | 3252 | rho | -0.1292 | 0.0000 | negative | SUPPORTED | poi_count_t ~ ewr_composite_t (contemporaneous) [k=1, EWR 2014–2020, same-era] |
+| H3a | Cross-lagged (EWR) k=2 | 1626 | partial rho | -0.0839 [-0.149, -0.019] | 0.0007 | negative | SUPPORTED | Prior POI change [e0→e1] predicts later status change [e1→e2], given prior status change + D4 (POI leads status) [raw POI count; k=2; pivot edition(s) [2016, 2017, 2018]; D4 control] |
+| H3b | Cross-lagged (EWR) k=2 | 1626 | partial rho | 0.0162 [-0.048, 0.078] | 0.5139 | negative | NOT SIGNIFICANT | Prior status change [e0→e1] predicts later POI change [e1→e2], given prior POI change + D4 (status leads POI) [raw POI count; k=2; pivot edition(s) [2016, 2017, 2018]; D4 control] |
+| H3c | Spearman k=2 | 2710 | rho | -0.1202 | 0.0000 | negative | SUPPORTED | poi_count_t ~ ewr_composite_t (contemporaneous) [k=2, EWR 2014–2020, same-era] |
+| H3c | Spearman k=4 | 1626 | rho | -0.1044 | 0.0000 | negative | SUPPORTED | poi_count_t ~ ewr_composite_t (contemporaneous) [k=4, EWR 2014–2020, same-era] |
 
-**Verdicts:** Supported 13/13 · Contradicted 0 · Not significant 0
+**Verdicts:** Supported 7/13 · Contradicted 0 · Not significant 6
 
 **Direction (cross-lagged H3a vs H3b):**
 
-- **Cross-lagged (EWR) k=1:** both directions supported -- no single leading series (H3a SUPPORTED, H3b SUPPORTED)
-- **Cross-lagged (EWR) k=2:** both directions supported -- no single leading series (H3a SUPPORTED, H3b SUPPORTED)
+- **Cross-lagged (EWR) k=1:** no directional evidence either way (H3a NOT SIGNIFICANT, H3b NOT SIGNIFICANT)
+- **Cross-lagged (EWR) k=2:** commercial change leads composite change (H3a; against the thesis) (H3a SUPPORTED, H3b NOT SIGNIFICANT)
 
 ## Results — Section 5: H1/H2/H3 at BZR Scale (Bezirksregion, ~137 units, B10 #120)
 
@@ -157,8 +161,8 @@ Each controls for the outcome's own prior change. **Before 2026-10-26 the two we
 | H1b | Spearman | 137 | rho | 0.2411 | 0.0045 | positive | SUPPORTED | Fast-food POI count ~ MSS social status (status_index) |
 | H2 | Spearman k=1 | 560 | rho | -0.0362 | 0.3931 | negative | NOT SIGNIFICANT | Current-edition POI stock ~ future status change [k=1 MSS editions, BZR lor_2021 panel] |
 | H2 | Spearman k=2 | 280 | rho | -0.0574 | 0.3384 | negative | NOT SIGNIFICANT | Current-edition POI stock ~ future status change [k=2 MSS editions, BZR lor_2021 panel] |
-| H3a | Cross-lagged k=1 | 280 | partial rho | 0.0011 [-0.077, 0.079] | 0.9851 | negative | NOT SIGNIFICANT | Prior POI change [e0→e1] predicts later status change [e1→e2], given prior status change + D4 (POI leads status) [C5-corrected dynamism; k=1; pivot edition(s) [2017, 2023]; no D4 control -- unavailable at the pivot] |
-| H3b | Cross-lagged k=1 | 280 | partial rho | 0.0103 [-0.138, 0.182] | 0.8636 | negative | NOT SIGNIFICANT | Prior status change [e0→e1] predicts later POI change [e1→e2], given prior POI change + D4 (status leads POI) [C5-corrected dynamism; k=1; pivot edition(s) [2017, 2023]; no D4 control -- unavailable at the pivot] |
+| H3a | Cross-lagged k=1 | 280 | partial rho | 0.0011 [-0.074, 0.076] | 0.9851 | negative | NOT SIGNIFICANT | Prior POI change [e0→e1] predicts later status change [e1→e2], given prior status change + D4 (POI leads status) [C5-corrected dynamism; k=1; pivot edition(s) [2017, 2023]; no D4 control -- unavailable at the pivot] |
+| H3b | Cross-lagged k=1 | 280 | partial rho | 0.0103 [-0.149, 0.180] | 0.8636 | negative | NOT SIGNIFICANT | Prior status change [e0→e1] predicts later POI change [e1→e2], given prior POI change + D4 (status leads POI) [C5-corrected dynamism; k=1; pivot edition(s) [2017, 2023]; no D4 control -- unavailable at the pivot] |
 | H3c | Spearman k=1 | 560 | rho | 0.0782 | 0.0643 | negative | NOT SIGNIFICANT | Simultaneous dynamism ~ status_index co-movement (same edition) [k=1] |
 | H3c | Spearman k=2 | 280 | rho | 0.1532 | 0.0102 | negative | CONTRADICTED | Simultaneous dynamism ~ status_index co-movement (same edition) [k=2] |
 
@@ -179,8 +183,8 @@ Each controls for the outcome's own prior change. **Before 2026-10-26 the two we
 | H1b | Spearman | 12 | rho | 0.0350 | 0.9141 | positive | NOT SIGNIFICANT | Fast-food POI count ~ MSS social status (status_index) |
 | H2 | Spearman k=1 | 48 | rho | -0.3595 | 0.0121 | negative | SUPPORTED | Current-edition POI stock ~ future status change [k=1 MSS editions, Bezirk lor_2021 panel] |
 | H2 | Spearman k=2 | 24 | rho | -0.4866 | 0.0159 | negative | SUPPORTED | Current-edition POI stock ~ future status change [k=2 MSS editions, Bezirk lor_2021 panel] |
-| H3a | Cross-lagged k=1 | 24 | partial rho | -0.0245 [-0.221, 0.147] | 0.9115 | negative | NOT SIGNIFICANT | Prior POI change [e0→e1] predicts later status change [e1→e2], given prior status change + D4 (POI leads status) [C5-corrected dynamism; k=1; pivot edition(s) [2017, 2023]; no D4 control -- unavailable at the pivot] |
-| H3b | Cross-lagged k=1 | 24 | partial rho | -0.2475 [-0.715, 0.402] | 0.2549 | negative | NOT SIGNIFICANT | Prior status change [e0→e1] predicts later POI change [e1→e2], given prior POI change + D4 (status leads POI) [C5-corrected dynamism; k=1; pivot edition(s) [2017, 2023]; no D4 control -- unavailable at the pivot] |
+| H3a | Cross-lagged k=1 | 24 | partial rho | -0.0245 [-0.226, 0.155] | 0.9115 | negative | NOT SIGNIFICANT | Prior POI change [e0→e1] predicts later status change [e1→e2], given prior status change + D4 (POI leads status) [C5-corrected dynamism; k=1; pivot edition(s) [2017, 2023]; no D4 control -- unavailable at the pivot] |
+| H3b | Cross-lagged k=1 | 24 | partial rho | -0.2475 [-0.713, 0.436] | 0.2549 | negative | NOT SIGNIFICANT | Prior status change [e0→e1] predicts later POI change [e1→e2], given prior POI change + D4 (status leads POI) [C5-corrected dynamism; k=1; pivot edition(s) [2017, 2023]; no D4 control -- unavailable at the pivot] |
 | H3c | Spearman k=1 | 48 | rho | 0.0916 | 0.5357 | negative | NOT SIGNIFICANT | Simultaneous dynamism ~ status_index co-movement (same edition) [k=1] |
 | H3c | Spearman k=2 | 24 | rho | 0.0162 | 0.9403 | negative | NOT SIGNIFICANT | Simultaneous dynamism ~ status_index co-movement (same edition) [k=2] |
 
@@ -194,11 +198,11 @@ Each controls for the outcome's own prior change. **Before 2026-10-26 the two we
 
 - **MSS modern (2021–2025):** Supported 8/18 · Contradicted 4 · Not significant 6
 - **MSS pre-2021 (2013–2019, the thesis's editions):** Supported 0/14 · Contradicted 3 · Not significant 11
-- **EWR resident-register composite (2014–2020):** Supported 13/13 · Contradicted 0 · Not significant 0
+- **EWR resident-register composite (2014–2020):** Supported 7/13 · Contradicted 0 · Not significant 6
 - **BZR scale:** Supported 1/9 · Contradicted 1 · Not significant 7
 - **Bezirk scale:** Supported 2/9 · Contradicted 0 · Not significant 7
 
-**All tests:** Supported 24/63 · Contradicted 8 · Not significant 31
+**All tests:** Supported 18/63 · Contradicted 8 · Not significant 37
 
 ### Which series leads? (cross-lagged H3a vs H3b)
 
@@ -214,8 +218,8 @@ Each controls for the outcome's own prior change. **Before 2026-10-26 the two we
 
 **EWR resident-register composite (2014–2020)**
 
-- **Cross-lagged (EWR) k=1:** both directions supported -- no single leading series (H3a SUPPORTED, H3b SUPPORTED)
-- **Cross-lagged (EWR) k=2:** both directions supported -- no single leading series (H3a SUPPORTED, H3b SUPPORTED)
+- **Cross-lagged (EWR) k=1:** no directional evidence either way (H3a NOT SIGNIFICANT, H3b NOT SIGNIFICANT)
+- **Cross-lagged (EWR) k=2:** commercial change leads composite change (H3a; against the thesis) (H3a SUPPORTED, H3b NOT SIGNIFICANT)
 
 **BZR scale**
 

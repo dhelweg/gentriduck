@@ -581,6 +581,8 @@ their math only, not their usual connotation (see the ethics note below):
   Advantage curation already uses, and should be read alongside an area's status/dynamism trajectory,
   never in isolation
   (<a href="https://github.com/dhelweg/gentriduck/blob/main/docs/methodology/OA-D0-domain-signoff.md">OA-D0 domain sign-off, Condition B.2</a>).
+  Where two or more types have exactly the same top share, the table names the alphabetically
+  first one; such a tie means that no single type leads, not that the named type dominates.
 </Alert>
 
 <Alert status="warning">

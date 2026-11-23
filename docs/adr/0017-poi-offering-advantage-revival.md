@@ -252,3 +252,68 @@ owning tickets so the PM's pre-integration check has an authoritative reference.
 *Both R-C1 verdicts are `PASS`; the PM integrated this ADR into `develop` per ADR-0011 self-integration
 authority (no new tool/library/data-source introduced, so no separate maintainer approval is required
 beyond the R-C1 gate). The system-architect authored this ADR and did not sign it off.*
+
+---
+
+## Amendment 2026-11-07 — D5 C-1 restated: one-sided, integer-excess mass invariant (#363)
+
+- **Status:** Accepted (maintainer decision B 2026-11-02; amendment text approved by the maintainer 2026-11-23)
+- **Issue:** #363. **Decision basis:** maintainer decision B (2026-11-02).
+- **Evidence:** `docs/epic-c/363-geo-tolerance-note.md` (geo-DS, 2026-11-07).
+- **Amends:** D5 row C-1 only. D1–D4 and C-2…C-5 are unchanged.
+
+**Trigger.** The C-1 invariance test (`test_c1_oa_weighted_mass_conservation_invariance`) passed
+vacuously. The gaussian branch writes `city_code = 'berlin'` and the standard branch writes `'BER'`,
+so the join matched no rows. With the codes canonicalised, the original claim
+(`Σ_a weighted_count_level = hard city total_level`, exactly) fails. Gaussian city totals exceed the
+hard totals by a whole number of POIs: the POIs outside every area polygon whose 500 m kernel reaches
+an area. The largest excess is +0.078 % at city level (Berlin, `lor_2021`, 2022). Maintainer decision
+B: this cross-boundary kernel mass is **intended**. For an edge area, what counts is the offering
+around the corner, whichever side of the city boundary it sits on. This holds only as far as the
+POI extract reaches: the Berlin extract is clipped to a bounding box around the city, so places
+across the city line are included where that box extends beyond it and missing at the city's
+extreme edges. Outside-polygon POIs also include in-city gaps such as water bodies and the airport
+perimeter. Any future city's extract bounds must be stated the same way. The model stays as it is.
+The invariant is restated. Unlike the thesis's un-normalized PLR-to-PLR spread
+(`reference/system/45_osm_poi_features_domain_piv_distcalc.sql`), which did not conserve total
+mass, this variant normalizes each POI's weights to 1 (`docs/methodology/ADR-0010-geo-signoff.md`).
+
+**Restated C-1 (replaces the D5 C-1 invariant wording):**
+
+> C-1 (restated, #363, maintainer decision B 2026-11-02): for every city, snapshot year and area
+> vintage, and at every taxonomy level, the gaussian variant's city-wide stock equals the hard
+> (point-in-polygon) stock plus a non-negative whole number of POIs: the POIs outside every area
+> polygon whose kernel reaches an area within the bandwidth (each contributes total weight 1). The
+> excess is bounded per city-year total over all domains by max(0.1 % of the hard total, 3 POIs).
+> Any negative or non-integer excess, a missing taxonomy leaf in either variant, or a gaussian
+> city-year without a hard counterpart is a violation (BLOCKING).
+
+**What stays BLOCKING.**
+- The zero-weight fallback to `hard_area_code` at weight 1 (the leakage guard) is unchanged.
+- The test runs at error severity. It fails on any of the following:
+  - negative excess (mass loss) at any level;
+  - non-integer excess (|Δ − round(Δ)| > 1e-6) at any level;
+  - leaf-set mismatch between the variants;
+  - a gaussian (city, year, vintage) with no standard counterpart. This is a failure, not a skip.
+  - a city-year total above the bound.
+- C-1 still blocks on cross-time (H3) and cross-city (ADR-0005) comparability. The bound is
+  city-agnostic. It applies unchanged to Hamburg once a gaussian HH variant exists. It must not pass
+  silently when that variant is added.
+- There is no per-cell relative bound. In small cells a single POI is more than 1 %, so per cell
+  only the structural checks apply (geo note §1–2).
+
+**Consequences.**
+- **City code made consistent (ADR-0005).** The gaussian model emits `city_code = 'BER'` to match
+  `dim_city` and the standard branch. Until that fix lands, the test canonicalises the code. The old
+  two-sided `abs(...) > 0.01` checks are removed. The header of `int_osm_poi_plr_weighted.sql`
+  ("… hold exactly") is updated to the restated invariant.
+- **Disclosure.** The methodology / OA-modes page states that the gaussian variant includes kernel
+  mass from POIs just outside the city boundary (at most about 0.1 % of the city stock). It also
+  states why this is intended. This is an edge effect at the city boundary. It is not a leak.
+- No new tool, library or data source.
+
+**Gate (R-C1).** This amendment is methodology-bearing (it changes `docs/adr/**` and the C-1
+invariant). It needs a `geo-data-scientist` `Verdict: PASS` and a `gentrification-domain-expert`
+`Verdict: PASS`. The domain expert ratifies the invariant sentence and the disclosure text. Both are
+needed before integration into `develop`. The system-architect authored this amendment and does
+not sign it off.

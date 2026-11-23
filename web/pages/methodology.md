@@ -461,20 +461,19 @@ Part 2 for the full review). That makes a genuine, same-year, same-boundary,
 same-outcome comparison possible for the first time:
 
 - **Faithful** (all business types, uncurated) against the 2018 golden data:
-  **statistically significant but wrong-signed** (n=435 areas — same result as before,
-  repeated here as the left side of the comparison). This comparison was run in July 2026,
-  before the October 2026 OpenStreetMap deletion fix; the re-run on corrected data gives the
-  same wrong-signed result (rho +0.15, n=433 — see the
+  **statistically significant but wrong-signed** (rho +0.15, n=433 areas — the same result as
+  before, repeated here as the left side of the comparison; re-run in November 2026 on the
+  corrected OpenStreetMap data, matching the
   [E1 regression findings](https://github.com/dhelweg/gentriduck/blob/main/docs/epic-e/E1-regression-findings.md)).
 - **Improved** (the curated, theory-weighted basket), now computed *natively* for 2018
   thesis-era boundaries, against the *same* 2018 golden data: **essentially no
-  correlation** (rho ≈ 0.007, n=436, not statistically significant) — numerically
+  correlation** (rho ≈ 0.02, n=436, not statistically significant) — numerically
   closer to zero than the faithful basket's wrong-signed result.
 - **On this genuine like-for-like test, curating the business-type list does not
   sharpen the aggregate signal** — if anything the curated basket is weaker (closer to
   a null result) than the uncurated one. This holds even on the strictest possible cut
   (restricting to the identical set of areas where both predictors are available,
-  n=435).
+  n=433).
 - **This still does not mean Offering Advantage "doesn't work."** As before, the
   [thesis re-check page](/thesis-recheck) shows finer-grained, single-business-type
   tests (fast food) using the *same* faithful OA construct remain significant,
@@ -500,7 +499,7 @@ ones to read for the actual faithful-vs-improved question.*
 thesis's actual Offering-Advantage basket (the four business domains it identified as
 upscaling-relevant, averaged) against the 2018 golden data, the relationship is
 **statistically significant but points the opposite way from the thesis's prior**
-(n=435 areas — more of this business basket goes with slightly *worse*, not better,
+(n=433 areas — more of this business basket goes with slightly *worse*, not better,
 social standing).
 
 **Improved (the curated, theory-weighted basket) against Berlin's current official
@@ -568,7 +567,14 @@ Neither result, on its own, is the headline. What *is* worth reporting:
   ([OA-C.1, #174](https://github.com/dhelweg/gentriduck/issues/174)) of whether the published
   headline should ever switch from the hard-count variant to a Gaussian-weighted one — if that
   ever happens, the sweep's finding (stable near 1000 m, fragile at the sweep's full span)
-  becomes directly relevant to that variant's publish-readiness.
+  becomes directly relevant to that variant's publish-readiness. A separate note on the
+  distance-weighted place counts (500 m kernel; also not used for the figures above): mapped
+  places that lie outside every area, just across the city boundary or on water or airport land,
+  still count towards nearby areas if they are within the kernel's reach. This is intended,
+  because for an area at the edge the offering around the corner matters, whichever side of the
+  boundary it is on. As a result, that variant's city totals can exceed the hard counts by about
+  0.1 % at most. Places across the boundary are only partly included, because the map data are
+  cut to a box around the city.
 
 This section's own further reading: [the 2018 thesis, re-checked](/thesis-recheck) (the faithful
 revival, hypothesis by hypothesis), [three-way comparison findings (OA-C.1)](https://github.com/dhelweg/gentriduck/blob/main/docs/epic-e/C1-three-way-comparison-findings.md)

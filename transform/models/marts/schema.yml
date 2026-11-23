@@ -1585,8 +1585,15 @@ models:
       constituent-PLR membership comes from the DOMINANT PLR->Ortsteil
       area-overlap crosswalk (int_berlin_plr_ortsteil_overlap.sql,
       is_dominant_ortsteil), not a code-prefix substr() -- Ortsteil does not
-      nest into PLR (see dim_area_hierarchy.sql). 'ortsteil' rows are always
-      area_vintage='lor_2021' (the crosswalk's scope).
+      nest into PLR (see dim_area_hierarchy.sql).
+
+      #372 / #381: Berlin area_vintage is the boundary scheme and is always
+      'lor_2021'; values for 2008-2020 are crosswalked from the pre-2021 LOR
+      scheme (int_berlin_ewr_plr2021). Those crosswalked years are published
+      only at 'bzr', 'pgr' and 'bezirk' level, where the area-only crosswalk's
+      count errors cancel; 'plr' and 'ortsteil' rows exist only for the native
+      years (2024+). Pre-2021 shares and mean age are population-weighted
+      (#381, C3-crosswalk-geo-signoff.md §3).
 
       #313: widened to Hamburg (city_code='HH') -- INDIVIDUAL indicators
       only, no blended composite column (the Hamburg EWR-equivalent composite
@@ -2573,7 +2580,9 @@ models:
           OA-D8, #240). #281: already canonical-only -- upstream
           int_poi_offering_advantage_arealevel INNER JOINs dim_city, which
           defensively excludes any legacy lowercase 'berlin' rows as a side
-          effect (verified by query during the #281 fix).
+          effect (verified by query during the #281 fix). Since #363 the
+          gaussian rows upstream carry 'BER', and the arealevel model keeps
+          its standard-only scope with an explicit weight_variant filter.
         data_tests:
 
           - not_null
@@ -2633,10 +2642,16 @@ models:
 
           - not_null
       - name: weight_variant
-        description: "'standard' or a Gaussian-weighted kernel variant."
+        description: >
+          'standard' only (hard point-in-polygon). The upstream arealevel model
+          filters to it explicitly since #363; before, the gaussian rows were
+          dropped implicitly by their legacy 'berlin' city_code.
         data_tests:
 
           - not_null
+          - accepted_values:
+              arguments:
+                values: ["standard"]
       - name: methodology_variant
         description: ADR-0017 D4 structural invariant.
         data_tests:
@@ -3052,7 +3067,11 @@ models:
       - name: evenness
         description: Pielou evenness (entropy / ln(n_children)), range [0,1]. NULL when n_children <= 1.
       - name: top_child
-        description: The child_label (category or type name) with the largest share in this group cell.
+        description: >
+          The child_label (category or type name) with the largest share in
+          this group cell. Ties at 9 decimals are broken alphabetically by
+          label, then level (#363 O7); a tie means that no single type leads,
+          not that the named type dominates (tie flag: #379).
       - name: top_child_level
         description: "'category' or 'type' -- the taxonomy grain of top_child."
       - name: top_child_offering_tier

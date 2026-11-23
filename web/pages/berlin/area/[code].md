@@ -742,6 +742,10 @@ group by poi_domain_h
   domain sign-off Condition B.4).
 -->
 
+<!-- #363 D4 (domain sign-off docs/epic-c/363-domain-signoff.md): top_child ties are broken alphabetically
+(int_poi_within_group_dominance, #363 O7), so a tie is disclosed here until the tie flag of #379
+lets the table mark tied cells itself. -->
+
 **Within-group dominance** asks a different question from Offering Advantage: within a curated
 group of businesses, is one type dominating, or is the mix diverse? ("Are fast-food places crowding
 out sit-down restaurants within gastronomy?") The figures below are **sign-blind** — a high
@@ -749,7 +753,9 @@ concentration reading says only that this area's mix is concentrated in the name
 never whether that is an up-market or down-market shift; read it alongside the status/trajectory
 section above, never in isolation. See the [Offering Advantage decoder](/methodology-oa-modes) §5
 for the full methodology, ethics note, and why cuisine-typed dominance never appears on any public
-page (this table included).
+page (this table included). Where two or more types have exactly the same top share, the table
+names the alphabetically first one; such a tie means that no single type leads, not that the named
+type dominates.
 
 ```sql dominance_area
 select

@@ -82,6 +82,7 @@ OUTPUT_MD = Path(__file__).parent.parent / "docs" / "epic-e" / "E1-regression-fi
 # review). Sibling module; same import convention as e4_early_warning -> a9.
 sys.path.insert(0, str(Path(__file__).parent))
 from directional_inference import (  # noqa: E402
+    SEED,
     build_cross_lagged,
     cross_lagged_tests,
     direction_conclusion,
@@ -275,6 +276,7 @@ def load_oa_category_panel(
         WHERE weight_variant = '{weight_variant}'
           AND methodology_variant = 'faithful'
         GROUP BY area_code, area_vintage, snapshot_year
+        ORDER BY area_code, area_vintage, snapshot_year  -- #364: deterministic row order
     """).df()
     domain_cols = [
         "oa_domain_gastronomy",
@@ -336,6 +338,7 @@ def load_h1_h2_data(con: duckdb.DuckDBPyConnection) -> object:
         WHERE t.area_level = 'plr'
           AND t.status_index IS NOT NULL
           AND p.total_poi_count IS NOT NULL
+        ORDER BY area_code  -- #364: deterministic row order
     """).df()
 
     oa_available = "int_poi_offering_advantage" in {
@@ -411,6 +414,7 @@ def load_ewr_lead_lag_data(con: duckdb.DuckDBPyConnection) -> object:
         -- Pre-2014 partial-composite rows (ewr_composite_partial only) are excluded here;
         -- they have no matching POI data and would inject zero-POI rows that dilute the signal.
         WHERE ll.any_endpoint_partial = FALSE
+        ORDER BY ll.area_code, ll.lag_k, ll.year_t, ll.year_tk  -- #364: deterministic row order
     """).df()
     return df
 
@@ -471,6 +475,7 @@ def load_lead_lag_data(con: duckdb.DuckDBPyConnection, vintage: str = "lor_2021"
             AND ll.edition_tk = p_tk.snapshot_year
             AND ll.area_vintage = p_tk.area_vintage
         WHERE ll.area_vintage = '{vintage}'
+        ORDER BY ll.area_code, ll.lag_k, ll.edition_t, ll.edition_tk  -- #364: deterministic order
     """).df()
 
     tables = {
@@ -554,6 +559,7 @@ def load_bzr_h1_data(con: duckdb.DuckDBPyConnection, scale: str = "bzr") -> obje
             JOIN bzr_poi p ON t.raum_id = p.bzr_code
             WHERE t.status_sum IS NOT NULL
               AND p.total_poi_count IS NOT NULL
+            ORDER BY area_code  -- #364: deterministic row order
         """).df()
     elif scale == "bezirk":
         # Bezirk level: aggregate BZR thesis data to 12 districts
@@ -609,6 +615,7 @@ def load_bzr_h1_data(con: duckdb.DuckDBPyConnection, scale: str = "bzr") -> obje
             JOIN bezirk_poi p ON t.bezirk_code = p.bezirk_code
             WHERE t.status_index IS NOT NULL
               AND p.total_poi_count IS NOT NULL
+            ORDER BY area_code  -- #364: deterministic row order
         """).df()
     else:
         raise ValueError(f"Unknown scale: {scale!r}. Use 'plr', 'bzr', or 'bezirk'.")
@@ -718,6 +725,8 @@ def load_bzr_lead_lag_data(con: duckdb.DuckDBPyConnection, scale: str = "bzr") -
                 ELSE 'stable'
             END AS status_transition
         FROM pairs
+        -- #364: deterministic row order
+        ORDER BY city_code, area_code, area_vintage, lag_k, edition_t, edition_tk
     """).df()
     return df
 
@@ -1044,6 +1053,18 @@ def test_h2(df_ll: object, panel_label: str = "2021+ panel") -> list[dict]:
     return results
 
 
+# #364: the cluster bootstrap in directional_inference draws clusters in first-appearance
+# order (pd.unique), so its CIs depend on row order even with a fixed seed. Every SQL load
+# above ends in ORDER BY, and each cross-lagged frame is sorted here on its keys (stable
+# mergesort, so any tie keeps the ordered-load order) before it reaches the bootstrap.
+CROSS_LAG_SORT_KEYS: tuple[str, ...] = ("area_code", "pivot")
+
+
+def _sort_cross_lagged(cl):
+    """Return the cross-lagged frame in a deterministic row order (#364)."""
+    return cl.sort_values(list(CROSS_LAG_SORT_KEYS), kind="mergesort").reset_index(drop=True)
+
+
 def _cross_lag_rows(cl, tests: dict, k: int, tag: str, measure_note: str) -> list[dict]:
     """Result rows for one cross-lagged H3a/H3b pair (see directional_inference.py)."""
     rows = []
@@ -1126,7 +1147,8 @@ def test_h3(df_ll: object, panel_label: str = "2021+ panel") -> list[dict]:
                     f"cross-lagged H3a/H3b{tag} test -- skipped"
                 )
                 continue
-            results += _cross_lag_rows(cl, cross_lagged_tests(cl), k, tag, note)
+            cl = _sort_cross_lagged(cl)  # #364: bootstrap cluster order independent of row order
+            results += _cross_lag_rows(cl, cross_lagged_tests(cl, seed=SEED), k, tag, note)
 
         # H3c: contemporaneous level co-movement at edition t (not a lead-lag claim).
         sub = df_ll[df_ll["lag_k"] == k]
@@ -1275,7 +1297,10 @@ def test_h3_ewr(df_ewr: object) -> list[dict]:
         if cl.empty:
             print(f"  NOTE (EWR): no consecutive k={k} windows for cross-lagged H3a/H3b -- skipped")
         else:
-            results += _cross_lag_rows(cl, cross_lagged_tests(cl), k, " (EWR)", "raw POI count")
+            cl = _sort_cross_lagged(cl)  # #364: bootstrap cluster order independent of row order
+            results += _cross_lag_rows(
+                cl, cross_lagged_tests(cl, seed=SEED), k, " (EWR)", "raw POI count"
+            )
 
         # H3c: contemporaneous ewr_composite_t ~ poi_count_t
         r3c = run_spearman(poi_t, ewr_t, f"Spearman(poi_count_t, ewr_composite_t, k={k})")
@@ -1304,6 +1329,43 @@ def test_h3_ewr(df_ewr: object) -> list[dict]:
 # ---------------------------------------------------------------------------
 # Output helpers
 # ---------------------------------------------------------------------------
+
+
+# Correction notes (#381): dated, hand-written notices for the findings doc. They live HERE, in
+# the generator, not in the generated Markdown, so that every regeneration (which rewrites the
+# whole doc) carries them forward unchanged (same pattern as CHANGE_NOTES in
+# analysis/c_three_way_comparison.py). History: the interim (pre-fix) wording was
+# domain-ratified (docs/epic-c/381-correction-domain-review.md §2 B). This RESOLVED wording
+# replaces it now that int_berlin_ewr_plr2021 implements the C3-approved population-weighted
+# crosswalk; final texts per docs/epic-c/381-fix-domain-signoff.md §3 (Section 4 banner with
+# the geo-DS R1 sentence). The verdict counts are taken from the regenerated Section 4.
+CORRECTION_NOTES_TOP: tuple[str, ...] = (
+    "**Correction (November 2026, #381):** Section 4 (EWR resident-register composite, "
+    "2014–2020) and the EWR lines of the Overall Scorecard and of 'Which series leads?' were "
+    "regenerated on corrected data; see the note at the top of Section 4. All other sections, "
+    "including the H1 cross-section in Section 1, are not affected by that error: their "
+    "estimates, p-values and verdicts are unchanged. Their bootstrap confidence intervals differ "
+    "from the previous version in the third decimal because the bootstrap now runs on a fixed "
+    "row order (#364); from this version on they are reproducible from run to run.",
+)
+CORRECTION_NOTES_SECTION4: tuple[str, ...] = (
+    "**Correction (November 2026, #381).** This section was regenerated on corrected data. Its "
+    "first version carried pre-2021 resident-register shares and averages over to the 2021 area "
+    "boundaries by area instead of by population. With the correction, 6 of the 13 verdicts "
+    "change from SUPPORTED to NOT SIGNIFICANT: H2 OLS at k = 1, 2 and 4, H3a cross-lagged at "
+    "k = 1, and H3b cross-lagged at k = 1 and 2. The 7 that remain SUPPORTED are two to five "
+    "times weaker than before; six of them (the H2 and H3c Spearman rows) rely on analytic "
+    "p-values over pooled, non-independent rows, and the one cross-lagged result that holds "
+    "(H3a, k = 2) is about half as strong. The earlier reading that this panel supports H2 and "
+    "H3, with both series leading each other, no longer holds. The one directional result left "
+    "(commercial change before change in the population composite, at k = 2 only; none at "
+    "k = 1) is not robust across lags and is not a statement about social status.",
+)
+
+
+def render_correction_notes(notes: tuple[str, ...]) -> str:
+    """One blockquote paragraph per note, each followed by a blank line."""
+    return "".join(f"> {note}\n\n" for note in notes)
 
 
 def _fmt_val(val: float | None) -> str:
@@ -1343,7 +1405,12 @@ def _verdict_label(r: dict) -> str:
 
 
 def h3_direction_lines(results: list[dict]) -> list[str]:
-    """One line per cross-lagged (test, k) pair: which series leads, if any."""
+    """One line per cross-lagged (test, k) pair: which series leads, if any.
+
+    EWR panel (#381, domain sign-off §4 O1): its status side is the resident-register
+    composite (population composition), not social status, so its lines say "composite
+    change" instead of "status change". Wording only; the verdicts are unchanged.
+    """
     lines = []
     seen = []
     for r in results:
@@ -1354,9 +1421,11 @@ def h3_direction_lines(results: list[dict]) -> list[str]:
         b = next((r for r in results if r["hyp"] == "H3b" and r["test"] == test), None)
         if b is None:
             continue
+        conclusion = direction_conclusion(a["verdict"], b["verdict"])
+        if "(EWR)" in test:
+            conclusion = conclusion.replace("status change", "composite change")
         lines.append(
-            f"- **{test}:** {direction_conclusion(a['verdict'], b['verdict'])} "
-            f"(H3a {_verdict_label(a)}, H3b {_verdict_label(b)})"
+            f"- **{test}:** {conclusion} (H3a {_verdict_label(a)}, H3b {_verdict_label(b)})"
         )
     return lines
 
@@ -1435,6 +1504,7 @@ def write_findings(
     OUTPUT_MD.parent.mkdir(parents=True, exist_ok=True)
     with open(OUTPUT_MD, "w", encoding="utf-8") as f:
         f.write("# E1 Regression Findings -- Thesis H1-H3c Validation\n\n")
+        f.write(render_correction_notes(CORRECTION_NOTES_TOP))
         f.write("- **Task:** H1-H3c regression and lead-lag analysis, real thesis hypotheses\n")
         f.write("- **Issue:** #65 / #115\n")
         f.write(f"- **Date:** {today}\n")
@@ -1572,6 +1642,7 @@ def write_findings(
 
         if results_ewr:
             f.write("## Results — Section 4: H2/H3 EWR Resident-Register Composite (2014–2020)\n\n")
+            f.write(render_correction_notes(CORRECTION_NOTES_SECTION4))
             f.write(
                 "> EWR is Berlin's resident register (Einwohnerregister); its composite measures population composition (residence duration, age, nationality, migration background), NOT social status, and it was not the thesis's outcome measure -- the thesis used MSS Status/Dynamik (editions 2013-2017; thesis §6.2.3, Tabelle 6-1). H3c here correlates same-year LEVELS, not co-occurring "
                 "changes -- not a like-for-like test of H3c. The POI side is the raw OSM count "
@@ -1668,7 +1739,18 @@ def write_findings(
 # ---------------------------------------------------------------------------
 
 
+def _force_utf8_console() -> None:
+    """#364: console output uses non-ASCII (arrows, en dashes); on a Windows cp1252 console
+    print() raised UnicodeEncodeError unless PYTHONIOENCODING=utf-8 was set. Reconfigure
+    stdout/stderr to UTF-8 (errors='replace' as a last resort). No-op where not supported."""
+    for stream in (sys.stdout, sys.stderr):
+        reconfigure = getattr(stream, "reconfigure", None)
+        if reconfigure is not None and (stream.encoding or "").lower() != "utf-8":
+            reconfigure(encoding="utf-8", errors="replace")
+
+
 def main() -> None:
+    _force_utf8_console()
     # B10 (#120): --scale argument for multi-scale analysis.
     # PLR is the default (existing behavior preserved). BZR and Bezirk are new.
     parser = argparse.ArgumentParser(description="E1 regressions: thesis H1-H3c, multi-scale")

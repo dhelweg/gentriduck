@@ -12,6 +12,11 @@
 -- foreigners_share: recomputed from summed numerators (intensive indicator,
 -- rollup rule per mart_area_demographics.sql header) must match within 1e-9.
 --
+-- #372: the mart no longer publishes crosswalked (pre-2021) PLR rows but keeps
+-- their BZR rollups, so for those years the PLR values are taken from the
+-- mart's upstream int_ewr_demographics_wide (source_area_vintage =
+-- 'lor_pre2021'), keeping every BZR row reconciled.
+--
 -- Returns rows that FAIL reconciliation. Zero rows = test passes.
 with
     plr_rows as (
@@ -24,6 +29,16 @@ with
             foreigners_share
         from {{ ref("mart_area_demographics") }}
         where area_level = 'plr'
+        union all
+        select
+            city_code,
+            substr(lpad(area_code, 8, '0'), 1, 6) as bzr_code,
+            area_vintage,
+            reference_year,
+            residents_total,
+            foreigners_share
+        from {{ ref("int_ewr_demographics_wide") }}
+        where source_area_vintage = 'lor_pre2021'
     ),
 
     hand_summed as (

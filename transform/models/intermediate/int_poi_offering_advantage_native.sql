@@ -20,8 +20,9 @@
 -- `poi_kernel_bandwidth_m` vars. No methodology change.
 --
 -- city_code is canonicalised here with canonical_city_code() (ADR-0005,
--- QA-4 #179): the gaussian rows of both sources inherit the legacy 'berlin'
--- value from int_osm_poi_plr_weighted, the standard rows already say 'BER'.
+-- QA-4 #179). Since #363 the gaussian rows of both sources already carry
+-- 'BER' (the kernel macro canonicalises); the call is kept as an idempotent
+-- guard.
 --
 -- dbt_meta_owner: data-engineer
 -- depends_on: {{ ref('int_poi_offering_advantage') }}

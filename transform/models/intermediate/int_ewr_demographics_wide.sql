@@ -23,6 +23,12 @@
 -- parity -- I19 ticket: "the data is already ingested ... today they only
 -- feed the composite, never shown descriptively"), vs. int_ewr_socioeco's 8.
 --
+-- source_area_vintage (#381/#372): carried through from int_berlin_ewr_plr2021
+-- -- 'lor_pre2021' for crosswalked rows (reference_year <= 2020), 'lor_2021'
+-- for native rows. area_vintage is the boundary scheme and is always
+-- 'lor_2021'. mart_area_demographics uses source_area_vintage to suppress the
+-- crosswalked rows at PLR and Ortsteil grain (#372 option (b)).
+--
 -- Graceful degradation: returns zero rows when int_berlin_ewr_plr2021 has
 -- no rows.
 --
@@ -36,6 +42,7 @@ with
             city_code,
             plr_id_2021 as area_code,
             area_vintage,
+            source_area_vintage,
             reference_year,
             reference_date,
             indicator,
@@ -49,6 +56,7 @@ select
     city_code,
     area_code,
     area_vintage,
+    source_area_vintage,
     reference_year,
     max(reference_date) as reference_date,
     max(indicator_value) filter (
@@ -94,4 +102,4 @@ select
     bool_or(coalesce(is_suppressed_any, false)) as any_indicator_suppressed,
     max(source_attribution) as source_attribution
 from ewr
-group by city_code, area_code, area_vintage, reference_year
+group by city_code, area_code, area_vintage, source_area_vintage, reference_year

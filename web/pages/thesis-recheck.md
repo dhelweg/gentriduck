@@ -443,9 +443,15 @@ For the **current** picture these hypotheses take a back seat to the live typolo
   completeness grew over both periods.
 - There is no open small-area source on refugee accommodation, so its effect on the benefit-based
   indicators is disclosed, not corrected.
-- **The resident-register (EWR) panel is outside this re-test.** Its earlier results remain
-  documented in the
+- **The resident-register (EWR) panel is outside this re-test.** Its results are documented
+  separately in the
   [E1 regression findings](https://github.com/dhelweg/gentriduck/blob/main/docs/epic-e/E1-regression-findings.md), §4.
+- **Correction (November 2026):** the resident-register results in E1 §4 were first computed with
+  an error in how pre-2021 population shares were carried over to the 2021 area boundaries
+  ([#381](https://github.com/dhelweg/gentriduck/issues/381)). They have now been re-run on
+  corrected data: 6 of the 13 verdicts are no longer significant, and most of the rest rely on tests
+  the findings already flag as weak. No verdict on this page changed; two sensitivity figures moved
+  slightly.
 - Reproducing a 2018 result is a directional check, not a number-for-number replay — see the
   [Epic B framing](https://github.com/dhelweg/gentriduck/blob/main/docs/PROJECT_PLAN.md) for why.
 
