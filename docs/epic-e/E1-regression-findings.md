@@ -1,5 +1,7 @@
 # E1 Regression Findings -- Thesis H1-H3c Validation
 
+> **Correction (November 2026, #381):** Section 4 (EWR resident-register composite, 2014–2020) and the EWR lines of the Overall Scorecard and of 'Which series leads?' are affected by a known error and will be regenerated; see the note at the top of Section 4. All other sections, including the H1 cross-section in Section 1, are not affected.
+
 - **Task:** H1-H3c regression and lead-lag analysis, real thesis hypotheses
 - **Issue:** #65 / #115
 - **Date:** 2026-11-01
@@ -120,6 +122,8 @@ Each controls for the outcome's own prior change. **Before 2026-10-26 the two we
 - **Cross-lagged (OA) k=1:** no directional evidence either way (H3a NOT SIGNIFICANT, H3b NOT SIGNIFICANT)
 
 ## Results — Section 4: H2/H3 EWR Resident-Register Composite (2014–2020)
+
+> **Correction (November 2026, #381).** The results in this section were computed with an error: pre-2021 resident-register shares and averages were carried over to the 2021 area boundaries by area instead of by population. In a corrected re-run (`docs/epic-c/381-geo-triage.md` §2), 6 of the 13 verdicts below change from SUPPORTED to NOT SIGNIFICANT, and the correlations are two to five times weaker; of the remaining seven, six rely on analytic p-values over pooled, non-independent rows, and the one cross-lagged result that holds (H3a, k = 2) is about half as strong. This section will be regenerated once the fix has passed review. Until then, please do not cite these results.
 
 > EWR is Berlin's resident register (Einwohnerregister); its composite measures population composition (residence duration, age, nationality, migration background), NOT social status, and it was not the thesis's outcome measure -- the thesis used MSS Status/Dynamik (editions 2013-2017; thesis §6.2.3, Tabelle 6-1). H3c here correlates same-year LEVELS, not co-occurring changes -- not a like-for-like test of H3c. The POI side is the raw OSM count without the C5 completeness correction, so mapping growth can feed both directions. Annual panel: many cross-lagged pivots per area, all absorbed by the cluster bootstrap. POI side is the raw count via the dominant pre-2021 crosswalk (~35% of lor_2021 PLRs share a count with a neighbour -- pseudo-replication, see load_ewr_lead_lag_data). **Only the cross-lagged H3a/H3b rows use cluster-bootstrap CIs; the H2 and H3c rows here use analytic p-values on pooled area-year rows that are not independent, so their significance is overstated** -- read them as directional. The "D4 control" in this panel is the EWR composite's own level at the pivot (status IS the composite here), not an independent covariate.
 

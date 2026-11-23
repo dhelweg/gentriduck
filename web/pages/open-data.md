@@ -70,6 +70,13 @@ for the full per-source table and exact attribution strings).
 | Hamburg Stadtteil statistics (Regionalstatistische Daten) | Hamburg's demographic baseline | `dl-de/by-2.0` |
 | Hamburg soziale Erhaltungs&shy;verordnungen, Wohnlagen / Mietenspiegel | Displacement-protection context and the price/rent dimension | `dl-de/by-2.0` |
 
+**Known error (November 2026, [#381](https://github.com/dhelweg/gentriduck/issues/381)):** in
+the site's bundled Berlin demographics data, the shares and averages for 2008–2020 (for example
+age-structure or nationality shares) are wrong, because of how they were carried over to the 2021
+area boundaries. Resident counts and all values from 2021 on are not affected by this error, and
+the demographic figures shown on the site's pages are current values. A corrected version will
+replace the affected rows.
+
 Hamburg's `dl-de/by-2.0` licence requires attribution. This project credits **"Freie und Hansestadt
 Hamburg, Behörde für Stadtentwicklung und Wohnen"** for the Sozialmonitoring and its annex, the
 soziale Erhaltungsverordnungen and the Mietenspiegel / Wohnlagen; **"Freie und Hansestadt Hamburg,

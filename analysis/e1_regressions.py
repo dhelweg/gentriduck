@@ -1306,6 +1306,37 @@ def test_h3_ewr(df_ewr: object) -> list[dict]:
 # ---------------------------------------------------------------------------
 
 
+# Correction notes (#381): dated, hand-written notices for the findings doc. They live HERE, in
+# the generator, not in the generated Markdown, so that every regeneration (which rewrites the
+# whole doc) carries them forward unchanged (same pattern as CHANGE_NOTES in
+# analysis/c_three_way_comparison.py). Wording is domain-ratified, verbatim
+# (docs/epic-c/381-correction-domain-review.md §2 B, with the two geo-DS precision fixes in
+# docs/epic-c/381-correction-geo-signoff.md): do not edit it here. When the #381 fix
+# lands, replace both with a resolved statement under the R-C1 dual gate (review §3).
+CORRECTION_NOTES_TOP: tuple[str, ...] = (
+    "**Correction (November 2026, #381):** Section 4 (EWR resident-register composite, "
+    "2014–2020) and the EWR lines of the Overall Scorecard and of 'Which series leads?' are "
+    "affected by a known error and will be regenerated; see the note at the top of Section 4. "
+    "All other sections, including the H1 cross-section in Section 1, are not affected.",
+)
+CORRECTION_NOTES_SECTION4: tuple[str, ...] = (
+    "**Correction (November 2026, #381).** The results in this section were computed with an "
+    "error: pre-2021 resident-register shares and averages were carried over to the 2021 area "
+    "boundaries by area instead of by population. In a corrected re-run "
+    "(`docs/epic-c/381-geo-triage.md` §2), 6 of the 13 verdicts below change from SUPPORTED to "
+    "NOT SIGNIFICANT, and the correlations are two to five times weaker; of the remaining seven, "
+    "six rely on analytic p-values over pooled, non-independent rows, and the one cross-lagged "
+    "result that holds (H3a, k = 2) is about half as strong. "
+    "This section will be regenerated once the fix has passed review. Until then, please do not "
+    "cite these results.",
+)
+
+
+def render_correction_notes(notes: tuple[str, ...]) -> str:
+    """One blockquote paragraph per note, each followed by a blank line."""
+    return "".join(f"> {note}\n\n" for note in notes)
+
+
 def _fmt_val(val: float | None) -> str:
     """Format a stat value; switch to scientific notation when |val| < 0.001."""
     if val is None:
@@ -1435,6 +1466,7 @@ def write_findings(
     OUTPUT_MD.parent.mkdir(parents=True, exist_ok=True)
     with open(OUTPUT_MD, "w", encoding="utf-8") as f:
         f.write("# E1 Regression Findings -- Thesis H1-H3c Validation\n\n")
+        f.write(render_correction_notes(CORRECTION_NOTES_TOP))
         f.write("- **Task:** H1-H3c regression and lead-lag analysis, real thesis hypotheses\n")
         f.write("- **Issue:** #65 / #115\n")
         f.write(f"- **Date:** {today}\n")
@@ -1572,6 +1604,7 @@ def write_findings(
 
         if results_ewr:
             f.write("## Results — Section 4: H2/H3 EWR Resident-Register Composite (2014–2020)\n\n")
+            f.write(render_correction_notes(CORRECTION_NOTES_SECTION4))
             f.write(
                 "> EWR is Berlin's resident register (Einwohnerregister); its composite measures population composition (residence duration, age, nationality, migration background), NOT social status, and it was not the thesis's outcome measure -- the thesis used MSS Status/Dynamik (editions 2013-2017; thesis §6.2.3, Tabelle 6-1). H3c here correlates same-year LEVELS, not co-occurring "
                 "changes -- not a like-for-like test of H3c. The POI side is the raw OSM count "
