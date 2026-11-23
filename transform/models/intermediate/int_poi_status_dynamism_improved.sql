@@ -70,8 +70,13 @@ select
     -- change moved values by up to 2.7e-15 (floating-point summation order
     -- in the window aggregates), which split mathematically equal values
     -- and shifted the Spearman p of analysis/c_three_way_comparison.py. 9
-    -- decimals merges exactly the noise-split ties (122 here, observed
-    -- 2026-11-23) and no genuine gap; 6 would be too coarse. Rounding, not
+    -- decimals merges the noise-split ties (~122 here, observed 2026-11-23).
+    -- Margin, stated honestly: the smallest genuine within-year gap is
+    -- 5.7e-10, BELOW the 1e-9 step, yet no genuine pair is merged on the
+    -- current data (distinct values 9,138 -> 9,016 = 9,138 - 122); geo-DS
+    -- accepted that a merge at this scale would be immaterial
+    -- (docs/epic-c/363-geo-signoff.md flag 1). 6 decimals would be too
+    -- coarse, 12 would let build noise straddle rounding boundaries. Rounding, not
     -- a fixed summation order, so that equal values become the exact ties
     -- that Spearman's average ranks (scipy.stats.spearmanr) then treat as
     -- ties; done here, in the model, so every consumer agrees.

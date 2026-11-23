@@ -27,7 +27,11 @@
 -- checks are scoped to the (city, year, vintage, weight_variant) keys the
 -- gaussian variant actually has -- but a gaussian key WITHOUT a standard
 -- counterpart is a violation, not a skip, so a new city's gaussian variant
--- cannot pass silently. city_code is canonicalised on both sides
+-- cannot pass silently. The reverse holds too (DE review, #363): for a city
+-- that has a gaussian variant, every standard (year, vintage) must have rows of
+-- each of that city's gaussian weight_variants, so a gaussian year silently
+-- missing (e.g. a dropped snapshot) fails instead of shrinking the comparison.
+-- city_code is canonicalised on both sides
 -- (canonical_city_code()); since #363 the kernel macro emits 'BER' itself, so
 -- this is an idempotent guard against the vacuous 'BER' vs 'berlin' join that
 -- had made the pre-#363 test compare zero rows.
@@ -260,6 +264,45 @@ with
             )
     ),
 
+    -- DE review (#363): the reverse coverage. For each city that has a gaussian
+    -- variant, every standard (year, vintage) must have each of that city's
+    -- gaussian weight_variants. Cities without any gaussian variant (Hamburg
+    -- today) are out of scope, note §3.
+    gaussian_city_variants as (
+        select distinct city_code, weight_variant from gaussian_keys
+    ),
+
+    standard_keys as (
+        select distinct city_code, snapshot_year, area_vintage
+        from oa
+        where weight_variant = 'standard'
+    ),
+
+    reverse_coverage_violations as (
+        select
+            'standard_key_without_gaussian' as check_name,
+            'all' as oa_level,
+            s.city_code,
+            s.snapshot_year,
+            s.area_vintage,
+            v.weight_variant,
+            cast(null as varchar) as level_value,
+            cast(null as double) as standard_value,
+            cast(null as double) as weighted_value
+        from standard_keys as s
+        inner join gaussian_city_variants as v on s.city_code = v.city_code
+        where
+            not exists (
+                select 1
+                from gaussian_keys as g
+                where
+                    g.city_code = s.city_code
+                    and g.snapshot_year = s.snapshot_year
+                    and g.area_vintage = s.area_vintage
+                    and g.weight_variant = v.weight_variant
+            )
+    ),
+
     -- Note §5.3, every level: one-sided (no mass loss beyond float noise) and
     -- whole-number excess.
     cell_violations as (
@@ -325,6 +368,9 @@ from leaf_coverage_violations
 union all
 select *
 from key_coverage_violations
+union all
+select *
+from reverse_coverage_violations
 union all
 select *
 from cell_violations

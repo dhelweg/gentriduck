@@ -150,8 +150,9 @@ select
     -- int_poi_status_dynamism_improved (docs/epic-c/363-geo-tolerance-note.md
     -- §7). This lor_pre2021 sibling feeds Part 2 of
     -- analysis/c_three_way_comparison.py (the drifting "Run B" p in #363); 9
-    -- decimals merges exactly its 193 noise-split ties (observed 2026-11-23,
-    -- smallest genuine within-year gap 2.1e-4).
+    -- decimals merges its ~193 noise-split ties (observed 2026-11-23,
+    -- smallest genuine within-year gap 2.1e-4, so no genuine pair is merged;
+    -- docs/epic-c/363-geo-signoff.md flag 2).
     round(
         (amenity_weighted_count - avg(amenity_weighted_count) over w_year)
         / nullif(stddev(amenity_weighted_count) over w_year, 0),

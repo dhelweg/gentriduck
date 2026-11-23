@@ -262,13 +262,21 @@ with
     -- the signed tier pairing (OA-D0 domain sign-off Condition B.2), could
     -- flip between builds -- and label and level could even come from two
     -- different tied rows. One ranked row per group now supplies both. Order:
-    -- share descending, then child_label, then child_level ascending (a
-    -- documented, reproducible tie-break, not a methodology choice: tied
-    -- children are equally dominant, and top_share is unchanged). The share
-    -- is compared at 9 decimals so that float noise in the gaussian variant's
+    -- share descending, then child_label, then child_level ascending. This
+    -- tie-break is the #363 decision (geo-DS sign-off
+    -- docs/epic-c/363-geo-signoff.md flag 4: deterministic, documented
+    -- convention; domain sign-off docs/epic-c/363-domain-signoff.md §4: the
+    -- alphabetical-first label is not neutral in meaning, so a tie means "no
+    -- single type leads" and is disclosed on every page that shows top_child,
+    -- tie flag to follow in #379). top_share is unchanged. The share is
+    -- compared at 9 decimals so that float noise in the gaussian variant's
     -- fractional stocks (up to ~1e-15, docs/epic-c/363-geo-tolerance-note.md
-    -- §7) cannot split an exact tie; a genuine share difference below 1e-9
-    -- would need a group stock above 1e9 POIs.
+    -- §7) cannot split an exact tie. For the standard variant this merges no
+    -- genuine difference: the shares within a group have integer stocks over
+    -- one common group stock G, so they differ by multiples of 1/G, which is
+    -- below 1e-9 only if G exceeds 1e9 POIs. For the gaussian variant
+    -- (fractional stocks) that no genuine share difference falls below 1e-9
+    -- is a practical assumption, not a guarantee.
     top_children as (
         select
             city_code,

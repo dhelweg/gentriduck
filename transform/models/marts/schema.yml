@@ -3060,7 +3060,11 @@ models:
       - name: evenness
         description: Pielou evenness (entropy / ln(n_children)), range [0,1]. NULL when n_children <= 1.
       - name: top_child
-        description: The child_label (category or type name) with the largest share in this group cell.
+        description: >
+          The child_label (category or type name) with the largest share in
+          this group cell. Ties at 9 decimals are broken alphabetically by
+          label, then level (#363 O7); a tie means that no single type leads,
+          not that the named type dominates (tie flag: #379).
       - name: top_child_level
         description: "'category' or 'type' -- the taxonomy grain of top_child."
       - name: top_child_offering_tier
