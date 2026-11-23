@@ -65,8 +65,21 @@ select
     amenity_weighted_share,
     amenity_weighted_share_prev_year,
     amenity_share_yoy_change,
-    (amenity_weighted_count - avg(amenity_weighted_count) over w_year)
-    / nullif(stddev(amenity_weighted_count) over w_year, 0) as status_score_improved,
+    -- #363 drift fix (docs/epic-c/363-geo-tolerance-note.md §7): rounded to
+    -- 9 decimals (z-scale, so an absolute 1e-9). Rebuilding with no code
+    -- change moved values by up to 2.7e-15 (floating-point summation order
+    -- in the window aggregates), which split mathematically equal values
+    -- and shifted the Spearman p of analysis/c_three_way_comparison.py. 9
+    -- decimals merges exactly the noise-split ties (122 here, observed
+    -- 2026-11-23) and no genuine gap; 6 would be too coarse. Rounding, not
+    -- a fixed summation order, so that equal values become the exact ties
+    -- that Spearman's average ranks (scipy.stats.spearmanr) then treat as
+    -- ties; done here, in the model, so every consumer agrees.
+    round(
+        (amenity_weighted_count - avg(amenity_weighted_count) over w_year)
+        / nullif(stddev(amenity_weighted_count) over w_year, 0),
+        9
+    ) as status_score_improved,
     (amenity_share_yoy_change - avg(amenity_share_yoy_change) over w_year) / nullif(
         stddev(amenity_share_yoy_change) over w_year, 0
     ) as dynamism_score_improved,

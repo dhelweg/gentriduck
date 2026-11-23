@@ -146,8 +146,17 @@ select
     amenity_weighted_share,
     amenity_weighted_share_prev_year,
     amenity_share_yoy_change,
-    (amenity_weighted_count - avg(amenity_weighted_count) over w_year)
-    / nullif(stddev(amenity_weighted_count) over w_year, 0) as status_score_improved,
+    -- #363 drift fix: rounded to 9 decimals, the same rule as
+    -- int_poi_status_dynamism_improved (docs/epic-c/363-geo-tolerance-note.md
+    -- §7). This lor_pre2021 sibling feeds Part 2 of
+    -- analysis/c_three_way_comparison.py (the drifting "Run B" p in #363); 9
+    -- decimals merges exactly its 193 noise-split ties (observed 2026-11-23,
+    -- smallest genuine within-year gap 2.1e-4).
+    round(
+        (amenity_weighted_count - avg(amenity_weighted_count) over w_year)
+        / nullif(stddev(amenity_weighted_count) over w_year, 0),
+        9
+    ) as status_score_improved,
     (amenity_share_yoy_change - avg(amenity_share_yoy_change) over w_year) / nullif(
         stddev(amenity_share_yoy_change) over w_year, 0
     ) as dynamism_score_improved,
