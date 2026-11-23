@@ -34,7 +34,8 @@
 -- ŵ_ij = w_ij / Σ_i w_ij   (sum over all PLRs i within bandwidth of POI j)
 -- Each POI's weights sum to 1 → total POI mass is conserved city-wide, making the
 -- distance_weighted variant honestly comparable to the standard hard count (ADR-0010
--- §4).
+-- §4). City totals may still exceed the hard count by the boundary POIs described
+-- under "C-1 INVARIANT, RESTATED" below (#363).
 --
 -- MASS-LEAKAGE GUARD (spatial-methods.md §11.3; ADR-0017 D5 condition C-1;
 -- docs/epic-b/P0.1-oa-variant-geo-signoff.md §2.5,
@@ -51,13 +52,28 @@
 -- PLR
 -- (`hard_area_code`, from the C3 hard join) that matched zero PLRs within bandwidth is
 -- fall-back-assigned to that hard home PLR at weight 1 (see leakage_guard_contributions
--- below). This makes Σ_a weighted_count = hard city total hold exactly (§11.1
--- invariance), enforced by test_c1_oa_weighted_mass_conservation_invariance.sql via
--- int_poi_offering_advantage. POIs with a NULL hard_area_code (outside all PLR polygons
--- -- water bodies, airport perimeter) have no fallback and are correctly excluded
--- either
--- way, matching fct_poi_development's `where area_code is not null` filter on the hard
--- variant.
+-- below), so no POI inside a PLR polygon loses mass.
+--
+-- C-1 INVARIANT, RESTATED (#363; maintainer decision B 2026-11-02; ADR-0017 D5 C-1
+-- amendment; docs/epic-c/363-geo-tolerance-note.md §4). The old claim here, that
+-- Σ_a weighted_count = hard city total holds exactly, was wrong: a POI with a NULL
+-- hard_area_code (outside every PLR polygon -- just across the city boundary, water
+-- bodies, airport perimeter) that lies within bandwidth b of some PLR's
+-- representative point DOES enter the kernel and contributes total weight 1 to
+-- nearby PLRs. This is intended (decision B: for an edge area it is the corner that
+-- matters, not which side of the boundary a kiosk is on). A POI outside every polygon
+-- and beyond b of every PLR has no fallback and is excluded, as in the hard variant.
+-- Restated invariant: for every city, snapshot year, area vintage and taxonomy level,
+-- the gaussian city-wide stock = the hard stock + a non-negative WHOLE number of POIs
+-- (those outside-polygon POIs within the bandwidth); the excess over all domains is
+-- bounded per city-year by max(0.1 % of the hard total, 3 POIs) (observed 2008-2026:
+-- +0.025 % to +0.103 %, the 0.103 % being 1 POI in 2008). Any negative or non-integer
+-- excess, a taxonomy leaf missing from either variant, or a gaussian city-year without
+-- a hard counterpart is a violation. Enforced (error severity) by
+-- test_c1_oa_weighted_mass_conservation_invariance.sql via int_poi_offering_advantage.
+--
+-- city_code: since #363 the kernel macro canonicalises the legacy lowercase 'berlin'
+-- to the dim_city code 'BER' (ADR-0005), matching the standard variant.
 --
 -- CRS (spatial-methods.md §3; ADR-0010 Amendment 3):
 -- All distance/bandwidth computations in EPSG:25833 (ETRS89 / UTM zone 33N), Berlin's

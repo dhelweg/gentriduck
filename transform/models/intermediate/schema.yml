@@ -4439,13 +4439,19 @@ models:
       Mass-leakage guard (spatial-methods.md §11.3; ADR-0017 D5 C-1): a POI whose home PLR
       is large/low-density (Tempelhofer Feld, Grunewald) can be > b from every PLR's
       representative point and match zero rows via ST_DWithin. Such POIs are fall-back
-      assigned to their hard home PLR (`hard_area_code`) at weight 1, so no POI mass is
-      silently dropped and Σ_a weighted_count per level equals the hard-count city total
-      per level (enforced by test_c1_oa_weighted_mass_conservation_invariance.sql).
+      assigned to their hard home PLR (`hard_area_code`) at weight 1, so no in-polygon POI
+      mass is silently dropped.
+
+      C-1 restated (#363, maintainer decision B 2026-11-02, ADR-0017 D5 C-1 amendment,
+      docs/epic-c/363-geo-tolerance-note.md §4): POIs outside every PLR polygon but within
+      the bandwidth also enter the kernel (intended edge effect), so Σ_a weighted_count per
+      level = the hard-count city total + a non-negative whole number of POIs, bounded per
+      city-year over all domains by max(0.1 % of the hard total, 3 POIs) (enforced by
+      test_c1_oa_weighted_mass_conservation_invariance.sql).
 
       Output: one row per (city_code, snapshot_year, area_code, area_vintage, poi_category_h,
-      poi_type_h, weight_variant) with weighted_count (fractional; sum = standard count
-      city-wide); weight_variant discriminator (e.g. 'gaussian_500m'). Feeds the same share pipeline as int_poi_features_pivot
+      poi_type_h, weight_variant) with weighted_count (fractional; city-wide sum = standard
+      count + boundary POIs, see C-1 above); weight_variant discriminator (e.g. 'gaussian_500m'). Feeds the same share pipeline as int_poi_features_pivot
       for the distance-weighted dynamism_score used by Gi* hotspot analysis (spatial-methods.md §6),
       and (#166) int_poi_offering_advantage's weighted OA variant.
 
@@ -4474,12 +4480,18 @@ models:
             where: "area_code is not null and weighted_count is not null"
     columns:
       - name: city_code
-        description: City identifier (ADR-0005).
+        description: >
+          City identifier (ADR-0005). Canonical dim_city code ('BER') since #363 -- the
+          kernel macro maps the legacy lowercase 'berlin' from int_osm_poi_plr.
         data_tests:
 
           - not_null:
               config:
                 where: "area_code is not null"
+          - relationships:
+              arguments:
+                to: ref('dim_city')
+                field: city_code
       - name: snapshot_year
         description: Calendar year of the OSM snapshot (integer, 2008-2026).
         data_tests:
@@ -4830,8 +4842,8 @@ models:
         description: >
           City identifier (ADR-0005). #281: canonicalized at this model's own
           output boundary (join_city_code reused as city_code) -- unlike its
-          upstream source int_poi_offering_advantage, which still carries
-          legacy lowercase 'berlin' rows by design, this model's output is
+          upstream source int_poi_offering_advantage, which carried legacy
+          lowercase 'berlin' gaussian rows until #363, this model's output is
           canonical-only.
         data_tests:
 
@@ -5054,8 +5066,8 @@ models:
       - name: city_code
         description: >
           City identifier (ADR-0005). #281: canonicalized in the base CTE --
-          unlike its upstream source int_poi_offering_advantage, which still
-          carries legacy lowercase 'berlin' rows by design, this model's
+          unlike its upstream source int_poi_offering_advantage, which carried
+          legacy lowercase 'berlin' gaussian rows until #363, this model's
           output is canonical-only.
         data_tests:
 
@@ -5139,7 +5151,11 @@ models:
           n_children <= 1 (undefined, not zero/error -- see model SQL
           header).
       - name: top_child
-        description: The child_label (category or type name) with the largest share in this group cell.
+        description: >
+          The child_label (category or type name) with the largest share in
+          this group cell. Ties at 9 decimals are broken alphabetically by
+          label, then level (#363 O7); a tie means that no single type leads,
+          not that the named type dominates (tie flag: #379).
       - name: top_child_level
         description: "'category' or 'type' -- the taxonomy grain of top_child."
       - name: top_child_offering_tier

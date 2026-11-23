@@ -21,8 +21,9 @@
 -- one geometry vintage. Mass conservation against the hard back-cast counts
 -- is enforced by test_354_backcast_oa_weighted_mass_conservation.
 --
--- city_code is passed through un-normalised, as in int_osm_poi_plr_weighted
--- (legacy 'berlin'); int_poi_offering_advantage_native canonicalises it.
+-- city_code: since #363 the shared kernel macro canonicalises the legacy
+-- 'berlin' to the dim_city code 'BER' (ADR-0005), as in
+-- int_osm_poi_plr_weighted.
 --
 -- dbt_meta_owner: data-engineer
 -- depends_on: {{ ref('int_berlin_osm_poi_plr2021_backcast') }}

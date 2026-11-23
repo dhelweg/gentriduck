@@ -248,8 +248,10 @@ def _city_filter_sql(city_code: str, alias: str = "") -> tuple[str, list]:
 
     Berlin ('BER', the default -- preserves pre-#318 behavior byte-for-byte)
     keeps its two historical spellings verbatim: 'BER' (most models) and
-    lowercase 'berlin' (`int_osm_poi_plr_weighted`'s own convention, also
-    matched by `oa_bandwidth_sweep.py`'s identical filter). Any other
+    lowercase 'berlin' (`int_osm_poi_plr_weighted`'s own convention until
+    #363, which made it emit 'BER'; still matched so a pre-#363 warehouse
+    gives the same result, as in `oa_bandwidth_sweep.py`'s identical
+    filter). Any other
     city_code (e.g. 'HH' for Hamburg, `e5_hamburg_lead_lag.py`'s own
     convention) is matched case-insensitively (`upper()` both sides, #318
     review fix -- `--city-code hh` now matches stored 'HH' rows the same way

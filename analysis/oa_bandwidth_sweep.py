@@ -218,7 +218,9 @@ def load_oa_domain(con, pd, bandwidth_m: int):
     (predates ADR-0005 canonicalization), while its 'standard' rows already
     carry canonical 'BER'. This is a raw DuckDB query reading the intermediate
     layer directly (not through the mart's `canonical_city_code()` dbt macro),
-    so both spellings must be matched explicitly here.
+    so both spellings must be matched explicitly here. (Since #363 the
+    gaussian rows carry 'BER'; the 'berlin' match is kept so a pre-#363
+    warehouse gives the same result.)
 
     Review finding (iteration 2, #274): int_poi_offering_advantage's grain is
     (..., poi_category_h, poi_type_h, ...) -- a domain-level oa_domain value is

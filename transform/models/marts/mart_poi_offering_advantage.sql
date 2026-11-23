@@ -61,7 +61,9 @@ with
     -- poi_counts/area_km2 joins below (both keyed on canonical city_code) and
     -- carry NULL poi_count/area_km2/poi_density_per_km2. Same mechanical,
     -- non-methodology-bearing fix already applied at this exact boundary in
-    -- fct_poi_development.sql.
+    -- fct_poi_development.sql. #363: the gaussian rows now arrive as 'BER'
+    -- (the kernel macro canonicalises); this call is kept as an idempotent
+    -- guard.
     oa as (
         select
             {{ canonical_city_code("city_code") }} as city_code,

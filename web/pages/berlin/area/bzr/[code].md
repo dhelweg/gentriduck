@@ -279,12 +279,17 @@ full roll-up rule.
 
 ## Within-group dominance
 
+<!-- #363 D4 (domain sign-off docs/epic-c/363-domain-signoff.md): top_child ties are broken alphabetically
+(int_poi_within_group_dominance, #363 O7), so a tie is disclosed here until the tie flag of #379
+lets the table mark tied cells itself. -->
 <Alert status="info">
   <b>Dominance is sign-blind</b> — a high concentration figure says only that a group's mix is
   concentrated in the named leading type, never whether that is an up-market or down-market shift.
   Read it alongside each neighbourhood's own status/dynamism trajectory. Cuisine-typed dominance is
   barred from this table (public-safe groups only); see the
   <a href="/methodology-oa-modes">Offering Advantage decoder</a> §5 for the full ethics note.
+  Where two or more types have exactly the same top share, the table names the alphabetically
+  first one; such a tie means that no single type leads, not that the named type dominates.
 </Alert>
 
 <Dropdown name="dom_group" title="Business group" defaultValue="gastronomy_category">
