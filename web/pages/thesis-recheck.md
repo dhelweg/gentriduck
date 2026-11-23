@@ -449,7 +449,8 @@ For the **current** picture these hypotheses take a back seat to the live typolo
 - **Correction (November 2026):** the resident-register results in E1 §4 were computed with an
   error in how pre-2021 population shares were carried over to the 2021 area boundaries
   ([#381](https://github.com/dhelweg/gentriduck/issues/381)). In a corrected re-run, 6 of its 13
-  verdicts are no longer significant, and the rest rely on tests the findings already flag as weak.
+  verdicts are no longer significant, and most of the rest rely on tests the findings already flag
+  as weak.
   Please do not cite those results until they have been re-run. No verdict on this page changes;
   two sensitivity figures will shift slightly once the corrected data are in.
 - Reproducing a 2018 result is a directional check, not a number-for-number replay — see the
